@@ -1,6 +1,6 @@
 import { Service } from '@angular/core';
 
-import { QuestionType } from '../../../../shared/models/question-type.enum';
+import { declaredIsMultiAnswer } from '../../../../shared/utils/question-type-authority';
 
 import { Option } from '../../../../shared/models/Option.model';
 import { QuizQuestion } from '../../../../shared/models/QuizQuestion.model';
@@ -37,16 +37,19 @@ export class AnswerOptionsService {
     optionsSource: Option[],
     currentType: 'single' | 'multiple'
   ): boolean {
+    // A DECLARED type decides on its own. This used to be one arm of an OR
+    // alongside `correctCount > 1`, which let the local bank's flags promote a
+    // declared single-answer question to multiple.
+    const declared = declaredIsMultiAnswer(question);
+    if (declared !== null) return declared;
+
+    // REMOVE IN /questions CONTENT CUTOVER.
     const correctCount =
       optionsSource?.filter((option: any) =>
         isOptionCorrect(option)
       ).length ?? 0;
 
-    return (
-      currentType === 'multiple' ||
-      question.type === QuestionType.MultipleAnswer ||
-      correctCount > 1
-    );
+    return currentType === 'multiple' || correctCount > 1;
   }
 
   getQuestionTypeFromOptions(options: Option[]): 'single' | 'multiple' {

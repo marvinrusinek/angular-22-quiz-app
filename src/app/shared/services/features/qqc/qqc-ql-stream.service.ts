@@ -24,6 +24,7 @@ import { SelectedOptionService } from '../../state/selectedoption.service';
 import { SelectionMessageService } from '../selection-message/selection-message.service';
 import { TimerService } from '../timer/timer.service';
 
+import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
 import { delay } from '../../../utils/delay';
 import { swallow } from '../../../utils/error-logging';
 
@@ -773,7 +774,15 @@ export class QqcQlStreamService {
         break;
     }
 
-    if (correctCount > 1) qType = QuestionType.MultipleAnswer;
+    // The switch above already mapped the question's DECLARED type (and folds
+    // trueFalse into single-selection for the selection message, which only
+    // cares about cardinality — the question keeps its own type). Only promote
+    // to multiple from the count when nothing was declared, or the local flags
+    // would override an explicit single.
+    // REMOVE IN /questions CONTENT CUTOVER.
+    if (declaredIsMultiAnswer(question) === null && correctCount > 1) {
+      qType = QuestionType.MultipleAnswer;
+    }
     this.selectionMessageService.enforceBaselineAtInit(i0, qType, totalCorrect);
   }
 

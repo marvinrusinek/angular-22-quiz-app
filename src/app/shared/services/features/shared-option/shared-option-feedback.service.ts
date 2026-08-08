@@ -15,6 +15,7 @@ import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 
 import { feedbackAnchorMatches } from '../../../utils/feedback-anchor';
+import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { isValidOption } from '../../../utils/option-utils';
 
@@ -139,12 +140,16 @@ export class SharedOptionFeedbackService {
     };
   }
 
-  // Robust detection: check type OR count of correct answers in the raw question data
+  // Declared type first; counting correct answers is the fallback for
+  // questions the API has not typed.
+  // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
   private detectMultiAnswer(ctx: FeedbackContext, question: QuizQuestion | null | undefined): boolean {
-    return ctx.type === 'multiple' ||
-      question?.type === QuestionType.MultipleAnswer ||
-      (question as any)?.multipleAnswer ||
-      ((question?.options?.filter(o => isOptionCorrect(o)).length ?? 0) > 1);
+    return resolveIsMultiAnswer(
+      question,
+      ctx.type === 'multiple' ||
+        (question as any)?.multipleAnswer ||
+        ((question?.options?.filter(o => isOptionCorrect(o)).length ?? 0) > 1)
+    );
   }
 
   private buildFeedbackProps(
@@ -571,7 +576,12 @@ export class SharedOptionFeedbackService {
         correctIndicesArr = result.correctIndices;
       }
 
-      const effectiveMultiMode = ctx.isMultiMode || ctx.type === 'multiple' || correctIndicesArr.length > 1;
+      // Type from the declared type; correctIndicesArr stays as correctness.
+      // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
+      const effectiveMultiMode = resolveIsMultiAnswer(
+        ctx.currentQuestion ?? this.getQuestionAtDisplayIndex(qIdx),
+        ctx.isMultiMode || ctx.type === 'multiple' || correctIndicesArr.length > 1
+      );
       const durableSelected = ctx._multiSelectByQuestion.get(qIdx);
 
       if (effectiveMultiMode && durableSelected && durableSelected.size > 0 && correctIndicesArr.length > 0) {

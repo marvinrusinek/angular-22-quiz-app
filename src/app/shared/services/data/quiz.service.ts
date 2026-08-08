@@ -1,6 +1,6 @@
 ﻿import { inject, Injector, Service, signal, WritableSignal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { BehaviorSubject, from, Observable, of, Subject } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, from, Observable, of, Subject } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 
 import { QuizStatus } from '../../models/quiz-status.enum';
@@ -456,11 +456,42 @@ export class QuizService {
   }
 
   async fetchQuizQuestions(quizId: string): Promise<QuizQuestion[]> {
+    // Ask the API what TYPE each question is before anything renders. The local
+    // bank declares `type` on none of its questions, so every consumer that
+    // checks `question.type` has been falling through to counting correct
+    // options — which makes question type an answer-key derivative. Loading
+    // here, at the one place questions are materialised, fixes that for all of
+    // them at once.
+    //
+    // Deliberately not fatal: this is a TRANSITIONAL slice and type is not
+    // correctness, so an unreachable API must leave the quiz playable on the
+    // existing count-based fallback. That stops being true at the /questions
+    // content cutover, when a failed load means there are no questions at all.
+    // Resolved lazily, like the load at `setQuizData` — a constructor-injected
+    // registry would drag its HTTP stack into QuizService's own construction.
+    let registry: TopicQuizTypeRegistry | null = null;
+    let typesLoaded: Promise<unknown> = Promise.resolve();
+    try {
+      registry = this.injector.get(TopicQuizTypeRegistry, null);
+      if (registry) {
+        // `load` is cached per quiz, so this rides on the in-flight request the
+        // setQuizData path already started rather than issuing a second one.
+        typesLoaded = firstValueFrom(registry.load(quizId)).catch(() => undefined);
+      }
+    } catch (err: unknown) { swallow('quiz.service.ts type-registry load', err); }
+
     const questions = await this.dataLoader.fetchQuizQuestions(
       quizId,
       this.questionsSig,
       (qs) => { this._questions = qs; }
     );
+
+    // Awaited, unlike the fire-and-forget load at setQuizData: stamping after
+    // the questions render would leave the first question mid-flight on the
+    // count-based fallback, which is the race this slice exists to close.
+    await typesLoaded;
+    registry?.applyDeclaredTypes(questions);
+
     this.quizId = quizId;
     this.totalQuestions.set(questions.length);
     return questions;

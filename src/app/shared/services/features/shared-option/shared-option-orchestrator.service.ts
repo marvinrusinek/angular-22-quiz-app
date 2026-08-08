@@ -9,6 +9,7 @@ import { FeedbackContext } from './shared-option-feedback.service';
 
 import type { SharedOptionComponent } from '../../../../components/question/answer/shared-option-component/shared-option.component';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
 import { norm } from '../../../utils/text-norm';
 
 type Host = SharedOptionComponent;
@@ -105,6 +106,19 @@ export class SharedOptionOrchestratorService {
     // Always resolve the display-order question for this index
     const currentQ = host.getQuestionAtDisplayIndex(idx) ?? host.currentQuestion();
 
+    // DECLARED TYPE FIRST. The whole fingerprint dance below exists only to
+    // count correct options in the local bank, which is the answer key. When
+    // the API has typed this question there is nothing to infer, and the
+    // fingerprint's failure modes (stale currentQuestion, option-text drift)
+    // stop mattering entirely.
+    const declaredMulti = declaredIsMultiAnswer(currentQ);
+    if (declaredMulti !== null) {
+      host._isMultiModeCache = declaredMulti;
+      return declaredMulti;
+    }
+
+    // REMOVE IN /questions CONTENT CUTOVER — everything below is the fallback
+    // for questions the API has not typed.
     // PRISTINE-FIRST via OPTION-TEXT FINGERPRINT.
     // Question-text matching can fail (currentQuestion may be null/stale at
     // initial render). Match by the option-text fingerprint instead â€” it

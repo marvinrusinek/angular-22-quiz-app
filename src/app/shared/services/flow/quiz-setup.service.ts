@@ -34,6 +34,7 @@ import { QUESTION_ROUTE_REGEX } from '../../constants/route-patterns';
 import { isOptionCorrect } from '../../utils/is-option-correct';
 import { reportError, swallow } from '../../utils/error-logging';
 import { norm } from '../../utils/text-norm';
+import { resolveIsMultiAnswer } from '../../utils/question-type-authority';
 
 type Host = QuizComponent;
 
@@ -298,7 +299,11 @@ export class QuizSetupService {
     const correctCount = (authQ?.options ?? []).filter(
       (o: any) => isOptionCorrect(o)
     ).length;
-    const isMultiAnswer = correctCount > 1 || this.quizService.multipleAnswer;
+    // Declared type wins; the count is the REMOVE IN /questions CONTENT
+    // CUTOVER fallback for questions the API has not typed yet.
+    const isMultiAnswer = resolveIsMultiAnswer(
+      authQ, correctCount > 1 || this.quizService.multipleAnswer
+    );
 
     let clickedIsCorrectForFET = false;
     if (!isMultiAnswer) {
@@ -508,7 +513,8 @@ subscribeToTimerExpiry(host: Host): void {
 
     const rawQ = this.resolveDisplayQuestion(qIdx);
     const { correctCount, correctTexts } = this.resolveCorrectInfo(rawQ);
-    const isMultiAnswer = correctCount > 1;
+    // REMOVE IN /questions CONTENT CUTOVER: `correctCount > 1` is the fallback.
+    const isMultiAnswer = resolveIsMultiAnswer(rawQ, correctCount > 1);
 
     // Single-answer: only show the FET once the question is scored correct.
     if (!isMultiAnswer && !this.resolveScoredCorrect(qIdx)) {

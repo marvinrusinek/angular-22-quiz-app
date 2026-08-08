@@ -10,6 +10,7 @@ import { QuizQuestion } from '../../../models/QuizQuestion.model';
 import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
 import { norm } from '../../../utils/text-norm';
 
 /**
@@ -141,7 +142,13 @@ export class OptionClickHandlerService {
 
     const correctIndices = fromPristine.length > 0 ? fromPristine : (fromRaw.length > 0 ? fromRaw : fromCurrentQ);
     const correctCount = correctIndices.length;
-    const isMultiMode = isMultiModeFromComponent || typeFromComponent === 'multiple' || correctCount > 1;
+    // `correctIndices`/`correctCount` are still the answer key and stay as they
+    // are — this migration only stops TYPE being derived from them.
+    const declared = declaredIsMultiAnswer(question);
+    const isMultiMode = declared !== null
+      ? declared
+      // REMOVE IN /questions CONTENT CUTOVER.
+      : (isMultiModeFromComponent || typeFromComponent === 'multiple' || correctCount > 1);
 
     return { correctIndices, correctCount, isMultiMode };
   }

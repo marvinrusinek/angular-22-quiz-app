@@ -19,6 +19,7 @@ import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { SelectionMessageService } from '../../features/selection-message/selection-message.service';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
 import { norm } from '../../../utils/text-norm';
 import { swallow } from '../../../utils/error-logging';
 
@@ -109,6 +110,13 @@ export class OptionUiSyncService {
     const _rawCob = ctx.optionBindings as any;
     const _cob: any[] = typeof _rawCob === 'function' ? (_rawCob() ?? []) : (_rawCob ?? []);
     const correctCountInBindings = _cob.filter((b: any) => isCorrectHelper(b.option)).length;
+    // DECLARED TYPE FIRST — no counting, and no guessing from the wording of
+    // the question text either. The heuristics below are all proxies for a
+    // fact the API now states outright.
+    const declared = declaredIsMultiAnswer((ctx as any).currentQuestion);
+    if (declared !== null) return declared;
+
+    // REMOVE IN /questions CONTENT CUTOVER — everything below is the fallback.
     // Canonical fallback: when binding flags are stale/missing, recover
     // the correct count from quizInitialState (pristine source). Use the
     // higher of the two so single-answer detection isn't weakened.

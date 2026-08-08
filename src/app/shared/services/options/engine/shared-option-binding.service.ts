@@ -18,6 +18,7 @@ import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 
 import { feedbackAnchorMatches } from '../../../utils/feedback-anchor';
+import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { norm } from '../../../utils/text-norm';
 
@@ -1055,16 +1056,21 @@ export class SharedOptionBindingService {
 
     const qIdx = comp.getActiveQuestionIndex();
 
+    const feedbackQ = comp.currentQuestion() ?? comp.getQuestionAtDisplayIndex(qIdx);
+
     let correctIndicesArr: number[] = comp._correctIndicesByQuestion?.get(qIdx) ?? [];
     if (correctIndicesArr.length === 0) {
-      const feedbackQ = comp.currentQuestion() ?? comp.getQuestionAtDisplayIndex(qIdx);
       const result = this.clickHandler.resolveCorrectIndices(
         feedbackQ, qIdx, comp.isMultiMode, comp.type
       );
       correctIndicesArr = result.correctIndices;
     }
 
-    const effectiveMultiMode = comp.isMultiMode || comp.type === 'multiple' || correctIndicesArr.length > 1;
+    // Type from the declared type; correctIndicesArr stays as correctness.
+    // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
+    const effectiveMultiMode = resolveIsMultiAnswer(
+      feedbackQ, comp.isMultiMode || comp.type === 'multiple' || correctIndicesArr.length > 1
+    );
     const durableSelected = comp._multiSelectByQuestion?.get(qIdx);
 
     if (effectiveMultiMode && durableSelected && durableSelected.size > 0 && correctIndicesArr.length > 0) {

@@ -6,6 +6,8 @@ import {
   TopicQuizQuestionsService,
   type TopicQuizQuestionType
 } from './topic-quiz-questions.service';
+import { QuestionType } from '../../models/question-type.enum';
+import type { QuizQuestion } from '../../models/QuizQuestion.model';
 
 /**
  * Authorized question TYPE for the current Topic Quiz, from the API.
@@ -114,6 +116,46 @@ export class TopicQuizTypeRegistry {
     if (type === null) return null;
     // trueFalse is a single-selection question wearing a label.
     return type === 'multiple';
+  }
+
+  /**
+   * The declared type as the app's own `QuestionType`, or null when unknown.
+   *
+   * `trueFalse` stays DISTINCT here. Collapsing it into single-answer at this
+   * boundary would destroy the only place the distinction survives — consumers
+   * that genuinely only care about selection cardinality can ask
+   * `isMultiAnswer` instead, which is a narrower question.
+   */
+  questionTypeOf(questionText: string | null | undefined): QuestionType | null {
+    switch (this.typeOf(questionText)) {
+      case 'multiple': return QuestionType.MultipleAnswer;
+      case 'trueFalse': return QuestionType.TrueFalse;
+      case 'single': return QuestionType.SingleAnswer;
+      default: return null;
+    }
+  }
+
+  /**
+   * Stamp the declared type onto questions that came from the local bank.
+   *
+   * This is the leverage point for the whole slice. Roughly fifteen consumers
+   * already ask `question.type === QuestionType.MultipleAnswer` and only fall
+   * back to counting correct options when that is unset — and the local bank
+   * sets it on none of its 185 questions, so the fallback always won. Filling
+   * the field in at the source makes those consumers authoritative without
+   * touching them.
+   *
+   * Matching is by question TEXT, never by index, so shuffling cannot hand a
+   * question its neighbour's type. A question the registry does not know is
+   * left alone rather than defaulted.
+   */
+  applyDeclaredTypes(questions: readonly QuizQuestion[] | null | undefined): void {
+    if (!Array.isArray(questions) || this.types.size === 0) return;
+
+    for (const question of questions) {
+      const declared = this.questionTypeOf(question?.questionText);
+      if (declared !== null) question.type = declared;
+    }
   }
 
   /** Leaving the quiz. Types are per-quiz and must not leak across them. */

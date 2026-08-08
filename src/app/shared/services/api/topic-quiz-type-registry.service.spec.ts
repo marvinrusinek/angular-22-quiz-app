@@ -183,8 +183,15 @@ describe('lifecycle', () => {
     expect(stored).toEqual(['multiple']);
     expect(JSON.stringify(stored)).not.toContain('LEAKED');
 
-    // And the public surface offers no way to ask for anything else.
+    // And the public surface offers no way to ask for anything else. Every
+    // name here answers "what TYPE is this question?" in some form —
+    // `applyDeclaredTypes` writes the type onto locally-loaded questions and
+    // `questionTypeOf` returns it as the app's enum. If a name ever appears
+    // that could return options, correctness or an explanation, this fails.
     expect(Object.getOwnPropertyNames(Object.getPrototypeOf(registry)).sort())
-      .toEqual(['clear', 'constructor', 'isMultiAnswer', 'key', 'load', 'typeOf']);
+      .toEqual([
+        'applyDeclaredTypes', 'clear', 'constructor', 'isMultiAnswer',
+        'key', 'load', 'questionTypeOf', 'typeOf'
+      ]);
   });
 });

@@ -8,6 +8,7 @@ import { QuizQuestion } from '../../models/QuizQuestion.model';
 
 import { ExplanationTextService } from '../features/explanation/explanation-text.service';
 import { QuizDataService } from '../data/quizdata.service';
+import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
 import { QuizService } from '../data/quiz.service';
 
 /**
@@ -19,6 +20,7 @@ export class QuizQuestionDataService {
   // ── injects ─────────────────────────────────────────────────────
   private explanationTextService = inject(ExplanationTextService);
   private quizDataService = inject(QuizDataService);
+  private topicQuizTypeRegistry = inject(TopicQuizTypeRegistry);
   private quizService = inject(QuizService);
 
   // ── public methods ──────────────────────────────────────────────
@@ -63,10 +65,15 @@ export class QuizQuestionDataService {
         resolvedQuestion.explanation?.trim()
       ) explanation = resolvedQuestion.explanation.trim();
 
+      // This builds a FRESH question object, so there is no stamped type to
+      // read — ask the registry by text instead. Without this the manufactured
+      // type would overwrite the declared one for every question built here.
+      // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
       const correctCount = options.filter((opt: Option) => opt.correct).length;
       const type =
-        correctCount > 1
-          ? QuestionType.MultipleAnswer : QuestionType.SingleAnswer;
+        this.topicQuizTypeRegistry.questionTypeOf(trimmedText) ??
+        (correctCount > 1
+          ? QuestionType.MultipleAnswer : QuestionType.SingleAnswer);
 
       const question: QuizQuestion = {
         questionText: trimmedText,

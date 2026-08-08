@@ -14,6 +14,7 @@ import { QuizShuffleService } from '../../flow/quiz-shuffle.service';
 import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { SelectionMessageService } from '../selection-message/selection-message.service';
+import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { norm } from '../../../utils/text-norm';
 
@@ -97,9 +98,13 @@ export class QqcOptionClickOrchestratorService {
   isMultiForSelection(question: QuizQuestion | undefined): boolean {
     if (!question) return false;
 
-    const typeMatch = question.type === QuestionType.MultipleAnswer;
-    const correctCount = (question.options?.filter((o: any) => isOptionCorrect(o)).length ?? 0);
-    return (typeMatch || correctCount > 1);
+    // A declared type decides alone. As an OR arm it did not: the local bank's
+    // flags could still promote a declared single-answer question to multiple.
+    const declared = declaredIsMultiAnswer(question);
+    if (declared !== null) return declared;
+
+    // REMOVE IN /questions CONTENT CUTOVER.
+    return (question.options?.filter((o: any) => isOptionCorrect(o)).length ?? 0) > 1;
   }
 
   /**

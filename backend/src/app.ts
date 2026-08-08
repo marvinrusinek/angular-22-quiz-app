@@ -93,7 +93,24 @@ function buildCorsOptions(config: AppConfig): CorsOptions {
       callback(null, allowed.has(origin));
     },
     methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    // The two Topic Quiz receipt headers must be listed explicitly.
+    //
+    // A custom request header makes the request non-simple, so the browser
+    // sends a CORS PREFLIGHT first and refuses the real request unless the
+    // header is named in Access-Control-Allow-Headers. Omitting them meant
+    // POST /questions/start and POST /check never left the browser — no
+    // response, no server log, and an error Angular could only report as a
+    // generic failure. POST /attempts kept working precisely because it sends
+    // no custom header, which is what made the defect look like a client bug.
+    //
+    // Named individually rather than widened: these are the only two custom
+    // headers the API accepts.
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Attempt-Receipt',
+      'X-Question-Receipt'
+    ],
     credentials: false,
     maxAge: 600
   };

@@ -33,6 +33,16 @@ import { API_BASE_URL } from '../../../tokens/api-base-url.token';
  * change-detection pass — from restarting a question's 30 seconds. The server
  * is stateless, so it would happily issue a fresh deadline; not asking for one
  * is the client's responsibility.
+ *
+ * ── Deadlines live on the CLIENT clock ─────────────────────────────
+ *
+ * The server sends `startedAt`/`expiresAt` on its own clock. Subtracting those
+ * from `Date.now()` would silently bake in whatever the two clocks disagree
+ * by — and a client running fast would time out BEFORE the signed deadline,
+ * which is the exact failure this whole mechanism exists to prevent. So the
+ * server's DURATION is anchored to the local instant the response settled:
+ * the countdown then ends one network round-trip AFTER the server's deadline,
+ * never before it, whatever the clocks think. No tolerance is added.
  */
 @Service()
 export class TopicQuizAttemptService {
@@ -45,8 +55,8 @@ export class TopicQuizAttemptService {
   /** Shared so concurrent first-renders produce ONE attempt, not several. */
   private attempt$: Observable<string> | null = null;
 
-  /** Canonical question text → in-flight or settled receipt request. */
-  private readonly questionReceipts = new Map<string, Observable<string>>();
+  /** Canonical question text → in-flight or settled activation. */
+  private readonly questionReceipts = new Map<string, Observable<QuestionActivation>>();
 
   /**
    * Match the server's canonicalization closely enough to key the cache.
@@ -106,7 +116,7 @@ export class TopicQuizAttemptService {
    * receipt, so the question's deadline is not pushed forward by navigating
    * away and back.
    */
-  questionReceipt(quizId: string, questionText: string): Observable<string> {
+  private activation(quizId: string, questionText: string): Observable<QuestionActivation> {
     this.ensureQuiz(quizId);
 
     const key = this.cacheKey(questionText);
@@ -115,13 +125,19 @@ export class TopicQuizAttemptService {
 
     const request$ = this.attemptReceipt(quizId).pipe(
       switchMap((attemptReceipt) =>
-        this.http.post<{ questionReceipt: string }>(
+        this.http.post<QuestionStartResponse>(
           `${this.baseUrl(quizId)}/questions/start`,
           { questionText },
           { headers: { 'X-Attempt-Receipt': attemptReceipt } }
         )
       ),
-      map((body) => body.questionReceipt),
+      map((body) => ({
+        receipt: body.questionReceipt,
+        // Anchor the server's duration to the local clock at arrival. See the
+        // class docblock: this is what keeps the countdown from ending early
+        // when the two clocks disagree.
+        deadlineMs: Date.now() + Math.max(0, body.expiresAt - body.startedAt)
+      })),
       catchError((err: unknown) => {
         // A failed start must not poison the cache — the next attempt to
         // activate this question should be able to try again.
@@ -138,13 +154,18 @@ export class TopicQuizAttemptService {
   }
 
   /**
-   * Activate a question so its timer deadline exists server-side.
+   * Activate a question and report WHEN it expires, on the local clock.
    *
-   * Separate from `questionReceipt` only for readability at the call site: the
-   * caller wants "start this question", not "give me a credential".
+   * The receipt itself stays inside this service — the timer only needs the
+   * deadline, and handing out a credential to something that will not send it
+   * anywhere is how credentials end up logged. A revisit replays the original
+   * deadline rather than issuing a new one, so navigating away and back cannot
+   * buy more time.
    */
-  startQuestion(quizId: string, questionText: string): Observable<void> {
-    return this.questionReceipt(quizId, questionText).pipe(map(() => undefined));
+  startQuestion(quizId: string, questionText: string): Observable<QuestionTiming> {
+    return this.activation(quizId, questionText).pipe(
+      map(({ deadlineMs }) => ({ deadlineMs }))
+    );
   }
 
   /** True when this question already has a receipt. Used by tests and guards. */
@@ -170,10 +191,28 @@ export class TopicQuizAttemptService {
     questionText: string,
     project: (headers: Record<string, string>) => Observable<T>
   ): Observable<T> {
-    return this.questionReceipt(quizId, questionText).pipe(
-      switchMap((receipt) => project({ 'X-Question-Receipt': receipt }))
+    return this.activation(quizId, questionText).pipe(
+      switchMap(({ receipt }) => project({ 'X-Question-Receipt': receipt }))
     );
   }
+}
+
+/** What `/questions/start` sends back. `questionReceipt` never leaves the service. */
+interface QuestionStartResponse {
+  readonly questionReceipt: string;
+  readonly startedAt: number;
+  readonly expiresAt: number;
+}
+
+/** Cached per question: the credential plus its local-clock deadline. */
+interface QuestionActivation {
+  readonly receipt: string;
+  readonly deadlineMs: number;
+}
+
+/** The only part of an activation a caller is allowed to see. */
+export interface QuestionTiming {
+  readonly deadlineMs: number;
 }
 
 /** Re-exported so specs can assert the endpoints without duplicating strings. */

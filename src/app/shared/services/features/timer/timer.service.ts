@@ -136,11 +136,76 @@ export class TimerService implements OnDestroy {
     }
   }
 
+  /**
+   * Display index → the local-clock instant this question's signed deadline
+   * expires, as authorized by its question receipt.
+   *
+   * Deliberately plain data: the deadline is PUSHED in by QuestionTimingService
+   * once the receipt lands, so this service never has to know that receipts, or
+   * an API, exist. Without an entry here `restartForQuestion` starts nothing —
+   * a countdown that no server agreed to cannot authorize a timeout reveal, and
+   * an unsigned one is exactly how the client used to time out ~30s early.
+   */
+  private readonly _deadlineByQuestion = new Map<number, number>();
+
+  /** Records the signed deadline for a question. Does not start anything. */
+  public setAuthorizedDeadline(questionIndex: number, deadlineMs: number): void {
+    if (questionIndex == null || questionIndex < 0) return;
+    this._deadlineByQuestion.set(questionIndex, deadlineMs);
+  }
+
+  /** True once this question has a signed deadline to count down to. */
+  public hasAuthorizedDeadline(questionIndex: number): boolean {
+    return this._deadlineByQuestion.has(questionIndex);
+  }
+
+  /** New attempt / new quiz: yesterday's deadlines authorize nothing. */
+  public clearAuthorizedDeadlines(): void {
+    this._deadlineByQuestion.clear();
+  }
+
+  /**
+   * Count down to a signed deadline rather than to a locally-invented 30s.
+   *
+   * The remaining time is whatever is genuinely left, so a revisit resumes
+   * where it was instead of restarting — the tick loop still counts elapsed
+   * upward, it just starts partway in.
+   */
+  public startTimerUntil(deadlineMs: number): void {
+    const remainingSeconds = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000));
+
+    if (remainingSeconds <= 0) {
+      this.expireImmediately();
+      return;
+    }
+
+    const alreadyElapsed = Math.max(0, this.timePerQuestion - remainingSeconds);
+    this.startTimer(this.timePerQuestion, this.isCountdown(), true, alreadyElapsed);
+  }
+
+  /**
+   * A question returned to after its deadline passed. It does not get a fresh
+   * countdown — it is already over, so announce that and let the normal
+   * authorized timeout path run.
+   */
+  private expireImmediately(): void {
+    if (this.timerSubscription) {
+      this.timerSubscription.unsubscribe();
+      this.timerSubscription = null;
+    }
+    this.isTimerRunning = false;
+    this.elapsedTimeSig.set(this.timePerQuestion);
+    this.hasExpiredForRun = true;
+    this.expiredForQuestionIndexSig.set(this.quizService.currentQuestionIndex);
+    this.expiredSubject.next();
+  }
+
   // Starts the timer
   startTimer(
     duration: number = this.timePerQuestion,
     isCountdown: boolean = true,
-    forceRestart: boolean = false
+    forceRestart: boolean = false,
+    startAtElapsedSeconds: number = 0
   ): void {
     if (this.isTimerStoppedForCurrentQuestion && !forceRestart) return;
 
@@ -171,14 +236,16 @@ export class TimerService implements OnDestroy {
     this.isTimerRunning = true;  // mark timer as running
     this.hasExpiredForRun = false;
 
-    // Show initial value immediately
-    this.elapsedTimeSig.set(0);
+    // Show initial value immediately. Non-zero when resuming a question whose
+    // signed deadline is already partly spent.
+    const offset = Math.max(0, Math.min(duration, startAtElapsedSeconds));
+    this.elapsedTimeSig.set(offset);
 
     // Start ticking after 1s so the initial value stays visible for a second
     const timer$ = timer(1000, 1000).pipe(
       tap((tick) => {
         // Tick starts at 0 after 1s â†’ elapsed = tick + 1 (1,2,3,â€¦)
-        const elapsed = tick + 1;
+        const elapsed = offset + tick + 1;
 
         this.elapsedTimeSig.set(elapsed);
 
@@ -479,7 +546,15 @@ export class TimerService implements OnDestroy {
     this.stopTimer?.(undefined, { force: true });
     this.resetTimer();
     this.resetTimerFlagsFor(questionIndex);
-    this.startTimer(this.timePerQuestion, this.isCountdown(), true);
+
+    // No signed deadline yet — show 0 and wait. QuestionTimingService calls
+    // back the moment the receipt lands. Starting a local 30s here instead is
+    // what used to make the client time out before the server's deadline, so
+    // the reveal it triggered was rejected as `incomplete`.
+    const deadlineMs = this._deadlineByQuestion.get(questionIndex);
+    if (deadlineMs == null) return;
+
+    this.startTimerUntil(deadlineMs);
   }
 
   // Freeze the timer at the time recorded when the question was answered, so a

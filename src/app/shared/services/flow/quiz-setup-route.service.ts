@@ -19,6 +19,7 @@ import { QuizService } from '../data/quiz.service';
 import { QuizStateService } from '../state/quizstate.service';
 import { SelectedOptionService } from '../state/selectedoption.service';
 import { SelectionMessageService } from '../features/selection-message/selection-message.service';
+import { QuestionTimingService } from '../features/timer/question-timing.service';
 import { TimerService } from '../features/timer/timer.service';
 
 import type { QuizComponent } from '../../../containers/quiz/quiz.component';
@@ -37,6 +38,7 @@ export class QuizSetupRouteService {
   // ── injects ─────────────────────────────────────────────────────
   private dotStatusService = inject(QuizDotStatusService);
   private nextButtonStateService = inject(NextButtonStateService);
+  private questionTimingService = inject(QuestionTimingService);
   private quizContentLoaderService = inject(QuizContentLoaderService);
   private quizNavigationService = inject(QuizNavigationService);
   private quizPersistence = inject(QuizPersistenceService);
@@ -329,9 +331,17 @@ export class QuizSetupRouteService {
       if (!result.success || !result.question) return;
       host.currentQuestionIndex.set(result.questionIndex);
       this.timerService.resetTimer();
-      this.timerService.startTimer(this.timerService.timePerQuestion, this.timerService.isCountdown(), true);
       this.resetFeedbackState(host);
       host.currentQuestion.set(result.question);
+
+      // Timing is requested only once the question is installed, because the
+      // freeze/start decision reads the active question's answered state. The
+      // countdown itself begins when the signed deadline arrives — never from
+      // a local 30s guess started here.
+      this.questionTimingService.activateQuestionTiming(
+        host.quizId(), result.question.questionText, result.questionIndex
+      );
+
       host.combinedQuestionData.set({
         question: result.question, options: result.question.options ?? [], explanation: result.question.explanation ?? ''
       });

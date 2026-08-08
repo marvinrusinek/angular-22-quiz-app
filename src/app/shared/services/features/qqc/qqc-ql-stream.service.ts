@@ -13,6 +13,7 @@ import { Quiz } from '../../../models/Quiz.model';
 import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
 import { ExplanationTextService } from '../explanation/explanation-text.service';
+import { QuestionTimingService } from '../timer/question-timing.service';
 import { QuizDataService } from '../../data/quizdata.service';
 import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
 import { QuizService } from '../../data/quiz.service';
@@ -42,6 +43,7 @@ export class QqcQlStreamService {
   private readonly resetStateService = inject(ResetStateService);
   private readonly selectedOptionService = inject(SelectedOptionService);
   private readonly selectionMessageService = inject(SelectionMessageService);
+  private readonly questionTimingService = inject(QuestionTimingService);
   private readonly timerService = inject(TimerService);
   private readonly router = inject(Router);
 
@@ -254,6 +256,14 @@ export class QqcQlStreamService {
     this.currentQuestionIndex = index;
 
     const explanation = q.explanation?.trim() || 'No explanation available';
+
+    // Ask for this question's signed deadline before anything downstream can
+    // render it. Idempotent per question, so arriving here after the direct
+    // route already activated the same question replays the same deadline
+    // rather than granting a second one.
+    this.questionTimingService.activateQuestionTiming(
+      this.activeQuizId, q.questionText, index
+    );
 
     this.emitQaPayload(q, cloned, index, explanation);
 
@@ -580,9 +590,15 @@ export class QqcQlStreamService {
     const answeredCorrectly =
       this.selectedOptionService.clickConfirmedDotStatus?.get?.(idx) === 'correct';
 
-    this.timerService.stopTimer?.(undefined, { force: true });
-    this.timerService.resetTimer();
-    this.timerService.resetTimerFlagsFor(idx);
+    // Only the answered branches touch the timer here. An unanswered question's
+    // countdown belongs to QuestionTimingService, which may already have
+    // started it from the signed deadline — stopping and resetting it on the
+    // way past would silently throw that away.
+    if (isAnswered || answeredCorrectly) {
+      this.timerService.stopTimer?.(undefined, { force: true });
+      this.timerService.resetTimer();
+      this.timerService.resetTimerFlagsFor(idx);
+    }
 
     if (isAnswered) {
       explanationText = q.explanation?.trim() || 'No explanation available';
@@ -604,13 +620,10 @@ export class QqcQlStreamService {
     } else if (isAnswered) {
       // Answered but not correct (e.g. wrong single-answer): keep stopped.
       this.timerService.isTimerRunning = false;
-    } else {
-      this.timerService.startTimer(
-        this.timerService.timePerQuestion,
-        this.timerService.isCountdown(),
-        true
-      );
     }
+    // Unanswered: QuestionTimingService owns the start, so there is nothing to
+    // do. A local 30s start here would beat the signed deadline and time out
+    // before the server's window opened.
 
     this.setQuestionDetails(q.questionText.trim(), opts, explanationText);
 

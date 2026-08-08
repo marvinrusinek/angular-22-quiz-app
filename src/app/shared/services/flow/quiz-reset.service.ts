@@ -6,6 +6,7 @@ import { ExplanationTextService } from '../features/explanation/explanation-text
 import { NextButtonStateService } from '../state/next-button-state.service';
 import { OptionLockStateService } from '../state/option-lock-state.service';
 import { QqcQuestionLoaderService } from '../features/qqc/qqc-question-loader.service';
+import { QuestionTimingService } from '../features/timer/question-timing.service';
 import { QuizDotStatusService } from './quiz-dot-status.service';
 import { QuizPersistenceService } from '../state/quiz-persistence.service';
 import { QuizService } from '../data/quiz.service';
@@ -29,6 +30,7 @@ export class QuizResetService {
   private explanationTextService = inject(ExplanationTextService);
   private nextButtonStateService = inject(NextButtonStateService);
   private optionLockState = inject(OptionLockStateService);
+  private questionTimingService = inject(QuestionTimingService);
   private quizPersistence = inject(QuizPersistenceService);
   private quizQuestionLoaderService = inject(QqcQuestionLoaderService);
   private quizService = inject(QuizService);
@@ -66,14 +68,10 @@ export class QuizResetService {
 
     queueMicrotask(() => {
       this.quizStateService.setInteractionReady(true);
-      requestAnimationFrame(() => {
-        this.timerService.resetTimer();
-        this.timerService.startTimer(
-          this.timerService.timePerQuestion,
-          this.timerService.isCountdown(),
-          true
-        );
-      });
+      // Reset only. The restart routes to question 1, which activates through
+      // the normal question path and starts its own signed countdown; a local
+      // start here would be a second, unauthorized timing authority racing it.
+      requestAnimationFrame(() => this.timerService.resetTimer());
     });
 
     queueMicrotask(postBindingCallback);
@@ -214,6 +212,9 @@ export class QuizResetService {
     this.explanationTextService.resetExplanationState();
     this.selectedOptionService.clearAllSelectionsForQuiz(routeQuizId);
 
+    // Deadlines are keyed by question index, which means nothing across quizzes.
+    this.questionTimingService.clearTiming();
+
     try {
       localStorage.removeItem(SK_SHUFFLED_QUESTIONS);
       localStorage.removeItem(SK_USER_ANSWERS);
@@ -239,6 +240,12 @@ export class QuizResetService {
   ): void {
     this.quizService.resetAll();
     this.quizService.resetScore();
+
+    // A restart is a NEW attempt, not a redisplay: every answer, dot and
+    // progress record is about to be discarded. The old signed deadlines go
+    // with them, so question 1 is genuinely started again rather than resumed
+    // against a window that has been counting down since the first run.
+    this.questionTimingService.clearTiming();
 
     // Clear per-question option/question locks — otherwise a previously-
     // locked incorrect option/question (e.g. Q2 answered incorrectly before

@@ -197,7 +197,26 @@ export class SelectedOptionService {
       // the service already records an `error` phase for callers that care.
       this.verdicts
         .checkAnswer(quizId, questionText, [...texts])
-        .subscribe({ error: () => { /* last confirmed state is retained */ } });
+        .subscribe({
+          next: (result) => {
+            // CREDIT ON ARRIVAL. Click-time scoring cannot decide a
+            // multi-answer question under the API adapter — the check is still
+            // in flight — so it defers and the point is applied here, where the
+            // authorized verdict actually lands.
+            //
+            // This subscription is used rather than an Angular effect because
+            // it provably runs: an effect in QuizScoringService was tried and
+            // silently never scheduled in this zoneless app.
+            //
+            // Only resolved-CORRECT credits: `resolved` alone is not enough
+            // (a single-answer question resolves on a wrong click too), and
+            // the credit itself is idempotent per question.
+            if (result?.status === 'resolved' && result.correct === true) {
+              this.quizService?.scoringService?.creditResolvedQuestion(quizId, questionText);
+            }
+          },
+          error: () => { /* last confirmed state is retained */ }
+        });
     } catch (err: unknown) {
       swallow('selectedoption.service#submitToVerdictService', err);
     }

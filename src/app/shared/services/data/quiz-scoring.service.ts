@@ -116,8 +116,58 @@ export class QuizScoringService {
       correctAnswerFound, quizId, isMultipleAnswer, qIndex, scoringKey
     );
 
+    // DEFERRED: no verdict decision yet. Writing here would record a guess.
+    if (isNowCorrect === null) return;
+
     this.applyCorrectnessUpdate(scoringKey, isNowCorrect, wasCorrect);
     this.saveQuestionCorrectness();
+  }
+
+  /**
+   * Credit ONE question whose verdict has resolved correct.
+   *
+   * The reactive half of scoring. Click-time scoring can only decide when the
+   * verdict is already terminal, and under the API adapter it never is — the
+   * check is still in flight. So the completing click defers and this applies
+   * the point when the authorized verdict actually lands.
+   *
+   * Called from the EXISTING subscription in
+   * `SelectedOptionService.submitToVerdictService`, which is the one place
+   * guaranteed to run when the response arrives. An Angular `effect` was tried
+   * first and never scheduled in this zoneless app, which is exactly the
+   * failure mode this avoids: a reaction that silently never runs.
+   *
+   * IDEMPOTENT by construction — it credits only when `questionCorrectness`
+   * does not already record `true` for the scoring key, and that map is the
+   * same ledger click-time scoring writes. There is no second score store, so
+   * a replayed verdict, a revisit or a re-render cannot double-count.
+   */
+  creditResolvedQuestion(quizId: string, questionText: string): void {
+    if (!quizId || !questionText) return;
+
+    try {
+      const quizService = this.injector.get(QuizService, null) as any;
+      const displayOrder = quizService?.getQuestionsInDisplayOrder?.() ?? [];
+      if (!Array.isArray(displayOrder) || displayOrder.length === 0) return;
+
+      // Identity is question TEXT, resolved to a DISPLAY index. A source index
+      // would credit the wrong question once the order is shuffled.
+      const target = norm(questionText);
+      const displayIndex = displayOrder.findIndex(
+        (q: any) => norm(q?.questionText ?? '') === target
+      );
+      if (displayIndex < 0) return;
+
+      const shouldShuffle = quizService?.isShuffleEnabled?.() === true;
+      const scoringKey = this.resolveScoringKey(displayIndex, shouldShuffle, quizId);
+
+      if (this.questionCorrectness.get(scoringKey) === true) return;   // already credited
+
+      this.applyCorrectnessUpdate(scoringKey, true, false);
+      this.saveQuestionCorrectness();
+    } catch (err: unknown) {
+      swallow('quiz-scoring.service.ts creditResolvedQuestion', err);
+    }
   }
 
   // Scoring Key Resolution — Strict Shuffle Guard: only use the shuffle-service
@@ -212,7 +262,7 @@ export class QuizScoringService {
     isMultipleAnswer: boolean,
     qIndex: number,
     scoringKey: number
-  ): boolean {
+  ): boolean | null {
     let isNowCorrect = correctAnswerFound;  // simplified
     if (isNowCorrect && quizId && isMultipleAnswer) {
       // Union the confirmed correct clicks with the cross-visit UI selection
@@ -230,10 +280,16 @@ export class QuizScoringService {
       // Keyed by qIndex (DISPLAY) — scoringKey is a SOURCE index under shuffle.
       const fromVerdict = this.multiAnswerCompleteFromVerdict(quizId, qIndex);
 
-      // No verdict for a multi-answer question means it was never judged
-      // complete, so it must not increment. The local scan that used to run
-      // here is gone — it decided completion by comparing the selection
-      // against the BANK's correct set rather than the server's.
+      // NON-TERMINAL MEANS DEFER, NOT REJECT.
+      //
+      // Under the API adapter the check is in flight at click time, so this
+      // reads `checking` and gets null. Treating that as "not complete" is what
+      // dropped the completing click's credit: false was written and nothing
+      // revisited it when the response arrived. Null now means "no decision
+      // yet" — incrementScore writes nothing, and creditResolvedQuestion()
+      // applies the point from the response subscription.
+      if (fromVerdict === null) return null;
+
       if (!fromVerdict) isNowCorrect = false;
       return isNowCorrect;
     }

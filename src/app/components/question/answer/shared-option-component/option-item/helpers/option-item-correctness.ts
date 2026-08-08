@@ -1,10 +1,8 @@
-import { Option } from '../../../../../../shared/models/Option.model';
 import { OptionBindings } from '../../../../../../shared/models/OptionBindings.model';
 
 import { QuizService } from '../../../../../../shared/services/data/quiz.service';
 import type { QuestionVerdictService } from '../../../../../../shared/services/features/verdict/question-verdict.service';
 
-import { isOptionCorrect } from '../../../../../../shared/utils/is-option-correct';
 import { norm } from '../../../../../../shared/utils/text-norm';
 
 /**
@@ -92,49 +90,33 @@ export function isCurrentOptionCorrect(
   const quizId = (quizService as any)?.quizId as string | undefined;
   const questionText = questionTextForDisplayIndex(quizService, qIdx);
 
-  if (verdicts && quizId && questionText && optionText) {
-    // 1. The user selected this option — its own verdict is authorized.
-    const own = verdicts.verdictForOption(quizId, questionText, optionText);
-    if (own !== null) return own;
+  if (!verdicts || !quizId || !questionText || !optionText) return false;
 
-    const state = verdicts.verdictFor(quizId, questionText);
+  // 1. The user selected this option — its own verdict is authorized.
+  const own = verdicts.verdictForOption(quizId, questionText, optionText);
+  if (own !== null) return own;
 
-    // 2. Terminal — the full correct set is authorized, including options the
-    //    user never selected. This is the reveal.
-    if (state.phase === 'resolved' || state.phase === 'expired') {
-      const target = norm(optionText);
-      return state.correctOptionTexts.some((text) => norm(text) === target);
-    }
+  const state = verdicts.verdictFor(quizId, questionText);
 
-    // 3. INCOMPLETE and unselected — reveal nothing. Deliberately returns
-    //    before the fallback below, so no direct `correct` read can run for an
-    //    unselected option on an unresolved question.
-    if (state.phase === 'incomplete') return false;
-
-    // 4. idle | checking | error — fall through to the compatibility path.
+  // 2. Terminal — the full correct set is authorized, including options the
+  //    user never selected. This is the reveal.
+  if (state.phase === 'resolved' || state.phase === 'expired') {
+    const target = norm(optionText);
+    return state.correctOptionTexts.some((text) => norm(text) === target);
   }
 
-  // ── TEMPORARY COMPATIBILITY PATH ─────────────────────────────────
+  // 3. incomplete | idle | checking | error — nothing has been authorized, so
+  //    nothing is painted.
   //
-  // Reached only when no verdict has been recorded yet (idle/checking/error),
-  // or when the caller could not supply the verdict service. The timeout
-  // reveal still depends on this, because the timer paths are not migrated
-  // until STAGE 9D — this block is removed there.
+  //    `idle`/`checking`/`error` used to fall through to reading the option's
+  //    own `correct` flag. That existed for one reason: the timeout reveal
+  //    used to paint before the server had authorized it, so SOMETHING had to
+  //    answer during the gap. The signed-deadline work closed that gap — the
+  //    reveal now happens on the `expired` verdict, which case 2 handles — so
+  //    the fallback has nothing left to cover.
   //
-  // It is UNREACHABLE for the migrated incomplete-feedback path: case 3 above
-  // returns first.
-  const opt = binding?.option as any;
-  if (isOptionCorrect(opt) || binding?.isCorrect === true) return true;
-
-  const service = quizService as any;
-  const isShuffled = service?.isShuffleEnabled?.()
-    && Array.isArray(service?.shuffledQuestions)
-    && service.shuffledQuestions.length > 0;
-  const question = isShuffled ? service?.shuffledQuestions?.[qIdx] : service?.questions?.[qIdx];
-  if (question?.options && opt?.text) {
-    const optText = norm(opt.text);
-    const match = question.options.find((o: Option) => o?.text && norm(o.text) === optText);
-    if (isOptionCorrect(match)) return true;
-  }
+  //    Returning false here is "not authorized", not "known incorrect". The
+  //    caller renders neutral either way, and it is the only answer that stays
+  //    honest once options arrive from the API carrying no correctness at all.
   return false;
 }

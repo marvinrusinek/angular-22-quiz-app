@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subject } from 'rxjs';
 
 import { isCurrentOptionCorrect } from './option-item-correctness';
 import { QuestionVerdictService } from '../../../../../../shared/services/features/verdict/question-verdict.service';
+import { TOPIC_QUIZ_VERDICT_ADAPTER } from '../../../../../../shared/services/features/verdict/verdict-adapter';
 import { setQuizDataCache } from '../../../../../../shared/quiz-data-cache';
 import type { Quiz } from '../../../../../../shared/models/Quiz.model';
 import type { OptionBindings } from '../../../../../../shared/models/OptionBindings.model';
@@ -74,6 +75,34 @@ function binding(text: string): OptionBindings {
 
 const check = (questionText: string, selected: readonly string[]) =>
   firstValueFrom(verdicts.checkAnswer('rxjs', questionText, selected));
+
+/**
+ * A verdict service whose adapter never answers on its own.
+ *
+ * The local adapter resolves synchronously, so `checking` and `error` are
+ * unreachable through it — and those two phases are exactly where the deleted
+ * fallback used to run. This lets the test sit in them deliberately.
+ */
+function withPendingAdapter(): { verdicts: QuestionVerdictService; fail: () => void } {
+  const pending = new Subject<never>();
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [
+      QuestionVerdictService,
+      {
+        provide: TOPIC_QUIZ_VERDICT_ADAPTER,
+        useValue: {
+          check: () => pending.asObservable(),
+          revealExpired: () => pending.asObservable()
+        }
+      }
+    ]
+  });
+  return {
+    verdicts: TestBed.inject(QuestionVerdictService),
+    fail: () => pending.error(new Error('network down'))
+  };
+}
 
 beforeEach(() => {
   setQuizDataCache(JSON.parse(JSON.stringify(BANK)) as Quiz[], []);
@@ -171,16 +200,57 @@ describe('single-answer', () => {
   });
 });
 
-describe('the temporary compatibility path', () => {
-  it('is used when NO verdict has been recorded (idle)', async () => {
-    // Nothing checked. Not-yet-migrated paths — the timeout reveal, removed in
-    // STAGE 9D — still depend on the local read here.
-    const flagged = { option: { text: 'map', correct: true } } as unknown as OptionBindings;
-    expect(isCurrentOptionCorrect(flagged, quizServiceStub(MULTI), 0, verdicts)).toBe(true);
+/**
+ * The local `correct` flag is no longer consulted, in any phase.
+ *
+ * There used to be a fallback for `idle`/`checking`/`error` that read the
+ * option's own flag. It existed for exactly one reason: the timeout reveal
+ * painted before the server had authorized it, so something had to answer
+ * during the gap. The signed-deadline work closed that gap — the reveal now
+ * rides the `expired` verdict — and the fallback was deleted.
+ *
+ * Every fixture below carries a local flag that LIES. If the flag ever becomes
+ * authoritative again, these fail.
+ */
+describe('local correct flags are never consulted', () => {
+  const lyingTrue = () =>
+    ({ option: { text: 'map', correct: true } }) as unknown as OptionBindings;
+
+  it('stays neutral while idle, despite a local correct=true', () => {
+    expect(isCurrentOptionCorrect(lyingTrue(), quizServiceStub(MULTI), 0, verdicts)).toBe(false);
   });
 
-  it('is used when the verdict service is not supplied at all', () => {
-    const flagged = { option: { text: 'map', correct: true } } as unknown as OptionBindings;
-    expect(isCurrentOptionCorrect(flagged, quizServiceStub(MULTI), 0)).toBe(true);
+  it('stays neutral while checking, despite a local correct=true', () => {
+    // A check in flight is not an answer. Painting from the local flag here is
+    // what let an unearned reveal appear a round trip early.
+    const { verdicts: v } = withPendingAdapter();
+    v.checkAnswer('rxjs', MULTI, ['map']).subscribe({ error: () => undefined });
+
+    expect(v.verdictFor('rxjs', MULTI).phase).toBe('checking');
+    expect(isCurrentOptionCorrect(lyingTrue(), quizServiceStub(MULTI), 0, v)).toBe(false);
+  });
+
+  it('stays neutral after an error, despite a local correct=true', () => {
+    const { verdicts: v, fail } = withPendingAdapter();
+    v.checkAnswer('rxjs', MULTI, ['map']).subscribe({ error: () => undefined });
+    fail();
+
+    expect(v.verdictFor('rxjs', MULTI).phase).toBe('error');
+    expect(isCurrentOptionCorrect(lyingTrue(), quizServiceStub(MULTI), 0, v)).toBe(false);
+  });
+
+  it('stays neutral when no verdict service is supplied at all', () => {
+    expect(isCurrentOptionCorrect(lyingTrue(), quizServiceStub(MULTI), 0)).toBe(false);
+  });
+
+  it('works on options that have no `correct` property at all', async () => {
+    // The shape the API actually returns. Nothing here can be counted or read
+    // for correctness — the verdict is the only source.
+    await check(MULTI, ['map', 'filter']);
+    const bare = { option: { text: 'map' } } as unknown as OptionBindings;
+    const bareWrong = { option: { text: 'Observable' } } as unknown as OptionBindings;
+
+    expect(isCurrentOptionCorrect(bare, quizServiceStub(MULTI), 0, verdicts)).toBe(true);
+    expect(isCurrentOptionCorrect(bareWrong, quizServiceStub(MULTI), 0, verdicts)).toBe(false);
   });
 });

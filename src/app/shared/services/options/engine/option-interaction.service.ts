@@ -1093,7 +1093,9 @@ export class OptionInteractionService {
     // Also try bindings as a source of correct info
     if (correctIndicesSet.size === 0) {
       for (const [i, b] of state.optionBindings.entries()) {
-        if (b.isCorrect || isOptionCorrect(b.option)) correctIndicesSet.add(i);
+        // `=== true` because isCorrect is tri-state: null is "not authorized
+        // yet", which must not be read as either answer.
+        if (b.isCorrect === true || isOptionCorrect(b.option)) correctIndicesSet.add(i);
       }
     }
 

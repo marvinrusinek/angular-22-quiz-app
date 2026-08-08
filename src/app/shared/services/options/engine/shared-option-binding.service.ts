@@ -46,7 +46,8 @@ export class SharedOptionBindingService {
     if (comp.freezeOptionBindings() || comp.hasUserClicked()) return;
 
     const bindings = comp.optionsToDisplay.map((option: Option, idx: number) => {
-      const isCorrect = option.correct ?? false;
+      // Unknown until a verdict authorizes it — see OptionBindings.isCorrect.
+      const isCorrect = null;
       return {
         option: {
           ...option,
@@ -116,7 +117,7 @@ export class SharedOptionBindingService {
         option: { ...option, highlight: false, showIcon: false },
         index: idx,
         isSelected: trustOptionSelected && !!option.selected,
-        isCorrect: option.correct ?? false,
+        isCorrect: null,
         showFeedback: false,
         feedback: option.feedback ?? 'No feedback available',
         showFeedbackForOption: false,
@@ -137,7 +138,9 @@ export class SharedOptionBindingService {
         if (updated) {
           binding.option = { ...updated, highlight: false, showIcon: false };
           binding.isSelected = trustSel && !!updated.selected;
-          binding.isCorrect = updated.correct ?? false;
+          // Deliberately NOT re-derived from `updated.correct`. Refreshing the
+          // option must not overwrite an authorized verdict with a local flag,
+          // nor invent one where none exists.
         }
         idx++;
       }
@@ -987,7 +990,11 @@ export class SharedOptionBindingService {
       idx: i,
       type: comp.resolveInteractionType(),
       isOptionSelected: isActuallySelected,
-      isAnswerCorrect: b.isCorrect,
+      // KNOWN correct only. This drives highlight treatment, where "not yet
+      // authorized" and "wrong" both mean don't paint it as correct — so
+      // narrowing tri-state to a boolean is safe HERE specifically, and is
+      // written explicitly rather than left to truthiness.
+      isAnswerCorrect: b.isCorrect === true,
       highlightCorrectAfterIncorrect: comp.highlightCorrectAfterIncorrect(),
       shouldResetBackground:
         (comp.shouldResetBackground() || (!isOnCorrectQuestion && currentSelections.length === 0))

@@ -40,14 +40,12 @@ export class OptionBindingFactoryService {
   createBindings(cfg: OptionBindingFactoryConfig): OptionBindings[] {
     const opts = Array.isArray(cfg.optionsToDisplay) ? cfg.optionsToDisplay : [];
 
-    // Infer input type from correctness count (your prior behavior)
-    const correctOptionsCount = opts.reduce(
-      (count, o) => (o?.correct ? count + 1 : count), 0
-    );
-    const inferredType: 'single' | 'multiple' =
-      correctOptionsCount > 1 ? 'multiple' : 'single';
-
-    const inputType = inferredType === 'multiple' ? 'checkbox' : 'radio';
+    // Radio vs checkbox follows the question's TYPE, which the caller already
+    // resolved from the declared type. It used to be inferred by counting
+    // correct options — an answer-key read for a rendering decision, and one
+    // that would silently turn every question into a radio group once options
+    // arrive without correctness.
+    const inputType = cfg.type === 'multiple' ? 'checkbox' : 'radio';
     const ariaPrefix = (cfg.ariaLabelPrefix ?? 'Option').trim() || 'Option';
 
     const bindings: OptionBindings[] = [];
@@ -70,14 +68,23 @@ export class OptionBindingFactoryService {
         index: idx,
 
         feedback: option?.feedback ?? 'No feedback available',
-        isCorrect: option?.correct ?? false,
+
+        // UNKNOWN at construction. A freshly built binding has no authorized
+        // verdict, so it cannot claim correctness in either direction — the
+        // option object it is built from may carry no `correct` flag at all.
+        // QuestionVerdictService fills this in once an answer or a reveal
+        // authorizes it.
+        isCorrect: null,
 
         showFeedback: cfg.showFeedback,
         showFeedbackForOption: cfg.showFeedbackForOption,
 
         highlightCorrectAfterIncorrect: cfg.highlightCorrectAfterIncorrect,
-        highlightIncorrect: selected && !option?.correct,
-        highlightCorrect: selected && !!option?.correct,
+        // Visual state, not correctness — nothing is highlighted at build time.
+        // These used to read the option's `correct` flag, which meant a brand
+        // new binding could paint a verdict nobody had earned.
+        highlightIncorrect: false,
+        highlightCorrect: false,
 
         allOptions: opts,
 

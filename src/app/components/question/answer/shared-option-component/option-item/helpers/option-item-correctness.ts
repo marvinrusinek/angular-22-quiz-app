@@ -3,6 +3,7 @@ import { OptionBindings } from '../../../../../../shared/models/OptionBindings.m
 import { QuizService } from '../../../../../../shared/services/data/quiz.service';
 import type { QuestionVerdictService } from '../../../../../../shared/services/features/verdict/question-verdict.service';
 
+import { questionTextForDisplayIndex } from '../../../../../../shared/services/features/verdict/authorized-correctness';
 import { norm } from '../../../../../../shared/utils/text-norm';
 
 /**
@@ -28,29 +29,6 @@ import { norm } from '../../../../../../shared/utils/text-norm';
  * until the question resolves, so it cannot answer for an unselected one.
  * `verdictForOption` returning null IS that distinction.
  */
-
-/**
- * The question this display index refers to.
- *
- * SHUFFLE-AWARE: in shuffle mode `questions[qIdx]` is the wrong question,
- * because qIdx is the DISPLAY index. The display-order array is the only
- * correct source, and getting this wrong would key the verdict lookup to
- * another question entirely.
- */
-function questionTextForDisplayIndex(quizService: QuizService, qIdx: number): string | null {
-  const service = quizService as any;
-  const inDisplayOrder = service?.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText;
-  if (typeof inDisplayOrder === 'string' && inDisplayOrder.length > 0) return inDisplayOrder;
-
-  const isShuffled = service?.isShuffleEnabled?.()
-    && Array.isArray(service?.shuffledQuestions)
-    && service.shuffledQuestions.length > 0;
-  const fallback = isShuffled
-    ? service?.shuffledQuestions?.[qIdx]?.questionText
-    : service?.questions?.[qIdx]?.questionText;
-
-  return typeof fallback === 'string' && fallback.length > 0 ? fallback : null;
-}
 
 /**
  * Has the backend AUTHORIZED this question's timeout reveal yet?

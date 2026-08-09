@@ -5,6 +5,13 @@ import { QuestionType } from '../../../models/question-type.enum';
 import { OptionBindings } from '../../../models/OptionBindings.model';
 
 import { QuizService } from '../../data/quiz.service';
+import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
+import type { QuestionVerdictState } from '../../features/verdict/question-verdict.types';
+import {
+  allCorrectSelectedFromVerdict,
+  selectedVerdictFor,
+  verdictStateForDisplayIndex
+} from '../../features/verdict/authorized-correctness';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { norm } from '../../../utils/text-norm';
 
@@ -102,7 +109,21 @@ export class OptionLockPolicyService {
     allCorrectSelected: boolean;
     isPerfect: boolean;
   } {
-    // Canonical correct indices from quizService (overrides stale binding flags)
+    // AUTHORIZED FIRST. Everything this method needs — did they pick a right
+    // one, are all the right ones picked, did they also pick a wrong one — is
+    // answerable from the verdict WITHOUT knowing the correctness of options
+    // they have not selected. That matters: mid-question, an unselected
+    // option's correctness is not ours to know, and deriving locking from it
+    // is how the answer key leaks into the UI.
+    const verdictState = this.resolveVerdictState();
+    if (verdictState) {
+      const authorized = this.applyAuthorizedCorrectness(bindings, verdictState);
+      if (authorized) return authorized;
+    }
+
+    // REMOVE WITH THE REMAINING .correct MIGRATION — reached only when no
+    // verdict has been recorded for this question yet (idle), where the old
+    // pristine path is still the only answer available.
     const canonicalCorrectIdxs = this.resolveCanonicalCorrectIdxs(bindings);
 
     const isCorrectBinding = (b: OptionBindings, i: number) => {
@@ -136,6 +157,64 @@ export class OptionLockPolicyService {
     const isPerfect = allCorrectSelected && !hasIncorrectSelection;
 
     return { hasCorrectSelection, allCorrectSelected, isPerfect };
+  }
+
+  /** The recorded verdict for the question currently on screen, if any. */
+  private resolveVerdictState(): QuestionVerdictState | null {
+    try {
+      const quizSvc = this.injector.get(QuizService, null);
+      const verdicts = this.injector.get(QuestionVerdictService, null);
+      if (!quizSvc || !verdicts) return null;
+
+      const idx = (quizSvc as any)?.currentQuestionIndex;
+      if (!Number.isFinite(idx) || idx < 0) return null;
+
+      return verdictStateForDisplayIndex(quizSvc, idx, verdicts);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Derive the selection state from the verdict, and backfill what the verdict
+   * has authorized onto the bindings.
+   *
+   * Returns null when the verdict says nothing yet (idle/checking/error), so
+   * the caller can fall back rather than mistake silence for "no correct
+   * options selected".
+   */
+  private applyAuthorizedCorrectness(
+    bindings: OptionBindings[],
+    state: QuestionVerdictState
+  ): { hasCorrectSelection: boolean; allCorrectSelected: boolean; isPerfect: boolean } | null {
+    const allCorrectSelected = allCorrectSelectedFromVerdict(state);
+    if (allCorrectSelected === null) return null;   // idle | checking | error
+
+    // On a terminal phase the whole correct set is authorized, so every binding
+    // can be told what it is. While incomplete, only the user's own picks carry
+    // a verdict — the rest stay unknown rather than being forced to false.
+    const revealed = state.phase === 'resolved' || state.phase === 'expired'
+      ? new Set(state.correctOptionTexts.map((text) => norm(text)))
+      : null;
+
+    for (const b of bindings) {
+      const text = b?.option?.text;
+      if (revealed) {
+        b.isCorrect = revealed.has(norm(text ?? ''));
+        continue;
+      }
+      const own = selectedVerdictFor(state, text);
+      if (own !== undefined) b.isCorrect = own;
+    }
+
+    const hasCorrectSelection = bindings.some((b) => b.isSelected && b.isCorrect === true);
+    const hasIncorrectSelection = bindings.some((b) => b.isSelected && b.isCorrect === false);
+
+    return {
+      hasCorrectSelection,
+      allCorrectSelected,
+      isPerfect: allCorrectSelected && !hasIncorrectSelection
+    };
   }
 
   // Re-enable every binding (no locking applies).

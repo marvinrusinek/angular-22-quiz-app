@@ -1,5 +1,5 @@
 import { Service, inject, signal, type Signal } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
+import { Observable, Subject, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
 import { canonicalize } from './local-verdict.adapter';
@@ -10,6 +10,7 @@ import {
   type QuestionCheckResult,
   type QuestionExpiredResult,
   type QuestionVerdictState,
+  type TerminalVerdictArrival,
 } from './question-verdict.types';
 
 /**
@@ -99,6 +100,23 @@ export class QuestionVerdictService {
 
   /** Reactive handle for template/computed use. */
   readonly states: Signal<ReadonlyMap<string, QuestionVerdictState>> = this._states.asReadonly();
+
+  private readonly _terminal = new Subject<TerminalVerdictArrival>();
+
+  /**
+   * Fires when a question reaches an AUTHORIZED terminal state.
+   *
+   * For UI that mutates on correctness rather than merely reading it. A computed
+   * over `states` covers everything that re-derives during change detection; a
+   * one-shot mutation (repainting bindings, greying the losers) needs an event,
+   * and needs it at the moment authorization arrives rather than at the click
+   * that requested it.
+   *
+   * An Observable rather than an effect deliberately: a service-level effect was
+   * tried for the scoring equivalent and silently never scheduled in this
+   * zoneless app.
+   */
+  readonly terminalVerdicts$: Observable<TerminalVerdictArrival> = this._terminal.asObservable();
 
   hasResolved(quizId: string, questionText: string): boolean {
     const phase = this.verdictFor(quizId, questionText).phase;
@@ -277,6 +295,22 @@ export class QuestionVerdictService {
     const next = new Map(this._states());
     next.set(this.key(quizId, questionText), state);
     this._states.set(next);
+
+    // ARRIVAL. Correctness-dependent UI cannot run on the click that requests a
+    // check — under the API adapter the phase is still `checking` then, so a
+    // consumer painting at click time has nothing authorized to paint from and
+    // ends up reading the local bank. This announces the moment authorization
+    // actually exists.
+    //
+    // ONLY terminal phases are announced, because only they carry the full
+    // correct set. `markChecking` and `markError` write non-terminal phases, so
+    // they cannot reach this. And every terminal write already sits inside an
+    // `isCurrent()` guard, so a stale response is dropped BEFORE it can be
+    // announced — subscribers inherit the generation protection instead of
+    // re-implementing it.
+    if (state.phase === 'resolved' || state.phase === 'expired') {
+      this._terminal.next({ quizId, questionText, state });
+    }
   }
 
   private markChecking(

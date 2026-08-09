@@ -85,6 +85,18 @@ export interface QuestionVerdictState {
   readonly isResolvedCorrect: boolean | null;
 }
 
+/**
+ * One question reaching an authorized terminal state.
+ *
+ * Identity stays (quizId, exact questionText) — a subscriber matches on the
+ * same pair it would query with, so nothing here reintroduces ids or indexes.
+ */
+export interface TerminalVerdictArrival {
+  readonly quizId: string;
+  readonly questionText: string;
+  readonly state: QuestionVerdictState;
+}
+
 export const IDLE_VERDICT_STATE: QuestionVerdictState = {
   phase: 'idle',
   selectedOptionTexts: [],

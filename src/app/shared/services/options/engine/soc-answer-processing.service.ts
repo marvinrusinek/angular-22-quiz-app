@@ -1,4 +1,6 @@
 import { Service, inject } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { filter, take } from 'rxjs/operators';
 
 import { QuestionType } from '../../../models/question-type.enum';
 
@@ -49,6 +51,16 @@ export class SocAnswerProcessingService {
   private sharedOptionExplanationService = inject(SharedOptionExplanationService);
   private timerService = inject(TimerService);
   private verdicts = inject(QuestionVerdictService);
+
+  /**
+   * Questions with a terminal-repaint wait outstanding, keyed by quiz+question.
+   *
+   * Every click on an unfinished multi-answer question registers the intent to
+   * repaint, but only one wait may exist per question — otherwise the completing
+   * verdict is answered once per click. Entries are removed when the wait fires
+   * (the stream is `take(1)`), so this never accumulates.
+   */
+  private readonly pendingRespreads = new Map<string, Subscription>();
 
   // ── public methods ──────────────────────────────────────────────
 
@@ -539,27 +551,112 @@ export class SocAnswerProcessingService {
   }
 
   /**
-   * On all-correct, re-spread every binding with fresh refs (correct options
-   * enabled+active, others disabled) on a microtask so OnPush option-items
-   * re-render. Belt-and-suspenders for click-flow CD timing. Verbatim.
+   * Repaint every binding once the question is authorized-complete: correct
+   * options enabled and active, the rest disabled.
+   *
+   * ── Why this waits for the verdict ─────────────────────────────────
+   *
+   * This used to run from the click, taking a correct-index set built at click
+   * time. Under the API adapter the check is still in flight then — the phase is
+   * `checking`, so nothing is authorized — which meant the indices came from the
+   * local bank. The repaint was only ever synchronous BECAUSE the answer key was
+   * in the browser, so it could not have survived the key's removal.
+   *
+   * It now runs when the terminal verdict lands, where `correctOptionTexts` is
+   * the authorized reveal. Correct options are matched by TEXT, so shuffling or
+   * any reordering of the display cannot misplace the repaint.
    */
-  private respreadBindingsOnAllCorrect(comp: any, effectiveCorrectIndices: number[]): void {
+  private respreadBindingsOnAllCorrect(comp: any, correctTexts: ReadonlySet<string>): void {
     queueMicrotask(() => {
-      const correctSet = new Set(effectiveCorrectIndices);
-      comp.optionBindings.set((comp.optionBindings() ?? []).map((b: OptionBindings, bi: number) => {
-        const isCorrectIdx = correctSet.has(bi);
+      comp.optionBindings.set((comp.optionBindings() ?? []).map((b: OptionBindings) => {
+        const isCorrectOption = correctTexts.has(norm((b.option as any)?.text));
         return {
           ...b,
-          disabled: !isCorrectIdx,
-          isCorrect: isCorrectIdx,
+          disabled: !isCorrectOption,
+          isCorrect: isCorrectOption,
           option: b.option ? {
             ...b.option,
-            active: isCorrectIdx
+            active: isCorrectOption
           } : b.option
         };
       }));
       comp.cdRef.detectChanges();
     });
+  }
+
+  /**
+   * Repaint now if the verdict is already terminal, otherwise when it arrives.
+   *
+   * Both branches are real. The API adapter leaves the check in flight across
+   * the whole click, so the repaint is deferred; the local adapter resolves
+   * during the same click, BEFORE this runs, so its arrival event has already
+   * been and gone — subscribing alone would wait for something that will never
+   * come again.
+   */
+  private scheduleTerminalRespread(comp: any): void {
+    const quizId = (this.quizService as any)?.quizId as string | undefined;
+    const questionText = comp?.currentQuestion?.()?.questionText as string | undefined;
+    if (!quizId || !questionText) return;
+
+    const already = this.verdicts.verdictFor(quizId, questionText);
+    if (this.shouldRespreadForVerdict(already)) {
+      this.respreadFromVerdict(comp, questionText, already);
+      return;
+    }
+
+    // ONE pending wait per question. Every click on an unfinished multi-answer
+    // question passes through here, and without this the completing verdict
+    // would be answered by one subscription per click.
+    const key = `${quizId} ${norm(questionText)}`;
+    if (this.pendingRespreads.has(key)) return;
+
+    const sub = this.verdicts.terminalVerdicts$
+      .pipe(
+        filter((e) => e.quizId === quizId && norm(e.questionText) === norm(questionText)),
+        take(1)
+      )
+      .subscribe((e) => {
+        this.pendingRespreads.delete(key);
+        if (this.shouldRespreadForVerdict(e.state)) {
+          this.respreadFromVerdict(comp, questionText, e.state);
+        }
+      });
+
+    if (sub.closed) this.pendingRespreads.delete(key);
+    else this.pendingRespreads.set(key, sub);
+  }
+
+  /**
+   * The old gate, expressed in authorized terms.
+   *
+   * `computeAllCorrectInDurable` asked for PERFECT rather than the superset
+   * rule — every correct option selected AND nothing wrong — because a wrong
+   * pick must keep its red repaint instead of being greyed out with the losers.
+   * That distinction is preserved here deliberately.
+   */
+  private shouldRespreadForVerdict(state: QuestionVerdictState | null): boolean {
+    if (!state || state.phase !== 'resolved') return false;
+    if (state.isResolvedCorrect !== true) return false;
+
+    for (const [, correct] of state.selectedVerdicts) {
+      if (correct === false) return false;
+    }
+    return true;
+  }
+
+  /** Repaint, unless the component has moved on to another question. */
+  private respreadFromVerdict(comp: any, questionText: string, state: QuestionVerdictState): void {
+    // STALE GUARD, second layer. The verdict service already drops a response
+    // that lost its generation race; this covers the other direction — a
+    // response still current for ITS question arriving after the user has
+    // navigated to a different one.
+    const showing = comp?.currentQuestion?.()?.questionText as string | undefined;
+    if (!showing || norm(showing) !== norm(questionText)) return;
+
+    this.respreadBindingsOnAllCorrect(
+      comp,
+      new Set(state.correctOptionTexts.map((t) => norm(t)))
+    );
   }
 
   /**
@@ -653,9 +750,11 @@ export class SocAnswerProcessingService {
     comp.showFeedback.set(true);
     comp.cdRef.detectChanges();
 
-    if (allCorrectInDurable) {
-      this.respreadBindingsOnAllCorrect(comp, effectiveCorrectIndices);
-    }
+    // NOT gated on `allCorrectInDurable`: that decision is made at click time,
+    // when nothing is authorized yet, so it still answers from the local bank.
+    // The verdict decides both WHETHER and WHAT to repaint, so this only has to
+    // register the intent to repaint.
+    this.scheduleTerminalRespread(comp);
 
     this.triggerAllIncorrectsExhaustedAutoReveal(comp, index, qIdx, displayIdx);
   }

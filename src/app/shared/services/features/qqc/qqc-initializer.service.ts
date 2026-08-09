@@ -222,7 +222,23 @@ export class QqcInitializerService {
     const parsedParam = Number(rawParam);
     let questionIndex = isNaN(parsedParam) ? 1 : parsedParam;
 
-    if (questionIndex < 1 || questionIndex > totalQuestions) questionIndex = 1;
+    // The upper bound only means something once the count is known.
+    //
+    // On a cold load straight to a deep link — /quiz/question/forms/6 — this
+    // runs before the questions have arrived, so totalQuestions is still 0.
+    // Bounding against 0 rejected every question but the first and silently
+    // rewrote the index to 1, which then became the app's currentQuestionIndex.
+    // The route said question 6, the heading rendered question 1, and the
+    // mismatch only surfaced on the first click, when the heading recomputed
+    // and read the overwritten index. Deep links to question 1 were unaffected,
+    // which is why this hid for so long.
+    //
+    // The URL is the authority for which question is showing; when the count is
+    // unknown there is nothing to validate against, so the param stands.
+    const hasTotal = Number.isFinite(totalQuestions) && totalQuestions > 0;
+    if (questionIndex < 1 || (hasTotal && questionIndex > totalQuestions)) {
+      questionIndex = 1;
+    }
 
     return questionIndex - 1;  // convert to 0-based
   }

@@ -379,7 +379,15 @@ export class SelectionMessageService {
       // selectedCorrect` likewise ignored wrong selections).
       const remaining = this.remainingCorrectFromVerdict(index)
         ?? (totalCorrect - selectedCorrect);
-      const totalSelected = selectedCorrect + selectedWrong;
+
+      // How many options the user has picked — NOT how many were right.
+      //
+      // This was `selectedCorrect + selectedWrong`, which is the same number
+      // (every selected option is one or the other) but arrived at by sorting
+      // the picks against the answer key. Counting `selected` directly makes
+      // the authorized path provably correctness-free: with a verdict present,
+      // nothing in this branch reads a `correct` flag at all.
+      const totalSelected = opts.filter((o) => o.selected).length;
 
       // All correct answers selected → Next button or Show Results
       if (remaining === 0) {

@@ -3,6 +3,13 @@ import { inject, Service } from '@angular/core';
 import { SK_DOT_CONFIRMED, SK_MULTI_PERFECT, SK_SEL_Q } from '../../../constants/session-keys';
 import { readSessionString } from '../../../utils/session-storage';
 
+import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
+import type { QuestionVerdictState } from '../../features/verdict/question-verdict.types';
+import {
+  allCorrectSelectedFromVerdict,
+  selectedVerdictFor,
+  verdictStateForDisplayIndex
+} from '../../features/verdict/authorized-correctness';
 import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 
@@ -27,6 +34,7 @@ export interface QuestionResolutionResult {
 export class QuestionResolutionService {
   private readonly quizService = inject(QuizService);
   private readonly selectedOptionService = inject(SelectedOptionService);
+  private readonly verdicts = inject(QuestionVerdictService);
 
   resolveQuestionState(
     qIdx: number,
@@ -64,7 +72,7 @@ export class QuestionResolutionService {
     const correctOpts = this.resolvePristineCorrectOpts(qIdx);
     const isCanonMulti = correctOpts.length > 1;
     const { liveSel, computedPerfect, computedImperfect } = includeSelections
-      ? this.resolveSelectionSignals(qIdx, correctOpts)
+      ? this.resolveSelectionSignals(qIdx, correctOpts, this.resolveVerdictState(qIdx))
       : { liveSel: [], computedPerfect: false, computedImperfect: false };
 
     return {
@@ -149,9 +157,19 @@ export class QuestionResolutionService {
   }
 
   // Signal 5: selection comparison
+  /** The recorded verdict for this display index, or null when unavailable. */
+  private resolveVerdictState(qIdx: number): QuestionVerdictState | null {
+    try {
+      return verdictStateForDisplayIndex(this.quizService, qIdx, this.verdicts);
+    } catch {
+      return null;
+    }
+  }
+
   private resolveSelectionSignals(
     qIdx: number,
-    correctOpts: any[]
+    correctOpts: any[],
+    verdictState: QuestionVerdictState | null
   ): { liveSel: any[]; computedPerfect: boolean; computedImperfect: boolean } {
     let sel: any[] = [];
     try {
@@ -171,6 +189,35 @@ export class QuestionResolutionService {
 
     let computedPerfect = false;
     let computedImperfect = false;
+
+    // AUTHORIZED PATH.
+    //
+    // "Perfect" here is stricter than the verdict's own correct/incorrect: it
+    // means every correct option was picked AND nothing wrong was. The verdict
+    // resolves multi-answer on the audited SUPERSET rule, which tolerates extra
+    // wrong picks, so `isResolvedCorrect` alone is NOT the same question and
+    // swapping it in would call a selection with wrong extras perfect.
+    //
+    // Both halves are answerable from authorized facts anyway: completion from
+    // the verdict, and "nothing wrong was picked" from the user's OWN selected
+    // verdicts. Neither needs to know about an option they never touched.
+    const authorizedComplete = allCorrectSelectedFromVerdict(verdictState);
+    if (authorizedComplete !== null) {
+      if (liveSel.length > 0) {
+        const anyWrongPicked = liveSel.some(
+          (s: any) => selectedVerdictFor(verdictState, s?.text) === false
+        );
+        computedPerfect = authorizedComplete && !anyWrongPicked;
+        computedImperfect = !computedPerfect;
+      }
+      return { liveSel, computedPerfect, computedImperfect };
+    }
+
+    // REMOVE WITH THE REMAINING CORRECTNESS MIGRATION — reached only when no
+    // verdict has been recorded (idle/checking/error), where the pristine
+    // comparison is still the only answer available. Absence of a verdict is
+    // not a negative one, so falling back here rather than reporting "not
+    // perfect" preserves revisit behaviour in a fresh session.
     if (correctOpts.length > 0 && liveSel.length > 0) {
       const wasPicked = (canon: any): boolean => {
         const cid = canon?.optionId;

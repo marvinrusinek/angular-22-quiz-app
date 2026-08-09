@@ -5,13 +5,17 @@ import { OptionBindings } from '../../../../shared/models/OptionBindings.model';
 import { SelectedOption } from '../../../../shared/models/SelectedOption.model';
 
 import { AnswerOptionsService } from './answer-options.service';
-import { isOptionCorrect } from '../../../../shared/utils/is-option-correct';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { QuizService } from '../../data/quiz.service';
+import { verdictStateForDisplayIndex } from '../verdict/authorized-correctness';
 import { norm } from '../../../../shared/utils/text-norm';
 
 @Service()
 export class AnswerBindingsService {
   // ── injects ─────────────────────────────────────────────────────
   private readonly answerOptionsService = inject(AnswerOptionsService);
+  private readonly quizService = inject(QuizService);
+  private readonly verdicts = inject(QuestionVerdictService);
 
   rebuildOptionBindings(options: Option[]): OptionBindings[] {
     if (!options?.length) return [];
@@ -80,8 +84,21 @@ export class AnswerBindingsService {
   ): OptionBindings[] {
     if (!currentBindings?.length) return [];
 
+    // Lock the other options only once the question is AUTHORIZED as answered
+    // correctly — not merely because something was clicked.
+    //
+    // It used to lock on any selection, then exempt whichever option the bank
+    // said was correct. After a wrong guess that left the right answer as the
+    // only enabled option, so the answer was readable straight off the DOM
+    // without clicking anything. Retry was the excuse; disclosure was the
+    // effect.
+    //
+    // An unresolved or unknown verdict deliberately locks nothing: absence is
+    // not a wrong answer, and leaving the rest selectable is what preserves
+    // retry-until-correct.
     const isSingle = type === 'single';
-    const disableOthers = isSingle && enrichedOption.selected === true;
+    const lockUnselected =
+      isSingle && enrichedOption.selected === true && this.isResolvedCorrect();
 
     return currentBindings.map((binding, index) => {
       const bindingId = this.answerOptionsService.getEffectiveOptionId(
@@ -96,7 +113,7 @@ export class AnswerBindingsService {
       }
 
       if (isSingle) {
-        return this.buildUnselectedSingleAnswerBinding(binding, disableOthers);
+        return this.buildUnselectedSingleAnswerBinding(binding, lockUnselected);
       }
 
       return binding;
@@ -127,12 +144,18 @@ export class AnswerBindingsService {
     } as OptionBindings;
   }
 
+  /**
+   * An option the user did NOT pick, on a single-answer question.
+   *
+   * Its state must not depend on whether it happens to be the right answer —
+   * that is the whole point. It is cleared of marks either way, and it only
+   * becomes disabled when the question is already answered correctly, which
+   * disables every unselected option alike and so distinguishes none of them.
+   */
   private buildUnselectedSingleAnswerBinding(
     binding: OptionBindings,
-    disableOthers: boolean,
+    lockUnselected: boolean,
   ): OptionBindings {
-    const isThisOptionCorrect = isOptionCorrect(binding.option);
-
     const newOption = {
       ...binding.option,
       selected: false,
@@ -146,11 +169,27 @@ export class AnswerBindingsService {
       isSelected: false,
       highlight: false,
       checked: false,
-      disabled:
-        disableOthers && !isThisOptionCorrect
-          ? true
-          : binding.disabled
+      disabled: lockUnselected ? true : binding.disabled
     } as OptionBindings;
+  }
+
+  /**
+   * Is the question on screen authorized as answered CORRECTLY?
+   *
+   * Only `resolved` + `isResolvedCorrect` counts. A wrong single-answer pick
+   * also resolves the question, and must not lock anything — the user is still
+   * allowed to try again.
+   */
+  private isResolvedCorrect(): boolean {
+    try {
+      const idx = (this.quizService as any)?.currentQuestionIndex;
+      if (!Number.isFinite(idx) || idx < 0) return false;
+
+      const state = verdictStateForDisplayIndex(this.quizService, idx, this.verdicts);
+      return state?.phase === 'resolved' && state.isResolvedCorrect === true;
+    } catch {
+      return false;
+    }
   }
 
   hydrateBindingsFromSavedSelections(

@@ -132,15 +132,31 @@ export class SocAnswerProcessingService {
   }
 
   /**
-   * Pristine cross-check that the clicked single-answer option is correct: trust
-   * its own correct flag first, else match its text against the pristine correct
-   * texts via several question-text sources (handling a stale currentQuestion
-   * after navigation, and shuffle ordering). Extracted verbatim.
+   * Was the clicked single-answer option correct?
+   *
+   * The verdict for the user's OWN selection answers this directly — it is the
+   * one fact a check discloses about a pick. The bank scan below is the
+   * compatibility path for when nothing has been checked yet.
+   *
+   * Formerly `isPristineSingleCorrect`, which named the fallback as if it were
+   * the authority.
    */
-  private isPristineSingleCorrect(comp: any, index: number, qIdx: number, displayIdx: number, isShuffled: boolean): boolean {
+  private isSingleAnswerClickCorrect(comp: any, index: number, qIdx: number, displayIdx: number, isShuffled: boolean): boolean {
+    const clickedText = norm(comp.optionBindings()?.[index]?.option?.text);
+
+    // AUTHORIZED. `undefined` means this pick carries no verdict yet, which is
+    // not the same as a wrong pick — hence the explicit check.
+    const own = selectedVerdictFor(
+      this.resolveVerdictStateForComp(comp),
+      comp.optionBindings()?.[index]?.option?.text
+    );
+    if (own !== undefined) return own;
+
+    // REMOVE WITH THE IDLE/CHECKING/ERROR CLEANUP — the pre-verdict path. The
+    // several question-text candidates below exist because currentQuestion can
+    // be stale right after navigation, and because shuffle reorders display.
     try {
       const clickedBinding = comp.optionBindings()?.[index];
-      const clickedText = norm(clickedBinding?.option?.text);
       if (isOptionCorrect(clickedBinding?.option)) {
         return true;
       } else if (clickedText) {
@@ -703,7 +719,7 @@ export class SocAnswerProcessingService {
     // locking the remaining options before the 2nd correct is picked).
     if (this.routeToMultiIfPristineMulti(params)) return;
 
-    if (this.isPristineSingleCorrect(comp, index, qIdx, displayIdx, isShuffled)) {
+    if (this.isSingleAnswerClickCorrect(comp, index, qIdx, displayIdx, isShuffled)) {
       // THE CORRECT SET IS THE CLICK.
       //
       // A single-answer question has exactly one correct option — a

@@ -14,8 +14,11 @@ import { OptionBindingFactoryService } from './option-binding-factory.service';
 import { OptionClickHandlerService } from './option-click-handler.service';
 import { OptionService } from '../view/option.service';
 import { QuestionResolutionService } from './question-resolution.service';
+import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
 import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
+
+import { authorizedCorrectTexts } from '../../features/verdict/authorized-correctness';
 
 import { feedbackAnchorMatches } from '../../../utils/feedback-anchor';
 import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
@@ -33,6 +36,7 @@ export class SharedOptionBindingService {
   private questionResolution = inject(QuestionResolutionService);
   private quizService = inject(QuizService);
   private selectedOptionService = inject(SelectedOptionService);
+  private verdicts = inject(QuestionVerdictService);
 
   // ── public methods ──────────────────────────────────────────────
 
@@ -553,9 +557,17 @@ export class SharedOptionBindingService {
       const _res = this.questionResolution.resolveQuestionState(qIndex, { includeSelections: false });
       const wasPerfect = _res.fullyResolvedCorrect;
 
-      this.restoreOptionsToDisplay(comp, savedByIndex, wasPerfect);
+      // A perfect revisit is a TERMINAL state, so the correct set is
+      // legitimately disclosable here — this is the one place the restore path
+      // may ask for it. Null when no verdict was recorded (a revisit in a fresh
+      // session), which the restore methods handle without touching the bank.
+      const authorizedCorrect = wasPerfect
+        ? authorizedCorrectTexts(this.quizService, qIndex, this.verdicts)
+        : null;
+
+      this.restoreOptionsToDisplay(comp, savedByIndex, wasPerfect, authorizedCorrect);
       if (!wasPerfect) this.unlockQuestionOptions(qIndex);
-      this.restoreOptionBindings(comp, savedByIndex, wasPerfect);
+      this.restoreOptionBindings(comp, savedByIndex, wasPerfect, authorizedCorrect);
       this.applyFeedbackDisplay(comp, saved, savedByIndex, qIndex);
 
       if (comp.optionBindings()?.length) {
@@ -681,7 +693,12 @@ export class SharedOptionBindingService {
    * Restore optionsToDisplay visuals for a revisit: perfect -> highlight the
    * correct picks (others blank); imperfect -> clear every mark. Extracted verbatim.
    */
-  private restoreOptionsToDisplay(comp: any, savedByIndex: Map<number, any>, wasPerfect: boolean): void {
+  private restoreOptionsToDisplay(
+    comp: any,
+    savedByIndex: Map<number, any>,
+    wasPerfect: boolean,
+    authorizedCorrect: ReadonlySet<string> | null
+  ): void {
     if (!comp.optionsToDisplay?.length) return;
     for (const [idx, opt] of comp.optionsToDisplay.entries()) {
       const match = savedByIndex.get(idx);
@@ -694,7 +711,7 @@ export class SharedOptionBindingService {
         continue;
       }
 
-      const isCorrect = isOptionCorrect(opt);
+      const isCorrect = this.wasCorrectOnPerfectRevisit(opt, match, authorizedCorrect);
       if (isCorrect) {
         const isSelected = !!match?.selected;
         const isPreviouslyClicked = !isSelected && !!match?.showIcon;
@@ -724,7 +741,12 @@ export class SharedOptionBindingService {
    * Restore optionBindings for a revisit: imperfect -> reset to interactive;
    * perfect -> highlight correct picks, grey the rest, and lock. Extracted verbatim.
    */
-  private restoreOptionBindings(comp: any, savedByIndex: Map<number, any>, wasPerfect: boolean): void {
+  private restoreOptionBindings(
+    comp: any,
+    savedByIndex: Map<number, any>,
+    wasPerfect: boolean,
+    authorizedCorrect: ReadonlySet<string> | null
+  ): void {
     if (!comp.optionBindings()?.length) return;
     for (const [idx, b] of comp.optionBindings().entries()) {
       const match = savedByIndex.get(idx);
@@ -732,7 +754,7 @@ export class SharedOptionBindingService {
         if (!wasPerfect) {
           this.resetBindingToInteractive(comp, b, idx);
         } else {
-          this.applyResolvedBindingState(b, match);
+          this.applyResolvedBindingState(b, match, authorizedCorrect);
         }
       }
       b.showFeedback = true;
@@ -767,8 +789,39 @@ export class SharedOptionBindingService {
    * Perfect-revisit binding state: highlight correct picks (active), grey the
    * incorrect (inactive), and lock the option. Extracted verbatim.
    */
-  private applyResolvedBindingState(b: OptionBindings, match: any): void {
-    const isCorrect = isOptionCorrect(b.option);
+  /**
+   * Was this option one of the correct ones, on a question already answered
+   * perfectly — without asking the answer key?
+   *
+   * Two authorized sources, in order:
+   *
+   *  1. The verdict's correct set. A perfect revisit is terminal, so the reveal
+   *     is legitimately available (see authorizedCorrectTexts, which returns
+   *     null anywhere else).
+   *  2. The user's own remembered picks. "Perfect" means every correct option
+   *     was selected and nothing else was, so on this path chosen IS correct.
+   *     That makes the fallback exact rather than approximate, and it needs no
+   *     verdict at all — which matters on a revisit in a fresh session, where
+   *     nothing has been checked yet.
+   *
+   * Neither consults `option.correct`, so a wrong or absent flag in the bank
+   * cannot change what the restored question looks like.
+   */
+  private wasCorrectOnPerfectRevisit(
+    option: any,
+    match: any,
+    authorizedCorrect: ReadonlySet<string> | null
+  ): boolean {
+    if (authorizedCorrect) return authorizedCorrect.has(norm(option?.text ?? ''));
+    return !!match?.selected || !!match?.showIcon;
+  }
+
+  private applyResolvedBindingState(
+    b: OptionBindings,
+    match: any,
+    authorizedCorrect: ReadonlySet<string> | null
+  ): void {
+    const isCorrect = this.wasCorrectOnPerfectRevisit(b.option, match, authorizedCorrect);
     if (isCorrect) {
       const isSelected = !!match?.selected;
       const isPreviouslyClicked = !isSelected && !!match?.showIcon;

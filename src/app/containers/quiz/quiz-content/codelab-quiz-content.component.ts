@@ -44,6 +44,8 @@ import { FeedbackPolicyService } from '../../../shared/services/features/intervi
 
 import { QuizQuestionComponent } from '../../../components/question/quiz-question/quiz-question.component';
 
+import { QuestionVerdictService } from '../../../shared/services/features/verdict/question-verdict.service';
+
 import { buildHeadingInputs } from '../../../shared/utils/heading-inputs';
 import { deriveHeadingHtml, shouldShowFet } from '../../../shared/utils/heading-model';
 
@@ -59,6 +61,7 @@ export class CodelabQuizContentComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
   private readonly displayService = inject(QuizContentDisplayService);
   public readonly explanationTextService = inject(ExplanationTextService);
+  private readonly questionVerdictService = inject(QuestionVerdictService);
   private readonly orchestrator = inject(CqcOrchestratorService);
   public readonly quizDataService = inject(QuizDataService);
   private readonly quizNavigationService = inject(QuizNavigationService);
@@ -166,6 +169,7 @@ export class CodelabQuizContentComponent implements OnInit {
     this.selectedOptionService.selectedOptionSig(); // option selection changed
     this.quizStateService.lastInteractionTimeSig(); // any genuine option click
     this.explanationTextService.formattedExplanationSig(); // FET text became available
+    this.questionVerdictService.states(); // a verdict was recorded/updated
     this.feedbackPolicyService.feedbackMode(); // immediate ↔ deferred (Interview Mode)
     const idx = this.quizService.currentQuestionIndex;
     const inputs = buildHeadingInputs({
@@ -178,6 +182,7 @@ export class CodelabQuizContentComponent implements OnInit {
       quizNavigationService: this.quizNavigationService,
       quizQuestionManagerService: this.quizQuestionManagerService,
       feedbackPolicyService: this.feedbackPolicyService,
+      questionVerdictService: this.questionVerdictService,
     });
     if (!inputs) return '';
 

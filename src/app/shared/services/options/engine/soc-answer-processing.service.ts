@@ -132,33 +132,6 @@ export class SocAnswerProcessingService {
   }
 
   /**
-   * Resolve the single-answer correct-index set: match comp.currentQuestion text
-   * against quizService.questions[] for authoritative correct flags (fall back
-   * to qIdx / effectiveCorrectIndices). Extracted verbatim.
-   */
-  private resolveSingleAnswerCorrectSet(comp: any, qIdx: number, effectiveCorrectIndices: number[]): Set<number> {
-    let correctIdxs: number[] = [];
-    try {
-      const allQs: any[] = this.quizService?.questions ?? [];
-      const passedText = norm(comp.currentQuestion()?.questionText);
-      let canonicalQ: any = null;
-      if (passedText && allQs.length) {
-        const idx = allQs.findIndex((q: any) => norm(q?.questionText) === passedText);
-        if (idx >= 0) canonicalQ = allQs[idx];
-      }
-      if (!canonicalQ) canonicalQ = allQs[qIdx] ?? comp.currentQuestion();
-      const rawOpts = canonicalQ?.options ?? [];
-      correctIdxs = rawOpts
-        .map((o: any, i: number) => isOptionCorrect(o) ? i : -1)
-        .filter((n: number) => n >= 0);
-    } catch (err: unknown) { console.error('processSingleAnswerClick canonical-resolution failed:', err); }
-    if (correctIdxs.length === 0 && effectiveCorrectIndices?.length) {
-      correctIdxs = effectiveCorrectIndices;
-    }
-    return new Set(correctIdxs);
-  }
-
-  /**
    * Pristine cross-check that the clicked single-answer option is correct: trust
    * its own correct flag first, else match its text against the pristine correct
    * texts via several question-text sources (handling a stale currentQuestion
@@ -721,16 +694,28 @@ export class SocAnswerProcessingService {
     effectiveCorrectIndices: number[];
     isShuffled: boolean;
   }): void {
-    const { comp, index, qIdx, displayIdx, isShuffled, effectiveCorrectIndices } = params;
+    // `effectiveCorrectIndices` stays on the params type because the
+    // multi-answer route below still consumes it; the single-answer path no
+    // longer needs it at all.
+    const { comp, index, qIdx, displayIdx, isShuffled } = params;
 
     // If pristine data says this is multi-answer, route there instead (avoids
     // locking the remaining options before the 2nd correct is picked).
     if (this.routeToMultiIfPristineMulti(params)) return;
 
-    const correctSet = this.resolveSingleAnswerCorrectSet(comp, qIdx, effectiveCorrectIndices);
-
     if (this.isPristineSingleCorrect(comp, index, qIdx, displayIdx, isShuffled)) {
-      this.handleSingleAnswerCorrect(comp, index, qIdx, displayIdx, correctSet);
+      // THE CORRECT SET IS THE CLICK.
+      //
+      // A single-answer question has exactly one correct option — a
+      // multi-answer one was routed away above — and we only reach here
+      // because the clicked option is that one. So scanning the bank to
+      // rediscover it answered a question we had already answered.
+      //
+      // It was also a latent break: with correctness absent from the options
+      // (the shape /questions returns) the scan produced an EMPTY set, and
+      // `disabled: !isCorrectBinding` would then have disabled every option
+      // including the user's correct pick.
+      this.handleSingleAnswerCorrect(comp, index, qIdx, displayIdx, new Set([index]));
       return;
     }
 

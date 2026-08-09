@@ -13,7 +13,12 @@ import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { SocAnswerProcessingService } from './soc-answer-processing.service';
 import { SocOptionUiService } from './soc-option-ui.service';
+import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
 import { TimerService } from '../../features/timer/timer.service';
+import {
+  allCorrectSelectedFromVerdict,
+  verdictStateForDisplayIndex
+} from '../../features/verdict/authorized-correctness';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { norm } from '../../../utils/text-norm';
 
@@ -35,6 +40,7 @@ export class SharedOptionClickService {
   private quizStateService = inject(QuizStateService);
   private selectedOptionService = inject(SelectedOptionService);
   private timerService = inject(TimerService);
+  private verdicts = inject(QuestionVerdictService);
 
   // ── public methods ──────────────────────────────────────────────
 
@@ -212,6 +218,27 @@ export class SharedOptionClickService {
     durableSet: Set<number>
   ): void {
     try {
+      // "Has every required correct answer been selected?" — one boolean, and
+      // the verdict answers it directly. Note this is the SUPERSET question,
+      // not perfection: the old code checked only that each correct index was
+      // in the durable set, so extra wrong picks never kept the timer running.
+      // `allCorrectSelectedFromVerdict` asks exactly that, which is why no
+      // "and nothing wrong" clause is added here — it would stop the timer
+      // later than today for a correct-plus-extra selection.
+      const authorized = allCorrectSelectedFromVerdict(
+        verdictStateForDisplayIndex(this.quizService, qIdx, this.verdicts)
+      );
+      if (authorized === true) {
+        this.timerService.stopTimer?.(undefined, { force: true, bypassAntiThrash: true });
+        return;
+      }
+      if (authorized === false) return;
+
+      // REMOVE WITH THE IDLE/CHECKING/ERROR CLEANUP — reached only when the
+      // verdict has said nothing yet. Under the API adapter that includes the
+      // in-flight `checking` moment on the completing click, so this still runs
+      // in practice; stopping the timer a round trip later instead would change
+      // the recorded elapsed time that a frozen revisit displays.
       let allCorrectIdxs: number[] = [];
       const allQs: any[] = this.quizService?.questions ?? [];
       const passedText = norm(comp.currentQuestion()?.questionText);

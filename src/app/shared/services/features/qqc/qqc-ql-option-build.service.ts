@@ -117,7 +117,12 @@ export class QqcQlOptionBuildService {
     return clonedOptions.map((opt, idx) => ({
       appHighlightOption: false,
       option: opt,
-      isCorrect: opt.correct ?? false,
+      // UNKNOWN at construction — see OptionBindings.isCorrect. A binding built
+      // before any verdict cannot claim correctness in either direction, and
+      // the option may carry no `correct` flag at all once questions come from
+      // the API. `isMultipleAnswer` is passed in explicitly, so nothing here
+      // needs to count correct options.
+      isCorrect: null,
       feedback: opt.feedback ?? '',
       showFeedback: false,
       showFeedbackForOption: {},

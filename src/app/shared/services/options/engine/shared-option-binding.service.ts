@@ -1015,9 +1015,6 @@ export class SharedOptionBindingService {
   }
 
   getOptionBindings(comp: any, option: Option, idx: number, isSelected: boolean = false): OptionBindings {
-    const correctOptionsCount =
-      comp.optionsToDisplay?.filter((opt: any) => isOptionCorrect(opt)).length ?? 0;
-    const inferredType = correctOptionsCount > 1 ? 'multiple' : 'single';
     const selected = isSelected;
 
     return {
@@ -1027,16 +1024,27 @@ export class SharedOptionBindingService {
       },
       index: idx,
       feedback: option.feedback ?? 'No feedback available',
-      isCorrect: option.correct ?? false,
+      // UNKNOWN at construction, like every other binding constructor — see
+      // OptionBindings.isCorrect. This one was missed in the first pass: the
+      // others assign `binding.isCorrect =`, so a grep for that form skipped
+      // this object literal.
+      isCorrect: null,
       showFeedback: comp.showFeedback(),
       showFeedbackForOption: comp.showFeedbackForOption,
       highlightCorrectAfterIncorrect: comp.highlightCorrectAfterIncorrect(),
-      highlightIncorrect: selected && !option.correct,
-      highlightCorrect: selected && !!option.correct,
+      // Visual state, not correctness. Nothing is highlighted until a verdict
+      // authorizes it.
+      highlightIncorrect: false,
+      highlightCorrect: false,
       allOptions: comp.optionsToDisplay,
       type: comp.resolveInteractionType(),
       appHighlightOption: false,
-      appHighlightInputType: inferredType === 'multiple' ? 'checkbox' : 'radio',
+      // Radio vs checkbox follows the question's resolved TYPE — the same value
+      // assigned to `type` above. It used to be inferred by counting correct
+      // options, which made a rendering decision depend on the answer key and
+      // would turn every question into a radio group once options arrive
+      // without correctness.
+      appHighlightInputType: comp.resolveInteractionType() === 'multiple' ? 'checkbox' : 'radio',
       appHighlightReset: comp.shouldResetBackground(),
       appResetBackground: comp.shouldResetBackground(),
       optionsToDisplay: comp.optionsToDisplay,

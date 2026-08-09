@@ -37,14 +37,19 @@ export class AnswerBindingsService {
       option,
       index,
       isSelected: !!option.selected,
-      isCorrect: option.correct ?? false,
+      // UNKNOWN at construction — see OptionBindings.isCorrect.
+      isCorrect: null,
 
       showFeedback: true,
-      feedback:
-        option.feedback?.trim() ||
-        (option.correct
-          ? 'Great job — that answer is correct.'
-          : 'Not quite — see the explanation above.'),
+      // Whatever feedback the option already carries, and nothing else.
+      //
+      // This used to pick between "Great job — that answer is correct." and
+      // "Not quite — see the explanation above." based on the option's own
+      // `correct` flag. That put the answer key straight on screen, before any
+      // verdict authorized a reveal and for options the user had not even
+      // selected. Authorized feedback comes from FeedbackService once a verdict
+      // exists; a fallback binding has no business inventing it.
+      feedback: option.feedback?.trim() ?? '',
 
       highlight: !!option.highlight,
 

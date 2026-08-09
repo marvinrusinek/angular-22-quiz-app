@@ -94,33 +94,68 @@ describe('SharedOptionBindingService', () => {
     const correctOpt: Option = { optionId: 1, text: 'Right', correct: true };
     const wrongOpt: Option = { optionId: 2, text: 'Wrong', correct: false };
 
-    it('infers radio input for a single-correct option set', () => {
-      const comp = makeComp({ optionsToDisplay: [correctOpt, wrongOpt] });
+    // Input type follows the question's resolved TYPE, not a count of correct
+    // options. Counting made a rendering decision depend on the answer key,
+    // and would collapse every question to a radio group once options arrive
+    // from the API carrying no correctness.
+    it('renders radio for a single-answer question', () => {
+      const comp = makeComp({
+        optionsToDisplay: [correctOpt, wrongOpt],
+        resolveInteractionType: () => 'single'
+      });
       const b = service.getOptionBindings(comp, correctOpt, 0);
       expect(b.appHighlightInputType).toBe('radio');
     });
 
-    it('infers checkbox input when more than one option is correct', () => {
-      const multi = [correctOpt, { ...wrongOpt, correct: true }];
-      const comp = makeComp({ optionsToDisplay: multi });
+    it('renders checkbox for a multiple-answer question', () => {
+      const comp = makeComp({
+        optionsToDisplay: [correctOpt, wrongOpt],
+        resolveInteractionType: () => 'multiple'
+      });
       const b = service.getOptionBindings(comp, correctOpt, 0);
       expect(b.appHighlightInputType).toBe('checkbox');
     });
 
-    it('marks highlightCorrect for a selected correct option', () => {
+    it('renders radio for a single-answer question even when several options are flagged correct', () => {
+      // The count says multiple; the resolved type says single. The type wins.
+      const lying = [correctOpt, { ...wrongOpt, correct: true }];
+      const comp = makeComp({
+        optionsToDisplay: lying,
+        resolveInteractionType: () => 'single'
+      });
+      expect(service.getOptionBindings(comp, correctOpt, 0).appHighlightInputType).toBe('radio');
+    });
+
+    // Selection is tracked; correctness is not asserted. A binding is built
+    // before any verdict exists, so claiming either answer would be a guess —
+    // and `false` specifically would mean "a verdict said wrong".
+    it('tracks selection without claiming correctness for a correct option', () => {
       const comp = makeComp({ optionsToDisplay: [correctOpt, wrongOpt] });
       const b = service.getOptionBindings(comp, correctOpt, 0, true);
       expect(b.isSelected).toBe(true);
       expect(b.checked).toBe(true);
-      expect(b.highlightCorrect).toBe(true);
+      expect(b.isCorrect).toBeNull();
+      expect(b.highlightCorrect).toBe(false);
       expect(b.highlightIncorrect).toBe(false);
     });
 
-    it('marks highlightIncorrect for a selected wrong option', () => {
+    it('does not mark a selected wrong option incorrect either', () => {
       const comp = makeComp({ optionsToDisplay: [correctOpt, wrongOpt] });
       const b = service.getOptionBindings(comp, wrongOpt, 1, true);
-      expect(b.highlightIncorrect).toBe(true);
+      expect(b.isCorrect).toBeNull();
+      expect(b.highlightIncorrect).toBe(false);
       expect(b.highlightCorrect).toBe(false);
+    });
+
+    it('builds from an option with NO `correct` property at all', () => {
+      // The shape GET /questions returns: text and nothing else.
+      const bare = { optionId: 9, text: 'Bare' } as Option;
+      const comp = makeComp({ optionsToDisplay: [bare] });
+      const b = service.getOptionBindings(comp, bare, 0);
+
+      expect(b.option.text).toBe('Bare');
+      expect(b.isCorrect).toBeNull();
+      expect(b.appHighlightInputType).toBe('radio');
     });
 
     it('defaults feedback text and deep-clones the option', () => {

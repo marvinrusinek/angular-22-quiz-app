@@ -1,4 +1,4 @@
-import { Service } from '@angular/core';
+import { Service, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { filter, take } from 'rxjs/operators';
 
@@ -8,6 +8,12 @@ import { Option } from '../../../models/Option.model';
 import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
 import type { QuizQuestionComponent } from '../../../../components/question/quiz-question/quiz-question.component';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import type { QuestionVerdictState } from '../verdict/question-verdict.types';
+import {
+  selectedVerdictFor,
+  verdictStateForDisplayIndex
+} from '../verdict/authorized-correctness';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { norm } from '../../../utils/text-norm';
 import { swallow } from '../../../utils/error-logging';
@@ -20,6 +26,7 @@ type Host = QuizQuestionComponent;
  */
 @Service()
 export class QqcOrchClickService {
+  private readonly verdicts = inject(QuestionVerdictService);
 
   async runOnOptionClicked(
     host: Host,
@@ -162,11 +169,24 @@ export class QqcOrchClickService {
    */
   private applySingleAnswerDisable(host: Host, idx: number, q: QuizQuestion | null, evtOpt: any, evtIdx: number): void {
     try {
-      const { isSingleAnswer, clickedIsCorrect, correctIdSet } =
-        this.computeSingleAnswerDisableContext(host, idx, q, evtOpt, evtIdx);
-      if (isSingleAnswer && clickedIsCorrect) {
-        this.disableIncorrectSingleAnswerBindings(host, correctIdSet);
-      }
+      const { isSingleAnswer } = this.computeSingleAnswerDisableContext(host, idx, q);
+      if (!isSingleAnswer) return;
+
+      // Lock only once the VERDICT says the question was answered correctly.
+      //
+      // This used to gate on the clicked option's own `correct` flag and then
+      // lock everything outside a correct-id set built from the bank. Neither
+      // fact survives the answer key leaving the browser: `evtOpt.correct`
+      // would be absent, the guard would never pass, and a correct answer
+      // would stop locking anything.
+      //
+      // Note this path never leaked: it only ran after a CORRECT click, so it
+      // disclosed nothing the user had not already earned. What it needed was
+      // an authority, not a fix.
+      const state = verdictStateForDisplayIndex(host.quizService, idx, this.verdicts);
+      if (state?.phase !== 'resolved' || state.isResolvedCorrect !== true) return;
+
+      this.lockAroundCorrectSelection(host, state);
     } catch (err: unknown) {
       console.error('QqcOrchClickService.handleOptionSelected single-answer disable failed:', err);
     }
@@ -177,38 +197,41 @@ export class QqcOrchClickService {
    * flags, with a pristine >1-correct override), whether the clicked option is
    * correct, and the set of correct option keys. Extracted verbatim.
    */
-  private computeSingleAnswerDisableContext(host: Host, idx: number, q: QuizQuestion | null, evtOpt: any, evtIdx: number):
-    { isSingleAnswer: boolean; clickedIsCorrect: boolean; correctIdSet: Set<number> } {
+  private computeSingleAnswerDisableContext(host: Host, idx: number, q: QuizQuestion | null):
+    { isSingleAnswer: boolean } {
     const rawQuestion: any = host.quizService.getQuestionsInDisplayOrder?.()?.[idx]
       ?? host.quizService?.questions?.[idx]
       ?? q;
     const rawOpts: any[] = rawQuestion?.options ?? [];
     const rawCorrectCount = rawOpts.filter((o: any) => isOptionCorrect(o)).length;
 
+    // The correct-id set that used to be built here is gone. Locking now asks
+    // the verdict which option the user got right, so a full answer set never
+    // has to exist in the browser for this path to work.
+    //
+    // What remains is single-vs-multi detection, which is question TYPE rather
+    // than correctness. It is still counted from the bank because the local
+    // questions carry no declared type; it moves to the type registry with the
+    // rest of the type inference, not here.
     // Pristine fallback: stale single-looking raw flags but quizInitialState
     // shows >1 correct => actually multi-answer; skip the single-answer disable.
     const isSingleAnswer = !this.detectPristineMulti(host, rawQuestion) && rawCorrectCount <= 1;
-    const correctIdSet = new Set<number>(
-      rawOpts
-        .map((o: any, i: number) => {
-          const c = isOptionCorrect(o);
-          if (!c) return -1;
-          const id = Number(o?.optionId);
-          return Number.isFinite(id) && id !== -1 ? id : i;
-        })
-        .filter((n: number) => n >= 0)
-    );
-    const clickedId = Number(evtOpt?.optionId);
-    const clickedKey = Number.isFinite(clickedId) && clickedId !== -1 ? clickedId : evtIdx;
-    const clickedIsCorrect = correctIdSet.has(clickedKey) || isOptionCorrect(evtOpt);
-    if (correctIdSet.size === 0 && clickedIsCorrect) {
-      correctIdSet.add(clickedKey);
-    }
-    return { isSingleAnswer, clickedIsCorrect, correctIdSet };
+    return { isSingleAnswer };
   }
 
-  /** Disable all bindings not in correctIdSet and flag wrongly-selected ones incorrect. Extracted verbatim. */
-  private disableIncorrectSingleAnswerBindings(host: Host, correctIdSet: Set<number>): void {
+  /**
+   * Lock a correctly-answered single-answer question around the user's pick.
+   *
+   * "Everything except the correct option" and "everything except the option
+   * the user got right" are the same set here — the question is single-answer
+   * and resolved correct, so their correct pick IS the answer. Reading it from
+   * the verdict's own per-selection result means no correct-id set has to be
+   * built, and nothing asks about an option the user never touched.
+   *
+   * A selected option the verdict marked wrong (an earlier guess still showing)
+   * keeps its incorrect marking — that is disclosed by their own selection.
+   */
+  private lockAroundCorrectSelection(host: Host, state: QuestionVerdictState): void {
     const targets: any[][] = [];
     const soc: any = host.sharedOptionComponent?.();
     if (soc?.optionBindings()?.length) targets.push(soc.optionBindings());
@@ -218,12 +241,11 @@ export class QqcOrchClickService {
       for (let bi = 0; bi < arr.length; bi++) {
         const b = arr[bi];
         if (!b) continue;
-        const bId = Number(b.option?.optionId);
-        const effId = Number.isFinite(bId) && bId !== -1 ? bId : bi;
-        const isCorrect = correctIdSet.has(effId);
+        const own = selectedVerdictFor(state, b.option?.text);
+        const isCorrect = own === true;
         b.disabled = !isCorrect;
         if (b.option) b.option.active = isCorrect;
-        if (!isCorrect && (b.isSelected || b.option?.selected)) {
+        if (own === false) {
           b.highlight = true;
           b.showFeedback = true;
           if (b.option) {

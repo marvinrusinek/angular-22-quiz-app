@@ -15,6 +15,7 @@ import { FeedbackService } from '../../features/feedback/feedback.service';
 import { NextButtonStateService } from '../../state/next-button-state.service';
 import { OptionClickHandlerService } from './option-click-handler.service';
 import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
+import type { QuestionVerdictState } from '../../features/verdict/question-verdict.types';
 import {
   allCorrectSelectedFromVerdict,
   selectedVerdictFor
@@ -401,7 +402,22 @@ export class SocAnswerProcessingService {
       comp.currentQuestion()!
     );
     const freshOption = comp.optionBindings()?.[index]?.option ?? binding.option;
-    const isClickedCorrect = new Set(effectiveCorrectIndices).has(index);
+
+    // Only ever asks about the option the user just clicked, which is exactly
+    // what a verdict discloses for a selection. Membership of a full
+    // correct-index set was a much bigger fact than the question needed.
+    //
+    // `undefined` means no verdict has been recorded for this pick yet, which
+    // is not the same as "wrong" — hence the explicit check rather than a
+    // truthiness test.
+    // REMOVE THE FALLBACK WITH THE IDLE/CHECKING/ERROR CLEANUP.
+    const authorizedClicked = selectedVerdictFor(
+      this.resolveVerdictStateForComp(comp),
+      freshOption?.text
+    );
+    const isClickedCorrect = authorizedClicked !== undefined
+      ? authorizedClicked
+      : new Set(effectiveCorrectIndices).has(index);
     comp._feedbackDisplay = {
       idx: index,
       optionId: freshOption?.optionId,
@@ -418,6 +434,18 @@ export class SocAnswerProcessingService {
     // Deterministic render: _feedbackDisplay is a plain field; force CD so the
     // multi-answer FET re-renders regardless of machine timing (zoneless).
     comp.cdRef?.markForCheck();
+  }
+
+  /** The recorded verdict for the question the component is showing, if any. */
+  private resolveVerdictStateForComp(comp: any): QuestionVerdictState | null {
+    try {
+      const quizId = (this.quizService as any)?.quizId as string | undefined;
+      const questionText = comp?.currentQuestion?.()?.questionText as string | undefined;
+      if (!quizId || !questionText) return null;
+      return this.verdicts.verdictFor(quizId, questionText);
+    } catch {
+      return null;
+    }
   }
 
   /** Push the multi-answer selection message (built from pristine correctness). Verbatim. */

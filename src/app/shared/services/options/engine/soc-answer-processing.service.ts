@@ -14,6 +14,11 @@ import { ExplanationTextService } from '../../features/explanation/explanation-t
 import { FeedbackService } from '../../features/feedback/feedback.service';
 import { NextButtonStateService } from '../../state/next-button-state.service';
 import { OptionClickHandlerService } from './option-click-handler.service';
+import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
+import {
+  allCorrectSelectedFromVerdict,
+  selectedVerdictFor
+} from '../../features/verdict/authorized-correctness';
 import { QuizService } from '../../data/quiz.service';
 import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
@@ -42,6 +47,7 @@ export class SocAnswerProcessingService {
   private selectionMessageService = inject(SelectionMessageService);
   private sharedOptionExplanationService = inject(SharedOptionExplanationService);
   private timerService = inject(TimerService);
+  private verdicts = inject(QuestionVerdictService);
 
   // ── public methods ──────────────────────────────────────────────
 
@@ -453,38 +459,62 @@ export class SocAnswerProcessingService {
       const liveQAC: any = this.resolveLiveQuestion(comp, displayIdx, qIdx);
       const bindingsAC: any[] = comp.optionBindings() ?? [];
       if (bindingsAC.length) {
+        // WHICH OPTIONS COUNT AS SELECTED — unchanged, and load-bearing.
+        //
+        // The live durable set UNION the cross-visit snapshot. durableSet resets
+        // on navigation, so on a REVISIT it holds only the just-clicked option;
+        // folding in uiSelectedTexts is what lets a COMPLETING click on revisit
+        // register as all-correct. Distinct texts (not a counter) keep a partial
+        // from ever reaching the full count.
+        const selectedTexts = new Set<string>();
+        for (const selIdx of durableSet) {
+          const txt = norm(bindingsAC[selIdx]?.option?.text);
+          if (txt) selectedTexts.add(txt);
+        }
+        for (const t of this.selectedOptionService.uiSelectedTextsForQuestion(displayIdx) ?? []) {
+          const n = norm(t);
+          if (n) selectedTexts.add(n);
+        }
+
+        // AUTHORIZED PATH.
+        //
+        // This asks for PERFECT, not the verdict's own correct/incorrect: every
+        // required answer present AND nothing wrong picked. `isResolvedCorrect`
+        // alone is the audited SUPERSET rule and would call "2 correct + 1
+        // wrong" perfect — which drops the red incorrect repaint on revisit that
+        // the no-incorrect guard exists to preserve.
+        //
+        // Both halves are facts about the user's OWN selections, so nothing here
+        // asks about an option they never touched.
+        const quizId = (this.quizService as any)?.quizId as string | undefined;
+        const questionText = liveQAC?.questionText as string | undefined;
+        const state = quizId && questionText
+          ? this.verdicts.verdictFor(quizId, questionText)
+          : null;
+
+        const authorizedAll = allCorrectSelectedFromVerdict(state);
+        if (authorizedAll !== null) {
+          const anyWrongPicked = [...selectedTexts].some(
+            (t) => selectedVerdictFor(state, t) === false
+          );
+          return authorizedAll && !anyWrongPicked;
+        }
+
+        // REMOVE WITH THE IDLE/CHECKING/ERROR CLEANUP — reached only when no
+        // verdict has been recorded. A revisit in a fresh session has none, and
+        // absence is not a negative verdict, so the pristine comparison still
+        // answers here.
         const pristineCorrectTextsAC =
-          this.quizService.getPristineCorrectTextsForQuestion(liveQAC?.questionText);
+          this.quizService.getPristineCorrectTextsForQuestion(questionText);
         if (pristineCorrectTextsAC.size > 0) {
-          // Count DISTINCT correct texts selected — from the live durable set AND
-          // the cross-visit UI union (live bindings ∪ first-visit _revisitDisplay
-          // snapshot). durableSet resets on navigation, so on REVISIT it holds
-          // only the just-clicked option; folding in uiSelectedTexts lets a
-          // COMPLETING click on revisit register as all-correct (mirrors the
-          // non-shuffle checkAndScoreMultiAnswer union). Counting distinct texts
-          // (not a raw counter) keeps a partial from ever reaching the full count.
           const selectedCorrectTexts = new Set<string>();
           let hasIncorrectSelected = false;
-          for (const selIdx of durableSet) {
-            const txt = norm(bindingsAC[selIdx]?.option?.text);
-            if (!txt) continue;
-            if (pristineCorrectTextsAC.has(txt)) selectedCorrectTexts.add(txt);
+          for (const t of selectedTexts) {
+            if (pristineCorrectTextsAC.has(t)) selectedCorrectTexts.add(t);
             else hasIncorrectSelected = true;
           }
-          const uiSelected = this.selectedOptionService.uiSelectedTextsForQuestion(displayIdx);
-          if (uiSelected) {
-            for (const t of uiSelected) {
-              const n = norm(t);
-              if (!n) continue;
-              if (pristineCorrectTextsAC.has(n)) selectedCorrectTexts.add(n);
-              else hasIncorrectSelected = true;
-            }
-          }
-          // Require ALL pristine-correct selected AND no incorrect selected. Without
-          // the no-incorrect guard, a "2 correct + 1 wrong" selection reads as
-          // fully-resolved-correct, which drops the red 'incorrect-option' repaint of
-          // the clicked wrong on revisit (mirrors the hasIncorrect guard the other gates use).
-          allCorrectInDurable = selectedCorrectTexts.size >= pristineCorrectTextsAC.size && !hasIncorrectSelected;
+          allCorrectInDurable =
+            selectedCorrectTexts.size >= pristineCorrectTextsAC.size && !hasIncorrectSelected;
         }
       }
     } catch (err: unknown) { console.error('processMultiAnswerClick allCorrectInDurable check failed:', err); }

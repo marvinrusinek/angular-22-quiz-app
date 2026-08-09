@@ -662,19 +662,40 @@ export class SocAnswerProcessingService {
 
   /**
    * Compute the multi-answer click state, update the durable disabled set, mark
-   * the question perfect when all correct are now selected (before bindings, so
-   * isDisabled() sees it), and compute the binding updates. Returns both the
-   * click state and the binding updates. Verbatim.
+   * the question complete when all correct are now selected (before bindings, so
+   * isDisabled() sees it), and compute the binding updates.
+   *
+   * ── Where these facts come from ────────────────────────────────────
+   *
+   * This used to take a full correct-index set and read every answer off it,
+   * including options the user never touched. The verdict answers the same
+   * questions with strictly less: a selection carries its own verdict, the
+   * number of still-missing correct answers arrives WITHOUT naming them, and
+   * the full set is disclosed only once the question is terminal — which is the
+   * one moment this function actually needs it, to grey out the losers.
+   *
+   * COMPLETION, NOT PERFECT. `remaining` counts only MISSING correct answers,
+   * so extra wrong picks still leave it at zero. That is the audited superset
+   * rule, and it is exactly what the old index arithmetic did
+   * (`correctIndices.length - correctSelected`), so the `_multiAnswerPerfect`
+   * stamp keeps firing on the same clicks as before despite its name.
    */
   private applyMultiAnswerDisableState(comp: any, index: number, qIdx: number, displayIdx: number, durableSet: Set<number>, effectiveCorrectIndices: number[]): { clickState: any; bindingUpdates: any[] } {
-    const clickState = this.clickHandler.computeMultiAnswerClickState(
-      index, durableSet, effectiveCorrectIndices
+    const bindings: any[] = comp.optionBindings() ?? [];
+    const authorized = this.authorizedMultiAnswerFacts(
+      this.resolveVerdictStateForComp(comp), bindings, index, durableSet
     );
+
+    // REMOVE WITH THE IDLE/CHECKING/ERROR CLEANUP — the pre-verdict path. Note
+    // the fallback is all-or-nothing: facts are never mixed across authorities.
+    const clickState = authorized?.clickState
+      ?? this.clickHandler.computeMultiAnswerClickState(index, durableSet, effectiveCorrectIndices);
+    const correctIdxs = authorized ? authorized.correctIndices : effectiveCorrectIndices;
 
     const disabledSetRef = this.ensureDisabledSet(comp, qIdx);
     this.clickHandler.updateDisabledSet(
       disabledSetRef, index, clickState.isClickedCorrect,
-      clickState.remaining, comp.optionBindings().length, effectiveCorrectIndices
+      clickState.remaining, bindings.length, correctIdxs
     );
 
     if (clickState.remaining === 0) {
@@ -682,10 +703,122 @@ export class SocAnswerProcessingService {
       writeSessionString(SK_MULTI_PERFECT + displayIdx, 'true');
     }
 
-    const bindingUpdates = this.clickHandler.computeMultiAnswerBindingUpdates(
-      comp.optionBindings().length, durableSet, effectiveCorrectIndices, disabledSetRef
-    );
+    const bindingUpdates = authorized
+      ? this.buildAuthorizedBindingUpdates(bindings, durableSet, disabledSetRef, authorized.correctnessOf)
+      : this.clickHandler.computeMultiAnswerBindingUpdates(
+          bindings.length, durableSet, effectiveCorrectIndices, disabledSetRef
+        );
     return { clickState, bindingUpdates };
+  }
+
+  /**
+   * The multi-answer facts taken from the verdict, or null when the question
+   * carries no usable one yet (idle/checking/error, or a state that cannot
+   * answer for the clicked option) so the caller can fall back wholesale.
+   *
+   * Returning null rather than guessing is the point: an unchecked pick is not
+   * a wrong pick.
+   */
+  private authorizedMultiAnswerFacts(
+    state: QuestionVerdictState | null,
+    bindings: any[],
+    clickedIndex: number,
+    durableSet: Set<number>
+  ): { clickState: any; correctIndices: number[]; correctnessOf: (bi: number) => boolean | null } | null {
+    const completed = allCorrectSelectedFromVerdict(state);
+    if (!state || completed === null) return null;
+
+    // TERMINAL ONLY. `correctOptionTexts` is empty for the whole of incomplete
+    // play, so during partial selection there is no full set to read even here.
+    const revealed = state.phase === 'resolved' || state.phase === 'expired'
+      ? new Set(state.correctOptionTexts.map((t) => norm(t)))
+      : null;
+
+    const correctnessOf = (bi: number): boolean | null => {
+      const text = bindings[bi]?.option?.text;
+      if (revealed) return revealed.has(norm(text ?? ''));
+      const own = selectedVerdictFor(state, text);
+      return own !== undefined ? own : null;
+    };
+
+    // The clicked option is the one thing this must be sure about — it decides
+    // whether the pick gets disabled. Unknown means defer, not "wrong".
+    const clickedCorrect = correctnessOf(clickedIndex);
+    if (clickedCorrect === null) return null;
+
+    let remaining: number;
+    if (completed) {
+      remaining = 0;
+    } else if (typeof state.remainingCorrectCount === 'number' && state.remainingCorrectCount > 0) {
+      remaining = state.remainingCorrectCount;
+    } else {
+      return null;  // not complete, yet cannot say what is outstanding
+    }
+
+    const correctIndices: number[] = [];
+    if (revealed) {
+      for (let bi = 0; bi < bindings.length; bi++) {
+        if (correctnessOf(bi) === true) correctIndices.push(bi);
+      }
+    }
+
+    let correctSelected = 0;
+    let incorrectSelected = 0;
+    for (const selIdx of durableSet) {
+      const known = correctnessOf(selIdx);
+      if (known === true) correctSelected++;
+      else if (known === false) incorrectSelected++;
+    }
+
+    return {
+      clickState: {
+        clickedIndex,
+        isClickedCorrect: clickedCorrect,
+        correctSelected,
+        incorrectSelected,
+        remaining,
+        correctIndices1Based: correctIndices.map((i) => i + 1)
+      },
+      correctIndices,
+      correctnessOf
+    };
+  }
+
+  /**
+   * Per-binding updates with TRI-STATE correctness: an option that has neither
+   * been picked nor been revealed stays unknown instead of being told it is
+   * wrong. Consumers already test `=== true` for this reason — see
+   * OptionBindings.isCorrect and option-lock-policy.applyAuthorizedCorrectness,
+   * whose shape this mirrors.
+   *
+   * `highlight`/`showIcon` follow SELECTION only, exactly as before, so nothing
+   * an untouched option renders depends on what the answer key says.
+   */
+  private buildAuthorizedBindingUpdates(
+    bindings: any[],
+    durableSet: Set<number>,
+    disabledSet: Set<number>,
+    correctnessOf: (bi: number) => boolean | null
+  ): any[] {
+    const updates: any[] = [];
+    for (let bi = 0; bi < bindings.length; bi++) {
+      const isInDurable = durableSet.has(bi);
+      const known = correctnessOf(bi);
+      updates.push({
+        isSelected: isInDurable,
+        isCorrect: known,
+        disabled: disabledSet.has(bi),
+        optionOverrides: {
+          // Undefined, not false: this clears the bank's own flag off the copy
+          // so it cannot stand in for a verdict that has not been given.
+          correct: known ?? undefined,
+          selected: isInDurable,
+          highlight: isInDurable,
+          showIcon: isInDurable
+        }
+      });
+    }
+    return updates;
   }
 
   /** Restore _feedbackDisplay after the synchronous CD pass clears it (microtask). */

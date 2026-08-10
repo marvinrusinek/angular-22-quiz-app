@@ -316,7 +316,7 @@ export class SocAnswerProcessingService {
     this.explanationTextService.fetBypassForQuestion.set(displayIdx, true);
     this.quizService.scoreDirectly(qIdx, true, isMulti);
     this.nextButtonStateService.setNextButtonState(true);
-    this.markPerfectAndUnlockFet(comp, displayIdx);
+    this.markPerfectAndUnlockFet(comp, displayIdx, isMulti);
   }
 
   /**
@@ -324,7 +324,14 @@ export class SocAnswerProcessingService {
    * sessionStorage), clear the FET lock and unlock the explanation, then emit
    * the show-explanation change. Identical in both process*AnswerClick paths.
    */
-  private markPerfectAndUnlockFet(comp: any, displayIdx: number): void {
+  private markPerfectAndUnlockFet(comp: any, displayIdx: number, isMulti: boolean): void {
+    // On the MULTI path this is the all-correct branch, so it is completion.
+    // On the SINGLE path it means "this one pick resolved correctly", which is
+    // not a multi-answer fact at all and belongs to neither map — the legacy
+    // union carries it until its readers are migrated.
+    if (isMulti) {
+      this.quizService.multiAnswerCompletion.set(displayIdx, true);
+    }
     this.quizService._multiAnswerPerfect.set(displayIdx, true);
     writeSessionString(SK_MULTI_PERFECT + displayIdx, 'true');
     this.explanationTextService._fetLocked = false;
@@ -798,6 +805,9 @@ export class SocAnswerProcessingService {
     );
 
     if (clickState.remaining === 0) {
+      // COMPLETION, not perfect: `remaining` counts only MISSING correct
+      // answers, so a wrong extra still leaves it at zero.
+      this.quizService.multiAnswerCompletion.set(displayIdx, true);
       this.quizService._multiAnswerPerfect.set(displayIdx, true);
       writeSessionString(SK_MULTI_PERFECT + displayIdx, 'true');
     }

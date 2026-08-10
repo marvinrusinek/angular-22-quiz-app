@@ -80,7 +80,47 @@ export class QuizService {
       return '';
     }
   })();
+  /**
+   * LEGACY UNION — true when ANY of five writers fired. Do not add readers.
+   *
+   * The name says "multi-answer perfect"; the field means at least five
+   * different things, which is why moving it broke revisit rendering when it was
+   * last touched:
+   *
+   *   1. multi-answer COMPLETION, superset  (soc.applyMultiAnswerDisableState,
+   *      answer-selection) — every required correct option selected, extra
+   *      wrong picks tolerated
+   *   2. multi-answer PERFECT               (option-ui-sync) — completion AND
+   *      nothing wrong selected
+   *   3. SINGLE-answer resolved/scored      (option-interaction, and
+   *      soc.markPerfectAndUnlockFet on the single path)
+   *   4. an auto-reveal RENDER signal       (option-item: "secondary auto-reveal
+   *      signals")
+   *   5. the NAVIGATION-CLEAR gate          (quiz-navigation / setCurrentQuestionIndex
+   *      decide what to wipe from it; soc.enterAutoRevealState deliberately does
+   *      NOT set it for exactly this reason)
+   *
+   * The two precise states below are written ALONGSIDE it. Readers still read
+   * this union, so behaviour is unchanged; migrating them by meaning is the next
+   * slice, and it needs 4 and 5 named before it can be done safely.
+   */
   _multiAnswerPerfect: Map<number, boolean> = new Map();
+
+  /**
+   * SUPERSET completion: every required correct option has been selected.
+   * Extra wrong picks do NOT clear it — that is the audited Topic Quiz rule.
+   */
+  multiAnswerCompletion: Map<number, boolean> = new Map();
+
+  /**
+   * PERFECT: completion AND nothing incorrect selected.
+   *
+   * Strictly stronger than completion, so a wrong extra leaves this false while
+   * completion is true. That difference is what keeps a wrong pick's red repaint
+   * instead of greying it out with the losers.
+   */
+  multiAnswerPerfect: Map<number, boolean> = new Map();
+
   private _questions: QuizQuestion[] = [];
 
   // Scoring state delegated to QuizScoringService â€” getters for backwards compat
@@ -615,13 +655,13 @@ export class QuizService {
         // was cleared elsewhere.
         const _scored = this.questionCorrectness?.get?.(safeIndex) === true;
         if (!_userAnsweredCorrectly && !_scored) {
-          this._multiAnswerPerfect.delete(safeIndex);
+          this.wipeCompletionStateAt(safeIndex);
         }
       } catch (err: unknown) {
         console.error('QuizService.setCurrentQuestionIndex _multiAnswerPerfect check failed:', err);
         // If the check fails for any reason, fall back to clearing
         // (safer than leaving a possibly-stale flag set).
-        this._multiAnswerPerfect.delete(safeIndex);
+        this.wipeCompletionStateAt(safeIndex);
       }
     }
 
@@ -1087,6 +1127,21 @@ export class QuizService {
     this.questionsQuizId = null;
     this.dataLoader.clearFetchPromise();
     this._multiAnswerPerfect.clear();
+    this.multiAnswerCompletion.clear();
+    this.multiAnswerPerfect.clear();
+  }
+
+  /**
+   * Clear every completion state for one question, on one boundary.
+   *
+   * The union and the two split states must never disagree about whether a
+   * question is still answered — a survivor would be exactly the kind of stale
+   * flag the conditional wipe above exists to remove.
+   */
+  private wipeCompletionStateAt(idx: number): void {
+    this._multiAnswerPerfect.delete(idx);
+    this.multiAnswerCompletion.delete(idx);
+    this.multiAnswerPerfect.delete(idx);
   }
 
   private resolveShuffleQuizId(): string | null {

@@ -96,6 +96,8 @@ beforeEach(() => {
           totalQuestions: () => 1,
           getPristineCorrectTextsForQuestion: () => new Set<string>(),
           _multiAnswerPerfect: new Map<number, boolean>(),
+          multiAnswerCompletion: new Map<number, boolean>(),
+          multiAnswerPerfect: new Map<number, boolean>(),
           quizReset$: of(undefined)
         }
       },

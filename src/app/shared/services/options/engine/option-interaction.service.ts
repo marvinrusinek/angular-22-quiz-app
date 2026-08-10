@@ -488,6 +488,10 @@ export class OptionInteractionService {
     if (isShuffleActive) return;
     let scoreFired = false;
     if (allCorrectFound && !isMultipleMode && !pristineIsMultiAnswer) {
+      // SINGLE-ANSWER resolved — the gate is `!isMultipleMode &&
+      // !pristineIsMultiAnswer`. Despite the field name this is not a
+      // multi-answer fact, so neither multi map is written; the legacy union
+      // carries it until its readers are migrated.
       this.quizService._multiAnswerPerfect.set(qIdx, true);
       writeSessionString(SK_MULTI_PERFECT + qIdx, 'true');
       this.quizService.scoreDirectly(qIdx, true, isMultipleMode);

@@ -308,10 +308,16 @@ export class QuizNavigationService {
     // actually scored correct. For a genuinely perfectly-answered question we
     // WANT the flag preserved so revisit re-renders the green/gray highlight;
     // only buggy stale flags need wiping, and those won't have questionCorrectness.
+    // The split states clear on exactly the same boundary as the union.
+    const _wipeAt = (i: number) => {
+      this.quizService._multiAnswerPerfect.delete(i);
+      this.quizService.multiAnswerCompletion.delete(i);
+      this.quizService.multiAnswerPerfect.delete(i);
+    };
     const _scoredDest = _isScoredAt(index);
-    if (!_scoredDest) this.quizService._multiAnswerPerfect.delete(index);
+    if (!_scoredDest) _wipeAt(index);
     if (sourceIdx >= 0 && sourceIdx !== index && !_isScoredAt(sourceIdx)) {
-      this.quizService._multiAnswerPerfect.delete(sourceIdx);
+      _wipeAt(sourceIdx);
     }
   }
 

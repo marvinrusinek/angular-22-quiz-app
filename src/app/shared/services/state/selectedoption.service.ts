@@ -499,6 +499,9 @@ export class SelectedOptionService {
     // is a no-op for those cases anyway.
     if (this.quizService.questionCorrectness?.get?.(idx) !== true) {
       this.quizService._multiAnswerPerfect.delete(idx);
+      // Same boundary for the split states — they must not outlive the union.
+      this.quizService.multiAnswerCompletion.delete(idx);
+      this.quizService.multiAnswerPerfect.delete(idx);
     }
   }
 

@@ -47,6 +47,7 @@ describe('SelectionMessageService', () => {
       currentQuestion: { value: null },
       scoringService: { questionCorrectness: new Map() },
       _multiAnswerPerfect: new Map(),
+      questionResolved: new Map(),
       getCurrentQuestionIndex: () => 0,
     };
 

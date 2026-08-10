@@ -121,6 +121,25 @@ export class QuizService {
    */
   multiAnswerPerfect: Map<number, boolean> = new Map();
 
+  /**
+   * The user's answer interaction for this question has reached a resolved
+   * state — single or multi, right or wrong.
+   *
+   * This is the broad fact most consumers of the legacy union actually wanted:
+   * "has this question been answered?" It deliberately does NOT mean the answer
+   * was correct, that a multi-answer question is complete or perfect, that
+   * auto-reveal painted, or that the timer expired. Those are separate facts
+   * with their own state.
+   *
+   * INVARIANTS (each strictly stronger than the next):
+   *
+   *     multiAnswerPerfect ⊆ multiAnswerCompletion ⊆ questionResolved
+   *
+   * so a single-answer question can be resolved while both multi states stay
+   * false — which is exactly the distinction the old union could not express.
+   */
+  questionResolved: Map<number, boolean> = new Map();
+
   private _questions: QuizQuestion[] = [];
 
   // Scoring state delegated to QuizScoringService â€” getters for backwards compat
@@ -623,13 +642,16 @@ export class QuizService {
   setCurrentQuestionIndex(idx: number) {
     const safeIndex = Number.isFinite(idx) ? Math.max(0, Math.trunc(idx)) : 0;
 
-    // Conditionally wipe _multiAnswerPerfect[safeIndex] — ONLY clear if
+    // Conditionally wipe the answer state at [safeIndex] — ONLY clear if
     // the user did NOT actually answer the question correctly on the
     // prior visit. Genuinely-correct answers should preserve their
     // green/disabled visual on revisit. We check by comparing
     // selectedOptionsMap[idx] selections against the question's
     // canonical correct texts.
-    const _before = this._multiAnswerPerfect.get(safeIndex);
+    // Short-circuit on RESOLVED: nothing to wipe unless the question was
+    // recorded as answered. It is written at exactly the sites the legacy union
+    // is, so this triggers on precisely the same visits as before.
+    const _before = this.questionResolved.get(safeIndex);
     if (_before === true) {
       try {
         const _selections = this.selectedOptionsMap.get(safeIndex) ?? [];
@@ -1129,6 +1151,7 @@ export class QuizService {
     this._multiAnswerPerfect.clear();
     this.multiAnswerCompletion.clear();
     this.multiAnswerPerfect.clear();
+    this.questionResolved.clear();
   }
 
   /**
@@ -1142,6 +1165,10 @@ export class QuizService {
     this._multiAnswerPerfect.delete(idx);
     this.multiAnswerCompletion.delete(idx);
     this.multiAnswerPerfect.delete(idx);
+    // Resolved clears here too: this wipe exists to drop a stale "answered"
+    // flag for a question the user did NOT actually answer, and that is the
+    // same judgement for all four.
+    this.questionResolved.delete(idx);
   }
 
   private resolveShuffleQuizId(): string | null {

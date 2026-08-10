@@ -332,6 +332,9 @@ export class SocAnswerProcessingService {
     if (isMulti) {
       this.quizService.multiAnswerCompletion.set(displayIdx, true);
     }
+    // RESOLVED either way — the single path reaching here means one pick
+    // resolved the question, which is the broad fact most readers wanted.
+    this.quizService.questionResolved.set(displayIdx, true);
     this.quizService._multiAnswerPerfect.set(displayIdx, true);
     writeSessionString(SK_MULTI_PERFECT + displayIdx, 'true');
     this.explanationTextService._fetLocked = false;
@@ -808,6 +811,7 @@ export class SocAnswerProcessingService {
       // COMPLETION, not perfect: `remaining` counts only MISSING correct
       // answers, so a wrong extra still leaves it at zero.
       this.quizService.multiAnswerCompletion.set(displayIdx, true);
+      this.quizService.questionResolved.set(displayIdx, true);
       this.quizService._multiAnswerPerfect.set(displayIdx, true);
       writeSessionString(SK_MULTI_PERFECT + displayIdx, 'true');
     }
@@ -1168,7 +1172,8 @@ export class SocAnswerProcessingService {
     this.nextButtonStateService.setNextButtonState(true);
     this.selectionMessageService.forceNextButtonMessage(qIdx);
     this.explanationTextService.fetBypassForQuestion.set(displayIdx, true);
-    // INTENTIONALLY do NOT set _multiAnswerPerfect — see comment in
+    // INTENTIONALLY records NO answer state (not questionResolved, not
+    // completion, not the legacy union) — see comment in
     // sibling autoreveal block (~line 711). Used as the navigation-clear
     // gate, so setting it on autoreveal-fired (user picked wrong) made
     // Q2 retain green correct-option highlight on 2nd visit.

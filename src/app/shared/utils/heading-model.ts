@@ -24,7 +24,7 @@ export interface HeadingInputs {
   /** Pristine: does this question have >1 correct option? */
   isMultiAnswer: boolean;
   /** Multi-answer completed — every pristine-correct option selected
-   *  (a.k.a. _multiAnswerPerfect / fetBypass for this index). */
+   *  (a.k.a. multiAnswerCompletion / fetBypass for this index). */
   isMultiAnswerComplete: boolean;
   /** Single-answer answered correctly (the pristine-correct option selected). */
   isSingleAnswered: boolean;

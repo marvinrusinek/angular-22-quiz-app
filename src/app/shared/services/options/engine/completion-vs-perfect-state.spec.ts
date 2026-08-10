@@ -100,6 +100,7 @@ beforeEach(() => {
           _multiAnswerPerfect: new Map<number, boolean>(),
           multiAnswerCompletion: new Map<number, boolean>(),
           multiAnswerPerfect: new Map<number, boolean>(),
+          questionResolved: new Map<number, boolean>(),
           quizReset$: of(undefined)
         }
       },
@@ -124,6 +125,7 @@ beforeEach(() => {
 
 const completion = () => quiz.multiAnswerCompletion.get(IDX);
 const perfect = () => quiz.multiAnswerPerfect.get(IDX);
+const resolved = () => quiz.questionResolved.get(IDX);
 const legacyUnion = () => quiz._multiAnswerPerfect.get(IDX);
 
 /** 'map'(0) and 'filter'(2) are the correct pair; 'Subject'(1) is wrong. */
@@ -164,21 +166,76 @@ describe('completion tolerates a wrong extra; perfect does not', () => {
 });
 
 describe('single-answer resolution does not pollute multi-answer state', () => {
-  it('the SINGLE path leaves both multi states untouched', () => {
+  it('the SINGLE path is RESOLVED but neither complete nor perfect', () => {
     (service as any).scoreAndOpenFet(makeComp(), IDX, IDX, false);
 
-    // Despite writing the legacy union — whose name says "multiAnswerPerfect" —
-    // resolving one single-answer pick is not a multi-answer fact.
+    // The distinction the old union could not express: a single-answer question
+    // is answered without any multi-answer question being finished.
+    expect(resolved()).toBe(true);
     expect(completion()).toBeUndefined();
     expect(perfect()).toBeUndefined();
-    expect(legacyUnion()).toBe(true);
   });
 
-  it('the MULTI path records completion', () => {
+  it('the MULTI path records completion AND resolved', () => {
     (service as any).scoreAndOpenFet(makeComp(), IDX, IDX, true);
 
+    expect(resolved()).toBe(true);
     expect(completion()).toBe(true);
-    expect(legacyUnion()).toBe(true);
+  });
+});
+
+describe('resolved is implied by completion, never the reverse', () => {
+  it('completing a multi-answer question resolves it', () => {
+    disablePass(2, [0, 2]);
+
+    expect(resolved()).toBe(true);
+    expect(completion()).toBe(true);
+  });
+
+  it('a partial selection resolves nothing', () => {
+    disablePass(0, [0]);
+
+    expect(resolved()).toBeUndefined();
+    expect(completion()).toBeUndefined();
+    expect(perfect()).toBeUndefined();
+  });
+
+  it('completion after an earlier wrong pick is resolved but not perfect', () => {
+    disablePass(2, [0, 1, 2]);
+
+    expect(resolved()).toBe(true);
+    expect(completion()).toBe(true);
+    expect(perfect()).toBeUndefined();
+  });
+
+  it('COMPLETION never outruns RESOLVED', () => {
+    for (const durable of [[0], [1], [0, 2], [0, 1, 2]]) {
+      quiz.multiAnswerCompletion.clear();
+      quiz.multiAnswerPerfect.clear();
+      quiz.questionResolved.clear();
+      disablePass(durable[durable.length - 1], durable);
+
+      if (completion() === true) expect(resolved()).toBe(true);
+      if (perfect() === true) expect(completion()).toBe(true);
+    }
+  });
+});
+
+describe('auto-reveal does not manufacture completion', () => {
+  it('leaves every state untouched — it is a render concern, not an answer', () => {
+    const c = makeComp();
+    // Auto-reveal paints via `_autoRevealedCorrect` on the binding and
+    // deliberately records no answer state, so a question the user got WRONG is
+    // never marked finished. Pinning that here because a comment claiming the
+    // opposite previously misdirected a whole migration.
+    (service as any).applyAutoRevealBindings(
+      c, c.optionBindings(), new Set([0, 2]), new Set<number>(), 1
+    );
+
+    expect(resolved()).toBeUndefined();
+    expect(completion()).toBeUndefined();
+    expect(perfect()).toBeUndefined();
+    expect((c.optionBindings()[0] as any)._autoRevealedCorrect).toBe(true);
   });
 });
 

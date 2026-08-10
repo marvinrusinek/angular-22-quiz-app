@@ -48,7 +48,8 @@ function deps(opts: {
       isShuffleEnabled: () => false,
       shuffledQuestions: [],
       getPristineCorrectTextsForQuestion: () => new Set(['map', 'filter']),
-      _multiAnswerPerfect: new Map<number, boolean>()
+      _multiAnswerPerfect: new Map<number, boolean>(),
+      multiAnswerCompletion: new Map<number, boolean>()
     },
     explanationTextService: {
       formattedExplanations: { 0: { questionIndex: 0, explanation: opts.localFet ?? LOCAL_LEAK } },

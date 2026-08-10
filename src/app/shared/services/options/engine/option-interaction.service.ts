@@ -492,6 +492,10 @@ export class OptionInteractionService {
       // !pristineIsMultiAnswer`. Despite the field name this is not a
       // multi-answer fact, so neither multi map is written; the legacy union
       // carries it until its readers are migrated.
+      // RESOLVED only. A single-answer question that resolves is not a
+      // multi-answer completion, and writing one here is what made the old
+      // union claim things it could not support.
+      this.quizService.questionResolved.set(qIdx, true);
       this.quizService._multiAnswerPerfect.set(qIdx, true);
       writeSessionString(SK_MULTI_PERFECT + qIdx, 'true');
       this.quizService.scoreDirectly(qIdx, true, isMultipleMode);

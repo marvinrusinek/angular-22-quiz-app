@@ -101,7 +101,7 @@ export class QuestionResolutionService {
 
   // Signal 2: multi-answer perfect flag
   private resolveMultiPerfect(qIdx: number): boolean {
-    let multiPerfect = this.quizService._multiAnswerPerfect.get(qIdx) === true;
+    let multiPerfect = this.quizService.questionResolved.get(qIdx) === true;
     if (!multiPerfect) {
       multiPerfect = readSessionString(SK_MULTI_PERFECT + qIdx) === 'true';
     }

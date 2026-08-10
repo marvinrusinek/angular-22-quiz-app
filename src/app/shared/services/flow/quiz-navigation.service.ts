@@ -313,6 +313,7 @@ export class QuizNavigationService {
       this.quizService._multiAnswerPerfect.delete(i);
       this.quizService.multiAnswerCompletion.delete(i);
       this.quizService.multiAnswerPerfect.delete(i);
+      this.quizService.questionResolved.delete(i);
     };
     const _scoredDest = _isScoredAt(index);
     if (!_scoredDest) _wipeAt(index);

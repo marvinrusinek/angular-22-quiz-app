@@ -502,6 +502,7 @@ export class SelectedOptionService {
       // Same boundary for the split states — they must not outlive the union.
       this.quizService.multiAnswerCompletion.delete(idx);
       this.quizService.multiAnswerPerfect.delete(idx);
+      this.quizService.questionResolved.delete(idx);
     }
   }
 

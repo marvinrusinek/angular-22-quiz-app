@@ -51,6 +51,7 @@ describe('SelectionMessageService integration', () => {
       currentQuestion: { value: null },
       scoringService: { questionCorrectness: new Map() },
       _multiAnswerPerfect: new Map(),
+      questionResolved: new Map(),
       getCurrentQuestionIndex: () => currentIdxSig(),
     };
 
@@ -182,7 +183,10 @@ describe('SelectionMessageService integration', () => {
     // External map says Q1 correct — but the in-session push never happened.
     // The signal must not promote external maps into "Answered ✓..." text.
     quizServiceMock.scoringService.questionCorrectness.set(0, true);
-    quizServiceMock._multiAnswerPerfect.set(0, true);
+    // The answered probe reads `questionResolved` now; the assertion is
+    // unchanged — an external map must still not promote itself into
+    // "Answered ..." text.
+    quizServiceMock.questionResolved.set(0, true);
     expect(service.selectionMessageSig()).toBe(CONTINUE_MSG);
     expect(service.isCompletedInSession(0)).toBe(false);
   });

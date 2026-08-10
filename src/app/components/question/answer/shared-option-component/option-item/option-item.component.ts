@@ -577,7 +577,7 @@ export class OptionItemComponent implements OnInit {
     // Fallback to the legacy flag path if pristine resolution failed
     // (no quizInitialState match, etc.).
     const perfectMap =
-      this.quizService._multiAnswerPerfect;
+      this.quizService.questionResolved;
     if (perfectMap?.get(_qIdx) === true && this.binding()?.disabled === true) {
       return true;
     }
@@ -806,7 +806,7 @@ export class OptionItemComponent implements OnInit {
     if (this.isCurrentOptionCorrect()) {
       const _qIdxARBg = this.quizService.currentQuestionIndex ?? this.currentQuestionIndex();
       const perfectMapARBg =
-        this.quizService._multiAnswerPerfect;
+        this.quizService.questionResolved;
       if (perfectMapARBg?.get(_qIdxARBg) === true ||
           this.binding()?.cssClasses?.['correct-option'] === true) {
         return CORRECT_COLOR;
@@ -890,7 +890,7 @@ export class OptionItemComponent implements OnInit {
   // Multi-answer data-driven gray: when the user has selected every
   // pristine-correct option for this question, every unselected
   // (incorrect) option goes gray. Mirrors the isDisabled() check so
-  // visuals stay in lockstep without depending on _multiAnswerPerfect
+  // visuals stay in lockstep without depending on the resolved-state map
   // or b.disabled flags being set in sync.
   private multiAnswerGray(): string | undefined {
     if (this.type() === 'multiple' && !this.binding()?.isSelected) {
@@ -916,7 +916,7 @@ export class OptionItemComponent implements OnInit {
       }
       // Legacy flag fallback
       const perfectMap =
-        this.quizService._multiAnswerPerfect;
+        this.quizService.questionResolved;
       if (perfectMap?.get(_qIdx) === true && !this.isCurrentOptionCorrect()) {
         return DISABLED_COLOR;
       }
@@ -984,14 +984,21 @@ export class OptionItemComponent implements OnInit {
         this.binding()?.option?._autoRevealedCorrect === true) {
       return true;
     }
-    // Secondary auto-reveal signals: _multiAnswerPerfect map (cross-mechanism
-    // flag) AND cssClasses['correct-option'] (set by auto-reveal, kept by
-    // {...b} spread but wiped by updateBindingSnapshots).
+    // NOT an auto-reveal signal, despite what this comment used to claim — and
+    // that claim cost a whole migration. Auto-reveal is the block above
+    // (`_autoRevealedCorrect`), and it deliberately never sets this state (see
+    // soc-answer-processing enterAutoRevealState), so this branch cannot be
+    // reached BY auto-reveal.
+    //
+    // What it actually means: the question has been answered AND this option is
+    // authorized correct, so keep it highlighted through binding rebuilds. The
+    // cssClasses check below is the auto-reveal one — set by auto-reveal, kept
+    // by the {...b} spread but wiped by updateBindingSnapshots.
     if (this.isCurrentOptionCorrect()) {
       const _qIdxAR = this.quizService.currentQuestionIndex ?? this.currentQuestionIndex();
-      const perfectMapAR =
-        this.quizService._multiAnswerPerfect;
-      if (perfectMapAR?.get(_qIdxAR) === true) return true;
+      const resolvedMapAR =
+        this.quizService.questionResolved;
+      if (resolvedMapAR?.get(_qIdxAR) === true) return true;
       if (this.binding()?.cssClasses?.['correct-option'] === true) return true;
     }
 

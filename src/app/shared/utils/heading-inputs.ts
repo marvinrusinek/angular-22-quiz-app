@@ -132,7 +132,7 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
       verdictComplete !== null
         ? verdictComplete
         : (pristine.length > 0 && selectedCorrect.length >= pristine.length)
-          || d.quizService._multiAnswerPerfect?.get?.(idx) === true
+          || d.quizService.multiAnswerCompletion?.get?.(idx) === true
           || ets.fetBypassForQuestion?.get?.(idx) === true,
     isSingleAnswered: !isMultiAnswer && selectedCorrectFromAuthority > 0,
     isTimedOut: d.timerService.expiredForQuestionIndexSig?.() === idx,

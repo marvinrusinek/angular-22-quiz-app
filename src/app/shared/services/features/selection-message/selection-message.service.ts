@@ -70,7 +70,7 @@ export class SelectionMessageService {
   // In-session "this idx was completed" tracker. Populated only when
   // pushMessage records a real completion message (NEXT_BTN / SHOW_RESULTS /
   // "Answered ✓..."). Used by deriveNavMessageForIdx as the authoritative
-  // answered probe — external maps (questionCorrectness, _multiAnswerPerfect,
+  // answered probe — external maps (questionCorrectness, questionResolved,
   // quizStateService.isQuestionAnswered) leak across sessions / collide in
   // shuffled mode.
   private _completedIdxSet = new Set<number>();
@@ -183,7 +183,7 @@ export class SelectionMessageService {
     const dot = this.selectedOptionService?.clickConfirmedDotStatus?.get?.(idx);
     const genuinelyAnswered =
       dot === 'correct' || dot === 'wrong'
-      || qs?._multiAnswerPerfect?.get?.(idx) === true
+      || qs?.questionResolved?.get?.(idx) === true
       || qs?.questionCorrectness?.get?.(idx) === true;
     return !genuinelyAnswered;
   }
@@ -211,7 +211,7 @@ export class SelectionMessageService {
     return this.quizStateService.isQuestionAnswered?.(idx) === true
       || qs?.questionCorrectness?.get?.(idx) === true
       || (origIdx >= 0 && qs?.questionCorrectness?.get?.(origIdx) === true)
-      || qs?._multiAnswerPerfect?.get?.(idx) === true
+      || qs?.questionResolved?.get?.(idx) === true
       || this.explanationTextService?.fetBypassForQuestion?.get?.(idx) === true;
   }
 

@@ -492,14 +492,12 @@ export class SelectedOptionService {
     // sibling bindings still see the stale entry and stay disabled.
     this.selectedOptionsMapSig.set(new Map(this.selectedOptionsMap));
 
-    // Clear quizService._multiAnswerPerfect[idx] — ONLY if the question
+    // Clear this question's answer state — ONLY if the question
     // was NOT scored correct. For genuinely-perfect multi-answer questions,
     // the flag must survive so revisit rehydrate renders the green/gray
     // highlight. Partial/wrong answers never set this flag, so the delete
     // is a no-op for those cases anyway.
     if (this.quizService.questionCorrectness?.get?.(idx) !== true) {
-      this.quizService._multiAnswerPerfect.delete(idx);
-      // Same boundary for the split states — they must not outlive the union.
       this.quizService.multiAnswerCompletion.delete(idx);
       this.quizService.multiAnswerPerfect.delete(idx);
       this.quizService.questionResolved.delete(idx);

@@ -95,7 +95,6 @@ beforeEach(() => {
           quizInitialState: [],
           totalQuestions: () => 1,
           getPristineCorrectTextsForQuestion: () => new Set<string>(),
-          _multiAnswerPerfect: new Map<number, boolean>(),
           multiAnswerCompletion: new Map<number, boolean>(),
           multiAnswerPerfect: new Map<number, boolean>(),
           questionResolved: new Map<number, boolean>(),
@@ -187,7 +186,7 @@ describe('while incomplete, an unselected option reveals nothing', () => {
     const { clickState } = run(c, 0, [0]);
 
     expect(clickState.remaining).toBe(1);
-    expect(TestBed.inject(QuizService)._multiAnswerPerfect.get(0)).toBeUndefined();
+    expect(TestBed.inject(QuizService).multiAnswerCompletion.get(0)).toBeUndefined();
   });
 
   it('never names the outstanding answers in the click state', () => {
@@ -258,7 +257,7 @@ describe('completion is authorized disclosure', () => {
     verdictState = resolved();
     run(makeComp(), 2, [0, 2]);
 
-    expect(TestBed.inject(QuizService)._multiAnswerPerfect.get(0)).toBe(true);
+    expect(TestBed.inject(QuizService).multiAnswerCompletion.get(0)).toBe(true);
   });
 
   it('reveals the correct set from the verdict, ignoring the lying local set', () => {
@@ -288,7 +287,9 @@ describe('superset: extra wrong picks still count as complete', () => {
     const { clickState } = run(makeComp(), 2, [0, 1, 2]);
 
     expect(clickState.remaining).toBe(0);
-    expect(TestBed.inject(QuizService)._multiAnswerPerfect.get(0)).toBe(true);
+    expect(TestBed.inject(QuizService).multiAnswerCompletion.get(0)).toBe(true);
+    // ...and NOT perfect, because a wrong option is in the selection.
+    expect(TestBed.inject(QuizService).multiAnswerPerfect.get(0)).toBeUndefined();
   });
 
   it('keeps the wrong selection distinguishable from the right ones', () => {

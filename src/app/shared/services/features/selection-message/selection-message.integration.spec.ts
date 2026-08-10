@@ -50,7 +50,6 @@ describe('SelectionMessageService integration', () => {
       isShuffleEnabled: jest.fn().mockReturnValue(false),
       currentQuestion: { value: null },
       scoringService: { questionCorrectness: new Map() },
-      _multiAnswerPerfect: new Map(),
       questionResolved: new Map(),
       getCurrentQuestionIndex: () => currentIdxSig(),
     };

@@ -896,7 +896,6 @@ export class OptionUiSyncService {
       this.quizService.multiAnswerPerfect.set(questionIndex, true);
       this.quizService.multiAnswerCompletion.set(questionIndex, true);
       this.quizService.questionResolved.set(questionIndex, true);
-      this.quizService._multiAnswerPerfect.set(questionIndex, true);
       writeSessionString(SK_MULTI_PERFECT + questionIndex, 'true');
       // Force FET readiness even if already scored correct (to be safe)
       this.selectedOptionService.setAnswered(true, true);

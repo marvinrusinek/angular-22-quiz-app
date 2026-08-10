@@ -300,7 +300,7 @@ export class QuizSessionManagerService {
    * Wipes every per-run accumulator on the host quiz state and emits the
    * reset-source signal. The host (QuizService) handles the few internals
    * that aren't on QuizSessionState (dataLoader fetch promise,
-   * questionsQuizId, _multiAnswerPerfect map).
+   * questionsQuizId, the per-question answer-state maps).
    */
   resetAll(state: QuizSessionState, quizResetSource: Subject<void>): void {
     state.currentQuestionIndex = 0;

@@ -335,7 +335,6 @@ export class SocAnswerProcessingService {
     // RESOLVED either way — the single path reaching here means one pick
     // resolved the question, which is the broad fact most readers wanted.
     this.quizService.questionResolved.set(displayIdx, true);
-    this.quizService._multiAnswerPerfect.set(displayIdx, true);
     writeSessionString(SK_MULTI_PERFECT + displayIdx, 'true');
     this.explanationTextService._fetLocked = false;
     this.explanationTextService.unlockExplanation();
@@ -786,8 +785,8 @@ export class SocAnswerProcessingService {
    * COMPLETION, NOT PERFECT. `remaining` counts only MISSING correct answers,
    * so extra wrong picks still leave it at zero. That is the audited superset
    * rule, and it is exactly what the old index arithmetic did
-   * (`correctIndices.length - correctSelected`), so the `_multiAnswerPerfect`
-   * stamp keeps firing on the same clicks as before despite its name.
+   * (`correctIndices.length - correctSelected`), so the completion stamp keeps
+   * firing on the same clicks as before.
    */
   private applyMultiAnswerDisableState(comp: any, index: number, qIdx: number, displayIdx: number, durableSet: Set<number>, effectiveCorrectIndices: number[]): { clickState: any; bindingUpdates: any[] } {
     const bindings: any[] = comp.optionBindings() ?? [];
@@ -812,7 +811,6 @@ export class SocAnswerProcessingService {
       // answers, so a wrong extra still leaves it at zero.
       this.quizService.multiAnswerCompletion.set(displayIdx, true);
       this.quizService.questionResolved.set(displayIdx, true);
-      this.quizService._multiAnswerPerfect.set(displayIdx, true);
       writeSessionString(SK_MULTI_PERFECT + displayIdx, 'true');
     }
 

@@ -143,7 +143,7 @@ export class AnswerSelectionService {
         totalCorrectInQuestion > 0
       ) {
         this.quizService.scoreDirectly(activeQuestionIndex, true, true);
-        // Also set the _multiAnswerPerfect flag so revisit rehydrate sees
+        // Also record completion so revisit rehydrate sees
         // this question as fully resolved (and renders the green/gray
         // highlight). scoreDirectly only writes questionCorrectness; the
         // perfect flag must be set explicitly.
@@ -151,7 +151,6 @@ export class AnswerSelectionService {
         // no check on incorrect selections, so this is the superset rule.
         this.quizService.multiAnswerCompletion.set(activeQuestionIndex, true);
         this.quizService.questionResolved.set(activeQuestionIndex, true);
-        this.quizService._multiAnswerPerfect.set(activeQuestionIndex, true);
         writeSessionString(SK_MULTI_PERFECT + activeQuestionIndex, 'true');
         this.quizStateService.setAnswerSelected(true);
         return;

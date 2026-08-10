@@ -226,9 +226,9 @@ export class QuizNavigationService {
   // Clear stale selections on both source AND destination unless the
   // question is timer-locked (then preserve the timeout-revealed state).
   // Per user requirement: questions should be COMPLETELY CLEAN on
-  // revisit, regardless of what was clicked first visit. _multiAnswerPerfect
-  // was previously used as a "preserve correct state" gate but it was
-  // being set by buggy paths even on wrong-only clicks.
+  // revisit, regardless of what was clicked first visit. The old
+  // `_multiAnswerPerfect` union was previously used as a "preserve correct
+  // state" gate but it was being set by buggy paths even on wrong-only clicks.
   // Snapshot the source (current) question's selected option texts into the
   // display-only revisit store so a later revisit can repaint the first-visit
   // colors. Runs at nav entry, before the index/selection stores change.
@@ -304,13 +304,12 @@ export class QuizNavigationService {
       this.selectedOptionService.clearSelectionsForQuestion(index, _isScoredAt(index));
     }
 
-    // Wipe _multiAnswerPerfect for the destination unless the question was
+    // Wipe the answer state for the destination unless the question was
     // actually scored correct. For a genuinely perfectly-answered question we
     // WANT the flag preserved so revisit re-renders the green/gray highlight;
     // only buggy stale flags need wiping, and those won't have questionCorrectness.
     // The split states clear on exactly the same boundary as the union.
     const _wipeAt = (i: number) => {
-      this.quizService._multiAnswerPerfect.delete(i);
       this.quizService.multiAnswerCompletion.delete(i);
       this.quizService.multiAnswerPerfect.delete(i);
       this.quizService.questionResolved.delete(i);

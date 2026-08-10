@@ -18,7 +18,7 @@ import { IDLE_VERDICT_STATE } from '../../features/verdict/question-verdict.type
 /**
  * COMPLETION is not PERFECT.
  *
- * One boolean, `_multiAnswerPerfect`, carried at least five meanings: superset
+ * One boolean, the old `_multiAnswerPerfect` union, carried five meanings: superset
  * completion, true perfect, single-answer resolved, an auto-reveal render
  * signal, and the navigation-clear gate. Writers disagreed about which they
  * meant, which is why the last attempt to move it broke revisit rendering in a
@@ -97,7 +97,6 @@ beforeEach(() => {
           getPristineCorrectTextsForQuestion: () => new Set<string>(),
           scoreDirectly: () => undefined,
           // The three states under test.
-          _multiAnswerPerfect: new Map<number, boolean>(),
           multiAnswerCompletion: new Map<number, boolean>(),
           multiAnswerPerfect: new Map<number, boolean>(),
           questionResolved: new Map<number, boolean>(),
@@ -126,7 +125,6 @@ beforeEach(() => {
 const completion = () => quiz.multiAnswerCompletion.get(IDX);
 const perfect = () => quiz.multiAnswerPerfect.get(IDX);
 const resolved = () => quiz.questionResolved.get(IDX);
-const legacyUnion = () => quiz._multiAnswerPerfect.get(IDX);
 
 /** 'map'(0) and 'filter'(2) are the correct pair; 'Subject'(1) is wrong. */
 const disablePass = (clicked: number, durable: number[]) =>
@@ -239,11 +237,12 @@ describe('auto-reveal does not manufacture completion', () => {
   });
 });
 
-describe('the legacy union still sees everything', () => {
-  it('is set by a completion writer, so existing readers are unaffected', () => {
+describe('the durable session mirror still records completion', () => {
+  it('writes the session key so a revisit in the same session rehydrates', () => {
+    // The in-memory maps do not survive a reload; `question-resolution` falls
+    // back to this key. Its name is historical — it records completion.
     disablePass(2, [0, 1, 2]);
 
-    expect(legacyUnion()).toBe(true);
     expect(sessionStorage.getItem('multi_perfect_' + IDX)).toBe('true');
   });
 

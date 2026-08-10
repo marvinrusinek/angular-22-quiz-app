@@ -92,7 +92,6 @@ beforeEach(() => {
           shuffledQuestions: [],
           totalQuestions: () => 1,
           getPristineCorrectTextsForQuestion: () => new Set(['map']),
-          _multiAnswerPerfect: new Map(),
           quizReset$: of(undefined)
         }
       },

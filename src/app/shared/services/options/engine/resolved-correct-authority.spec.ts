@@ -71,7 +71,6 @@ beforeEach(() => {
           isShuffleEnabled: () => false,
           shuffledQuestions: [],
           getPristineQuestionByText: () => PRISTINE,
-          _multiAnswerPerfect: new Map<number, boolean>(),
           multiAnswerCompletion: new Map<number, boolean>(),
           multiAnswerPerfect: new Map<number, boolean>(),
           questionResolved: new Map<number, boolean>(),

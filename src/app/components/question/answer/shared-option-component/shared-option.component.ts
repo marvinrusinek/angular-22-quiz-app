@@ -290,9 +290,28 @@ export class SharedOptionComponent
       const texts: string[] = [];
       for (const b of this.optionBindings() ?? []) {
         const opt = b?.option;
-        if (opt && (b.isSelected || opt.selected || opt.highlight)) {
-          if (opt.text) texts.push(opt.text);
-        }
+        if (!opt?.text) continue;
+
+        // AUTO-REVEAL IS DISPLAY, NOT AN ANSWER.
+        //
+        // When every incorrect option has been picked, auto-reveal paints the
+        // correct ones — `highlight`/`showIcon`/`active` — but deliberately
+        // leaves `selected`/`isSelected` set only for the option the user
+        // actually clicked (applyAutoRevealBindings). Reading `highlight` as
+        // selection therefore turned a reveal into an answer: this set is
+        // submitted to POST /check, so the app was telling the server the user
+        // had selected options it had revealed to them, and the server —
+        // correctly — called the question resolved.
+        //
+        // `highlight` still counts for everything else, because a
+        // previously-clicked option keeps it after the bindings are rebuilt.
+        const revealed =
+          (b as any)?._autoRevealedCorrect === true ||
+          (opt as any)?._autoRevealedCorrect === true;
+        const userSelected =
+          b.isSelected === true || opt.selected === true || (!revealed && opt.highlight === true);
+
+        if (userSelected) texts.push(opt.text);
       }
       const snapshot = this.selectedOptionService.getRevisitDisplayTexts(qIdx);
       if (snapshot) texts.push(...snapshot);

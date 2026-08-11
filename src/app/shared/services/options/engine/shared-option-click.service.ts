@@ -15,6 +15,7 @@ import { SocAnswerProcessingService } from './soc-answer-processing.service';
 import { SocOptionUiService } from './soc-option-ui.service';
 import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
 import { TimerService } from '../../features/timer/timer.service';
+import { TopicQuizTypeRegistry } from '../../api/topic-quiz-type-registry.service';
 import {
   allCorrectSelectedFromVerdict,
   verdictStateForDisplayIndex
@@ -40,6 +41,7 @@ export class SharedOptionClickService {
   private quizStateService = inject(QuizStateService);
   private selectedOptionService = inject(SelectedOptionService);
   private timerService = inject(TimerService);
+  private typeRegistry = inject(TopicQuizTypeRegistry);
   private verdicts = inject(QuestionVerdictService);
 
   // ── public methods ──────────────────────────────────────────────
@@ -383,10 +385,11 @@ export class SharedOptionClickService {
    * mode. Extracted verbatim from runOptionContentClick.
    */
   private resolveEffectiveCorrectIndices(comp: any, qIdx: number) {
+    const liveQuestion = comp.currentQuestion() ?? comp.getQuestionAtDisplayIndex(qIdx);
+
     if (!comp._correctIndicesByQuestion.has(qIdx)) {
-      const question = comp.currentQuestion() ?? comp.getQuestionAtDisplayIndex(qIdx);
       const result = this.clickHandler.resolveCorrectIndices(
-        question, qIdx, comp.isMultiMode, comp.type
+        liveQuestion, qIdx, comp.isMultiMode, comp.type
       );
       comp._correctIndicesByQuestion.set(qIdx, result.correctIndices);
     }
@@ -399,7 +402,6 @@ export class SharedOptionClickService {
       && Array.isArray(this.quizService?.shuffledQuestions)
       && this.quizService?.shuffledQuestions?.length > 0;
 
-    let pristineCorrectCount = correctCountFromQ;
     try {
       // Prefer the live displayed question — it is shuffle-correct without any
       // index. Indexing display-order arrays by qIdx is WRONG here: qIdx is the
@@ -417,7 +419,6 @@ export class SharedOptionClickService {
       const pristineCorrectTexts =
         this.quizService.getPristineCorrectTextsForQuestion(qTextForLookup);
       if (pristineCorrectTexts.size > 0) {
-        pristineCorrectCount = pristineCorrectTexts.size;
         const rebuilt: number[] = [];
         const bindings: any[] = Array.isArray(comp.optionBindings()) ? comp.optionBindings() : [];
         for (let i = 0; i < bindings.length; i++) {
@@ -432,7 +433,24 @@ export class SharedOptionClickService {
       console.error('SharedOptionClickService.runOptionContentClick pristine-rebuild failed:', err);
     }
     const effectiveCorrectCount = effectiveCorrectIndices.length;
-    const isMultiFromQ = comp.isMultiMode || comp.type === 'multiple' || effectiveCorrectCount > 1 || pristineCorrectCount > 1;
+
+    // ── SINGLE vs MULTI: TYPE, NOT ANSWER-KEY CARDINALITY ─────────────
+    //
+    // This used to be `... || effectiveCorrectCount > 1 || pristineCorrectCount > 1`,
+    // which makes question TYPE a derivative of the answer key. It decides
+    // which click path runs for EVERY click, so with correctness absent — the
+    // shape `/questions` returns — both counts collapse to 0 and every
+    // multi-answer question would be routed to the single-answer path.
+    //
+    // The declared type answers this directly: the registry holds it for the
+    // current quiz, and `comp.isMultiMode`/`comp.type` are themselves
+    // registry-first (answer.component.resolveQuestionType). A registry MISS
+    // is deliberately NOT treated as single — that would silently downgrade
+    // multi-answer questions while the request is in flight.
+    const declaredMulti = this.typeRegistry.isMultiAnswer(liveQuestion?.questionText);
+    const isMultiFromQ = declaredMulti !== null
+      ? declaredMulti
+      : (comp.isMultiMode || comp.type === 'multiple');
 
     return { effectiveCorrectIndices, effectiveCorrectCount, isShuffled, isMultiFromQ };
   }
@@ -472,7 +490,13 @@ export class SharedOptionClickService {
 
     // â”€â”€â”€ Delegate to answer processing sub-services â”€â”€â”€
 
-    if (isMultiFromQ && effectiveCorrectCount > 0) {
+    // ROUTED BY TYPE ALONE. The `effectiveCorrectCount > 0` guard that used to
+    // sit here is answer-key dependent: with correctness absent it is 0, and a
+    // multi-answer question would fall through to the single-answer path — a
+    // silent behaviour change rather than a visible failure. Today the count is
+    // always > 0 for a multi question, so removing the term changes nothing now
+    // and stops it mattering later.
+    if (isMultiFromQ) {
       // Use fresh binding from comp.optionBindings()[index] â€” the local
       // `binding` variable was captured before updateOptionAndUI's
       // `comp.optionBindings() = state.optionBindings` reassign at line 238,

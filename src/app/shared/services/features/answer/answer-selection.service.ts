@@ -143,13 +143,14 @@ export class AnswerSelectionService {
         totalCorrectInQuestion > 0
       ) {
         this.quizService.scoreDirectly(activeQuestionIndex, true, true);
-        // Also record completion so revisit rehydrate sees
-        // this question as fully resolved (and renders the green/gray
-        // highlight). scoreDirectly only writes questionCorrectness; the
-        // perfect flag must be set explicitly.
-        // COMPLETION: the gate is `correctSelectedCount === totalCorrect` with
-        // no check on incorrect selections, so this is the superset rule.
-        this.quizService.multiAnswerCompletion.set(activeQuestionIndex, true);
+        // NO COMPLETION HERE. The gate counts correct options via
+        // `isCorrectOptionValue` — the local answer key — and this runs on the
+        // click, before /check answers. Completion is established from the
+        // authorized verdict in
+        // SelectedOptionService.applyAuthorizedMultiCompletion.
+        //
+        // RESOLVED and the durable session mirror stay: the first needs no
+        // correctness, and the second is what a revisit rehydrates from.
         this.quizService.questionResolved.set(activeQuestionIndex, true);
         writeSessionString(SK_MULTI_PERFECT + activeQuestionIndex, 'true');
         this.quizStateService.setAnswerSelected(true);

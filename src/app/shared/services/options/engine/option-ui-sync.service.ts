@@ -890,11 +890,15 @@ export class OptionUiSyncService {
       // for unselected incorrect options. Without this flag, the
       // policy correctly stamps b.disabled=true but the UI still
       // returns false from isDisabled() in multi-answer mode.
-      // TRUE PERFECT: the gate above requires every correct option selected AND
-      // no incorrect one, so this is the strictly stronger state. Completion is
-      // implied by it, hence both.
-      this.quizService.multiAnswerPerfect.set(questionIndex, true);
-      this.quizService.multiAnswerCompletion.set(questionIndex, true);
+      // NO COMPLETION OR PERFECT HERE. The gate above is answer-key derived —
+      // `correctTextSet` comes from resolveCorrectOptionsForScoring walking
+      // pristine quizInitialState — and this runs on the click, while /check is
+      // still in flight. Both states are established from the authorized
+      // verdict in SelectedOptionService.applyAuthorizedMultiCompletion, which
+      // also derives PERFECT from the revealed correct set versus what the user
+      // actually submitted.
+      //
+      // RESOLVED stays: "the user answered" follows from their own interaction.
       this.quizService.questionResolved.set(questionIndex, true);
       writeSessionString(SK_MULTI_PERFECT + questionIndex, 'true');
       // Force FET readiness even if already scored correct (to be safe)

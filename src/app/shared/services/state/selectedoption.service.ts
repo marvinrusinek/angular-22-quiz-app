@@ -19,6 +19,7 @@ import { OptionFeedbackStateService } from './option-feedback-state.service';
 import { OptionIdResolverService } from './option-id-resolver.service';
 import { OptionLockStateService } from './option-lock-state.service';
 import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
+import type { QuestionCheckResult } from '../features/verdict/question-verdict.types';
 import { QuizService } from '../data/quiz.service';
 import { SelectionCrudService } from './selection-crud.service';
 import { SelectionPersistenceService } from './selection-persistence.service';
@@ -214,12 +215,96 @@ export class SelectedOptionService {
             if (result?.status === 'resolved' && result.correct === true) {
               this.quizService?.scoringService?.creditResolvedQuestion(quizId, questionText);
             }
+
+            this.applyAuthorizedMultiCompletion(questionText, texts, result);
           },
           error: () => { /* last confirmed state is retained */ }
         });
     } catch (err: unknown) {
       swallow('selectedoption.service#submitToVerdictService', err);
     }
+  }
+
+  /**
+   * Multi-answer completion, established by the AUTHORIZED verdict.
+   *
+   * Completion used to be decided on the click, from a correct-option count
+   * taken off the local bank. Under the API adapter the check is still in
+   * flight at that moment, so that count was the only thing available — which
+   * meant "this question is finished" was an answer-key claim, not an
+   * authorized one.
+   *
+   * ── What counts as completion ──────────────────────────────────────
+   *
+   * `resolved` only. `incomplete` is explicitly not complete (the backend
+   * returns no correct set at all for it), and `expired` is the timeout
+   * lifecycle — a reveal the user did not earn by answering — so it must not
+   * masquerade as completion here.
+   *
+   * ── How we know it is MULTI-answer ─────────────────────────────────
+   *
+   * From `correctOptionTexts.length > 1`, which is authorized terminal data,
+   * NOT a bank scan. A single-answer question resolves too, and recording
+   * multi-answer completion for it is exactly the category error the old
+   * union made.
+   *
+   * ── Why the index is resolved by TEXT ──────────────────────────────
+   *
+   * These maps are keyed by DISPLAY index, which diverges from the canonical
+   * index under shuffle (see resolveScoringContext, which self-heals the two
+   * separately and warns that keying the perfect flags by the wrong one stops
+   * the FET showing). This method only has the question's identity, so it
+   * fingerprints the display order — position is derived, never assumed.
+   */
+  private applyAuthorizedMultiCompletion(
+    questionText: string,
+    submitted: ReadonlySet<string>,
+    result: QuestionCheckResult | null | undefined
+  ): void {
+    try {
+      if (result?.status !== 'resolved') return;
+
+      const correctTexts = result.correctOptionTexts ?? [];
+      if (correctTexts.length <= 1) return;   // single-answer: not a multi fact
+
+      const displayIdx = this.resolveDisplayIndexByText(questionText);
+      if (displayIdx < 0) return;
+
+      const qs = this.quizService;
+      if (!qs) return;
+
+      // Idempotent by construction: these are set-to-true writes on a keyed
+      // map, so a replayed or duplicated terminal verdict writes the same
+      // value and triggers no second transition.
+      qs.multiAnswerCompletion?.set(displayIdx, true);
+      qs.questionResolved?.set(displayIdx, true);
+
+      // PERFECT is strictly stronger — completion AND nothing wrong picked.
+      // Both halves come from authorized data: the revealed correct set, and
+      // the user's own submitted selection.
+      const correctSet = new Set(correctTexts.map((t) => norm(t)));
+      const anyWrongPicked = [...submitted].some((t) => !correctSet.has(norm(t)));
+      if (!anyWrongPicked) {
+        qs.multiAnswerPerfect?.set(displayIdx, true);
+      }
+    } catch (err: unknown) {
+      swallow('selectedoption.service#applyAuthorizedMultiCompletion', err);
+    }
+  }
+
+  /** Display position of a question, by text fingerprint. -1 when not found. */
+  private resolveDisplayIndexByText(questionText: string): number {
+    const target = norm(questionText);
+    if (!target) return -1;
+
+    const displayQs: any[] = this.quizService?.getQuestionsInDisplayOrder?.() ?? [];
+    const found = displayQs.findIndex((q: any) => norm(q?.questionText) === target);
+    if (found >= 0) return found;
+
+    // Unshuffled runs may not expose a display-order array; the canonical list
+    // IS the display order then.
+    const canonical: any[] = this.quizService?.questions ?? [];
+    return canonical.findIndex((q: any) => norm(q?.questionText) === target);
   }
 
   /** Reactive read of the current question's UI-selected texts (for the M-A lock). */

@@ -132,20 +132,22 @@ const disablePass = (clicked: number, durable: number[]) =>
     makeComp(), clicked, IDX, IDX, new Set(durable), [0, 2]
   );
 
-describe('completion tolerates a wrong extra; perfect does not', () => {
-  it('all correct PLUS a wrong pick counts as completion, not perfect', () => {
-    disablePass(2, [0, 1, 2]);   // map + Subject(wrong) + filter
+describe('the click records the answer but never completes the question', () => {
+  it('does NOT complete on the click, even with every correct option picked', () => {
+    // `remaining === 0` here is bank-derived: the check is still in flight on
+    // this click, so nothing has authorized a completion. The arrival handler
+    // owns it — see multi-completion-arrival.spec.ts.
+    disablePass(2, [0, 2]);
 
-    expect(completion()).toBe(true);
-    // This writer only ever meant completion. Claiming perfect here would grey
-    // out the wrong pick instead of leaving its red repaint.
+    expect(completion()).toBeUndefined();
     expect(perfect()).toBeUndefined();
   });
 
-  it('all correct with nothing wrong is completion too', () => {
-    disablePass(2, [0, 2]);
+  it('does NOT complete on the click when a wrong option is also picked', () => {
+    disablePass(2, [0, 1, 2]);   // map + Subject(wrong) + filter
 
-    expect(completion()).toBe(true);
+    expect(completion()).toBeUndefined();
+    expect(perfect()).toBeUndefined();
   });
 
   it('a partial selection is neither', () => {
@@ -174,20 +176,21 @@ describe('single-answer resolution does not pollute multi-answer state', () => {
     expect(perfect()).toBeUndefined();
   });
 
-  it('the MULTI path records completion AND resolved', () => {
+  it('the MULTI path records RESOLVED, and defers completion to the verdict', () => {
     (service as any).scoreAndOpenFet(makeComp(), IDX, IDX, true);
 
     expect(resolved()).toBe(true);
-    expect(completion()).toBe(true);
+    expect(completion()).toBeUndefined();
   });
 });
 
 describe('resolved is implied by completion, never the reverse', () => {
-  it('completing a multi-answer question resolves it', () => {
+  it('answering a multi-answer question resolves it immediately', () => {
     disablePass(2, [0, 2]);
 
+    // Resolved needs no correctness — the user answered. Completion waits.
     expect(resolved()).toBe(true);
-    expect(completion()).toBe(true);
+    expect(completion()).toBeUndefined();
   });
 
   it('a partial selection resolves nothing', () => {
@@ -198,11 +201,10 @@ describe('resolved is implied by completion, never the reverse', () => {
     expect(perfect()).toBeUndefined();
   });
 
-  it('completion after an earlier wrong pick is resolved but not perfect', () => {
+  it('an earlier wrong pick still resolves, and never claims perfect', () => {
     disablePass(2, [0, 1, 2]);
 
     expect(resolved()).toBe(true);
-    expect(completion()).toBe(true);
     expect(perfect()).toBeUndefined();
   });
 

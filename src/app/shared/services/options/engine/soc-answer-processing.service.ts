@@ -329,11 +329,10 @@ export class SocAnswerProcessingService {
     // On the SINGLE path it means "this one pick resolved correctly", which is
     // not a multi-answer fact at all and belongs to neither map — the legacy
     // union carries it until its readers are migrated.
-    if (isMulti) {
-      this.quizService.multiAnswerCompletion.set(displayIdx, true);
-    }
-    // RESOLVED either way — the single path reaching here means one pick
-    // resolved the question, which is the broad fact most readers wanted.
+    // NO COMPLETION HERE either — the multi path reaches this from the same
+    // bank-derived click-time gate. Completion arrives with the verdict.
+    //
+    // RESOLVED either way: the user has answered, which needs no correctness.
     this.quizService.questionResolved.set(displayIdx, true);
     writeSessionString(SK_MULTI_PERFECT + displayIdx, 'true');
     this.explanationTextService._fetLocked = false;
@@ -807,9 +806,14 @@ export class SocAnswerProcessingService {
     );
 
     if (clickState.remaining === 0) {
-      // COMPLETION, not perfect: `remaining` counts only MISSING correct
-      // answers, so a wrong extra still leaves it at zero.
-      this.quizService.multiAnswerCompletion.set(displayIdx, true);
+      // NO COMPLETION HERE. `remaining` is bank-derived on this click — the
+      // check is still in flight, so nothing has authorized a completion yet.
+      // `SelectedOptionService.applyAuthorizedMultiCompletion` sets it when the
+      // verdict lands.
+      //
+      // RESOLVED still fires immediately: "the user has answered" follows from
+      // their own interaction and needs no correctness. Same for the durable
+      // session mirror, which is what a revisit rehydrates from.
       this.quizService.questionResolved.set(displayIdx, true);
       writeSessionString(SK_MULTI_PERFECT + displayIdx, 'true');
     }

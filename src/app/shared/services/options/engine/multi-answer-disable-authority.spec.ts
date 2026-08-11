@@ -253,11 +253,13 @@ describe('completion is authorized disclosure', () => {
     expect(bindingUpdates[3].disabled).toBe(true);
   });
 
-  it('marks the question complete', () => {
+  it('does NOT mark the question complete on the click', () => {
+    // Completion is established when the verdict lands, not from this
+    // bank-derived click-time gate — see multi-completion-arrival.spec.ts.
     verdictState = resolved();
     run(makeComp(), 2, [0, 2]);
 
-    expect(TestBed.inject(QuizService).multiAnswerCompletion.get(0)).toBe(true);
+    expect(TestBed.inject(QuizService).multiAnswerCompletion.get(0)).toBeUndefined();
   });
 
   it('reveals the correct set from the verdict, ignoring the lying local set', () => {
@@ -286,9 +288,10 @@ describe('superset: extra wrong picks still count as complete', () => {
     verdictState = supersetVerdict();
     const { clickState } = run(makeComp(), 2, [0, 1, 2]);
 
+    // The click still RECOGNISES completion (remaining hits zero)...
     expect(clickState.remaining).toBe(0);
-    expect(TestBed.inject(QuizService).multiAnswerCompletion.get(0)).toBe(true);
-    // ...and NOT perfect, because a wrong option is in the selection.
+    // ...but does not record it; the verdict does.
+    expect(TestBed.inject(QuizService).multiAnswerCompletion.get(0)).toBeUndefined();
     expect(TestBed.inject(QuizService).multiAnswerPerfect.get(0)).toBeUndefined();
   });
 

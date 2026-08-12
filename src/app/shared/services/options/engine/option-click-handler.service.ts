@@ -449,7 +449,7 @@ export class OptionClickHandlerService {
         // COMPLETION, not resolved: this branch is already inside
         // `isMultiFromData`, and it asks whether the multi-answer question is
         // finished — a single-answer resolution says nothing about that.
-        const isFullyResolved = this.quizService.multiAnswerCompletion.get(qIndex) === true;
+        const isFullyResolved = this.quizService.isMultiAnswerComplete(qIndex);
         if (!isFullyResolved) return false;
       } else {
         return false;

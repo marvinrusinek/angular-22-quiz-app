@@ -8,6 +8,7 @@ import { SelectedOptionService } from './selectedoption.service';
 import { QuizService } from '../data/quiz.service';
 import type { QuestionCheckResult } from '../features/verdict/question-verdict.types';
 import { API_BASE_URL } from '../../tokens/api-base-url.token';
+import { answerStateStub } from '../../testing/answer-state-stub';
 
 /**
  * WHERE multi-answer completion comes from.
@@ -85,9 +86,7 @@ beforeEach(() => {
           questions: CANONICAL,
           getQuestionsInDisplayOrder: () => DISPLAY_ORDER,
           questionsSig: () => CANONICAL,
-          multiAnswerCompletion: new Map<number, boolean>(),
-          multiAnswerPerfect: new Map<number, boolean>(),
-          questionResolved: new Map<number, boolean>(),
+          ...answerStateStub(),
           quizReset$: of(undefined)
         }
       }

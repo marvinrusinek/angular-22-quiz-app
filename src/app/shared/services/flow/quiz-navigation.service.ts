@@ -310,9 +310,7 @@ export class QuizNavigationService {
     // only buggy stale flags need wiping, and those won't have questionCorrectness.
     // The split states clear on exactly the same boundary as the union.
     const _wipeAt = (i: number) => {
-      this.quizService.multiAnswerCompletion.delete(i);
-      this.quizService.multiAnswerPerfect.delete(i);
-      this.quizService.questionResolved.delete(i);
+      this.quizService.clearAnswerStateAt(i);
     };
     const _scoredDest = _isScoredAt(index);
     if (!_scoredDest) _wipeAt(index);

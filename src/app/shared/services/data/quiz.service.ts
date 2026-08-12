@@ -84,7 +84,26 @@ export class QuizService {
    * SUPERSET completion: every required correct option has been selected.
    * Extra wrong picks do NOT clear it — that is the audited Topic Quiz rule.
    */
-  multiAnswerCompletion: Map<number, boolean> = new Map();
+  /**
+   * ── WHY THESE ARE SIGNALS ──────────────────────────────────────────
+   *
+   * These three were plain Maps, which was fine while every writer ran
+   * synchronously on the click: the selection signals changed in the same turn,
+   * so OnPush consumers re-rendered and happened to observe them.
+   *
+   * Completion now arrives ASYNCHRONOUSLY, from the authorized verdict. A plain
+   * Map mutated in a subscription notifies nobody — the state was correct and
+   * the DOM never looked again. That is what broke the option-item render
+   * migration: grey-out, the visible score and the FET gate all read state that
+   * had already arrived.
+   *
+   * Mutations must therefore produce a NEW Map identity. In-place `.set` on the
+   * held Map would not notify, which is why the maps are private and reached
+   * through the accessors below.
+   */
+  private readonly _multiAnswerCompletion = signal<ReadonlyMap<number, boolean>>(new Map());
+  /** Reactive handle for computed/template use. */
+  readonly multiAnswerCompletionSig = this._multiAnswerCompletion.asReadonly();
 
   /**
    * PERFECT: completion AND nothing incorrect selected.
@@ -93,7 +112,8 @@ export class QuizService {
    * completion is true. That difference is what keeps a wrong pick's red repaint
    * instead of greying it out with the losers.
    */
-  multiAnswerPerfect: Map<number, boolean> = new Map();
+  private readonly _multiAnswerPerfect = signal<ReadonlyMap<number, boolean>>(new Map());
+  readonly multiAnswerPerfectSig = this._multiAnswerPerfect.asReadonly();
 
   /**
    * The user's answer interaction for this question has reached a resolved
@@ -112,7 +132,62 @@ export class QuizService {
    * so a single-answer question can be resolved while both multi states stay
    * false — which is exactly the distinction the old union could not express.
    */
-  questionResolved: Map<number, boolean> = new Map();
+  private readonly _questionResolved = signal<ReadonlyMap<number, boolean>>(new Map());
+  readonly questionResolvedSig = this._questionResolved.asReadonly();
+
+  // ── Semantic accessors ─────────────────────────────────────────────
+  // Reads are signal reads, so a consumer that calls one inside a computed or
+  // an OnPush template is registered as a dependency and re-runs on arrival.
+
+  isQuestionResolved(idx: number): boolean {
+    return this._questionResolved().get(idx) === true;
+  }
+  isMultiAnswerComplete(idx: number): boolean {
+    return this._multiAnswerCompletion().get(idx) === true;
+  }
+  isMultiAnswerPerfect(idx: number): boolean {
+    return this._multiAnswerPerfect().get(idx) === true;
+  }
+
+  markQuestionResolved(idx: number): void {
+    this.writeAnswerState(this._questionResolved, idx, true);
+  }
+  markMultiAnswerComplete(idx: number): void {
+    this.writeAnswerState(this._multiAnswerCompletion, idx, true);
+  }
+  markMultiAnswerPerfect(idx: number): void {
+    this.writeAnswerState(this._multiAnswerPerfect, idx, true);
+  }
+
+  /** New Map identity on every real change; a no-op write must not churn CD. */
+  private writeAnswerState(
+    target: WritableSignal<ReadonlyMap<number, boolean>>,
+    idx: number,
+    value: boolean
+  ): void {
+    if (target().get(idx) === value) return;
+    const next = new Map(target());
+    next.set(idx, value);
+    target.set(next);
+  }
+
+  /** Clear one question's answer state across all three, on one boundary. */
+  clearAnswerStateAt(idx: number): void {
+    for (const target of [this._questionResolved, this._multiAnswerCompletion, this._multiAnswerPerfect]) {
+      if (!target().has(idx)) continue;
+      const next = new Map(target());
+      next.delete(idx);
+      target.set(next);
+    }
+  }
+
+  /** Clear every question's answer state (quiz reset / switch). */
+  clearAllAnswerState(): void {
+    for (const target of [this._questionResolved, this._multiAnswerCompletion, this._multiAnswerPerfect]) {
+      if (target().size === 0) continue;
+      target.set(new Map());
+    }
+  }
 
   private _questions: QuizQuestion[] = [];
 
@@ -625,7 +700,7 @@ export class QuizService {
     // Short-circuit on RESOLVED: nothing to wipe unless the question was
     // recorded as answered. It is written at exactly the sites the legacy union
     // is, so this triggers on precisely the same visits as before.
-    const _before = this.questionResolved.get(safeIndex);
+    const _before = this.isQuestionResolved(safeIndex) ? true : undefined;
     if (_before === true) {
       try {
         const _selections = this.selectedOptionsMap.get(safeIndex) ?? [];
@@ -1122,9 +1197,7 @@ export class QuizService {
     // private QuizService fields.
     this.questionsQuizId = null;
     this.dataLoader.clearFetchPromise();
-    this.multiAnswerCompletion.clear();
-    this.multiAnswerPerfect.clear();
-    this.questionResolved.clear();
+    this.clearAllAnswerState();
   }
 
   /**
@@ -1135,9 +1208,7 @@ export class QuizService {
    * conditional wipe above exists to remove.
    */
   private wipeCompletionStateAt(idx: number): void {
-    this.multiAnswerCompletion.delete(idx);
-    this.multiAnswerPerfect.delete(idx);
-    this.questionResolved.delete(idx);
+    this.clearAnswerStateAt(idx);
   }
 
   private resolveShuffleQuizId(): string | null {

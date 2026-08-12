@@ -151,7 +151,7 @@ export class AnswerSelectionService {
         //
         // RESOLVED and the durable session mirror stay: the first needs no
         // correctness, and the second is what a revisit rehydrates from.
-        this.quizService.questionResolved.set(activeQuestionIndex, true);
+        this.quizService.markQuestionResolved(activeQuestionIndex);
         writeSessionString(SK_MULTI_PERFECT + activeQuestionIndex, 'true');
         this.quizStateService.setAnswerSelected(true);
         return;

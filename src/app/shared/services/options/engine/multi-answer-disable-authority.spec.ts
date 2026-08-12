@@ -12,6 +12,7 @@ import { SelectedOptionService } from '../../state/selectedoption.service';
 import { TimerService } from '../../features/timer/timer.service';
 import { API_BASE_URL } from '../../../tokens/api-base-url.token';
 import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '../../features/verdict/question-verdict.types';
+import { answerStateStub } from '../../../testing/answer-state-stub';
 
 /**
  * The multi-answer disable/lock mutation.
@@ -95,9 +96,7 @@ beforeEach(() => {
           quizInitialState: [],
           totalQuestions: () => 1,
           getPristineCorrectTextsForQuestion: () => new Set<string>(),
-          multiAnswerCompletion: new Map<number, boolean>(),
-          multiAnswerPerfect: new Map<number, boolean>(),
-          questionResolved: new Map<number, boolean>(),
+          ...answerStateStub(),
           quizReset$: of(undefined)
         }
       },
@@ -186,7 +185,7 @@ describe('while incomplete, an unselected option reveals nothing', () => {
     const { clickState } = run(c, 0, [0]);
 
     expect(clickState.remaining).toBe(1);
-    expect(TestBed.inject(QuizService).multiAnswerCompletion.get(0)).toBeUndefined();
+    expect(TestBed.inject(QuizService).isMultiAnswerComplete(0)).toBe(false);
   });
 
   it('never names the outstanding answers in the click state', () => {
@@ -259,7 +258,7 @@ describe('completion is authorized disclosure', () => {
     verdictState = resolved();
     run(makeComp(), 2, [0, 2]);
 
-    expect(TestBed.inject(QuizService).multiAnswerCompletion.get(0)).toBeUndefined();
+    expect(TestBed.inject(QuizService).isMultiAnswerComplete(0)).toBe(false);
   });
 
   it('reveals the correct set from the verdict, ignoring the lying local set', () => {
@@ -291,8 +290,8 @@ describe('superset: extra wrong picks still count as complete', () => {
     // The click still RECOGNISES completion (remaining hits zero)...
     expect(clickState.remaining).toBe(0);
     // ...but does not record it; the verdict does.
-    expect(TestBed.inject(QuizService).multiAnswerCompletion.get(0)).toBeUndefined();
-    expect(TestBed.inject(QuizService).multiAnswerPerfect.get(0)).toBeUndefined();
+    expect(TestBed.inject(QuizService).isMultiAnswerComplete(0)).toBe(false);
+    expect(TestBed.inject(QuizService).isMultiAnswerPerfect(0)).toBe(false);
   });
 
   it('keeps the wrong selection distinguishable from the right ones', () => {

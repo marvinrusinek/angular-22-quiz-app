@@ -333,7 +333,7 @@ export class SocAnswerProcessingService {
     // bank-derived click-time gate. Completion arrives with the verdict.
     //
     // RESOLVED either way: the user has answered, which needs no correctness.
-    this.quizService.questionResolved.set(displayIdx, true);
+    this.quizService.markQuestionResolved(displayIdx);
     writeSessionString(SK_MULTI_PERFECT + displayIdx, 'true');
     this.explanationTextService._fetLocked = false;
     this.explanationTextService.unlockExplanation();
@@ -814,7 +814,7 @@ export class SocAnswerProcessingService {
       // RESOLVED still fires immediately: "the user has answered" follows from
       // their own interaction and needs no correctness. Same for the durable
       // session mirror, which is what a revisit rehydrates from.
-      this.quizService.questionResolved.set(displayIdx, true);
+      this.quizService.markQuestionResolved(displayIdx);
       writeSessionString(SK_MULTI_PERFECT + displayIdx, 'true');
     }
 

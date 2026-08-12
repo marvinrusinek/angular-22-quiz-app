@@ -7,6 +7,7 @@ import { of } from 'rxjs';
 import { AnswerSelectionService } from './answer-selection.service';
 import { QuizService } from '../../data/quiz.service';
 import { API_BASE_URL } from '../../../tokens/api-base-url.token';
+import { answerStateStub } from '../../../testing/answer-state-stub';
 
 /**
  * THE CLICK NO LONGER DECIDES COMPLETION.
@@ -58,9 +59,7 @@ beforeEach(() => {
           quizId: 'rxjs',
           questions: [],
           scoreDirectly: () => undefined,
-          multiAnswerCompletion: new Map<number, boolean>(),
-          multiAnswerPerfect: new Map<number, boolean>(),
-          questionResolved: new Map<number, boolean>(),
+          ...answerStateStub(),
           quizReset$: of(undefined)
         }
       }

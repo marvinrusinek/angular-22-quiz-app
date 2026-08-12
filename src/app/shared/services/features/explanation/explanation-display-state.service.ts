@@ -846,7 +846,7 @@ export class ExplanationDisplayStateService {
           );
           const allCorrectSel = rawCorrectTexts.size > 0 && [...rawCorrectTexts].every(t => selTexts.has(t));
 
-          const oisPerfect = quizSvc.questionResolved.get(index) === true;
+          const oisPerfect = quizSvc.isQuestionResolved(index);
 
           if (!oisPerfect && !allCorrectSel) {
             return true;

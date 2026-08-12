@@ -899,7 +899,7 @@ export class OptionUiSyncService {
       // actually submitted.
       //
       // RESOLVED stays: "the user answered" follows from their own interaction.
-      this.quizService.questionResolved.set(questionIndex, true);
+      this.quizService.markQuestionResolved(questionIndex);
       writeSessionString(SK_MULTI_PERFECT + questionIndex, 'true');
       // Force FET readiness even if already scored correct (to be safe)
       this.selectedOptionService.setAnswered(true, true);

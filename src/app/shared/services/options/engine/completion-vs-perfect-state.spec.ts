@@ -14,6 +14,7 @@ import { SelectedOptionService } from '../../state/selectedoption.service';
 import { TimerService } from '../../features/timer/timer.service';
 import { API_BASE_URL } from '../../../tokens/api-base-url.token';
 import { IDLE_VERDICT_STATE } from '../../features/verdict/question-verdict.types';
+import { answerStateStub } from '../../../testing/answer-state-stub';
 
 /**
  * COMPLETION is not PERFECT.
@@ -97,9 +98,7 @@ beforeEach(() => {
           getPristineCorrectTextsForQuestion: () => new Set<string>(),
           scoreDirectly: () => undefined,
           // The three states under test.
-          multiAnswerCompletion: new Map<number, boolean>(),
-          multiAnswerPerfect: new Map<number, boolean>(),
-          questionResolved: new Map<number, boolean>(),
+          ...answerStateStub(),
           quizReset$: of(undefined)
         }
       },

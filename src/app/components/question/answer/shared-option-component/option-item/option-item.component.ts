@@ -576,9 +576,7 @@ export class OptionItemComponent implements OnInit {
 
     // Fallback to the legacy flag path if pristine resolution failed
     // (no quizInitialState match, etc.).
-    const perfectMap =
-      this.quizService.questionResolved;
-    if (perfectMap?.get(_qIdx) === true && this.binding()?.disabled === true) {
+    if (this.quizService.isQuestionResolved(_qIdx) && this.binding()?.disabled === true) {
       return true;
     }
     return false;
@@ -805,9 +803,7 @@ export class OptionItemComponent implements OnInit {
   private correctPerfectColor(): string | undefined {
     if (this.isCurrentOptionCorrect()) {
       const _qIdxARBg = this.quizService.currentQuestionIndex ?? this.currentQuestionIndex();
-      const perfectMapARBg =
-        this.quizService.questionResolved;
-      if (perfectMapARBg?.get(_qIdxARBg) === true ||
+      if (this.quizService.isQuestionResolved(_qIdxARBg) ||
           this.binding()?.cssClasses?.['correct-option'] === true) {
         return CORRECT_COLOR;
       }
@@ -915,9 +911,7 @@ export class OptionItemComponent implements OnInit {
         }
       }
       // Legacy flag fallback
-      const perfectMap =
-        this.quizService.questionResolved;
-      if (perfectMap?.get(_qIdx) === true && !this.isCurrentOptionCorrect()) {
+      if (this.quizService.isQuestionResolved(_qIdx) && !this.isCurrentOptionCorrect()) {
         return DISABLED_COLOR;
       }
     }
@@ -996,9 +990,7 @@ export class OptionItemComponent implements OnInit {
     // by the {...b} spread but wiped by updateBindingSnapshots.
     if (this.isCurrentOptionCorrect()) {
       const _qIdxAR = this.quizService.currentQuestionIndex ?? this.currentQuestionIndex();
-      const resolvedMapAR =
-        this.quizService.questionResolved;
-      if (resolvedMapAR?.get(_qIdxAR) === true) return true;
+      if (this.quizService.isQuestionResolved(_qIdxAR)) return true;
       if (this.binding()?.cssClasses?.['correct-option'] === true) return true;
     }
 

@@ -10,6 +10,7 @@ import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { API_BASE_URL } from '../../../tokens/api-base-url.token';
 import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '../../features/verdict/question-verdict.types';
+import { answerStateStub } from '../../../testing/answer-state-stub';
 
 /**
  * "Was this question answered perfectly?" — the gate behind perfect-revisit
@@ -71,9 +72,7 @@ beforeEach(() => {
           isShuffleEnabled: () => false,
           shuffledQuestions: [],
           getPristineQuestionByText: () => PRISTINE,
-          multiAnswerCompletion: new Map<number, boolean>(),
-          multiAnswerPerfect: new Map<number, boolean>(),
-          questionResolved: new Map<number, boolean>(),
+          ...answerStateStub(),
           questionCorrectness: new Map<number, boolean>()
         }
       },

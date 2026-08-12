@@ -183,7 +183,7 @@ export class SelectionMessageService {
     const dot = this.selectedOptionService?.clickConfirmedDotStatus?.get?.(idx);
     const genuinelyAnswered =
       dot === 'correct' || dot === 'wrong'
-      || qs?.questionResolved?.get?.(idx) === true
+      || qs?.isQuestionResolved?.(idx) === true
       || qs?.questionCorrectness?.get?.(idx) === true;
     return !genuinelyAnswered;
   }
@@ -211,7 +211,7 @@ export class SelectionMessageService {
     return this.quizStateService.isQuestionAnswered?.(idx) === true
       || qs?.questionCorrectness?.get?.(idx) === true
       || (origIdx >= 0 && qs?.questionCorrectness?.get?.(origIdx) === true)
-      || qs?.questionResolved?.get?.(idx) === true
+      || qs?.isQuestionResolved?.(idx) === true
       || this.explanationTextService?.fetBypassForQuestion?.get?.(idx) === true;
   }
 

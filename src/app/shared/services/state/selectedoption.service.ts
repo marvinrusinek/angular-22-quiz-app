@@ -276,8 +276,8 @@ export class SelectedOptionService {
       // Idempotent by construction: these are set-to-true writes on a keyed
       // map, so a replayed or duplicated terminal verdict writes the same
       // value and triggers no second transition.
-      qs.multiAnswerCompletion?.set(displayIdx, true);
-      qs.questionResolved?.set(displayIdx, true);
+      qs.markMultiAnswerComplete?.(displayIdx);
+      qs.markQuestionResolved?.(displayIdx);
 
       // PERFECT is strictly stronger — completion AND nothing wrong picked.
       // Both halves come from authorized data: the revealed correct set, and
@@ -285,7 +285,7 @@ export class SelectedOptionService {
       const correctSet = new Set(correctTexts.map((t) => norm(t)));
       const anyWrongPicked = [...submitted].some((t) => !correctSet.has(norm(t)));
       if (!anyWrongPicked) {
-        qs.multiAnswerPerfect?.set(displayIdx, true);
+        qs.markMultiAnswerPerfect?.(displayIdx);
       }
     } catch (err: unknown) {
       swallow('selectedoption.service#applyAuthorizedMultiCompletion', err);
@@ -583,9 +583,7 @@ export class SelectedOptionService {
     // highlight. Partial/wrong answers never set this flag, so the delete
     // is a no-op for those cases anyway.
     if (this.quizService.questionCorrectness?.get?.(idx) !== true) {
-      this.quizService.multiAnswerCompletion.delete(idx);
-      this.quizService.multiAnswerPerfect.delete(idx);
-      this.quizService.questionResolved.delete(idx);
+      this.quizService.clearAnswerStateAt(idx);
     }
   }
 

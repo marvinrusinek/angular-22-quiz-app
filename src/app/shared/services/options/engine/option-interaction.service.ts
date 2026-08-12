@@ -495,7 +495,7 @@ export class OptionInteractionService {
       // RESOLVED only. A single-answer question that resolves is not a
       // multi-answer completion, and writing one here is what made the old
       // union claim things it could not support.
-      this.quizService.questionResolved.set(qIdx, true);
+      this.quizService.markQuestionResolved(qIdx);
       writeSessionString(SK_MULTI_PERFECT + qIdx, 'true');
       this.quizService.scoreDirectly(qIdx, true, isMultipleMode);
       scoreFired = true;

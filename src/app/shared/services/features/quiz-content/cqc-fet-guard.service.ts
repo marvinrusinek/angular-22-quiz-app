@@ -38,7 +38,7 @@ export class CqcFetGuardService {
       // hasClickedInSession unset at the moment displayText$ emits the FET,
       // causing gates here to block the FET write.
       if (host.explanationTextService?.fetBypassForQuestion?.get(idx) === true) return true;
-      if (host.quizService?.questionResolved?.get(idx) === true) return true;
+      if (host.quizService?.isQuestionResolved?.(idx) === true) return true;
       return !!host.quizStateService.hasClickedInSession?.(idx);
     } catch {
       return false;

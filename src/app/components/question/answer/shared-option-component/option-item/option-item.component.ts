@@ -543,14 +543,7 @@ export class OptionItemComponent implements OnInit {
   private isMultiAnswerOptionDisabled(_qIdx: number): boolean {
     if (this.isTimerExpiredForThisQuestion()) { return true; }
 
-    const liveQT = norm(
-      (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[_qIdx]?.questionText
-      ?? (this.quizService as any)?.questions?.[_qIdx]?.questionText
-    );
-    const pristineCorrectTexts =
-      this.quizService.getPristineCorrectTextsForQuestion(liveQT);
-
-    if (pristineCorrectTexts.size > 0) {
+    if (this.quizService.isMultiAnswerComplete(_qIdx)) {
       // Read both signals directly — registers template dependencies so this
       // OnPush component re-renders when selections change.
       const selectionsMap = this.selectedOptionService.selectedOptionsMapSig();
@@ -565,13 +558,8 @@ export class OptionItemComponent implements OnInit {
       for (const t of this.selectedOptionService.uiSelectedTextsForQuestion(_qIdx)) {
         selectedTexts.add(t);
       }
-      const allPristineCorrectSelected =
-        [...pristineCorrectTexts].every(t => selectedTexts.has(t));
-      if (allPristineCorrectSelected) {
-        const myText = norm(this.binding()?.option?.text);
-        const r = !selectedTexts.has(myText);
-        return r;
-      }
+      const myText = norm(this.binding()?.option?.text);
+      return !selectedTexts.has(myText);
     }
 
     // Fallback to the legacy flag path if pristine resolution failed
@@ -891,22 +879,18 @@ export class OptionItemComponent implements OnInit {
   private multiAnswerGray(): string | undefined {
     if (this.type() === 'multiple' && !this.binding()?.isSelected) {
       const _qIdx = this.quizService.currentQuestionIndex ?? this.currentQuestionIndex();
-      const liveQTBg =
-        (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[_qIdx]?.questionText
-        ?? (this.quizService as any)?.questions?.[_qIdx]?.questionText;
-      const pristineCorrectTextsBg =
-        this.quizService.getPristineCorrectTextsForQuestion(liveQTBg);
-      if (pristineCorrectTextsBg.size > 0) {
+      if (this.quizService.isMultiAnswerComplete(_qIdx)) {
         // Read the signal directly so OnPush auto-tracks selection changes.
         const selectionsMapBg = this.selectedOptionService.selectedOptionsMapSig();
         const selectionsBg = selectionsMapBg.get(_qIdx) ?? [];
         const selectedTextsBg = new Set(
           selectionsBg.map((s: SelectedOption) => norm(s?.text)).filter((t: string) => !!t)
         );
-        const allPristineCorrectSelectedBg =
-          [...pristineCorrectTextsBg].every(t => selectedTextsBg.has(t));
+        for (const t of this.selectedOptionService.uiSelectedTextsForQuestion(_qIdx)) {
+          selectedTextsBg.add(t);
+        }
         const myTextBg = norm(this.binding()?.option?.text);
-        if (allPristineCorrectSelectedBg && !selectedTextsBg.has(myTextBg)) {
+        if (!selectedTextsBg.has(myTextBg)) {
           return DISABLED_COLOR;
         }
       }

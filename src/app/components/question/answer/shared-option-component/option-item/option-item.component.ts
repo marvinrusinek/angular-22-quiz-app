@@ -24,13 +24,14 @@ import { FeedbackPolicyService } from '../../../../../shared/services/features/i
 import { OptionItemTimerStateService } from '../../../../../shared/services/options/view/option-item-timer-state.service';
 
 import {
+  hasAuthorizedCorrectSelection as hasAuthCorrectSelection,
   isCurrentOptionCorrect as isOptCorrect,
   isTimeoutRevealAuthorized
 } from './helpers/option-item-correctness';
+import { TopicQuizTypeRegistry } from '../../../../../shared/services/api/topic-quiz-type-registry.service';
 import { QuestionVerdictService } from '../../../../../shared/services/features/verdict/question-verdict.service';
 import { isSelectedForCurrentQuestion as isSelForCurrentQ } from './helpers/option-item-selection-matcher';
 
-import { isOptionCorrect } from '../../../../../shared/utils/is-option-correct';
 import { norm } from '../../../../../shared/utils/text-norm';
 
 import { correctAnswerAnim } from '../../../../../animations/animations';
@@ -76,6 +77,8 @@ export class OptionItemComponent implements OnInit {
   private readonly optionService = inject(OptionService);
   private readonly questionResolution = inject(QuestionResolutionService);
   private readonly quizService = inject(QuizService);
+  /** Declared question type (single vs multi) — NOT derived from the answer key. */
+  private readonly typeRegistry = inject(TopicQuizTypeRegistry);
   /** Correctness authority for per-option highlighting. */
   private readonly verdicts = inject(QuestionVerdictService);
   private readonly selectedOptionService = inject(SelectedOptionService);
@@ -515,23 +518,35 @@ export class OptionItemComponent implements OnInit {
     return undefined;
   }
 
-  // RENDERING-LAYER PRISTINE GUARD: trust quizInitialState over the
-  // [type] input binding. If pristine says this question has >1
-  // correct option, force multi-mode regardless of what the parent
-  // template passed. This catches cases where isMultiMode resolved
-  // false in the template (e.g. Q2 of dependency-injection quiz)
-  // due to mutated/missing live binding flags.
+  // RENDERING-LAYER TYPE GUARD: trust the DECLARED type over the [type] input
+  // binding, which can resolve 'single' in the template from mutated/missing
+  // live flags (e.g. Q2 of the dependency-injection quiz).
+  //
+  // This used to ask the pristine bank whether the question had more than one
+  // correct option — question TYPE inferred from the ANSWER KEY, which cannot
+  // survive the bank's removal. The registry carries the type the API declares:
+  // the same fact, stated by an authority instead of counted from the answers.
+  //
+  // A registry MISS answers null and is deliberately NOT treated as 'single' —
+  // that would silently turn a multi-answer question single while the type
+  // request is in flight. Unknown leaves the input binding untouched.
   private resolveEffectiveDisabledType(_qIdx: number): string {
-    let _type = this.type();
-    if (_type !== 'multiple' && this.binding()?.option?.text) {
-      const liveQT =
-        (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[_qIdx]?.questionText
-        ?? (this.quizService as any)?.questions?.[_qIdx]?.questionText;
-      const pristineCC =
-        this.quizService.getPristineCorrectTextsForQuestion(liveQT).size;
-      if (pristineCC > 1) _type = 'multiple';
-    }
-    return _type;
+    const _type = this.type();
+    if (_type === 'multiple' || !this.binding()?.option?.text) return _type;
+
+    const declared = this.typeRegistry.isMultiAnswer(this.questionTextAt(_qIdx));
+    return declared === true ? 'multiple' : _type;
+  }
+
+  /** The question text at a display index, shuffle-safe. */
+  private questionTextAt(qIdx: number): string | undefined {
+    return (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText
+      ?? (this.quizService as any)?.questions?.[qIdx]?.questionText;
+  }
+
+  /** @see hasAuthorizedCorrectSelection — the single-answer lock authority. */
+  private hasAuthorizedCorrectSelection(qIdx: number): boolean {
+    return hasAuthCorrectSelection(this.quizService, qIdx, this.verdicts);
   }
 
   // For MULTIPLE mode, disable purely by data: when the user has
@@ -571,8 +586,8 @@ export class OptionItemComponent implements OnInit {
   }
 
   // SINGLE-ANSWER MODE — single, direct rule:
-  //   Lock = NOT-selected AND a pristine-correct option is already selected
-  //          for this question.
+  //   Lock = NOT-selected AND the VERDICT has confirmed one of the user's own
+  //          picks correct for this question.
   // The currently-selected option is never disabled.
   // While no correct option has been selected, every option stays clickable.
   private isSingleAnswerOptionDisabled(): boolean {
@@ -584,30 +599,14 @@ export class OptionItemComponent implements OnInit {
     const selections = selectionsMapSig.get(qIdx) ?? [];
     if (selections.length === 0) return false;
 
-    // Resolve pristine correct texts for this question via questionText match
-    // against quizInitialState (immutable structuredClone of QUIZ_DATA).
-    const isShufSA = this.quizService?.isShuffleEnabled?.()
-      && Array.isArray((this.quizService as any)?.shuffledQuestions)
-      && (this.quizService as any)?.shuffledQuestions?.length > 0;
-    const liveSAQ: any = isShufSA
-      ? (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[qIdx]
-        ?? (this.quizService as any)?.shuffledQuestions?.[qIdx]
-      : (this.quizService as any)?.questions?.[qIdx];
-    const correctTextsSA =
-      this.quizService.getPristineCorrectTextsForQuestion(liveSAQ?.questionText);
-
-    // Lock as soon as the selection record itself is flagged correct, OR
-    // its text matches a pristine correct text. The flag fallback covers
-    // the case where the cache lookup misses (stale questionText / wrong
-    // qIdx). Selection records are spread from the binding option which
-    // carries `correct: true` for the canonical correct option from JSON.
-    const hasCorrectSelection = selections.some((s: SelectedOption) => {
-      if (isOptionCorrect(s)) {
-        return true;
-      }
-      return correctTextsSA.has(norm(s?.text));
-    });
-    return hasCorrectSelection;
+    // Lock once the VERDICT says one of the user's OWN picks was correct.
+    //
+    // This used to match selection texts against the pristine correct set, with
+    // an `isOptionCorrect(s)` flag fallback — both answer-key reads, and the
+    // second trusted a flag copied off the bank onto the selection record. The
+    // verdict answers the same question about the same picks, and says nothing
+    // about options the user never touched.
+    return this.hasAuthorizedCorrectSelection(qIdx);
   }
 
   shouldShowIcon(_option?: any, _i?: number): boolean {
@@ -830,20 +829,14 @@ export class OptionItemComponent implements OnInit {
   private singleAnswerNoCorrectSuppress(): null | undefined {
     const _qIdxSA = this.quizService.currentQuestionIndex ?? this.currentQuestionIndex();
     if (this.type() === 'single' && !this.binding()?.isSelected) {
-      const liveQTSA =
-        (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[_qIdxSA]?.questionText
-        ?? (this.quizService as any)?.questions?.[_qIdxSA]?.questionText;
-      const pristineCorrectTextsSA =
-        this.quizService.getPristineCorrectTextsForQuestion(liveQTSA);
-      if (pristineCorrectTextsSA.size === 1) {
-        const selectionsMapSA = this.selectedOptionService.selectedOptionsMapSig();
-        const selectionsSA = selectionsMapSA.get(_qIdxSA) ?? [];
-        const noCorrectSelectedSA = !selectionsSA.some((s: SelectedOption) => {
-          const txt = norm(s?.text);
-          return !!txt && pristineCorrectTextsSA.has(txt);
-        });
-        if (noCorrectSelectedSA) return null;
-      }
+      // Suppress the grey while no pick has been AUTHORIZED correct.
+      //
+      // The pristine lookup this replaces did two jobs: confirming the question
+      // was single-answer (its correct set had exactly one member), and testing
+      // the user's selections against the answer key. `type()` already answers
+      // the first — registry-backed via resolveEffectiveDisabledType — and the
+      // verdict answers the second, about the user's own picks only.
+      if (!this.hasAuthorizedCorrectSelection(_qIdxSA)) return null;
     }
     return undefined;
   }

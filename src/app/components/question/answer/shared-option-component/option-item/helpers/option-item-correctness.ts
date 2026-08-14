@@ -3,7 +3,10 @@ import { OptionBindings } from '../../../../../../shared/models/OptionBindings.m
 import { QuizService } from '../../../../../../shared/services/data/quiz.service';
 import type { QuestionVerdictService } from '../../../../../../shared/services/features/verdict/question-verdict.service';
 
-import { questionTextForDisplayIndex } from '../../../../../../shared/services/features/verdict/authorized-correctness';
+import {
+  questionTextForDisplayIndex,
+  verdictStateForDisplayIndex
+} from '../../../../../../shared/services/features/verdict/authorized-correctness';
 import { norm } from '../../../../../../shared/utils/text-norm';
 
 /**
@@ -56,6 +59,36 @@ export function isTimeoutRevealAuthorized(
   if (!quizId || !questionText) return false;
 
   return verdicts.verdictFor(quizId, questionText).phase === 'expired';
+}
+
+/**
+ * Has the user selected an option the VERDICT confirms correct?
+ *
+ * The single-answer lock. Once a correct pick is confirmed the question is
+ * over, so every other option greys out; until then the user stays free to
+ * keep trying and nothing may change.
+ *
+ * This used to compare the user's selections against the bank's correct set,
+ * with a fallback to a `correct` flag copied onto the selection record. Both
+ * were answer-key reads, and both would answer nothing once the bank stops
+ * shipping. The verdict answers the same question about the same picks.
+ *
+ * It asks only about options the user actually touched, so it cannot leak the
+ * answer key: an option nobody selected carries no verdict, and `undefined` is
+ * not `true` — hence the explicit comparison rather than a truthiness test.
+ */
+export function hasAuthorizedCorrectSelection(
+  quizService: QuizService,
+  qIdx: number,
+  verdicts?: QuestionVerdictService | null
+): boolean {
+  const state = verdictStateForDisplayIndex(quizService, qIdx, verdicts);
+  if (!state) return false;
+
+  for (const [, correct] of state.selectedVerdicts) {
+    if (correct === true) return true;
+  }
+  return false;
 }
 
 export function isCurrentOptionCorrect(

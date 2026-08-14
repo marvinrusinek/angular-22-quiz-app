@@ -19,6 +19,7 @@ import { OptionFeedbackStateService } from './option-feedback-state.service';
 import { OptionIdResolverService } from './option-id-resolver.service';
 import { OptionLockStateService } from './option-lock-state.service';
 import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
+import { questionTextForDisplayIndex } from '../features/verdict/authorized-correctness';
 import type { QuestionCheckResult } from '../features/verdict/question-verdict.types';
 import { QuizService } from '../data/quiz.service';
 import { SelectionCrudService } from './selection-crud.service';
@@ -189,7 +190,26 @@ export class SelectedOptionService {
   private submitToVerdictService(questionIndex: number, texts: ReadonlySet<string>): void {
     try {
       const quizId = this.quizService?.quizId;
-      const questionText = this.quizService?.questionsSig?.()?.[questionIndex]?.questionText;
+      // IDENTITY COMES FROM THE DISPLAY ORDER.
+      //
+      // `questionIndex` is a DISPLAY position — both callers derive it from the
+      // question the user is looking at (`getActiveQuestionIndex()` in the
+      // shared-option component, `ctx.qIdx` in the click path). This used to
+      // index `questionsSig()`, which is assigned the shuffled array on some
+      // setup paths and the canonical array on others, so under shuffle it could
+      // still hold canonical order when the first answer was submitted.
+      //
+      // The consequence was not a cosmetic mislabel: the user's selected option
+      // texts were POSTed to /check under a DIFFERENT question's identity, with
+      // a receipt bound to that other question. The server then judged the wrong
+      // question, one question was submitted twice and another never reached
+      // authorization at all. Measured on the dependency-injection quiz under
+      // shuffle: 7 answered questions produced only 6 unique identities.
+      //
+      // `questionTextForDisplayIndex` is the same resolver every other
+      // authorized consumer already uses, so identity is derived in exactly one
+      // place rather than re-implemented here.
+      const questionText = questionTextForDisplayIndex(this.quizService, questionIndex);
       if (!quizId || !questionText) return;
 
       // Fire and forget: the verdict lands in the service's own state, which

@@ -497,7 +497,10 @@ export class OptionInteractionService {
       // union claim things it could not support.
       this.quizService.markQuestionResolved(qIdx);
       writeSessionString(SK_MULTI_PERFECT + qIdx, 'true');
-      this.quizService.scoreDirectly(qIdx, true, isMultipleMode);
+      // NO SCORE HERE — the gate is answer-key derived; credit is applied by
+      // creditResolvedQuestion on authorized verdict arrival. `scoreFired`
+      // below stays: it gates the EXPLANATION emit, a display decision about
+      // the user's own completed interaction rather than a score.
       scoreFired = true;
     }
     if (scoreFired) {

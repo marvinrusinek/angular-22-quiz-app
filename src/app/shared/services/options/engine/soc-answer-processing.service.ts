@@ -314,7 +314,11 @@ export class SocAnswerProcessingService {
   private scoreAndOpenFet(comp: any, qIdx: number, displayIdx: number, isMulti: boolean): void {
     try { this.timerService.stopTimer?.(undefined, { force: true, bypassAntiThrash: true }); } catch {}
     this.explanationTextService.fetBypassForQuestion.set(displayIdx, true);
-    this.quizService.scoreDirectly(qIdx, true, isMulti);
+    // NO SCORE HERE. The caller decided "all correct" from the local answer
+    // key; credit is applied by creditResolvedQuestion on authorized verdict
+    // arrival. Everything else in this method — stopping the timer, the FET
+    // bypass, the Next button — follows from the user having finished
+    // interacting, not from whether they were right.
     this.nextButtonStateService.setNextButtonState(true);
     this.markPerfectAndUnlockFet(comp, displayIdx, isMulti);
   }

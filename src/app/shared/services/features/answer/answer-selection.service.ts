@@ -142,7 +142,12 @@ export class AnswerSelectionService {
         correctSelectedCount === totalCorrectInQuestion &&
         totalCorrectInQuestion > 0
       ) {
-        this.quizService.scoreDirectly(activeQuestionIndex, true, true);
+        // NO SCORE HERE, for the same reason as completion below: the gate
+        // counts correct options from the local answer key, so crediting from
+        // it would let the bank decide the score. The point is applied by
+        // QuizScoringService.creditResolvedQuestion when the authorized
+        // verdict lands.
+        //
         // NO COMPLETION HERE. The gate counts correct options via
         // `isCorrectOptionValue` — the local answer key — and this runs on the
         // click, before /check answers. Completion is established from the

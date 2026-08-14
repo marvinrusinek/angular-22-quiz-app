@@ -316,7 +316,10 @@ export class QuizOptionProcessingService {
       // Capture the live elapsed now so the frozen revisit shows the right
       // seconds-remaining — covers the last question (no capture-on-leave).
       this.timerService.recordElapsedForAnsweredQuestion(idx);
-      this.quizService.scoreDirectly(idx, true, false);
+      // NO SCORE HERE. `clickedIsCorrect` is decided locally from the answer
+      // key; credit comes from creditResolvedQuestion on verdict arrival. The
+      // dot status and elapsed capture above are interaction facts, not
+      // correctness claims, so they stay.
     } else {
       this.selectedOptionService.clickConfirmedDotStatus.set(idx, 'wrong');
       writeSessionString(SK_DOT_CONFIRMED + idx, 'wrong');
@@ -349,14 +352,19 @@ export class QuizOptionProcessingService {
     const { allCorrectSelected, hasIncorrectSelection, hasAnyCorrectSelection, currentSelections, syncIds } =
       this.evaluateMultiCorrectness(option, idx, immediateSelections, questionForSelection, optionsForImmediateScoring, correctOptionsForQuestion);
 
-    if (allCorrectSelected) this.quizService.scoreDirectly(idx, true, true);
+    // NO SCORE HERE — `allCorrectSelected` comes from evaluateMultiCorrectness,
+    // which reads the local answer key. Credit is applied by
+    // creditResolvedQuestion on authorized verdict arrival.
 
     const immediateMultiDotStatus = this.computeImmediateDotStatus(
       option, currentSelections, questionForSelection, optionsForImmediateScoring,
       allCorrectSelected, hasIncorrectSelection, hasAnyCorrectSelection
     );
 
-    if (!allCorrectSelected) this.quizService.scoreDirectly(idx, false, true);
+    // NO NEGATIVE SCORE HERE either. This wrote `isCorrect: false` into the
+    // ledger from the same answer-key-derived gate. The authorized path never
+    // credits an unresolved question, so there is nothing to retract: a
+    // question only enters the ledger as correct once the server says so.
 
     if (immediateMultiDotStatus) this.persistMultiDotStatus(idx, quizId, immediateMultiDotStatus);
 
@@ -586,7 +594,10 @@ export class QuizOptionProcessingService {
       }
 
       if (!pristineBlocked) {
-        this.quizService.scoreDirectly(idx, true, !isSingleAnswerQuestion);
+        // NO SCORE HERE. The `pristineBlocked` gate is an explicit answer-key
+        // cross-check; credit comes from creditResolvedQuestion. The persisted
+        // dot status stays — it records what the user did, not whether the
+        // server agreed.
         this.quizPersistence.setPersistedDotStatus(quizId, idx, 'correct');
       }
     } else if (!isSingleAnswerQuestion && immediateMultiDotStatus) {

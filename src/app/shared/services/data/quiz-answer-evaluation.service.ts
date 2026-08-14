@@ -1,27 +1,22 @@
-import { inject, Service, Injector } from '@angular/core';
+import { inject, Service } from '@angular/core';
 
 import { Option } from '../../models/Option.model';
-import { Quiz } from '../../models/Quiz.model';
 import { QuizQuestion } from '../../models/QuizQuestion.model';
 
 import { QuizOptionsService } from './quiz-options.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
-import { isOptionCorrect } from '../../utils/is-option-correct';
-import { norm } from '../../utils/text-norm';
-import { swallow } from '../../utils/error-logging';
 
 /**
- * Handles answer evaluation, correctness checking, and direct scoring
- * with pristine verification. Extracted from QuizService to reduce its size.
+ * Resolves a question's answer options and derives the shape of an answer
+ * (how many correct options it has, whether it is multi-answer).
+ *
+ * The pristine SCORING verification this service used to carry is gone — see
+ * the note where `verifyScoreAgainstPristine` stood. Nothing here decides
+ * score any more.
  */
 @Service()
 export class QuizAnswerEvaluationService {
   // ── injects ─────────────────────────────────────────────────────
-  private readonly injector = inject(Injector);
   private readonly optionsService = inject(QuizOptionsService);
-
-  // ── properties ──────────────────────────────────────────────────
-  private _selectedOptionService: SelectedOptionService | null = null;
 
   // ── public methods ──────────────────────────────────────────────
   /**
@@ -128,126 +123,12 @@ export class QuizAnswerEvaluationService {
     return { isCorrect, numberOfCorrectAnswers, multipleAnswer, resolvedAnswers, answerIds };
   }
 
-  /**
-   * Validates isCorrect=true against pristine quiz data and user selections.
-   * Returns true if scoring should proceed, false if blocked.
-   */
-  verifyScoreAgainstPristine(
-    questionIndex: number,
-    isCorrect: boolean,
-    isMultipleAnswer: boolean,
-    shouldShuffle: boolean,
-    quizId: string,
-    quizInitialState: Quiz[],
-    questions: QuizQuestion[],
-    answers: Option[],
-    userAnswers: any[]
-  ): boolean {
-    if (!isCorrect) return true;
-    if (shouldShuffle) return true;
+  // `verifyScoreAgainstPristine()` is GONE.
+  //
+  // It cross-checked a caller-supplied `isCorrect` against the pristine bank
+  // before allowing a score to land — an answer-key gate guarding an
+  // answer-key claim. Its only caller was QuizService.scoreDirectly(), which
+  // is also gone now that Topic Quiz credit comes solely from
+  // QuizScoringService.creditResolvedQuestion on authorized verdict arrival.
 
-    const bundle: any[] = quizInitialState ?? [];
-
-    let pristineCorrectTexts: string[] = [];
-
-    const q = questions?.[questionIndex];
-    const qText = norm(q?.questionText);
-    if (qText) {
-      for (const quiz of bundle) {
-        for (const pq of (quiz?.questions ?? [])) {
-          if (norm(pq?.questionText) !== qText) continue;
-
-          pristineCorrectTexts = (pq?.options ?? [])
-            .filter((o: any) => isOptionCorrect(o))
-            .map((o: any) => norm(o?.text))
-            .filter((t: string) => !!t);
-
-          break;
-        }
-        if (pristineCorrectTexts.length > 0) break;
-      }
-    }
-
-    if (pristineCorrectTexts.length === 0 && quizId) {
-      const pristineQuiz = bundle.find((qz: any) => qz?.quizId === quizId);
-      const pristineQ = pristineQuiz?.questions?.[questionIndex];
-      if (pristineQ) {
-        pristineCorrectTexts = (pristineQ?.options ?? [])
-          .filter((o: any) => isOptionCorrect(o))
-          .map((o: any) => norm(o?.text))
-          .filter((t: string) => !!t);
-      }
-    }
-
-    if (pristineCorrectTexts.length === 0) return true;
-    if (pristineCorrectTexts.length > 1 && !isMultipleAnswer) return false;
-
-    const selTexts = new Set<string>();
-
-    try {
-      const sos = this.selectedOptionServiceLazy;
-      if (sos) {
-        const selections = sos.getSelectedOptionsForQuestion(questionIndex) ?? [];
-        for (const s of selections) {
-          const t = norm((s as any)?.text);
-          if (t) selTexts.add(t);
-        }
-      }
-    } catch (err: unknown) {
-      console.error('Failed to retrieve selected options for evaluation:', err);
-    }
-
-    if (selTexts.size === 0 && answers?.length > 0) {
-      for (const a of answers) {
-        const t = norm((a as any)?.text);
-        if (t) selTexts.add(t);
-      }
-    }
-
-    if (selTexts.size === 0) {
-      try {
-        const uaIds = Array.isArray(userAnswers?.[questionIndex])
-          ? (userAnswers[questionIndex] as number[]) : [];
-        const qOpts = questions?.[questionIndex]?.options ?? [];
-        for (const id of uaIds) {
-          const opt = qOpts.find((o: any) => String(o?.optionId) === String(id))
-            ?? (typeof id === 'number' && id >= 0 && id < qOpts.length ? qOpts[id] : null);
-          if (opt) {
-            const t = norm((opt as any)?.text);
-            if (t) selTexts.add(t);
-          }
-        }
-      } catch (err: unknown) { swallow('quiz-answer-evaluation.service.ts', err); }
-    }
-
-    // Cross-visit union: fold in uiSelectedTexts (live bindings ∪ first-visit
-    // snapshot) so COMPLETING a multi-answer on REVISIT verifies. The sources
-    // above reset on navigation and hold only the just-clicked option, which
-    // would fail the every()-correct check below and block the credit.
-    try {
-      const sos = this.selectedOptionServiceLazy;
-      const ui = sos?.uiSelectedTextsForQuestion?.(questionIndex);
-      if (ui) for (const t of ui) { const n = norm(t); if (n) selTexts.add(n); }
-    } catch (err: unknown) { swallow('quiz-answer-evaluation.service.ts ui-union', err); }
-
-    if (selTexts.size > 0) {
-      if (pristineCorrectTexts.length === 1) {
-        if (!pristineCorrectTexts.some(t => selTexts.has(t))) return false;
-      } else {
-        if (!pristineCorrectTexts.every(t => selTexts.has(t))) return false;
-      }
-    }
-
-    return true;
-  }
-
-  // ── private methods ─────────────────────────────────────────────
-  private get selectedOptionServiceLazy(): SelectedOptionService | null {
-    if (!this._selectedOptionService) {
-      try {
-        this._selectedOptionService = this.injector.get(SelectedOptionService);
-      } catch (err: unknown) { swallow('quiz-answer-evaluation.service.ts', err); /* ignore */ }
-    }
-    return this._selectedOptionService;
-  }
 }

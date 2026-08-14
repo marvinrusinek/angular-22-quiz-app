@@ -1141,29 +1141,20 @@ export class QuizService {
     return result.isCorrect;
   }
 
-  public scoreDirectly(
-    questionIndex: number, 
-    isCorrect: boolean, 
-    isMultipleAnswer: boolean
-  ): void {
-    const shouldProceed = this.answerEvaluation.verifyScoreAgainstPristine(
-      questionIndex,
-      isCorrect,
-      isMultipleAnswer,
-      this.isShuffleEnabled(),
-      this.quizId,
-      this.quizInitialState,
-      this.questions,
-      this.answers,
-      this.userAnswers
-    );
-
-    if (!shouldProceed) return;
-
-    this.scoringService.scoreDirectly(
-      questionIndex, isCorrect, isMultipleAnswer, this.isShuffleEnabled(), this.quizId
-    );
-  }
+  // `scoreDirectly()` is GONE, along with the `verifyScoreAgainstPristine`
+  // guard it ran first.
+  //
+  // It took an `isCorrect` its callers had already decided from the local
+  // answer key, then cross-checked that decision against the bank before
+  // crediting — an answer-key gate protecting an answer-key claim. Ten call
+  // sites across six services fed it, and every one of them has been removed:
+  // Topic Quiz score credit now comes only from
+  // QuizScoringService.creditResolvedQuestion, applied when the authorized
+  // verdict arrives.
+  //
+  // Deleted rather than left callable. Removing only the guard would have left
+  // an UNGUARDED path that still scores from whatever correctness a caller
+  // decided locally, which is strictly worse than what was there before.
 
   incrementScore(
     answers: number[],

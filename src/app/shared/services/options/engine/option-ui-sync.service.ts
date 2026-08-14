@@ -738,7 +738,9 @@ export class OptionUiSyncService {
 
     if (isActuallySingle) {
       if (correctSelectedCount >= 1 && !hasIncorrect) {
-        this.quizService.scoreDirectly(questionIndex, true, false);
+        // NO SCORE HERE — `correctSelectedCount` comes from `correctTextSet`,
+        // which resolveCorrectOptionsForScoring builds from the local bank.
+        // Credit is applied by creditResolvedQuestion on verdict arrival.
       }
       return;
     }
@@ -884,7 +886,12 @@ export class OptionUiSyncService {
       !hasIncorrect &&
       !anyIncorrectTextSelected
     ) {
-      this.quizService.scoreDirectly(questionIndex, true, true);
+      // NO SCORE HERE. The gate above is answer-key derived — `correctTextSet`
+      // comes from resolveCorrectOptionsForScoring walking pristine
+      // quizInitialState — and this runs on the click while /check is still in
+      // flight. Credit is applied by creditResolvedQuestion when the authorized
+      // verdict lands.
+      //
       // Mark this multi-answer question as fully resolved so the
       // rendering layer (option-item.isDisabled) honors b.disabled
       // for unselected incorrect options. Without this flag, the

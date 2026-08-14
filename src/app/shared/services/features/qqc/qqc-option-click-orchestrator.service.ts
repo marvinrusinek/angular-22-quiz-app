@@ -611,9 +611,11 @@ export class QqcOptionClickOrchestratorService {
         question
       });
 
-      if (allCorrectSelected) {
-        this.quizService.scoreDirectly(questionIndex, true, true);
-      }
+      // NO SCORE HERE. `allCorrectSelected` is computed locally from the answer
+      // key on the click, before /check answers, so crediting from it would let
+      // the bank decide the score. Credit is applied by
+      // QuizScoringService.creditResolvedQuestion on authorized verdict arrival.
+      void allCorrectSelected;
     }
   }
 

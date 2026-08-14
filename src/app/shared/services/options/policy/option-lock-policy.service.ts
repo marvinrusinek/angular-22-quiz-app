@@ -12,7 +12,6 @@ import {
   selectedVerdictFor,
   verdictStateForDisplayIndex
 } from '../../features/verdict/authorized-correctness';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { norm } from '../../../utils/text-norm';
 
 export interface LockIncorrectResult {
@@ -121,42 +120,34 @@ export class OptionLockPolicyService {
       if (authorized) return authorized;
     }
 
-    // REMOVE WITH THE REMAINING .correct MIGRATION — reached only when no
-    // verdict has been recorded for this question yet (idle), where the old
-    // pristine path is still the only answer available.
-    const canonicalCorrectIdxs = this.resolveCanonicalCorrectIdxs(bindings);
-
-    const isCorrectBinding = (b: OptionBindings, i: number) => {
-      if (canonicalCorrectIdxs.size > 0) return canonicalCorrectIdxs.has(i);
-      if (b.isCorrect === true) return true;
-      return isOptionCorrect(b.option);
-    };
-
-    // Backfill correct flags onto bindings so downstream code sees them.
-    // IMPORTANT: Only set isCorrect on the BINDING — do NOT mutate
-    // b.option.correct, because b.option is a shared reference to
-    // quizService.questions[].options[]. Mutating it corrupts the live
-    // data and makes multi-answer guards think the question is single-answer.
-    if (canonicalCorrectIdxs.size > 0) {
-      for (const [i, b] of bindings.entries()) {
-        const isC = canonicalCorrectIdxs.has(i);
-        b.isCorrect = isC;
-      }
-    }
-
+    // NOTHING IS AUTHORIZED YET — idle, a check in flight, or an error.
+    //
+    // This used to rebuild the correct set from `quizInitialState` and lock from
+    // it. Under the API adapter the phase is `checking` for the whole in-flight
+    // window after every click, so that path ran on ordinary play and decided
+    // locking from the ANSWER KEY before the server had answered — the exact
+    // authority Stage 10 removes.
+    //
+    // What can honestly be said without it:
+    //
+    //   hasCorrectSelection  yes, from verdicts ALREADY authorized on the
+    //                        user's own earlier picks for this question
+    //   allCorrectSelected   NO. Completion is the server's to declare, and
+    //                        "not yet told" is not "yes".
+    //   isPerfect            NO, for the same reason.
+    //
+    // `b.isCorrect` is now written ONLY by applyAuthorizedCorrectness, so it
+    // carries no local-bank opinion; an option the verdict has not spoken about
+    // stays `null`/`undefined` and is neither locked nor revealed. Reporting
+    // completion as false here means untouched options stay interactive until
+    // the verdict lands, which is the conservative direction: a lock that
+    // arrives a round trip late is recoverable, a lock applied to a question
+    // the server never called complete is not.
     const hasCorrectSelection = bindings.some(
-      (b, i) => b.isSelected && isCorrectBinding(b, i)
+      (b) => b.isSelected && b.isCorrect === true
     );
-    const correctBindings = bindings.filter((b, i) => isCorrectBinding(b, i));
-    const allCorrectSelected =
-      correctBindings.length > 0 && correctBindings.every(b => b.isSelected);
 
-    const hasIncorrectSelection = bindings.some(
-      (b, i) => b.isSelected && !isCorrectBinding(b, i)
-    );
-    const isPerfect = allCorrectSelected && !hasIncorrectSelection;
-
-    return { hasCorrectSelection, allCorrectSelected, isPerfect };
+    return { hasCorrectSelection, allCorrectSelected: false, isPerfect: false };
   }
 
   /** The recorded verdict for the question currently on screen, if any. */
@@ -187,15 +178,20 @@ export class OptionLockPolicyService {
     bindings: OptionBindings[],
     state: QuestionVerdictState
   ): { hasCorrectSelection: boolean; allCorrectSelected: boolean; isPerfect: boolean } | null {
-    const allCorrectSelected = allCorrectSelectedFromVerdict(state);
-    if (allCorrectSelected === null) return null;   // idle | checking | error
-
     // On a terminal phase the whole correct set is authorized, so every binding
     // can be told what it is. While incomplete, only the user's own picks carry
     // a verdict — the rest stay unknown rather than being forced to false.
+    //
+    // `expired` is terminal but `allCorrectSelectedFromVerdict` answers null for
+    // it — the deadline passing says nothing about whether the user had picked
+    // everything. So the REVEAL is decided here, before that null check, or a
+    // timed-out question would surface no correct answers at all.
     const revealed = state.phase === 'resolved' || state.phase === 'expired'
       ? new Set(state.correctOptionTexts.map((text) => norm(text)))
       : null;
+
+    const allCorrectSelected = allCorrectSelectedFromVerdict(state);
+    if (allCorrectSelected === null && !revealed) return null;   // idle | checking | error
 
     for (const b of bindings) {
       const text = b?.option?.text;
@@ -210,10 +206,15 @@ export class OptionLockPolicyService {
     const hasCorrectSelection = bindings.some((b) => b.isSelected && b.isCorrect === true);
     const hasIncorrectSelection = bindings.some((b) => b.isSelected && b.isCorrect === false);
 
+    // On `expired` the completion question is unanswered, and an expiry is not
+    // an achievement — treat it as not-complete rather than inferring it from
+    // the revealed set, which would hand a timed-out question a perfect lock.
+    const complete = allCorrectSelected === true;
+
     return {
       hasCorrectSelection,
-      allCorrectSelected,
-      isPerfect: allCorrectSelected && !hasIncorrectSelection
+      allCorrectSelected: complete,
+      isPerfect: complete && !hasIncorrectSelection
     };
   }
 
@@ -261,64 +262,4 @@ export class OptionLockPolicyService {
     return locked;
   }
 
-  // ── private methods ─────────────────────────────────────────────
-
-  // Resolve canonical correct indices for a binding set by text-matching
-  // against quizInitialState (the immutable structuredClone of QUIZ_DATA).
-  // Pristine is the source of truth — quizService.questions[] can have
-  // mutated/missing correct flags after gameplay, which makes multi-answer
-  // questions appear single-answer here.
-  private resolveCanonicalCorrectIdxs(bindings: OptionBindings[]): Set<number> {
-    try {
-      const quizSvc: any = this.injector.get(QuizService, null);
-      if (!bindings.length) return new Set<number>();
-      const bindingTexts = bindings.map(b => norm(b?.option?.text)).filter(Boolean);
-      if (!bindingTexts.length) return new Set<number>();
-      // Build set of pristine correct option texts by matching the bindings'
-      // option-text fingerprint against the immutable quizInitialState bundle.
-      const bundle: any[] = quizSvc?.quizInitialState ?? [];
-      let pristineCorrectTexts: Set<string> | null = null;
-      outer: for (const quiz of bundle) {
-        for (const pq of (quiz?.questions ?? [])) {
-          const pqOpts = pq?.options ?? [];
-          if (pqOpts.length !== bindings.length) continue;
-          // Match if every binding text appears among pristine option texts.
-          const pqTexts = pqOpts.map((o: any) => norm(o?.text));
-          const allMatch = bindingTexts.every(bt => pqTexts.includes(bt));
-          if (!allMatch) continue;
-          pristineCorrectTexts = new Set(
-            pqOpts
-              .filter((o: any) => isOptionCorrect(o))
-              .map((o: any) => norm(o?.text))
-          );
-          break outer;
-        }
-      }
-      // Fallback to live questions[] if pristine match failed.
-      if (!pristineCorrectTexts) {
-        const allQs: any[] = quizSvc?.questions ?? [];
-        const matchedQ = allQs.find((q: any) => {
-          const opts = q?.options ?? [];
-          if (opts.length !== bindings.length) return false;
-          return opts.every(
-            (o: any, i: number) => norm(o?.text) === bindingTexts[i]
-          );
-        });
-        if (!matchedQ) return new Set<number>();
-        const set = new Set<number>();
-        for (const [i, o] of (matchedQ.options ?? []).entries()) {
-          if (isOptionCorrect(o)) set.add(i);
-        }
-        return set;
-      }
-      // Map pristine correct texts to binding indices in display order.
-      const set = new Set<number>();
-      for (let i = 0; i < bindings.length; i++) {
-        if (pristineCorrectTexts.has(bindingTexts[i])) set.add(i);
-      }
-      return set;
-    } catch {
-      return new Set<number>();
-    }
-  }
 }

@@ -154,28 +154,47 @@ export class SharedOptionExplanationService {
   private checkResolution(ctx: ExplanationContext): boolean {
     const { resolvedIndex, question } = ctx;
 
-    const { correctCount, pristineCorrectTexts } = this.resolveCorrectCountAndTexts(ctx);
-    // NOT MIGRATED TO DECLARED TYPE — DELIBERATE. See computeUiResolved: it
-    // re-derives single-vs-multi from `correctCount > 1` to pick its own
-    // resolution rule, so making THIS flag declared-first while that one keeps
-    // counting produces a split brain — classification saying "single" while
-    // the rule applied is still "multi". The decision that actually gates FET
-    // here lives inside the COMPLETION function, and moving it would change
-    // completion authorization rather than type classification.
-    const isMultiAnswer = correctCount > 1 || this.quizService.multipleAnswer;
-
-    const selectedFromUi = this.collectSelectedFromUi(ctx);
     const selectedFromService =
       this.selectedOptionService.getSelectedOptionsForQuestion(resolvedIndex) ?? [];
 
-    const uiResolved = this.computeUiResolved(
-      selectedFromUi, correctCount, pristineCorrectTexts, question!
-    );
-
+    // ── AUTHORIZED COMPLETION ─────────────────────────────────────────
+    //
+    // `strict: false` is the COMPLETION question — every correct option chosen,
+    // extra wrong picks tolerated. `strict: true` would be PERFECT, which is a
+    // different question and deliberately not asked here.
+    //
+    // This status is verdict-backed: its counts come from `selectedVerdicts`,
+    // which covers only options the USER submitted, so an auto-revealed option
+    // can never manufacture completion. `evaluated` is what makes that safe —
+    // idle/checking/error report zero because nothing is KNOWN, not because
+    // nothing was correct, and reading `resolved` alone would treat "not
+    // answered yet" as "answered wrongly".
     const status = this.selectedOptionService.getResolutionStatus(
       question!,
       selectedFromService as any,
       false
+    );
+
+    if (status.evaluated) return status.resolved;
+
+    // ── TEMPORARY: NO AUTHORIZED VERDICT YET ──────────────────────────
+    //
+    // Everything below reconstructs completion from the local answer key and
+    // runs only while the verdict is idle/checking/error. It is why a question
+    // declared SINGLE but flagged with three correct options used to refuse to
+    // resolve after one correct pick: `computeUiResolved` re-derives
+    // single-vs-multi from `correctCount > 1` and applies the multi rule.
+    //
+    // That defect is now unreachable once a verdict arrives. REMOVE THIS WHOLE
+    // FALLBACK IN /questions CONTENT CUTOVER — at that point there is no answer
+    // key to reconstruct from and the verdict is the only completion authority.
+    const { correctCount, pristineCorrectTexts } = this.resolveCorrectCountAndTexts(ctx);
+    const isMultiAnswer = correctCount > 1 || this.quizService.multipleAnswer;
+
+    const selectedFromUi = this.collectSelectedFromUi(ctx);
+
+    const uiResolved = this.computeUiResolved(
+      selectedFromUi, correctCount, pristineCorrectTexts, question!
     );
 
     let resolved = (selectedFromUi.length > 0) ? uiResolved : status.resolved;

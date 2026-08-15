@@ -10,7 +10,7 @@ import { QuizQuestion } from '../../../models/QuizQuestion.model';
 import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
+import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 import { norm } from '../../../utils/text-norm';
 
 /**
@@ -419,7 +419,11 @@ export class OptionClickHandlerService {
         const chkCorrectCount = (chkQ?.options ?? []).filter(
           (o: any) => isOptionCorrect(o)
         ).length;
-        if (chkCorrectCount > 1) effectiveMulti = true;
+        // DECLARED TYPE FIRST — `chkQ` was resolved through the display-order
+        // source above, so this is the question on screen. A declared SINGLE
+        // question is no longer promoted to multi by a drifting answer key.
+        // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
+        effectiveMulti = resolveIsMultiAnswer(chkQ, chkCorrectCount > 1);
       } catch { /* ignore */ }
     }
     return effectiveMulti;
@@ -443,7 +447,10 @@ export class OptionClickHandlerService {
       const questionCorrectCount = (currentQ?.options ?? []).filter(
         (o: any) => isOptionCorrect(o)
       ).length;
-      const isMultiFromData = questionCorrectCount > 1;
+      // DECLARED TYPE FIRST. `currentQ` came from shuffledQuestions when
+      // shuffle is on, so it is the displayed question. The count survives only
+      // as the fallback. REMOVE IT IN /questions CONTENT CUTOVER.
+      const isMultiFromData = resolveIsMultiAnswer(currentQ, questionCorrectCount > 1);
 
       if (isMultiFromData) {
         // COMPLETION, not resolved: this branch is already inside
@@ -569,6 +576,12 @@ export class OptionClickHandlerService {
     typeInput: string,
     configType?: string
   ): boolean {
+    // DECLARED TYPE FIRST — and that also retires the question-TEXT heuristic
+    // below, which is a second proxy for a fact the API now states outright.
+    const declared = declaredIsMultiAnswer(question);
+    if (declared !== null) return declared;
+
+    // REMOVE IN /questions CONTENT CUTOVER — everything below is the fallback.
     let result = false;
 
     const qText = (question?.questionText || '').toLowerCase();

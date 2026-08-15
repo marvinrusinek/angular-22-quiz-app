@@ -1,6 +1,7 @@
 import { Service, inject } from '@angular/core';
 
 import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 
 import { OptionBindings } from '../../../models/OptionBindings.model';
 import { SelectedOption } from '../../../models/SelectedOption.model';
@@ -29,10 +30,19 @@ export class SocOptionUiService {
     const normalizedId = (optionId != null && !isNaN(Number(optionId))) ? Number(optionId) : null;
     const effectiveId = (normalizedId !== null && normalizedId > -1) ? normalizedId : index;
 
-    const correctCount = (comp.currentQuestion()?.options?.filter((o: any) => isOptionCorrect(o)).length ?? 0);
-    const isMultiMode = comp.type === 'multiple' ||
-      comp.config()?.type === 'multiple' ||
-      correctCount > 1;
+    const currentQuestion = comp.currentQuestion();
+    const correctCount = (currentQuestion?.options?.filter((o: any) => isOptionCorrect(o)).length ?? 0);
+    // DECLARED TYPE FIRST. This decides whether a click CLEARS the other
+    // options or toggles just this one, so a declared single-answer question
+    // the local bank happened to flag twice used to behave as a checkbox group.
+    // The type is read from the same question object the count came from.
+    // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
+    const isMultiMode = resolveIsMultiAnswer(
+      currentQuestion,
+      comp.type === 'multiple' ||
+        comp.config()?.type === 'multiple' ||
+        correctCount > 1
+    );
 
     if (!isMultiMode) {
       for (const opt of comp.optionsToDisplay || []) opt.selected = false;

@@ -173,7 +173,12 @@ export class SharedOptionBindingService {
         const correctCount = (authQ?.options ?? []).filter(
           (o: any) => isOptionCorrect(o)
         ).length;
-        const isMulti = correctCount > 1 || comp.isMultiMode;
+        // DECLARED TYPE FIRST. The count is a proxy for "is this multi-answer",
+        // and it stops being computable once the answer key leaves the browser.
+        // `questions` is a GETTER that returns shuffledQuestions while shuffle
+        // is active, so indexing it with this display index is identity-safe.
+        // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
+        const isMulti = resolveIsMultiAnswer(authQ, correctCount > 1 || comp.isMultiMode);
         if (!isMulti) {
           comp.deferHighlightUpdate(() => comp.emitExplanation(currentIdx));
         }
@@ -943,7 +948,15 @@ export class SharedOptionBindingService {
     const authCorrectCount = (authQ?.options ?? []).filter(
       (o: any) => isOptionCorrect(o)
     ).length;
-    return comp.isMultiMode || authCorrectCount > 1 || this.quizService.multipleAnswer;
+    // DECLARED TYPE FIRST — the counted guess below survives only as the
+    // fallback. `qIndex` is a DISPLAY index and `questions` is a getter that
+    // returns shuffledQuestions while shuffle is active, so this reads the
+    // question the user is actually looking at.
+    // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
+    return resolveIsMultiAnswer(
+      authQ,
+      comp.isMultiMode || authCorrectCount > 1 || this.quizService.multipleAnswer
+    );
   }
 
   private resolveShouldHighlight(

@@ -14,7 +14,7 @@ import { QuizShuffleService } from '../../flow/quiz-shuffle.service';
 import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { SelectionMessageService } from '../selection-message/selection-message.service';
-import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
+import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { norm } from '../../../utils/text-norm';
 
@@ -255,8 +255,13 @@ export class QqcOptionClickOrchestratorService {
 
     try {
       const clickedIdNum = Number(evtOpt?.optionId ?? NaN);
-      const isMultiAnswer = question.type === QuestionType.MultipleAnswer ||
-        (question.options?.filter((o: any) => isOptionCorrect(o)).length ?? 0) > 1;
+      // DECLARED TYPE WINS — the count is the fallback, not an equal arm of the
+      // OR. This gates option LOCKING, so a declared single-answer question the
+      // local bank flagged twice used to leave the other options unlocked.
+      const isMultiAnswer = resolveIsMultiAnswer(
+        question,
+        (question.options?.filter((o: any) => isOptionCorrect(o)).length ?? 0) > 1
+      );
 
       if (Number.isFinite(clickedIdNum)) {
         if (!isMultiAnswer || !evtOpt?.correct) {
@@ -652,7 +657,11 @@ export class QqcOptionClickOrchestratorService {
     this.selectionMessageService.emitFromClick({
       index: params.idx,
       totalQuestions: params.totalQuestions,
-      questionType: params.questionType ?? QuestionType.SingleAnswer,
+      // Pass UNDECLARED through as undefined. Defaulting to SingleAnswer here
+      // fabricated a declared type, which was harmless only while the receiver
+      // OR'd `correctCount > 1` ahead of it. Now that the declared type wins,
+      // that default would force every undeclared question single.
+      questionType: params.questionType,
       options: params.optionsNow,
       canonicalOptions: params.canonicalOpts as any[],
       token: params.msgTok

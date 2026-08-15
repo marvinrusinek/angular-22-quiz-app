@@ -2,8 +2,6 @@ import { Service, inject } from '@angular/core';
 
 import { SK_DOT_CONFIRMED } from '../../constants/session-keys';
 
-import { QuestionType } from '../../models/question-type.enum';
-
 import { Option } from '../../models/Option.model';
 import { QuizQuestion } from '../../models/QuizQuestion.model';
 import { SelectedOption } from '../../models/SelectedOption.model';
@@ -15,6 +13,7 @@ import { QuizStateService } from '../state/quizstate.service';
 import { SelectedOptionService } from '../state/selectedoption.service';
 
 import { isOptionCorrect } from '../../utils/is-option-correct';
+import { resolveIsMultiAnswer } from '../../utils/question-type-authority';
 import { norm } from '../../utils/text-norm';
 import { swallow } from '../../utils/error-logging';
 
@@ -302,8 +301,19 @@ export class QuizDotStatusService {
 
     const correctOptionEntries = this.getResolvedCorrectOptionEntries(question, fallbackOptions);
     const correctOptions = correctOptionEntries.map(({ option }) => option);
-    const isMultipleAnswerQuestion =
-      question?.type === QuestionType.MultipleAnswer || correctOptions.length > 1;
+    // DECLARED TYPE WINS. `correctOptions.length > 1` used to be an equal arm
+    // of the OR, so the local answer key could promote a declared single-answer
+    // question to multiple and switch this evaluator to the all-correct-
+    // selected completeness rule.
+    //
+    // The declared type is read from the DISPLAYED question: getQuestionForIndex
+    // above indexes the CANONICAL array with what is a display index, which is
+    // exactly the identity defect fixed in 95a3d3cc. Correctness still flows
+    // through the existing lookup — only the type decision is re-anchored here.
+    const isMultipleAnswerQuestion = resolveIsMultiAnswer(
+      this.quizService.getDisplayedQuestion?.(index) ?? question,
+      correctOptions.length > 1
+    );
 
     if (correctOptions.length === 0 || selections.length === 0) return null;
 
@@ -857,10 +867,11 @@ export class QuizDotStatusService {
     const question = this.getQuestionForIndex(index, questionsArray);
     const fallbackOptions = this.getFallbackOptions(index, currentQuestionIndex, optionsToDisplay, currentQuestion);
     const resolvedCorrectOptionCount = this.getResolvedCorrectOptionEntries(question, fallbackOptions).length;
+    // DECLARED TYPE WINS — same OR-promotion defect as evaluateSelectionCorrectness.
     return index === currentQuestionIndex &&
       (questionHasLiveSessionState || selections.length > 0) &&
-      (
-        question?.type === QuestionType.MultipleAnswer ||
+      resolveIsMultiAnswer(
+        this.quizService.getDisplayedQuestion?.(index) ?? question,
         resolvedCorrectOptionCount > 1
       );
   }

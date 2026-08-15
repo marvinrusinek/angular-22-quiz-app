@@ -11,6 +11,7 @@ import { Option } from '../../../models/Option.model';
 import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
 import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
 import { norm } from '../../../utils/text-norm';
 
 import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
@@ -248,6 +249,33 @@ export class SelectionMessageService {
       ? questions[index] : (svc.currentQuestion?.value ?? null);
   }
 
+  /**
+   * The question type driving a selection message — DECLARED TYPE WINS.
+   *
+   * All four call sites below used to read
+   *
+   *     (correctCount > 1 || declared === MultipleAnswer)
+   *       ? MultipleAnswer : (declared ?? SingleAnswer)
+   *
+   * where the count is the FIRST arm of the OR. A local answer key carrying two
+   * `correct` flags therefore promoted a declared single-answer — or trueFalse —
+   * question to multiple, and the message told the user to keep selecting.
+   *
+   * A declared type is returned VERBATIM so trueFalse survives as trueFalse
+   * instead of collapsing into SingleAnswer.
+   */
+  private resolveQType(
+    declared: QuestionType | undefined,
+    correctCount: number
+  ): QuestionType {
+    if (declaredIsMultiAnswer({ type: declared } as QuizQuestion) !== null) {
+      return declared as QuestionType;
+    }
+
+    // REMOVE IN /questions CONTENT CUTOVER. Undeclared is not "single".
+    return correctCount > 1 ? QuestionType.MultipleAnswer : QuestionType.SingleAnswer;
+  }
+
   public determineSelectionMessage(
     questionIndex: number,
     totalQuestions: number,
@@ -288,8 +316,7 @@ export class SelectionMessageService {
     );
 
     const correctCount = overlaid.filter((o) => !!o?.correct).length;
-    const qType: QuestionType = (correctCount > 1 || declaredType === QuestionType.MultipleAnswer)
-      ? QuestionType.MultipleAnswer : (declaredType ?? QuestionType.SingleAnswer);
+    const qType: QuestionType = this.resolveQType(declaredType, correctCount);
 
     return this.computeFinalMessage({
       index: questionIndex,
@@ -468,8 +495,7 @@ export class SelectionMessageService {
   public forceBaseline(index: number): void {
     const q = this.getQuestion(index);
     const totalCorrect = (q?.options ?? []).filter((o: any) => o.correct).length;
-    const qType = (totalCorrect > 1 || q?.type === QuestionType.MultipleAnswer)
-      ? QuestionType.MultipleAnswer : (q?.type ?? QuestionType.SingleAnswer);
+    const qType = this.resolveQType(q?.type, totalCorrect);
 
     // Clear released state so enforceBaselineAtInit doesn't skip
     this._baselineReleased.delete(index);
@@ -508,8 +534,7 @@ export class SelectionMessageService {
       (o: any) => isOptionCorrect(o)
     ).length;
     const declaredType = params.questionType;
-    const qType: QuestionType = (correctCount > 1 || declaredType === QuestionType.MultipleAnswer)
-      ? QuestionType.MultipleAnswer : (declaredType ?? QuestionType.SingleAnswer);
+    const qType: QuestionType = this.resolveQType(declaredType, correctCount);
 
     const msg = this.computeFinalMessage({
       index: params.index,
@@ -602,9 +627,7 @@ export class SelectionMessageService {
   public reconcileObservedWithCurrentSelection(index: number, optionsNow: Option[]): void {
     const totalCorrect = optionsNow.filter(o => !!o?.correct).length;
     const q = this.getQuestion(index);
-    const qType = (totalCorrect > 1 || q?.type === QuestionType.MultipleAnswer)
-      ? QuestionType.MultipleAnswer
-      : (q?.type ?? QuestionType.SingleAnswer);
+    const qType = this.resolveQType(q?.type, totalCorrect);
 
     const msg = this.computeFinalMessage({
       index,

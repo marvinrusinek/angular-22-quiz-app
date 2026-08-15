@@ -541,9 +541,19 @@ export class OptionClickHandlerService {
    * Determines if a question is single or multiple answer.
    */
   determineQuestionType(input: QuizQuestion): 'single' | 'multiple' {
+    // DECLARED TYPE WINS. `correctOptionsCount > 1` used to be the FIRST arm of
+    // the OR, so two `correct` flags in the local bank promoted a declared
+    // single-answer question to multiple — question type was a derivative of
+    // the answer key. A declared trueFalse resolves to 'single' here because
+    // this returns an INTERACTION mode (radio vs checkbox); the declared type
+    // itself is untouched and callers that need it read `question.type`.
+    const declared = declaredIsMultiAnswer(input);
+    if (declared !== null) return declared ? 'multiple' : 'single';
+
+    // REMOVE IN /questions CONTENT CUTOVER — everything below is the fallback.
     if (input && Array.isArray(input.options)) {
       const correctOptionsCount = input.options.filter(o => isOptionCorrect(o)).length;
-      if (correctOptionsCount > 1 || input.type === QuestionType.MultipleAnswer || (input as any).multipleAnswer === true) {
+      if (correctOptionsCount > 1 || (input as any).multipleAnswer === true) {
         return 'multiple';
       }
     }

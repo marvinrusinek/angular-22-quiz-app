@@ -723,7 +723,13 @@ export class OptionUiSyncService {
 
     if (correctOptions.length === 0) return;
 
-    const isTrulyMulti = correctOptions.length > 1 || ctx.type === 'multiple';
+    // DECLARED TYPE WINS — the count is the fallback, not an equal arm of the
+    // OR. `question` came from getQuestionAtDisplayIndex above, so this is the
+    // question the user is actually looking at under shuffle.
+    const isTrulyMulti = resolveIsMultiAnswer(
+      question,
+      correctOptions.length > 1 || ctx.type === 'multiple'
+    );
     const isActuallySingle = !isTrulyMulti;
 
     let selectedOptions = this.gatherSelectedOptionsForScoring(ctx, questionIndex);
@@ -943,7 +949,13 @@ export class OptionUiSyncService {
   private toggleSelectedOption(_clicked: Option, clickedIndex: number, checked: boolean, ctx: OptionUiSyncContext): void {
     const isCorrectHelper = isOptionCorrect;
     const correctCount = (ctx.optionsToDisplay ?? []).filter(o => isCorrectHelper(o)).length;
-    const isMultiple = ctx.type === 'multiple' || correctCount > 1;
+    // DECLARED TYPE WINS. This decides whether a click TOGGLES one option or
+    // clears the others, so a declared single-answer question that the local
+    // bank happened to flag twice used to behave as a checkbox group.
+    const isMultiple = resolveIsMultiAnswer(
+      (ctx as any).currentQuestion,
+      ctx.type === 'multiple' || correctCount > 1
+    );
 
     const historySet = new Set(ctx.selectedOptionHistory || []);
     for (let i = 0; i < (ctx.optionsToDisplay ?? []).length; i++) {

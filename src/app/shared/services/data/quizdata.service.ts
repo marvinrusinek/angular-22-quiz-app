@@ -16,6 +16,7 @@ import { SK_COMPLETED_QUIZ_IDS, SK_STARTED_QUIZ_IDS } from '../../constants/sess
 import { readSessionJson } from '../../utils/session-storage';
 
 import { QuestionType } from '../../models/question-type.enum';
+import { resolveIsMultiAnswer } from '../../utils/question-type-authority';
 
 import { Option } from '../../models/Option.model';
 import { Quiz } from '../../models/Quiz.model';
@@ -296,10 +297,15 @@ export class QuizDataService {
 
         // Stamp multi-answer flag for each question
         for (const [_qIndex, question] of this.quizService.questions.entries()) {
-          (question as any).isMulti =
-            question.type === QuestionType.MultipleAnswer ||
-            (Array.isArray(question.options) &&
-              question.options.filter((o: Option) => isOptionCorrect(o)).length > 1);
+          // DECLARED TYPE WINS. The count used to be an equal arm of the OR, so
+          // this stamped isMulti=true onto a declared single-answer question the
+          // moment the local bank carried a second `correct` flag — and every
+          // consumer of the stamp inherited that.
+          (question as any).isMulti = resolveIsMultiAnswer(
+            question,
+            Array.isArray(question.options) &&
+              question.options.filter((o: Option) => isOptionCorrect(o)).length > 1
+          );
         }
 
         return this.cloneQuestions(sessionQuestions);

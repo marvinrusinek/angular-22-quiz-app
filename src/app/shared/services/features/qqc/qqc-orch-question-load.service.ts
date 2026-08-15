@@ -6,6 +6,7 @@ import { Option } from '../../../models/Option.model';
 import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
 import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 import { reportError, swallow } from '../../../utils/error-logging';
 
 import type { QuizQuestionComponent } from '../../../../components/question/quiz-question/quiz-question.component';
@@ -46,9 +47,18 @@ export class QqcOrchQuestionLoadService {
       } catch {
         // Do NOT abort the whole render on a transient resolution failure
         // (firstValueFrom throws EmptyError if the observable completes without
-        // emitting on a cold load). Derive multi-answer synchronously from the
-        // question's correct-option count so the component still renders.
-        isMultipleAnswer = (question.options ?? []).filter((o: Option) => isOptionCorrect(o)).length > 1;
+        // emitting on a cold load). Resolve multi-answer SYNCHRONOUSLY so the
+        // component still renders — this is the cold-load path, so introducing
+        // a wait here would be worse than the wrong answer it replaces.
+        //
+        // DECLARED TYPE FIRST. `question` is the object being rendered, passed
+        // in directly, so there is no index arithmetic and nothing to get wrong
+        // under shuffle. The count survives only for a question that carries no
+        // declared type. REMOVE THE COUNT IN /questions CONTENT CUTOVER.
+        isMultipleAnswer = resolveIsMultiAnswer(
+          question,
+          (question.options ?? []).filter((o: Option) => isOptionCorrect(o)).length > 1
+        );
       }
 
       container.clear();

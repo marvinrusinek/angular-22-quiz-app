@@ -264,6 +264,20 @@ export class OptionItemComponent implements OnInit {
       };
     }
 
+    // AUTO-REVEAL WINS, exactly as it does in getOptionBackgroundColor().
+    //
+    // Only the COLOR path honoured `_autoRevealedCorrect`; the class path fell
+    // through to the verdict and stamped `incorrect-option` whenever the
+    // verdict had not authorized this option — and `.incorrect-option` carries
+    // `background-color: red !important`, which beats the inline green the
+    // reveal had just set. The two paths have to agree or the more specific
+    // one silently wins: on Directives Q8 that painted the user's own correct
+    // picks red on top of their green.
+    if (this.binding()?._autoRevealedCorrect === true ||
+        this.binding()?.option?._autoRevealedCorrect === true) {
+      return { ...classes, 'correct-option': true, 'incorrect-option': false };
+    }
+
     const revisitClasses = this.getRevisitOptionClasses(classes);
     if (revisitClasses) return revisitClasses;
 
@@ -514,6 +528,9 @@ export class OptionItemComponent implements OnInit {
     if (b?.disabled && b?.cssClasses?.['incorrect-option']) {
       return true;  // incorrect option in auto-reveal — disabled
     }
+    // Multi-answer end state: an option the user never picked. The question is
+    // over but NOT complete, so no completion-derived rule below would lock it.
+    if (b?._autoRevealLocked === true) return true;
     return undefined;
   }
 

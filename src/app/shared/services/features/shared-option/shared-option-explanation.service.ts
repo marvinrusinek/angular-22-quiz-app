@@ -367,7 +367,16 @@ export class SharedOptionExplanationService {
     explanationText: string,
     displayIndex: number
   ): void {
-    this.quizStateService.markUserInteracted(displayIndex);
+    // NOT VISIT-SCOPED. Writing the explanation is a render, not a click.
+    //
+    // On a revisit this method runs again — the question already carries a
+    // terminal verdict and its selections are restored, so the resolution gate
+    // passes and the FET re-emits. Marking that as an interaction THIS VISIT
+    // told the heading it was looking at a live answer view, which defeats the
+    // revisit guard in shouldShowFet() and left the explanation in the heading
+    // instead of the question text after Previous. The durable evidence is
+    // still recorded; only the per-visit claim is withheld.
+    this.quizStateService.markUserInteracted(displayIndex, { visitScoped: false });
 
     const contextKey = this.buildExplanationContext(displayIndex);
 

@@ -196,9 +196,30 @@ export class TimerService implements OnDestroy {
     this.isTimerRunning = false;
     this.elapsedTimeSig.set(this.timePerQuestion);
     this.hasExpiredForRun = true;
+    // ALREADY OVER WHEN WE GOT HERE — not a timeout the user just watched
+    // happen. Recorded before the expiry signal so any consumer reacting to
+    // that signal sees the distinction on its first read.
+    this.expiredOnArrivalSig.set(this.quizService.currentQuestionIndex);
     this.expiredForQuestionIndexSig.set(this.quizService.currentQuestionIndex);
     this.expiredSubject.next();
   }
+
+  /**
+   * The question whose expiry was ALREADY TRUE ON ARRIVAL, or -1.
+   *
+   * `expiredForQuestionIndexSig` cannot tell the two kinds of expiry apart, and
+   * they mean opposite things to the UI:
+   *
+   *   live      the deadline passed while the user watched -> reveal the answer
+   *   on arrival  they came back to a question whose deadline had already gone
+   *
+   * The heading reveals the explanation on a timeout, deliberately overriding
+   * its revisit guard. Returning to an expired question therefore replaced the
+   * question text with the explanation — on Previous, and on coming back to the
+   * browser tab. A revisit is not a reveal; the reveal already happened on the
+   * visit that earned it.
+   */
+  public readonly expiredOnArrivalSig = signal(-1);
 
   // Starts the timer
   startTimer(
@@ -252,6 +273,9 @@ export class TimerService implements OnDestroy {
         // If reached the duration, emit expiration once (stop only for countdown)
         if (elapsed >= duration && !this.hasExpiredForRun) {
           this.hasExpiredForRun = true;
+          // LIVE expiry — the user is watching it happen, so this one does
+          // authorize the reveal.
+          this.expiredOnArrivalSig.set(-1);
           this.expiredForQuestionIndexSig.set(this.quizService.currentQuestionIndex);
           this.expiredSubject.next();
           if (isCountdown) this.stopTimer(undefined, { force: true });
@@ -542,6 +566,7 @@ export class TimerService implements OnDestroy {
     // Clear expiry/start guards so this fresh question can run
     this.hasExpiredForRun = false;
     this.expiredForQuestionIndexSig.set(-1);
+    this.expiredOnArrivalSig.set(-1);
     this._lastStartedAtMs = 0;
     this.stopTimer?.(undefined, { force: true });
     this.resetTimer();

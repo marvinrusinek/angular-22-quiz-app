@@ -62,6 +62,7 @@ export class OptionInteractionEffectsService {
       delete b._timerExpiredStamped;
       delete b._timerExpiredStampedForIndex;
       delete b._autoRevealedCorrect;
+      delete b._autoRevealLocked;
       if (b.cssClasses) {
         delete b.cssClasses['correct-option'];
         delete b.cssClasses['incorrect-option'];
@@ -141,6 +142,7 @@ export class OptionInteractionEffectsService {
           delete b._timerExpiredStamped;
           delete b._timerExpiredStampedForIndex;
           delete b._autoRevealedCorrect;
+          delete b._autoRevealLocked;
           // Also clear binding-level cssClasses that drive
           // ngClass — without this the `correct-option` / `selected`
           // classes persist via DOM reuse + OnPush staleness.

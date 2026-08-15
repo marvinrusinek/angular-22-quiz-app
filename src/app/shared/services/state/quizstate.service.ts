@@ -440,7 +440,18 @@ export class QuizStateService {
   readonly userHasInteractedSig = signal<number>(-1);
   public userHasInteracted$ = toObservable(this.userHasInteractedSig);
 
-  markUserInteracted(idx: number): void {
+  /**
+   * @param opts.visitScoped Pass `false` from a RENDER path (one that replays
+   * stored state rather than reacting to a click). Such a path may record the
+   * durable "this question was interacted with" evidence, but it must not claim
+   * the interaction happened on THIS VISIT — that flag is the only thing that
+   * distinguishes the live answer view from a revisit, and the heading uses it
+   * to decide question text vs FET. Re-emitting a stored explanation while
+   * navigating back used to set it, which turned the revisit into a live view
+   * and left the explanation in the heading. Defaults to true: every genuine
+   * click path calls this with no options.
+   */
+  markUserInteracted(idx: number, opts?: { visitScoped?: boolean }): void {
     this._hasUserInteracted.add(idx);
     this.userHasInteractedSig.set(idx);
     this.lastInteractionTimeSig.set(Date.now());
@@ -452,7 +463,7 @@ export class QuizStateService {
     // without being polluted by F5 restoration.
     this.markClickedInSession(idx);
     // ...and as an interaction THIS visit (race-immune live-view marker).
-    this.markInteractedThisVisit(idx);
+    if (opts?.visitScoped !== false) this.markInteractedThisVisit(idx);
   }
 
   hasUserInteracted(idx: number): boolean {

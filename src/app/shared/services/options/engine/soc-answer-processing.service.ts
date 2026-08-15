@@ -1069,7 +1069,7 @@ export class SocAnswerProcessingService {
 
       // All incorrects exhausted — auto-reveal the correct answer(s).
       const { correctIdxsAR, correctSetAR, historySetAR } =
-        this.enterAutoRevealState(comp, index, qIdx, displayIdx, bindingsAR, bindingNormsAR, pristineCorrectTextsAR);
+        this.enterAutoRevealState(comp, index, qIdx, displayIdx, bindingsAR, bindingNormsAR, pristineCorrectTextsAR, isMultiModeAR);
 
       // Resolve and emit the FET text FIRST while bindings are still
       // stable. The binding rebuild below must be synchronous (not
@@ -1089,7 +1089,7 @@ export class SocAnswerProcessingService {
       // Synchronous binding rebuild — MUST happen after FET emission and NOT be
       // deferred (detectChanges() effects would overwrite deferred bindings,
       // wiping _autoRevealedCorrect).
-      this.applyAutoRevealBindings(comp, bindingsAR, correctSetAR, historySetAR, index);
+      this.applyAutoRevealBindings(comp, bindingsAR, correctSetAR, historySetAR, index, isMultiModeAR);
 
       setTimeout(() => {
         try { comp.emitExplanation?.(qIdx, true); } catch { /* ignore */ }
@@ -1172,7 +1172,7 @@ export class SocAnswerProcessingService {
    * and compute the correct/disabled/history index sets used to rebuild the
    * bindings. Extracted verbatim.
    */
-  private enterAutoRevealState(comp: any, index: number, qIdx: number, displayIdx: number, bindingsAR: any[], bindingNormsAR: string[], pristineCorrectTextsAR: Set<string>):
+  private enterAutoRevealState(comp: any, index: number, qIdx: number, displayIdx: number, bindingsAR: any[], bindingNormsAR: string[], pristineCorrectTextsAR: Set<string>, isMultiModeAR = false):
     { correctIdxsAR: number[]; correctSetAR: Set<number>; historySetAR: Set<number> } {
     try { this.timerService.stopTimer?.(undefined, { force: true, bypassAntiThrash: true }); } catch {}
     this.nextButtonStateService.setNextButtonState(true);
@@ -1206,14 +1206,21 @@ export class SocAnswerProcessingService {
     }
     const disabledSetAR = comp.disabledOptionsPerQuestion.get(qIdx)!;
     const correctSetAR = new Set(correctIdxsAR);
-    disabledSetAR.clear();
-    for (let i = 0; i < bindingsAR.length; i++) {
-      if (!correctSetAR.has(i)) disabledSetAR.add(i);
-    }
 
     const durableClicksAR = comp._multiSelectByQuestion?.get(qIdx);
     const historySetAR = new Set<number>(durableClicksAR ?? []);
     historySetAR.add(index);
+
+    disabledSetAR.clear();
+    for (let i = 0; i < bindingsAR.length; i++) {
+      // The disabled set must agree with the bindings the caller is about to
+      // build, or the gray rule and the color disagree on the same option.
+      //   single-answer -> the reveal stays live, everything else locks
+      //   multi-answer  -> the user's own picks stay live, everything else
+      //                    locks (including a correct option they never found)
+      const staysLive = isMultiModeAR ? historySetAR.has(i) : correctSetAR.has(i);
+      if (!staysLive) disabledSetAR.add(i);
+    }
 
     return { correctIdxsAR, correctSetAR, historySetAR };
   }
@@ -1260,8 +1267,15 @@ export class SocAnswerProcessingService {
    * Rebuild bindings for auto-reveal: highlight the canonical correct option(s)
    * (_autoRevealedCorrect + correct-option class), keep the clicked option
    * selected, and disable the rest. Synchronous. Extracted verbatim.
+   *
+   * MULTI-ANSWER TAKES A DIFFERENT SHAPE — see applyMultiAnswerLockBindings.
    */
-  private applyAutoRevealBindings(comp: any, bindingsAR: any[], correctSetAR: Set<number>, historySetAR: Set<number>, index: number): void {
+  private applyAutoRevealBindings(comp: any, bindingsAR: any[], correctSetAR: Set<number>, historySetAR: Set<number>, index: number, isMultiModeAR = false): void {
+    if (isMultiModeAR) {
+      this.applyMultiAnswerLockBindings(comp, bindingsAR, correctSetAR, historySetAR, index);
+      return;
+    }
+
     comp.optionBindings.set(bindingsAR.map((ob: any, bi: number) => {
       const isCorrectBinding = correctSetAR.has(bi);
       const isClicked = bi === index;
@@ -1284,6 +1298,76 @@ export class SocAnswerProcessingService {
           ...(ob?.cssClasses || {}),
           'correct-option': isCorrectBinding,
           'incorrect-option': !isCorrectBinding && (isClicked || wasPreviouslyClicked)
+        }
+      };
+    }));
+  }
+
+  /**
+   * End state for a MULTI-ANSWER question whose last incorrect option was just
+   * clicked. The rule, per the app owner:
+   *
+   *   the user's correct picks   -> GREEN
+   *   the user's incorrect picks -> RED
+   *   everything unselected      -> DARK GRAY (locked)
+   *
+   * Two things separate this from the single-answer reveal above.
+   *
+   * NO REVEAL. A correct option the user never selected stays gray. The
+   * single-answer path reveals because there is nothing left to find — every
+   * other option has been eliminated. On a multi-answer question the user
+   * simply did not find that answer, and handing it over as green both gives
+   * away an answer they did not earn and disagrees with the FET's own count.
+   *
+   * SELECTIONS SURVIVE. The single-answer rebuild sets `isSelected: isClicked`,
+   * which is right when a click REPLACES the previous pick and wrong here: it
+   * deselected the user's earlier correct picks, the selection re-published as
+   * just the clicked option, and the verdict for those picks was dropped. With
+   * no authorized verdict left, `option-item.getOptionClasses` fell through to
+   * `incorrect-option` and painted them RED — over the green background this
+   * method had just set, because `.incorrect-option` carries `!important`.
+   * That is the Directives Q8 report: pick two correct, then the one wrong
+   * option, and all three go red while the untouched third correct one goes
+   * green.
+   */
+  private applyMultiAnswerLockBindings(comp: any, bindingsAR: any[], correctSetAR: Set<number>, historySetAR: Set<number>, index: number): void {
+    comp.optionBindings.set(bindingsAR.map((ob: any, bi: number) => {
+      const isCorrectBinding = correctSetAR.has(bi);
+      // Every option the user has clicked on this question, this visit —
+      // historySetAR already carries the durable click set plus `index`.
+      const wasPicked = historySetAR.has(bi) || bi === index;
+
+      const green = wasPicked && isCorrectBinding;
+      const red = wasPicked && !isCorrectBinding;
+
+      return {
+        ...ob,
+        // Unselected options lock out; the user's own picks keep their state.
+        disabled: !wasPicked,
+        // `disabled` alone does not grey an option: option-item.isDisabled()
+        // re-derives locking from completion state, and this question is NOT
+        // complete (a correct answer went unfound), so it would answer false
+        // and the option would render live and white. This flag is the lock
+        // itself, cleared on navigation alongside _autoRevealedCorrect.
+        _autoRevealLocked: !wasPicked,
+        isSelected: wasPicked,
+        // Correctness is disclosed ONLY for options the user actually picked.
+        // An untouched option keeps whatever the verdict had authorized (which
+        // is nothing, mid-question) rather than being told it is wrong.
+        isCorrect: wasPicked ? isCorrectBinding : (ob?.isCorrect ?? null),
+        _autoRevealedCorrect: green,
+        option: ob?.option ? {
+          ...ob.option,
+          selected: wasPicked,
+          highlight: wasPicked,
+          showIcon: wasPicked,
+          active: wasPicked,
+          _autoRevealedCorrect: green
+        } : ob?.option,
+        cssClasses: {
+          ...(ob?.cssClasses || {}),
+          'correct-option': green,
+          'incorrect-option': red
         }
       };
     }));

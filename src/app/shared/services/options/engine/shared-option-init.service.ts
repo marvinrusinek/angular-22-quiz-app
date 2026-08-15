@@ -169,6 +169,9 @@ export class SharedOptionInitService {
     for (const b of _bindings) {
       if (!b) continue;
       delete b._timerExpiredStamped;
+      // Same reasoning for the multi-answer end-state lock: a stale flag would
+      // render the new question's untouched options grey and unclickable.
+      delete b._autoRevealLocked;
       if (b.cssClasses) {
         delete b.cssClasses['correct-option'];
         delete b.cssClasses['incorrect-option'];

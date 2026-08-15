@@ -135,7 +135,18 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
           || d.quizService.isMultiAnswerComplete?.(idx) === true
           || ets.fetBypassForQuestion?.get?.(idx) === true,
     isSingleAnswered: !isMultiAnswer && selectedCorrectFromAuthority > 0,
-    isTimedOut: d.timerService.expiredForQuestionIndexSig?.() === idx,
+    // A LIVE timeout only.
+    //
+    // `shouldShowFet` lets a timeout override the revisit guard, because a
+    // question timing out under the user's nose must reveal its answer even
+    // though `isNavigatingToPrevious` can still be stale-true from the nav that
+    // brought them there. But the timer also expires a question the moment the
+    // user RETURNS to it after its signed deadline has passed — Previous, or
+    // coming back to the browser tab. That is not a reveal to perform, it is a
+    // reveal that already happened, and treating it as live put the explanation
+    // in the heading where the question text belongs.
+    isTimedOut: d.timerService.expiredForQuestionIndexSig?.() === idx
+      && d.timerService.expiredOnArrivalSig?.() !== idx,
     hasInteracted: d.quizStateService.hasUserInteracted?.(idx) === true,
     optionsReady: typeof document !== 'undefined'
       && document.querySelectorAll('.option-row').length > 0,

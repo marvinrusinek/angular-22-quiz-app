@@ -48,6 +48,13 @@ export interface OptionBindings {
   optionIcon?: string;
   optionCursor?: string;
   _autoRevealedCorrect?: boolean;
+  /**
+   * Locked out by the multi-answer end state: the question is over and this
+   * option is not one the user picked, so it greys out. Distinct from
+   * `disabled`, which several pipelines write and clear on their own — this
+   * one is owned by the auto-reveal lock and cleared only on navigation.
+   */
+  _autoRevealLocked?: boolean;
   _timerExpiredStamped?: boolean;
   _timerExpiredStampedForIndex?: number;
 }

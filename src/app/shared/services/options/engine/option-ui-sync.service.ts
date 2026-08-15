@@ -19,7 +19,7 @@ import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { SelectionMessageService } from '../../features/selection-message/selection-message.service';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
+import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 import { norm } from '../../../utils/text-norm';
 import { swallow } from '../../../utils/error-logging';
 
@@ -599,7 +599,17 @@ export class OptionUiSyncService {
     const correctCountInBindings = correctIndicesSet.size;
     const canonicalCorrectCount = this.resolveCanonicalCorrectCount(ctx.optionBindings);
     const effectiveCorrectCount = Math.max(correctCountInBindings, canonicalCorrectCount);
-    const isTrulyMulti = ctx.type === 'multiple' || (ctx as any).isMultiMode === true || effectiveCorrectCount > 1;
+    // DECLARED TYPE WINS. This read `type === 'multiple' || … || count > 1`,
+    // which lets the local answer key PROMOTE a declared single-answer question
+    // to multiple whenever the bank drifts or is tampered with.
+    // `resolveIsMultiAnswer` keeps the same counted guess as a fallback but
+    // subordinates it, so a declared type decides.
+    //
+    // REMOVE THE COUNTED ARGUMENT IN /questions CONTENT CUTOVER.
+    const isTrulyMulti = resolveIsMultiAnswer(
+      currentQuestion,
+      ctx.type === 'multiple' || (ctx as any).isMultiMode === true || effectiveCorrectCount > 1
+    );
 
     const key = ctx.keyOf(optionBinding.option, index);
     for (const configKey of Object.keys(ctx.feedbackConfigs)) {

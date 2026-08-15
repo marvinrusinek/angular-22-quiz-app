@@ -19,6 +19,7 @@ import { SelectedOptionService } from '../../state/selectedoption.service';
 import { SelectionMessageService } from '../../features/selection-message/selection-message.service';
 import { TimerService } from '../../features/timer/timer.service';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 import { norm } from '../../../utils/text-norm';
 
 export interface OptionInteractionState {
@@ -715,8 +716,19 @@ export class OptionInteractionService {
   ): boolean {
     const qText = state.currentQuestion?.questionText?.toLowerCase() || '';
     const isExplicitMulti = qText.includes('select all') || qText.includes('multiple') || qText.includes('apply');
-    return state.type === 'multiple' || (state as any).isMultiMode === true ||
-      isExplicitMulti || correctCountInBindings > 1 || pristineCorrectCount > 1;
+
+    // DECLARED TYPE WINS. The OR-chain below let two answer-key counts
+    // (`correctCountInBindings`, `pristineCorrectCount`) promote a declared
+    // single-answer question to multiple. Question type is not a secret —
+    // `GET /questions` declares it — so the counted guess is demoted to a
+    // fallback rather than an equal voice.
+    //
+    // REMOVE THE COUNTED ARGUMENT IN /questions CONTENT CUTOVER.
+    return resolveIsMultiAnswer(
+      state.currentQuestion,
+      state.type === 'multiple' || (state as any).isMultiMode === true ||
+        isExplicitMulti || correctCountInBindings > 1 || pristineCorrectCount > 1
+    );
   }
 
   /**

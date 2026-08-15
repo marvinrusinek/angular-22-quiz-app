@@ -155,6 +155,13 @@ export class SharedOptionExplanationService {
     const { resolvedIndex, question } = ctx;
 
     const { correctCount, pristineCorrectTexts } = this.resolveCorrectCountAndTexts(ctx);
+    // NOT MIGRATED TO DECLARED TYPE — DELIBERATE. See computeUiResolved: it
+    // re-derives single-vs-multi from `correctCount > 1` to pick its own
+    // resolution rule, so making THIS flag declared-first while that one keeps
+    // counting produces a split brain — classification saying "single" while
+    // the rule applied is still "multi". The decision that actually gates FET
+    // here lives inside the COMPLETION function, and moving it would change
+    // completion authorization rather than type classification.
     const isMultiAnswer = correctCount > 1 || this.quizService.multipleAnswer;
 
     const selectedFromUi = this.collectSelectedFromUi(ctx);

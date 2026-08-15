@@ -17,6 +17,7 @@ import { QuizService } from '../../data/quiz.service';
 import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 import { delay } from '../../../utils/delay';
 import { norm } from '../../../utils/text-norm';
 
@@ -196,7 +197,14 @@ export class QqcExplanationDisplayService {
     const rawQ: any = displayQuestions[i0] ?? q;
     const rawOpts: any[] = rawQ?.options ?? [];
     const correctCount = rawOpts.filter((o: any) => isOptionCorrect(o)).length;
-    const isMultiAnswer = correctCount > 1;
+    // TYPE ONLY. Which rule applies — "emit now" or "wait for every correct
+    // answer" — is a question about the question's TYPE, and the declared type
+    // answers it without counting. The COMPLETION half below is untouched:
+    // isMultiAnswerFullySelected still decides whether the user has finished,
+    // and it still reads the bank. Declared type says what kind of question
+    // this is, never whether it has been answered correctly.
+    // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
+    const isMultiAnswer = resolveIsMultiAnswer(rawQ, correctCount > 1);
 
     if (!isMultiAnswer || this.isMultiAnswerFullySelected(rawOpts, i0)) {
       svc.setExplanationText(nextText, { index: i0 });

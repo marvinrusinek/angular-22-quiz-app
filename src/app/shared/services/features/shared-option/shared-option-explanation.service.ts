@@ -175,19 +175,16 @@ export class SharedOptionExplanationService {
       false
     );
 
-    if (status.evaluated) return status.resolved;
-
-    // ── TEMPORARY: NO AUTHORIZED VERDICT YET ──────────────────────────
+    // NO EARLY RETURN ON `status.evaluated` — REVERTED, and deliberately so.
     //
-    // Everything below reconstructs completion from the local answer key and
-    // runs only while the verdict is idle/checking/error. It is why a question
-    // declared SINGLE but flagged with three correct options used to refuse to
-    // resolve after one correct pick: `computeUiResolved` re-derives
-    // single-vs-multi from `correctCount > 1` and applies the multi rule.
+    // Returning `status.resolved` here skipped the pristine gate below. On a
+    // REVISIT the question already carries a terminal verdict, so resolution
+    // came back true immediately, FET emitted, and the heading rendered the
+    // explanation INSTEAD OF THE QUESTION TEXT. That shipped and was visible.
     //
-    // That defect is now unreachable once a verdict arrives. REMOVE THIS WHOLE
-    // FALLBACK IN /questions CONTENT CUTOVER — at that point there is no answer
-    // key to reconstruct from and the verdict is the only completion authority.
+    // The verdict is still the correctness authority — it feeds `status` and
+    // the override at the end. What it must not do is bypass the gate that
+    // requires the pristine correct set to be present in the CURRENT view.
     const { correctCount, pristineCorrectTexts } = this.resolveCorrectCountAndTexts(ctx);
     const isMultiAnswer = correctCount > 1 || this.quizService.multipleAnswer;
 

@@ -1,9 +1,10 @@
-import { Service, effect } from '@angular/core';
+import { Service, effect, inject, untracked } from '@angular/core';
 
 import { OptionBindings } from '../../../models/OptionBindings.model';
 import { SelectedOption } from '../../../models/SelectedOption.model';
 
 import type { SharedOptionComponent } from '../../../../components/question/answer/shared-option-component/shared-option.component';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { norm } from '../../../utils/text-norm';
 
@@ -22,14 +23,49 @@ type Host = SharedOptionComponent;
  */
 @Service()
 export class OptionFeedbackEffectsService {
+  private readonly verdicts = inject(QuestionVerdictService);
+
   registerFeedbackEffects(host: Host): void {
     const h = host as any;
-    // Two independent effects; bodies extracted to named helpers. The signal
+    // Three independent effects; bodies extracted to named helpers. The signal
     // reads happen synchronously inside each effect, so dependency tracking is
     // intact (Angular tracks signals read during the effect's execution,
     // including nested calls).
     effect(() => this.applyMultiAnswerAutoDisable(h));
     effect(() => this.applyTimerExpiryStamp(h));
+    effect(() => this.repaintOnVerdictArrival(h));
+  }
+
+  /**
+   * Repaint when an AUTHORIZED VERDICT lands.
+   *
+   * The app is zoneless, and `option-lock-policy.applyAuthorizedCorrectness`
+   * writes `b.isCorrect` as a plain field — no signal, so no change detection.
+   * The two effects above wake on the SELECTIONS signal, i.e. on a click. The
+   * result was that each verdict was painted by the NEXT click's render pass,
+   * and the LAST click's verdict had no click behind it: on a three-correct
+   * question only two options ever turned green, until something unrelated
+   * (switching tabs and back) forced a render.
+   *
+   * Reading `verdicts.states()` makes verdict arrival itself a dependency.
+   * Fresh binding refs are what OnPush option-item children compare, and
+   * `getOptionClasses` recomputes `correct-option`/`incorrect-option` from
+   * `binding.isCorrect` on the resulting pass.
+   */
+  private repaintOnVerdictArrival(h: any): void {
+    // THE DEPENDENCY. Read first and unconditionally — an early return above
+    // this line would silently unsubscribe the effect from verdict arrivals.
+    this.verdicts.states();
+
+    // Everything else is untracked: reading optionBindings reactively and then
+    // writing it in the same effect would re-trigger this effect forever.
+    untracked(() => {
+      const bindings: OptionBindings[] = h.optionBindings?.() ?? [];
+      if (!bindings.length) return;
+
+      h.optionBindings.set(bindings.map((b: OptionBindings) => ({ ...b })));
+      h.cdRef?.markForCheck?.();
+    });
   }
 
   /**

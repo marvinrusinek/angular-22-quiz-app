@@ -304,10 +304,26 @@ export class OptionItemComponent implements OnInit {
       return this.clearHighlightClasses(classes);
     }
 
+    // RED REQUIRES THE USER'S OWN PICK — same guard the timer-expiry branch
+    // above already applies via `wasSelected`.
+    //
+    // `isCurrentOptionCorrect()` returns a plain boolean and collapses "not
+    // authorized yet" to false, so `!isCorrect` was true for BOTH an authorized
+    // wrong answer and an option nothing is known about. On a terminal verdict
+    // that painted untouched options red alongside the one the user actually
+    // clicked — and disclosed the correctness of options they never chose,
+    // which unselected-disclosure.spec.ts forbids for disabled state.
+    //
+    // Green may still appear on an unselected option: that is the reveal.
+    const wasSelected =
+      this.binding()?.isSelected === true ||
+      this._wasSelected === true ||
+      this.isSelectedForCurrentQuestion();
+
     return {
       ...classes,
       'correct-option': isCorrect,
-      'incorrect-option': !isCorrect
+      'incorrect-option': wasSelected && !isCorrect
     };
   }
 
@@ -714,8 +730,28 @@ export class OptionItemComponent implements OnInit {
       return this.suppressedHighlightColor();
     }
 
-    // Green if correct, red if incorrect
-    return this.isCurrentOptionCorrect() ? CORRECT_COLOR : INCORRECT_COLOR;
+    // GREEN when the verdict authorized this option correct — including one the
+    // user never picked, which is the terminal reveal.
+    if (this.isCurrentOptionCorrect()) return CORRECT_COLOR;
+
+    // RED IS ONLY EVER THE USER'S OWN WRONG PICK.
+    //
+    // This used to fall straight through to INCORRECT_COLOR. Because
+    // `isCurrentOptionCorrect()` returns a plain boolean and collapses "no
+    // authorized verdict yet" into false, EVERY highlighted option that was not
+    // yet known-correct painted red — untouched options included. Selecting one
+    // correct answer then one wrong one turned the two remaining, never-clicked
+    // options red.
+    //
+    // Painting nothing is the correct render for "not known": it neither
+    // invents correctness nor discloses the standing of an option the user
+    // never chose.
+    const wasSelected =
+      this.binding()?.isSelected === true ||
+      this._wasSelected === true ||
+      this.isSelectedForCurrentQuestion();
+
+    return wasSelected ? INCORRECT_COLOR : null;
   }
 
   // AUTO-REVEAL: persistent flag wins over all other guards.

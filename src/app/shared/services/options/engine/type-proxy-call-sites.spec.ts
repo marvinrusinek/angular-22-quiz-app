@@ -92,8 +92,13 @@ describe('interaction mode follows the DECLARED type, not the answer key', () =>
     expect(isMultiMode(q(QuestionType.TrueFalse, 2), 2, 2)).toBe(false);
   });
 
-  it('does not let a stale `type: multiple` input override a declared single', () => {
-    expect(isMultiMode(q(QuestionType.SingleAnswer, 1), 1, 1, 'multiple')).toBe(false);
+  it('MODE INPUT still promotes: `type: multiple` overrides a declared single', () => {
+    // CORRECTED after a LIVE highlighting regression. This previously asserted
+    // `false`. Passing `state.type` as resolveIsMultiAnswer's fallback ARGUMENT
+    // made a declared type discard it, and a click on a declared-single question
+    // then cleared the other options' highlight. Declared type replaces the
+    // COUNT only; an explicit mode input keeps its voice.
+    expect(isMultiMode(q(QuestionType.SingleAnswer, 1), 1, 1, 'multiple')).toBe(true);
   });
 
   it('works when options carry no `correct` property whatsoever', () => {
@@ -128,14 +133,18 @@ describe('an UNDECLARED type still falls back to the counted guess', () => {
     expect(isMultiMode(selectAll, 1, 1)).toBe(true);
   });
 
-  it('a declared single BEATS the explicit-multi text heuristic', () => {
+  it('the explicit-multi TEXT heuristic still promotes a declared single', () => {
+    // CORRECTED with the mode-input fix. The wording heuristic sits alongside
+    // `type`/`isMultiMode` in the same OR-chain, so subordinating it to the
+    // declared type discarded it too. It is a runtime signal, not a count, and
+    // the COUNT is the only thing the declared type replaces.
     const selectAllButSingle = {
       questionText: 'Select all that apply',
       type: QuestionType.SingleAnswer,
       options: [{ optionId: 1, text: 'a' }]
     } as unknown as QuizQuestion;
 
-    expect(isMultiMode(selectAllButSingle, 1, 1)).toBe(false);
+    expect(isMultiMode(selectAllButSingle, 1, 1)).toBe(true);
   });
 });
 

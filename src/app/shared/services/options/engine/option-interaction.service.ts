@@ -724,11 +724,15 @@ export class OptionInteractionService {
     // fallback rather than an equal voice.
     //
     // REMOVE THE COUNTED ARGUMENT IN /questions CONTENT CUTOVER.
-    return resolveIsMultiAnswer(
-      state.currentQuestion,
-      state.type === 'multiple' || (state as any).isMultiMode === true ||
-        isExplicitMulti || correctCountInBindings > 1 || pristineCorrectCount > 1
-    );
+    // MODE INPUTS STILL PROMOTE. Passing them as the fallback ARGUMENT meant a
+    // declared type discarded them; declared type replaces the COUNTS only.
+    return state.type === 'multiple'
+      || (state as any).isMultiMode === true
+      || isExplicitMulti
+      || resolveIsMultiAnswer(
+        state.currentQuestion,
+        correctCountInBindings > 1 || pristineCorrectCount > 1
+      );
   }
 
   /**

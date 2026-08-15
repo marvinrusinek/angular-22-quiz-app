@@ -606,10 +606,11 @@ export class OptionUiSyncService {
     // subordinates it, so a declared type decides.
     //
     // REMOVE THE COUNTED ARGUMENT IN /questions CONTENT CUTOVER.
-    const isTrulyMulti = resolveIsMultiAnswer(
-      currentQuestion,
-      ctx.type === 'multiple' || (ctx as any).isMultiMode === true || effectiveCorrectCount > 1
-    );
+    // MODE INPUTS STILL PROMOTE. Passing them as the fallback ARGUMENT meant a
+    // declared type discarded them; declared type replaces the COUNT only.
+    const isTrulyMulti = ctx.type === 'multiple'
+      || (ctx as any).isMultiMode === true
+      || resolveIsMultiAnswer(currentQuestion, effectiveCorrectCount > 1);
 
     const key = ctx.keyOf(optionBinding.option, index);
     for (const configKey of Object.keys(ctx.feedbackConfigs)) {
@@ -726,10 +727,9 @@ export class OptionUiSyncService {
     // DECLARED TYPE WINS — the count is the fallback, not an equal arm of the
     // OR. `question` came from getQuestionAtDisplayIndex above, so this is the
     // question the user is actually looking at under shuffle.
-    const isTrulyMulti = resolveIsMultiAnswer(
-      question,
-      correctOptions.length > 1 || ctx.type === 'multiple'
-    );
+    // MODE INPUT STILL PROMOTES — declared type replaces the COUNT only.
+    const isTrulyMulti = ctx.type === 'multiple'
+      || resolveIsMultiAnswer(question, correctOptions.length > 1);
     const isActuallySingle = !isTrulyMulti;
 
     let selectedOptions = this.gatherSelectedOptionsForScoring(ctx, questionIndex);
@@ -952,10 +952,11 @@ export class OptionUiSyncService {
     // DECLARED TYPE WINS. This decides whether a click TOGGLES one option or
     // clears the others, so a declared single-answer question that the local
     // bank happened to flag twice used to behave as a checkbox group.
-    const isMultiple = resolveIsMultiAnswer(
-      (ctx as any).currentQuestion,
-      ctx.type === 'multiple' || correctCount > 1
-    );
+    // MODE INPUT STILL PROMOTES — see shared-option-binding.resolveBuildIsMulti.
+    // Declared type replaces the COUNT only; `ctx.type` must keep its voice or a
+    // click on a declared-single question clears the other options' highlight.
+    const isMultiple = ctx.type === 'multiple'
+      || resolveIsMultiAnswer((ctx as any).currentQuestion, correctCount > 1);
 
     const historySet = new Set(ctx.selectedOptionHistory || []);
     for (let i = 0; i < (ctx.optionsToDisplay ?? []).length; i++) {

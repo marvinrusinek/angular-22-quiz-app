@@ -294,9 +294,23 @@ describe('shared-option-binding resolveBuildIsMulti: declared type beats the cou
     expect(buildIsMulti({ isMultiMode: false }, 0)).toBe(false);
   });
 
-  it('declared SINGLE is not promoted by the quiz-level multipleAnswer flag', () => {
+  it('MODE INPUTS still promote: multipleAnswer overrides even a declared single', () => {
+    // CORRECTED after a LIVE highlighting regression. This previously asserted
+    // `false` — that the declared type should beat the quiz-level flag. Passing
+    // the flag as resolveIsMultiAnswer's fallback ARGUMENT made a declared type
+    // discard it, which flipped resolveShouldHighlight from the durable-click-set
+    // branch to the live-binding branch and painted the wrong options.
+    //
+    // Declared type replaces the COUNT. It does not overrule an explicit mode
+    // input, because those carry runtime intent the type cannot express.
     quizService.questions = [q(QuestionType.SingleAnswer, 1)];
     quizService.multipleAnswer = true;
+    expect(buildIsMulti({ isMultiMode: false }, 0)).toBe(true);
+
+    // With the flag off, the declared type still beats the COUNT — the actual
+    // Stage 10 goal, unchanged.
+    quizService.multipleAnswer = false;
+    quizService.questions = [q(QuestionType.SingleAnswer, 3)];
     expect(buildIsMulti({ isMultiMode: false }, 0)).toBe(false);
   });
 

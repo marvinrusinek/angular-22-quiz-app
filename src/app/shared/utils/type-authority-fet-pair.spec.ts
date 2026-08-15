@@ -274,18 +274,23 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
     service = TestBed.inject(SharedOptionExplanationService);
   });
 
-  it('FORMER KNOWN DEFECT: declared SINGLE flagged 3-correct NOW resolves on one pick', () => {
-    // WAS asserted false. The authorized verdict resolved this question, so the
-    // bank's three flags no longer impose a multi-answer completion rule on it.
+  it('KNOWN DEFECT (restored): declared SINGLE flagged 3-correct does NOT resolve on one pick', () => {
+    // BRIEFLY "FIXED", THEN REVERTED. Returning the verdict early skipped the
+    // pristine gate, which on REVISIT emitted FET in place of the question text
+    // — a visible shipped regression. The gate is back, so this defect is back
+    // with it: the count still owns the rule inside computeUiResolved.
+    //
+    // Fixing it properly means separating the pristine gate from the completion
+    // rule, not bypassing the gate. Left asserted as the defect it is.
     expect(
       resolution(q(QuestionType.SingleAnswer, 3), ['opt1'], { resolved: true })
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it('FORMER KNOWN DEFECT: declared TRUEFALSE flagged 3-correct NOW resolves on one pick', () => {
+  it('KNOWN DEFECT (restored): declared TRUEFALSE flagged 3-correct does NOT resolve on one pick', () => {
     expect(
       resolution(q(QuestionType.TrueFalse, 3), ['opt1'], { resolved: true })
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('declared MULTIPLE partial stays unresolved on an incomplete verdict', () => {
@@ -302,11 +307,13 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
     ).toBe(true);
   });
 
-  it('declared MULTIPLE flagged only 1-correct still uses verdict completion', () => {
-    // The bank would call this single-answer; the verdict is what decides.
+  it('declared MULTIPLE flagged only 1-correct follows the local rule', () => {
+    // With the early return reverted, a single flagged-correct option means
+    // computeUiResolved takes its single-answer branch and one correct pick
+    // resolves. Recorded as the current contract, not endorsed.
     expect(
       resolution(q(QuestionType.MultipleAnswer, 1), ['opt1'], { resolved: false })
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('COMPLETE-BUT-IMPERFECT resolves: completion is not perfection', () => {

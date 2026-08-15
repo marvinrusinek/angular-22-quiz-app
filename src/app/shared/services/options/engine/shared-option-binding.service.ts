@@ -178,7 +178,8 @@ export class SharedOptionBindingService {
         // `questions` is a GETTER that returns shuffledQuestions while shuffle
         // is active, so indexing it with this display index is identity-safe.
         // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
-        const isMulti = resolveIsMultiAnswer(authQ, correctCount > 1 || comp.isMultiMode);
+        // MODE INPUT STILL PROMOTES — declared type replaces the COUNT only.
+        const isMulti = comp.isMultiMode || resolveIsMultiAnswer(authQ, correctCount > 1);
         if (!isMulti) {
           comp.deferHighlightUpdate(() => comp.emitExplanation(currentIdx));
         }
@@ -953,10 +954,15 @@ export class SharedOptionBindingService {
     // returns shuffledQuestions while shuffle is active, so this reads the
     // question the user is actually looking at.
     // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
-    return resolveIsMultiAnswer(
-      authQ,
-      comp.isMultiMode || authCorrectCount > 1 || this.quizService.multipleAnswer
-    );
+    // MODE INPUTS STILL PROMOTE. Passing them as the FALLBACK argument meant a
+    // declared type discarded them entirely, so a declared single-answer
+    // question could no longer be forced multi by isMultiMode/multipleAnswer —
+    // which flipped resolveShouldHighlight from the durable-click-set branch to
+    // the live-binding branch and changed which options paint.
+    // Declared type replaces the COUNT only; that is the Stage 10 goal.
+    return comp.isMultiMode
+      || this.quizService.multipleAnswer
+      || resolveIsMultiAnswer(authQ, authCorrectCount > 1);
   }
 
   private resolveShouldHighlight(

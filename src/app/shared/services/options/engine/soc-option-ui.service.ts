@@ -37,12 +37,10 @@ export class SocOptionUiService {
     // the local bank happened to flag twice used to behave as a checkbox group.
     // The type is read from the same question object the count came from.
     // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
-    const isMultiMode = resolveIsMultiAnswer(
-      currentQuestion,
-      comp.type === 'multiple' ||
-        comp.config()?.type === 'multiple' ||
-        correctCount > 1
-    );
+    // MODE INPUTS STILL PROMOTE — declared type replaces the COUNT only.
+    const isMultiMode = comp.type === 'multiple'
+      || comp.config()?.type === 'multiple'
+      || resolveIsMultiAnswer(currentQuestion, correctCount > 1);
 
     if (!isMultiMode) {
       for (const opt of comp.optionsToDisplay || []) opt.selected = false;

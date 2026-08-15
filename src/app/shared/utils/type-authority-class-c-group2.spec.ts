@@ -79,7 +79,11 @@ describe('qqc cold-load fallback: declared type decides which component loads', 
     const host: any = {
       dynamicAnswerContainer: () => ({ clear: () => {} }),
       quizQuestionManagerService: {
-        isMultipleAnswerQuestion: () =>
+        // Renamed in the Group 3 split: interaction mode and the banner's
+        // correct-count gate are now separate resolvers. The stub MUST track
+        // the real name — a missing method would throw and land in the catch,
+        // making these tests pass for the wrong reason.
+        isMultipleAnswerInteraction: () =>
           primary === 'throws'
             ? throwError(() => new Error('cold load: no emission'))
             : of()   // completes without emitting -> firstValueFrom EmptyError
@@ -164,7 +168,7 @@ describe('qqc cold-load fallback: declared type decides which component loads', 
     loadedAsMulti = null;
     const host: any = {
       dynamicAnswerContainer: () => ({ clear: () => {} }),
-      quizQuestionManagerService: { isMultipleAnswerQuestion: () => of(true) },
+      quizQuestionManagerService: { isMultipleAnswerInteraction: () => of(true) },
       dynamicComponentService: {
         loadComponent: (_c: unknown, isMulti: boolean) => {
           loadedAsMulti = isMulti;

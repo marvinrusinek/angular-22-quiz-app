@@ -41,8 +41,12 @@ export class QqcOrchQuestionLoadService {
 
       let isMultipleAnswer = false;
       try {
+        // INTERACTION MODE, not the banner's correct-count gate. These were one
+        // shared resolver; asking the interaction question explicitly is what
+        // let the declared type become authoritative here without moving the
+        // "(N answers are correct)" banner, which is still count-gated.
         isMultipleAnswer = await firstValueFrom(
-          host.quizQuestionManagerService.isMultipleAnswerQuestion(question)
+          host.quizQuestionManagerService.isMultipleAnswerInteraction(question)
         );
       } catch {
         // Do NOT abort the whole render on a transient resolution failure

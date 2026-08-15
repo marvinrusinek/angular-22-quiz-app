@@ -14,6 +14,7 @@ import { SelectedOptionService } from '../../state/selectedoption.service';
 import { SelectionMessageService } from '../selection-message/selection-message.service';
 import { TimerService } from '../timer/timer.service';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 
 /**
  * Manages option selection logic, state transitions, and correctness evaluation for QQC.
@@ -332,7 +333,20 @@ export class QqcOptionSelectionService {
     const maCorrectCount = rawOpts.filter(
       (o: any) => isOptionCorrect(o)
     ).length;
-    const isMultiQ = maCorrectCount > 1;
+    // TYPE ONLY — whether this question is answered with one pick or several.
+    // The count is the fallback, not the authority: a declared single-answer
+    // question the bank happened to flag twice used to be treated as multi and
+    // never emitted its explanation from this path at all.
+    //
+    // Nothing about COMPLETION or CORRECTNESS is decided here — this path does
+    // not consult either, and this change does not add such a gate. The
+    // explanation TEXT below is fetched and returned regardless.
+    //
+    // `quizService.questions` is a getter returning shuffledQuestions while
+    // shuffle is active, and `currentQuestionIndex` is a display index, so this
+    // lands on the question on screen; `currentQuestion` is the object passed
+    // straight in. REMOVE THE COUNT IN /questions CONTENT CUTOVER.
+    const isMultiQ = resolveIsMultiAnswer(rawQ, maCorrectCount > 1);
 
     if (!isMultiQ) {
       this.explanationTextService.setIsExplanationTextDisplayed(true);

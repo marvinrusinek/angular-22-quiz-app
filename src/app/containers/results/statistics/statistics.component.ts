@@ -1,12 +1,14 @@
 import {
-  ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect,
-  inject, input, OnInit, signal
+  ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef,
+  effect, inject, input, OnInit, signal
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { QuizStatus } from '../../../shared/models/quiz-status.enum'
 import { QuizMetadata } from '../../../shared/models/QuizMetadata.model';
 import { Resource } from '../../../shared/models/Resource.model';
 
+import { TopicQuizResourcesService } from '../../../shared/services/api/topic-quiz-resources.service';
 import { QuizDataService } from '../../../shared/services/data/quizdata.service';
 import { QuizService } from '../../../shared/services/data/quiz.service';
 import { TimerService } from '../../../shared/services/features/timer/timer.service';
@@ -27,7 +29,9 @@ export class StatisticsComponent implements OnInit {
   private readonly quizDataService = inject(QuizDataService);
   private readonly quizService = inject(QuizService);
   private readonly timerService = inject(TimerService);
+  private readonly resourcesApi = inject(TopicQuizResourcesService);
   private readonly cdRef = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   // ── inputs ──────────────────────────────────────────────────────
   // Signal input aliased to "quizId" so parent template binding stays the same.
@@ -175,11 +179,25 @@ export class StatisticsComponent implements OnInit {
       completionTime: totalElapsedTime
     });
 
-    // Ensure resources are loaded for this quiz
+    // RESOURCES COME FROM THE API, NOT THE LOCAL BANK.
+    //
+    // This used to be `quizService.loadResourcesForQuiz()` reading the
+    // `resources` block of `assets/data/quiz.json` — the last consumer of that
+    // block, and therefore one of the things keeping the public asset alive.
+    //
+    // Deliberately NOT awaited or gated on: the rest of the statistics panel
+    // renders from data it already has, and a slow or failed resources call
+    // must not delay or break it. The service resolves to an empty list on any
+    // failure, so the panel behaves exactly as it does for the twelve quizzes
+    // that have no links.
     if (this.quizId()) {
-      this.quizService.loadResourcesForQuiz(this.quizId());
+      this.resourcesApi.loadResources(this.quizId())
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((resources) => {
+          this.resources.set(resources);
+          this.cdRef.markForCheck();
+        });
     }
-    this.resources.set(this.quizService.resources);
     this.calculateElapsedTime();
     this.sendQuizStatusToQuizService();
 

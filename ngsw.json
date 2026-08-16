@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1786837438245,
+  "timestamp": 1786893491014,
   "index": "/angular-22-quiz-app/index.html",
   "assetGroups": [
     {
@@ -23,7 +23,7 @@
         "/angular-22-quiz-app/chunk-DbUkMnY7.js",
         "/angular-22-quiz-app/chunk-dfnK3eK9.js",
         "/angular-22-quiz-app/index.html",
-        "/angular-22-quiz-app/main-F6STVRM2.js",
+        "/angular-22-quiz-app/main-DCQPVWWM.js",
         "/angular-22-quiz-app/manifest.webmanifest",
         "/angular-22-quiz-app/polyfills-Q3J2IDWG.js",
         "/angular-22-quiz-app/styles-47UEOKTH.css"
@@ -119,8 +119,8 @@
     "/angular-22-quiz-app/icons/icon-512x512.png": "1de182f76f7329dfa8f9fcdd1fdcdd695bea6a99",
     "/angular-22-quiz-app/icons/icon-72x72.png": "aa88a6096bd973be7f6d7a5489bfa6bc2463f8c4",
     "/angular-22-quiz-app/icons/icon-96x96.png": "7fb8f59c30ce2ff12c700321a0b39e14b3dc8f95",
-    "/angular-22-quiz-app/index.html": "a26f95723ea74c6cd3fbf4e74f8e2c414bc148db",
-    "/angular-22-quiz-app/main-F6STVRM2.js": "2cc80dd78e685f59ec02338c698d1006e7207a1e",
+    "/angular-22-quiz-app/index.html": "66cf408b95bee1ca977f8f90ab9a670e85339446",
+    "/angular-22-quiz-app/main-DCQPVWWM.js": "3df79ba626c8d6aa06dbac1c99a6e5c0ad383e82",
     "/angular-22-quiz-app/manifest.webmanifest": "3c96a7bad35ef45fa2b23bfc68f7e0bdcd0c3090",
     "/angular-22-quiz-app/media/codelab_logo-67WJRSK2.jpeg": "f9feb096c6d94292acf3b2f5f9ea7b4aee5dc2a3",
     "/angular-22-quiz-app/polyfills-Q3J2IDWG.js": "d95d77c85e3638ace2862592b9479ad4e8520cad",

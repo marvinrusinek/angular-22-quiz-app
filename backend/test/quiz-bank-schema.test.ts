@@ -81,7 +81,7 @@ describe('migration 002 applies alongside 001', () => {
 
   it('is idempotent — a second run applies nothing', async () => {
     const db = fromPool(createTestPool().pool, 'pg-mem');
-    expect(await migrate(db, { now: CLOCK })).toEqual([1, 2]);
+    expect(await migrate(db, { now: CLOCK })).toEqual([1, 2, 3]);
     expect(await migrate(db, { now: CLOCK })).toEqual([]);
   });
 });
@@ -321,5 +321,95 @@ describe('internal ids stay internal', () => {
       'SELECT COUNT(*)::int AS n FROM questions'
     );
     expect(Number(after[0]!['n'])).toBe(2);
+  });
+});
+
+/**
+ * Migration 003 — the Results-page resource links.
+ *
+ * The last part of the bank with no source outside `data/quiz.json`. Nothing
+ * here is private (they are outbound documentation links), so the properties
+ * worth enforcing are structural: they belong to a quiz, they keep a stable
+ * order, and a url cannot repeat inside one quiz — the template tracks the
+ * rendered list by `resource.url`, so a duplicate would collapse two entries
+ * into one.
+ */
+describe('migration 003 — quiz_resources', () => {
+  const insertResource = (
+    db: DatabaseHandle,
+    quizPk: number,
+    url: string,
+    displayOrder = 0,
+    title = 'A link',
+    host = 'Example'
+  ) => db.query(
+    `INSERT INTO quiz_resources (quiz_pk, title, url, host, display_order)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [quizPk, title, url, host, displayOrder]
+  );
+
+  it('creates the table without disturbing the earlier migrations', async () => {
+    const db = await migratedDb();
+    for (const table of ['quizzes', 'questions', 'options', 'quiz_resources', 'interview_sessions']) {
+      const { rows } = await db.query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM ${table}`);
+      expect(Number(rows[0]!['n'])).toBe(0);
+    }
+  });
+
+  it('CASCADES delete from the quiz', async () => {
+    const db = await migratedDb();
+    const quiz = await insertQuiz(db);
+    await insertResource(db, quiz, 'https://example.test/one');
+
+    await db.query('DELETE FROM quizzes WHERE id = $1', [quiz]);
+    const { rows } = await db.query<{ n: number }>('SELECT COUNT(*)::int AS n FROM quiz_resources');
+    expect(Number(rows[0]!['n'])).toBe(0);
+  });
+
+  it('REJECTS an orphan resource', async () => {
+    const db = await migratedDb();
+    await expect(insertResource(db, 999_999, 'https://example.test/orphan')).rejects.toThrow();
+  });
+
+  it('rejects a duplicate url within one quiz', async () => {
+    const db = await migratedDb();
+    const quiz = await insertQuiz(db);
+    await insertResource(db, quiz, 'https://example.test/same', 0);
+    await expect(insertResource(db, quiz, 'https://example.test/same', 1)).rejects.toThrow();
+  });
+
+  it('ALLOWS the same url on a DIFFERENT quiz', async () => {
+    const db = await migratedDb();
+    const rxjs = await insertQuiz(db, 'rxjs');
+    const signals = await insertQuiz(db, 'signals');
+    await insertResource(db, rxjs, 'https://angular.dev');
+    await expect(insertResource(db, signals, 'https://angular.dev')).resolves.toBeDefined();
+  });
+
+  it('keeps display order unambiguous within a quiz', async () => {
+    const db = await migratedDb();
+    const quiz = await insertQuiz(db);
+    await insertResource(db, quiz, 'https://example.test/a', 0);
+    await expect(insertResource(db, quiz, 'https://example.test/b', 0)).rejects.toThrow();
+  });
+
+  it('rejects blank title, blank url and a negative order', async () => {
+    const db = await migratedDb();
+    const quiz = await insertQuiz(db);
+    await expect(insertResource(db, quiz, 'https://example.test/x', 0, '   ')).rejects.toThrow();
+    await expect(insertResource(db, quiz, '   ', 1)).rejects.toThrow();
+    await expect(insertResource(db, quiz, 'https://example.test/y', -1)).rejects.toThrow();
+  });
+
+  it('defaults host to empty rather than null', async () => {
+    const db = await migratedDb();
+    const quiz = await insertQuiz(db);
+    await db.query(
+      `INSERT INTO quiz_resources (quiz_pk, title, url, display_order)
+       VALUES ($1, 'No host', 'https://example.test/nohost', 0)`,
+      [quiz]
+    );
+    const { rows } = await db.query<{ host: string }>('SELECT host FROM quiz_resources');
+    expect(rows[0]!['host']).toBe('');
   });
 });

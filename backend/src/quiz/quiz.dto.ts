@@ -42,6 +42,45 @@ export function toQuizMetadataListDto(
   return metadata.map(toQuizMetadataDto);
 }
 
+// ── QUIZ RESOURCES (Results page links) ─────────────────────────────
+
+/**
+ * One outbound documentation link.
+ *
+ * The whole of the source shape, and the whole of what the panel renders. No
+ * identifier is emitted: the client addresses nothing by it, and `url` is
+ * already the key the template tracks the list by.
+ */
+export interface QuizResourceDto {
+  readonly title: string;
+  readonly url: string;
+  readonly host: string;
+}
+
+export interface QuizResourcesBody {
+  readonly quizId: string;
+  readonly resources: readonly QuizResourceDto[];
+}
+
+/**
+ * Built field by field, like every mapper here — a spread would carry through
+ * any column later added to `quiz_resources`. There is nothing private on this
+ * table today, and this keeps that true by construction rather than by review.
+ */
+export function toQuizResourcesDto(
+  quizId: string,
+  resources: readonly { title: string; url: string; host: string }[]
+): QuizResourcesBody {
+  return {
+    quizId,
+    resources: resources.map((resource) => ({
+      title: resource.title,
+      url: resource.url,
+      host: resource.host
+    }))
+  };
+}
+
 // ── TOPIC QUIZ questions (pre-answer) ───────────────────────────────
 
 /**

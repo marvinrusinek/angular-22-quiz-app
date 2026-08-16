@@ -154,9 +154,9 @@ describe('migration application', () => {
     const applied = await migrate(db, { now: CLOCK });
 
     // Every migration in the directory, in numeric order.
-    expect(applied).toEqual([1, 2]);
+    expect(applied).toEqual([1, 2, 3]);
     const records = await getAppliedMigrations(db);
-    expect(records).toHaveLength(2);
+    expect(records).toHaveLength(3);
     expect(records[0]).toEqual({
       version: 1,
       name: 'interview_sessions',
@@ -169,9 +169,9 @@ describe('migration application', () => {
 
   it('is IDEMPOTENT — a second run applies nothing', async () => {
     const db = freshDb();
-    expect(await migrate(db, { now: CLOCK })).toEqual([1, 2]);
+    expect(await migrate(db, { now: CLOCK })).toEqual([1, 2, 3]);
     expect(await migrate(db, { now: CLOCK })).toEqual([]);
-    expect(await getAppliedMigrations(db)).toHaveLength(2);
+    expect(await getAppliedMigrations(db)).toHaveLength(3);
   });
 
   it('creates every expected table', async () => {
@@ -185,7 +185,7 @@ describe('migration application', () => {
       'session_answers', 'schema_migrations'
     ]) {
       const { rows } = await db.query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM ${table}`);
-      expect(rows[0]!['n']).toBe(table === 'schema_migrations' ? 2 : 0);
+      expect(rows[0]!['n']).toBe(table === 'schema_migrations' ? 3 : 0);
     }
   });
 

@@ -96,6 +96,22 @@ export interface QuizMetadata {
   readonly questionCount: number;
 }
 
+/**
+ * One "Brush up your knowledge" link on the Results page.
+ *
+ * PUBLIC. Unlike everything else the bank holds, these are outbound links to
+ * third-party documentation — there is no answer key here, which is why they
+ * are served under the same policy as quiz metadata.
+ *
+ * The three fields are the whole of the source shape; the panel renders all
+ * three and there is nothing else on the item.
+ */
+export interface QuizResource {
+  readonly title: string;
+  readonly url: string;
+  readonly host: string;
+}
+
 export interface QuizBankStats {
   readonly quizCount: number;
   readonly questionCount: number;

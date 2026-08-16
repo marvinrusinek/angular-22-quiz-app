@@ -96,6 +96,7 @@ interface ImportSummary {
   questions: number;
   options: number;
   correctOptions: number;
+  resources: number;
 }
 
 /**
@@ -122,12 +123,58 @@ function factsByQuizId(raw: unknown): ReadonlyMap<string, readonly string[]> {
   return out;
 }
 
+interface SourceResource {
+  readonly title: string;
+  readonly url: string;
+  readonly host: string;
+}
+
+/**
+ * The Results-page links, from the file's top-level `resources` block.
+ *
+ * Extracted the same defensive way as `facts`, and for the same reason: this
+ * data is not part of the normalized private model, so nothing upstream has
+ * validated it. An item missing `title` or `url` is dropped rather than
+ * written, because both are NOT NULL with a non-empty CHECK.
+ *
+ * The entry's own `milestone` is deliberately ignored — it duplicates
+ * `quizzes.milestone` byte for byte, and the panel takes the name it displays
+ * from the quiz metadata.
+ */
+function resourcesByQuizId(raw: unknown): ReadonlyMap<string, readonly SourceResource[]> {
+  const out = new Map<string, readonly SourceResource[]>();
+  const source = raw as { resources?: unknown } | null;
+  if (!Array.isArray(source?.resources)) return out;
+
+  for (const entry of source.resources as readonly unknown[]) {
+    const group = entry as { quizId?: unknown; resources?: unknown };
+    if (typeof group?.quizId !== 'string' || !Array.isArray(group.resources)) continue;
+
+    const items: SourceResource[] = [];
+    for (const item of group.resources as readonly unknown[]) {
+      const resource = item as { title?: unknown; url?: unknown; host?: unknown };
+      if (typeof resource?.title !== 'string' || !resource.title.trim()) continue;
+      if (typeof resource?.url !== 'string' || !resource.url.trim()) continue;
+      items.push({
+        title: resource.title,
+        url: resource.url,
+        host: typeof resource.host === 'string' ? resource.host : ''
+      });
+    }
+    out.set(group.quizId, items);
+  }
+  return out;
+}
+
 async function importBank(
   client: Queryable,
   quizzes: readonly PrivateQuiz[],
-  facts: ReadonlyMap<string, readonly string[]>
+  facts: ReadonlyMap<string, readonly string[]>,
+  resources: ReadonlyMap<string, readonly SourceResource[]>
 ): Promise<ImportSummary> {
-  const summary: ImportSummary = { quizzes: 0, questions: 0, options: 0, correctOptions: 0 };
+  const summary: ImportSummary = {
+    quizzes: 0, questions: 0, options: 0, correctOptions: 0, resources: 0
+  };
 
   for (const [quizIndex, quiz] of quizzes.entries()) {
     const { rows } = await client.query<{ id: string }>(
@@ -156,6 +203,17 @@ async function importBank(
 
     // Full replace — see the header note on idempotency.
     await client.query('DELETE FROM questions WHERE quiz_pk = $1', [quizPk]);
+    await client.query('DELETE FROM quiz_resources WHERE quiz_pk = $1', [quizPk]);
+
+    // Array order IS the display order; the source has no other ordering key.
+    for (const [resourceIndex, resource] of (resources.get(quiz.quizId) ?? []).entries()) {
+      await client.query(
+        `INSERT INTO quiz_resources (quiz_pk, title, url, host, display_order)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [quizPk, resource.title, resource.url, resource.host, resourceIndex]
+      );
+      summary.resources++;
+    }
 
     for (const [questionIndex, question] of quiz.questions.entries()) {
       const inserted = await client.query<{ id: string }>(
@@ -296,10 +354,32 @@ async function main(): Promise<void> {
       return;
     }
 
-    const summary = await db.transaction((client) => importBank(client, quizzes, factsByQuizId(raw)));
+    const resources = resourcesByQuizId(raw);
+
+    // A resource group naming a quiz that does not exist cannot be imported —
+    // `quiz_resources.quiz_pk` is a foreign key. Reported rather than silently
+    // skipped, because the reason it is orphaned is a data bug worth seeing:
+    // `TS_Quiz` names a quiz whose real id is `typescript`, and Angular's own
+    // lookup (`find(r => r.quizId === quizId)`) has therefore never displayed
+    // those links either. Remapping it here would surface content the app has
+    // never shown, so it is dropped, not repaired.
+    const known = new Set(quizzes.map((quiz) => quiz.quizId));
+    for (const [quizId, items] of resources) {
+      if (!known.has(quizId)) {
+        console.warn(
+          `[import] WARNING: resource group "${quizId}" matches no quiz — ` +
+          `${items.length} link(s) NOT imported (unreachable in the app today)`
+        );
+      }
+    }
+
+    const summary = await db.transaction((client) =>
+      importBank(client, quizzes, factsByQuizId(raw), resources)
+    );
     console.log(
       `[import] wrote ${summary.quizzes} quizzes, ${summary.questions} questions, ` +
-      `${summary.options} options (${summary.correctOptions} correct)`
+      `${summary.options} options (${summary.correctOptions} correct), ` +
+      `${summary.resources} resources`
     );
 
     const problems = await verify(db, quizzes);

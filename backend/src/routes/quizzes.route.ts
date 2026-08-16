@@ -22,6 +22,7 @@ import {
 } from '../quiz/question-receipt';
 import {
   toQuizMetadataListDto,
+  toQuizResourcesDto,
   toTopicQuizQuestionsDto,
   type QuizMetadataDto
 } from '../quiz/quiz.dto';
@@ -119,6 +120,34 @@ export function createQuizzesRouter(deps: QuizRepository | QuizzesRouterDeps): R
     }
 
     res.status(200).json(toTopicQuizQuestionsDto(quiz));
+  });
+
+  /**
+   * The Results-page "Brush up your knowledge" links for one quiz.
+   *
+   * PUBLIC_METADATA, the same policy the metadata routes use, and correctly so:
+   * these are outbound links to third-party documentation. That policy bans
+   * `questions`, `options`, `explanation` and every answer-key field, so the
+   * response guard independently enforces what the DTO already refuses to emit.
+   *
+   * An unknown quiz 404s exactly like the questions route; a known quiz with no
+   * links returns 200 with an empty array, because "this quiz has no links" is
+   * an ordinary answer rather than a missing resource. Eleven of the twenty
+   * quizzes are in that state, so it is the common case, not an edge one.
+   *
+   * Served from the repository's in-memory copy, loaded from PostgreSQL at
+   * startup. No file is read here, and there is no `data/quiz.json` fallback.
+   */
+  router.get('/quizzes/:quizId/resources', (req, res, next) => {
+    setResponsePolicy(res, 'PUBLIC_METADATA');
+
+    const quizId = req.params.quizId;
+    if (!repository.getQuizById(quizId)) {
+      next(ApiError.notFound('Quiz not found'));
+      return;
+    }
+
+    res.status(200).json(toQuizResourcesDto(quizId, repository.getResourcesForQuiz(quizId)));
   });
 
   /**

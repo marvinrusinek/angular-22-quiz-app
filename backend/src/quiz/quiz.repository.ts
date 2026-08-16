@@ -1,5 +1,5 @@
 import type { Queryable } from '../db/database';
-import { loadQuizBankFromDatabase } from './quiz.db-source';
+import { loadQuizBankFromDatabase, loadQuizResourcesFromDatabase } from './quiz.db-source';
 import { readQuizDataFile, type LoadOptions } from './quiz.loader';
 import { validateAndNormalize } from './quiz.validation';
 import type {
@@ -7,7 +7,8 @@ import type {
   PrivateQuestion,
   PrivateQuiz,
   QuizBankStats,
-  QuizMetadata
+  QuizMetadata,
+  QuizResource
 } from './quiz.types';
 
 /**
@@ -34,6 +35,15 @@ export interface QuizRepository {
    */
   getOptionForQuestion(questionId: string, optionId: number): PrivateOption | undefined;
   getEligibleQuestions(filter?: EligibilityFilter): readonly PrivateQuestion[];
+  /**
+   * The Results-page links for a quiz, in display order.
+   *
+   * Always an array. An unknown quiz and a quiz with no links both answer
+   * empty here — the caller distinguishes them with `getQuizById`, exactly as
+   * the questions route does, so this method needs no not-found signal of its
+   * own.
+   */
+  getResourcesForQuiz(quizId: string): readonly QuizResource[];
 }
 
 export interface EligibilityFilter {
@@ -48,6 +58,12 @@ export interface RepositoryOptions extends LoadOptions {
   readonly dataPath?: string;
   /** Pre-parsed data for tests, so no file is touched. */
   readonly source?: unknown;
+  /**
+   * Results-page links, grouped by quiz id. Omitted means none — a repository
+   * built without them serves empty resource lists rather than failing, which
+   * is what keeps every existing construction site working unchanged.
+   */
+  readonly resources?: ReadonlyMap<string, readonly QuizResource[]>;
 }
 
 /** Recursive freeze — the bank must be immutable after load. */
@@ -74,7 +90,11 @@ function deepFreeze<T>(value: T): T {
  */
 export async function createQuizRepositoryFromDatabase(db: Queryable): Promise<QuizRepository> {
   const source = await loadQuizBankFromDatabase(db);
-  return createQuizRepository({ source });
+  // Loaded from the same database, in the same startup pass. There is no file
+  // fallback for these either: an unreadable resources table means no links,
+  // never a read of `data/quiz.json`.
+  const resources = await loadQuizResourcesFromDatabase(db);
+  return createQuizRepository({ source, resources });
 }
 
 export function createQuizRepository(options: RepositoryOptions = {}): QuizRepository {
@@ -120,6 +140,14 @@ export function createQuizRepository(options: RepositoryOptions = {}): QuizRepos
 
   const frozenAll = deepFreeze(allQuestions) as readonly PrivateQuestion[];
 
+  // Frozen like the rest of the bank, so a route handler cannot mutate the
+  // shared list it hands out.
+  const NO_RESOURCES = deepFreeze([]) as readonly QuizResource[];
+  const resourcesByQuiz = new Map<string, readonly QuizResource[]>();
+  for (const [quizId, list] of options.resources ?? []) {
+    resourcesByQuiz.set(quizId, deepFreeze([...list]) as readonly QuizResource[]);
+  }
+
   return {
     stats,
 
@@ -128,6 +156,8 @@ export function createQuizRepository(options: RepositoryOptions = {}): QuizRepos
     getQuizById: (quizId) => quizById.get(quizId),
 
     getQuestionById: (questionId) => questionById.get(questionId),
+
+    getResourcesForQuiz: (quizId) => resourcesByQuiz.get(quizId) ?? NO_RESOURCES,
 
     getOptionForQuestion(questionId, optionId) {
       const question = questionById.get(questionId);

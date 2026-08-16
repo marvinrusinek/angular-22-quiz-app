@@ -1268,10 +1268,13 @@ export class SocAnswerProcessingService {
       optionsToDisplay: comp.optionsToDisplay ?? [],
       isMultiMode: isMultiModeAR
     };
+    // `|| fetQuestionAR?.explanation` used to close this expression — the local
+    // bank, reached whenever the resolver came back empty. The resolver is now
+    // verdict-backed and empty MEANS unauthorized, so falling through to the
+    // bundled text would have re-opened exactly the hole this migration closes.
     let fetTextAR = '';
     try {
-      fetTextAR = this.sharedOptionExplanationService.resolveExplanationText(fetCtxAR as any)?.trim()
-        || fetQuestionAR?.explanation || '';
+      fetTextAR = this.sharedOptionExplanationService.resolveExplanationText(fetCtxAR as any)?.trim() ?? '';
     } catch { /* ignore */ }
 
     if (isMultiModeAR && fetTextAR) {

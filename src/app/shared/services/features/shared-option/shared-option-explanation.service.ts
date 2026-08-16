@@ -1,4 +1,6 @@
 ﻿import { Service, inject } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { filter, take } from 'rxjs/operators';
 
 import { SK_SEL_Q } from '../../../constants/session-keys';
 
@@ -7,6 +9,8 @@ import { OptionBindings } from '../../../models/OptionBindings.model';
 import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
 import { ExplanationTextService } from '../explanation/explanation-text.service';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { authorizedExplanation } from '../verdict/authorized-correctness';
 import { QuizService } from '../../data/quiz.service';
 import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
@@ -38,6 +42,7 @@ export class SharedOptionExplanationService {
   pendingExplanationIndex = -1;
 
   private explanationTextService = inject(ExplanationTextService);
+  private verdicts = inject(QuestionVerdictService);
   private quizService = inject(QuizService);
   private quizStateService = inject(QuizStateService);
   private selectedOptionService = inject(SelectedOptionService);
@@ -119,10 +124,26 @@ export class SharedOptionExplanationService {
       }
     }
 
-    const explanationText = this.resolveExplanationText(ctx)?.trim()
-      || question?.explanation || '';
+    // `|| question?.explanation` used to sit here as a last-ditch fallback. It
+    // is gone: the resolver above already answers from the verdict, so this
+    // could only ever have supplied text the verdict had refused to authorize.
+    const explanationText = this.resolveExplanationText(ctx)?.trim() ?? '';
 
-    if (!explanationText) return;
+    if (!explanationText) {
+      // NOT NECESSARILY "no explanation" — far more often "not yet".
+      //
+      // Under the API adapter the check is still in flight at click time, so a
+      // single-answer question emits its FET on the very click whose verdict
+      // has not landed. Reading the bank made that invisible; reading the
+      // verdict makes it the normal case, and returning here would simply lose
+      // the FET.
+      //
+      // Multi-answer questions accidentally survived this: their completion
+      // path emits again after MULTI_ANSWER_BACKUP_FET_DELAY_MS, by which time
+      // the verdict has arrived. Single-answer had no such second chance.
+      this.emitWhenVerdictArrives(ctx, skipGuard);
+      return;
+    }
 
     // Cache the resolved formatted text
     this.cacheResolvedFormattedExplanation(resolvedIndex, explanationText);
@@ -561,6 +582,74 @@ export class SharedOptionExplanationService {
    * Resolves the formatted explanation text using visual option positions
    * for correct "Option N" labeling (shuffle-safe).
    */
+  /** One pending wait per question, so repeated clicks do not stack subscriptions. */
+  private readonly pendingFetEmits = new Map<string, Subscription>();
+
+  /**
+   * Re-emit the FET the moment the authorized verdict lands.
+   *
+   * The same shape `soc-answer-processing.scheduleTerminalRespread` uses for
+   * the binding repaint, and for the same reason: the click asks a question the
+   * server has not answered yet, so the work has to happen on the answer rather
+   * than on the ask.
+   *
+   * A one-shot subscription per question, dropped when it fires. Without the
+   * key check every click on an unfinished multi-answer question would add
+   * another subscriber and the completing verdict would emit N times.
+   */
+  private emitWhenVerdictArrives(ctx: ExplanationContext, skipGuard: boolean): void {
+    const quizId = (this.quizService as any)?.quizId as string | undefined;
+    const questionText =
+      this.quizService.getQuestionsInDisplayOrder?.()?.[ctx.resolvedIndex]?.questionText
+      ?? ctx.question?.questionText;
+    if (!quizId || !questionText) return;
+
+    const key = `${quizId} ${this.normalize(questionText)}`;
+    if (this.pendingFetEmits.has(key)) return;
+
+    const sub = this.verdicts.terminalVerdicts$
+      .pipe(
+        filter((arrival) =>
+          arrival.quizId === quizId
+          && this.normalize(arrival.questionText) === this.normalize(questionText)),
+        take(1)
+      )
+      .subscribe(() => {
+        this.pendingFetEmits.delete(key);
+
+        // STALE GUARD. The verdict is still current for ITS question, but the
+        // user may have navigated on — emitting now would put one question's
+        // explanation on another's screen.
+        const showing =
+          this.quizService.getQuestionsInDisplayOrder?.()?.[ctx.resolvedIndex]?.questionText;
+        if (!showing || this.normalize(showing) !== this.normalize(questionText)) return;
+
+        // Re-entry is bounded: the verdict is terminal now, so the resolver
+        // returns text and this path is not taken a second time.
+        this.emitExplanation(ctx, skipGuard);
+      });
+
+    if (sub.closed) this.pendingFetEmits.delete(key);
+    else this.pendingFetEmits.set(key, sub);
+  }
+
+  /**
+   * The authorized explanation for a DISPLAY index, or '' when none is.
+   *
+   * Returns a string rather than `string | null` because every caller here
+   * feeds a text pipeline that already treats empty as "nothing to emit".
+   * Keeping the distinction would have meant teaching four call sites a new
+   * state for no behavioural gain.
+   *
+   * Resolved by display index, so under shuffle it keys to the question ON
+   * SCREEN — the same resolver the option painting and scoring use. Getting
+   * this wrong would attach one question's explanation to another (the class
+   * of defect 95a3d3cc was).
+   */
+  private resolveAuthorizedExplanation(displayIndex: number): string {
+    return authorizedExplanation(this.quizService, displayIndex, this.verdicts) ?? '';
+  }
+
   resolveExplanationText(ctx: ExplanationContext): string {
     const { resolvedIndex: displayIndex, question, optionsToDisplay, currentQuestion, quizId } = ctx;
     // RESOLVE: ctx.optionBindings may be a signal (-clean) or array (-main)
@@ -575,8 +664,11 @@ export class SharedOptionExplanationService {
       : (Array.isArray(optionsToDisplay) && optionsToDisplay.length > 0)
         ? optionsToDisplay : [];
 
+    // Both early exits below used to return `effectiveQuestion.explanation`.
+    // They are unauthorized reveals by any other name, so they now answer with
+    // the verdict or with nothing.
     if (displayOptions.length === 0) {
-      return (effectiveQuestion?.explanation || '').trim();
+      return this.resolveAuthorizedExplanation(displayIndex);
     }
 
     // 2. Identify the authoritative canonical question
@@ -586,7 +678,7 @@ export class SharedOptionExplanationService {
     let authQ = allCanonical.find(q => this.normalize(q.questionText) === currentQText);
     authQ = authQ || (effectiveQuestion as QuizQuestion);
 
-    if (!authQ) return (effectiveQuestion?.explanation || '').trim();
+    if (!authQ) return this.resolveAuthorizedExplanation(displayIndex);
 
     // 3. Build sets of correct identifiers from the authoritative source
     const correctIds = new Set<number>();
@@ -625,7 +717,21 @@ export class SharedOptionExplanationService {
       .filter((n): n is number => n !== null);
 
     // 5. Format and Emit
-    const rawExplanation = (authQ.explanation || '').trim();
+    //
+    // THE EXPLANATION TEXT IS AUTHORIZED, NOT LOCAL.
+    //
+    // This read `authQ.explanation` — the bundled answer key — which is why
+    // the FET could not survive `assets/data/quiz.json` leaving the browser.
+    // `/check` returns the explanation on `resolved` and `expired` and on
+    // nothing else, so asking the verdict gets the same text under the same
+    // authorization the correct options already travel under.
+    //
+    // NO LOCAL FALLBACK. An unauthorized question yields an empty string, and
+    // every caller of this method treats empty as "do not emit" — which is the
+    // correct behaviour for a reveal nobody has earned yet, and the behaviour
+    // that will still be correct once the asset is gone.
+    const rawExplanation = this.resolveAuthorizedExplanation(displayIndex);
+    if (!rawExplanation) return '';
     const formatted = this.explanationTextService.formatExplanation(
       { ...authQ, options: displayOptions },
       correctIndices,

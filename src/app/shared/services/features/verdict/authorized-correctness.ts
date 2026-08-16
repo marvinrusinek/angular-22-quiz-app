@@ -88,6 +88,50 @@ export function authorizedCorrectTexts(
 }
 
 /**
+ * The AUTHORIZED explanation for the question at a display index.
+ *
+ * Null until a terminal phase authorizes it — which is the same moment
+ * `authorizedCorrectTexts` starts answering, and for the same reason: the
+ * explanation names the correct options, so releasing it early would reveal the
+ * answer key to anyone who opened a question and read the network tab.
+ *
+ * `/check` already enforces this on the wire — `explanation` appears on
+ * `resolved` and `expired` and on nothing else — so this is the client-side
+ * mirror of a rule the server keeps independently.
+ *
+ * NULL MEANS "NOT AUTHORIZED", NOT "EMPTY". A caller must render nothing
+ * rather than reach for `question.explanation`: the local bank is what this
+ * migration exists to remove, and a fallback there would work in every test and
+ * then fail the day the asset is deleted.
+ */
+export function authorizedExplanation(
+  quizService: QuizService,
+  qIdx: number,
+  verdicts: QuestionVerdictService | null | undefined
+): string | null {
+  const state = verdictStateForDisplayIndex(quizService, qIdx, verdicts);
+  return explanationFromVerdict(state);
+}
+
+/**
+ * The same rule, for a caller that already holds the state.
+ *
+ * Split out so the FET pipeline can ask without re-resolving the question by
+ * display index — several of its call sites have the state in hand and
+ * re-deriving it would risk keying to a different question than the one they
+ * are rendering.
+ */
+export function explanationFromVerdict(
+  state: QuestionVerdictState | null
+): string | null {
+  if (!state) return null;
+  if (state.phase !== 'resolved' && state.phase !== 'expired') return null;
+
+  const text = (state.explanation ?? '').trim();
+  return text.length > 0 ? text : null;
+}
+
+/**
  * Was THIS option, which the user selected, correct?
  *
  * `undefined` when the option carries no verdict — either it was never selected

@@ -191,15 +191,20 @@ describe('qqc FET gate: classification declared, completion still counted', () =
  * rule. That made the local answer key the COMPLETION authority, and it is why
  * a question declared SINGLE but flagged with three correct options refused to
  * resolve after one correct pick — the two assertions previously committed here
- * as KNOWN DEFECT.
+ * as KNOWN DEFECT, now fixed and asserted as such.
  *
- * It now returns `status.resolved` whenever the verdict has `evaluated`.
+ * Two separate facts moved:
+ *
+ *   TYPE       declared, via resolveIsMultiAnswer on the display-order question
+ *   COMPLETION authorized, via `status.resolved` whenever `evaluated`
+ *
  * `strict: false` is asked deliberately: that is COMPLETION (every correct
  * option chosen, extra wrong picks tolerated), not PERFECT.
  *
  * `evaluated` is the safety property. idle/checking/error report zero counts
  * because nothing is KNOWN — treating that as "answered wrongly" would
- * authorize FET on an untouched question.
+ * authorize FET on an untouched question. Those three states, and only those,
+ * still run the local reconstruction.
  */
 describe('shared-option checkResolution: completion comes from the verdict', () => {
   let service: SharedOptionExplanationService;
@@ -274,23 +279,26 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
     service = TestBed.inject(SharedOptionExplanationService);
   });
 
-  it('KNOWN DEFECT (restored): declared SINGLE flagged 3-correct does NOT resolve on one pick', () => {
-    // BRIEFLY "FIXED", THEN REVERTED. Returning the verdict early skipped the
-    // pristine gate, which on REVISIT emitted FET in place of the question text
-    // — a visible shipped regression. The gate is back, so this defect is back
-    // with it: the count still owns the rule inside computeUiResolved.
+  it('DEFECT FIXED: declared SINGLE flagged 3-correct resolves on one authorized pick', () => {
+    // Twice a known defect, twice for a different reason. The count owned the
+    // rule inside computeUiResolved, so three flags demanded three picks from a
+    // question declared single. The first fix bypassed the pristine gate
+    // wholesale and was reverted, blamed for the revisit FET-in-heading
+    // regression — a misdiagnosis: that was the timer expiring a question on
+    // ARRIVAL, fixed in d3d13ee7.
     //
-    // Fixing it properly means separating the pristine gate from the completion
-    // rule, not bypassing the gate. Left asserted as the defect it is.
+    // Now the type is declared and the completion is authorized, and the gate
+    // is skipped only where it could do nothing but veto the verdict.
     expect(
       resolution(q(QuestionType.SingleAnswer, 3), ['opt1'], { resolved: true })
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it('KNOWN DEFECT (restored): declared TRUEFALSE flagged 3-correct does NOT resolve on one pick', () => {
+  it('DEFECT FIXED: declared TRUEFALSE flagged 3-correct resolves on one authorized pick', () => {
+    // trueFalse is single-SELECTION; the authority layer maps it accordingly.
     expect(
       resolution(q(QuestionType.TrueFalse, 3), ['opt1'], { resolved: true })
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('declared MULTIPLE partial stays unresolved on an incomplete verdict', () => {
@@ -307,13 +315,15 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
     ).toBe(true);
   });
 
-  it('declared MULTIPLE flagged only 1-correct follows the local rule', () => {
-    // With the early return reverted, a single flagged-correct option means
-    // computeUiResolved takes its single-answer branch and one correct pick
-    // resolves. Recorded as the current contract, not endorsed.
+  it('declared MULTIPLE flagged only 1-correct does NOT resolve against the verdict', () => {
+    // The mirror image of the two above, and the reason this matters in both
+    // directions: a bank flagging ONE correct option used to send a declared
+    // multi-answer question down the single-answer branch, where one pick
+    // resolved it and released FET early. The verdict says otherwise and now
+    // wins. (Previously asserted as `true` — recorded, explicitly not endorsed.)
     expect(
       resolution(q(QuestionType.MultipleAnswer, 1), ['opt1'], { resolved: false })
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('COMPLETE-BUT-IMPERFECT resolves: completion is not perfection', () => {
@@ -368,5 +378,58 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
     expect(resolution(q(undefined, 3), ['opt1'], null)).toBe(false);
     expect(resolution(q(undefined, 1), ['opt1'], null)).toBe(true);
     expect(resolution(q(QuestionType.MultipleAnswer, 3), [], null)).toBe(false);
+  });
+
+  // ── ADVERSARIAL: DECLARED TYPE vs LOCAL BANK ──────────────────────
+  //
+  // Every case here has the bank flagging a cardinality that contradicts the
+  // declared type. Each one resolved the WRONG way before this slice.
+
+  it('the pristine gate can no longer veto an authorized completion', () => {
+    // THE GATE'S OWN FAILURE MODE. It demands every pristine-correct TEXT be
+    // among the selections — an answer-key completion check. Here the verdict
+    // has authorized completion while the bank still lists three correct texts
+    // and only one was picked. The gate used to overrule the verdict; now it is
+    // skipped whenever anything is authorized, so it can only ever help while
+    // nothing is.
+    expect(
+      resolution(q(QuestionType.MultipleAnswer, 3), ['opt1'], { resolved: true })
+    ).toBe(true);
+  });
+
+  it('declared SINGLE still resolves on one pick while the verdict is UNEVALUATED', () => {
+    // The type half of the fix reaches the fallback too: the RULE is chosen by
+    // the declared type even when the COMPARISON is still local. Counted, three
+    // flags would have demanded three picks.
+    expect(resolution(q(QuestionType.SingleAnswer, 3), ['opt1'], null)).toBe(true);
+  });
+
+  it('declared TRUEFALSE still resolves on one pick while the verdict is UNEVALUATED', () => {
+    expect(resolution(q(QuestionType.TrueFalse, 3), ['opt1'], null)).toBe(true);
+  });
+
+  it('declared MULTIPLE flagged 1-correct still needs the whole set when UNEVALUATED', () => {
+    // The fallback's multi branch compares against the local count, which is
+    // all it has; the point is that the declared type — not the count — is what
+    // sent it down this branch at all.
+    expect(resolution(q(QuestionType.MultipleAnswer, 1), ['opt1'], null)).toBe(true);
+    expect(resolution(q(QuestionType.MultipleAnswer, 3), ['opt1'], null)).toBe(false);
+  });
+
+  it('NO `correct` fields at all: an evaluated verdict decides both ways', () => {
+    // The post-cutover shape. Nothing local to count, so the old rule could
+    // only ever answer "not complete" — the limitation the qqc suite above
+    // still documents for its own site.
+    const noKey = (type: QuestionType): QuizQuestion => ({
+      questionText: 'No answer key at all',
+      explanation: 'e',
+      type,
+      options: [{ optionId: 1, text: 'a', value: 1 }, { optionId: 2, text: 'b', value: 2 }]
+    } as unknown as QuizQuestion);
+
+    expect(resolution(noKey(QuestionType.MultipleAnswer), ['a', 'b'], { resolved: true })).toBe(true);
+    expect(resolution(noKey(QuestionType.MultipleAnswer), ['a'], { resolved: false })).toBe(false);
+    expect(resolution(noKey(QuestionType.SingleAnswer), ['a'], { resolved: true })).toBe(true);
+    expect(resolution(noKey(QuestionType.SingleAnswer), ['b'], { resolved: false })).toBe(false);
   });
 });

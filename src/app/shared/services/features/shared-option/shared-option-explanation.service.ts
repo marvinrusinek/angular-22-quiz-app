@@ -11,6 +11,7 @@ import { QuizService } from '../../data/quiz.service';
 import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 
 /**
  * Context passed from the component for explanation resolution.
@@ -175,30 +176,46 @@ export class SharedOptionExplanationService {
       false
     );
 
-    // NO EARLY RETURN ON `status.evaluated` — REVERTED, and deliberately so.
+    const { correctCount, pristineCorrectTexts, authQuestion } =
+      this.resolveCorrectCountAndTexts(ctx);
+
+    // TYPE IS DECLARED, NOT COUNTED.
     //
-    // Returning `status.resolved` here skipped the pristine gate below. On a
-    // REVISIT the question already carries a terminal verdict, so resolution
-    // came back true immediately, FET emitted, and the heading rendered the
-    // explanation INSTEAD OF THE QUESTION TEXT. That shipped and was visible.
-    //
-    // The verdict is still the correctness authority — it feeds `status` and
-    // the override at the end. What it must not do is bypass the gate that
-    // requires the pristine correct set to be present in the CURRENT view.
-    const { correctCount, pristineCorrectTexts } = this.resolveCorrectCountAndTexts(ctx);
-    const isMultiAnswer = correctCount > 1 || this.quizService.multipleAnswer;
+    // `correctCount > 1` made the local answer key decide what KIND of question
+    // this is, which is why a question declared SINGLE but flagged with three
+    // correct options took the multi-answer rule and refused to resolve after
+    // one correct pick. `authQuestion` came from the display-order resolver
+    // above, so this reads the question actually on screen under shuffle.
+    // trueFalse resolves to single-selection at the authority layer.
+    // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
+    const isMultiAnswer = resolveIsMultiAnswer(
+      authQuestion,
+      correctCount > 1 || this.quizService.multipleAnswer
+    );
 
     const selectedFromUi = this.collectSelectedFromUi(ctx);
 
     const uiResolved = this.computeUiResolved(
-      selectedFromUi, correctCount, pristineCorrectTexts, question!
+      selectedFromUi, status, isMultiAnswer, correctCount, pristineCorrectTexts, question!
     );
 
     let resolved = (selectedFromUi.length > 0) ? uiResolved : status.resolved;
 
-    // Pristine gate: require ALL pristine-correct texts present (blocks false
-    // positives from mutated flags).
-    if (isMultiAnswer && pristineCorrectTexts.size > 0) {
+    // PRISTINE GATE — COMPATIBILITY ONLY, while nothing is authorized.
+    //
+    // It requires every pristine-correct text to be among the selections, which
+    // is the answer key deciding completion. That is exactly what the verdict
+    // now answers, so once `evaluated` is true this must not run: it could only
+    // ever VETO an authorized completion, and it cannot answer at all once the
+    // bank stops shipping (no correct texts to match).
+    //
+    // An earlier attempt at this returned `status.resolved` before the gate and
+    // was reverted, blamed for the revisit FET-in-heading regression. That
+    // diagnosis was wrong: the causes were the timer expiring a question ON
+    // ARRIVAL and applyExplanationText marking a render as an interaction, both
+    // fixed in d3d13ee7. The heading's own revisit guard — not this gate — is
+    // what keeps the question text on screen.
+    if (!status.evaluated && isMultiAnswer && pristineCorrectTexts.size > 0) {
       resolved = this.applyMultiAnswerPristineGate(
         ctx, selectedFromUi, selectedFromService, pristineCorrectTexts, resolved
       );
@@ -215,7 +232,7 @@ export class SharedOptionExplanationService {
   // can have stale correct flags (e.g. after Restart Quiz) that inflate the count.
   private resolveCorrectCountAndTexts(
     ctx: ExplanationContext
-  ): { correctCount: number; pristineCorrectTexts: Set<string> } {
+  ): { correctCount: number; pristineCorrectTexts: Set<string>; authQuestion: QuizQuestion | null } {
     const { resolvedIndex, question } = ctx;
 
     const authQuestion = this.quizService.getQuestionsInDisplayOrder?.()?.[resolvedIndex]
@@ -246,7 +263,11 @@ export class SharedOptionExplanationService {
         (o: any) => isOptionCorrect(o)
       ).length;
     }
-    return { correctCount, pristineCorrectTexts };
+    // The question is returned alongside the counts so the caller can ask it
+    // for its DECLARED type rather than inferring one from those counts. Same
+    // object the counts came from, so type and count can never describe two
+    // different questions.
+    return { correctCount, pristineCorrectTexts, authQuestion: authQuestion ?? null };
   }
 
   // optionBindings may be a signal (-clean) or array (-main)
@@ -301,22 +322,49 @@ export class SharedOptionExplanationService {
     return false;
   }
 
+  /**
+   * Has the user FINISHED this question?
+   *
+   * COMPLETION IS AUTHORIZED, NOT COUNTED. This used to answer entirely from
+   * the local bank: count the correct flags, count how many of the user's
+   * selections matched them, and compare. Two things were wrong with that.
+   * The rule it picked came from `correctCount > 1` — the answer key deciding
+   * the question's TYPE — so a declared SINGLE question that the bank happened
+   * to flag three times demanded three picks and never resolved. And the
+   * comparison itself is an answer-key read, which returns nothing once the key
+   * stops shipping to the browser.
+   *
+   * `status` answers both, from the verdict: `resolved` is COMPLETION with
+   * `strict: false` — every correct option chosen, extra wrong picks tolerated
+   * — which is the same question this method asks. It covers single, trueFalse
+   * and multiple alike, because the verdict applies each type's own rule.
+   *
+   * `evaluated` is the safety property. idle/checking/error report zero counts
+   * because nothing is KNOWN, not because nothing was correct, so the local
+   * reconstruction stays as the fallback for exactly those states — and for
+   * nothing else. REMOVE IT IN /questions CONTENT CUTOVER.
+   */
   private computeUiResolved(
     selectedFromUi: any[],
+    status: { resolved: boolean; evaluated: boolean },
+    isMultiAnswer: boolean,
     correctCount: number,
     pristineCorrectTexts: Set<string>,
     question: any
   ): boolean {
     if (selectedFromUi.length === 0) return false;
 
+    if (status.evaluated) return status.resolved;
+
+    // ── TEMPORARY: NO AUTHORIZED VERDICT YET ──────────────────────────
     const correctSelected = selectedFromUi.filter(
       (sel: any) => this.isResolutionSelectionCorrect(sel, pristineCorrectTexts, question)
     ).length;
 
-    if (correctCount > 1) {
-      return correctSelected >= correctCount;
-    }
-    return correctSelected >= 1;
+    // The RULE is still chosen by the declared type — only the comparison is
+    // local. A declared single question needs one correct pick even when the
+    // bank flags several.
+    return isMultiAnswer ? correctSelected >= correctCount : correctSelected >= 1;
   }
 
   private applyMultiAnswerPristineGate(

@@ -1067,6 +1067,34 @@ export class SocAnswerProcessingService {
       if (!ctxAR) return;
       const { bindingsAR, bindingNormsAR, pristineCorrectTextsAR, isMultiModeAR } = ctxAR;
 
+      // ── THE TERMINAL PATH IS FOR A FINISHED QUESTION ONLY ─────────────
+      //
+      // "Every incorrect option has been selected" ends a SINGLE-answer
+      // question: nothing is left to find, and the lone survivor is the answer.
+      // On a MULTI-answer question it ends nothing — the options still unpicked
+      // are the correct ones the user has not found yet.
+      //
+      // DI Q3 and Directives Q8 have three correct options and ONE wrong one,
+      // so clicking that wrong option satisfied the condition on the user's very
+      // first click. Everything below then ran: the timer stopped, FET emitted,
+      // and applyMultiAnswerLockBindings set `disabled: !wasPicked` on the three
+      // correct options they had yet to find. The question was over before they
+      // could answer it. That shipped and is live.
+      //
+      // COMPLETION IS ASKED, NOT COUNTED. The verdict answers it under the
+      // superset rule — every correct option selected, extra wrong picks
+      // tolerated — which is why one wrong pick does not disqualify a question
+      // the user can still finish.
+      //
+      // UNKNOWN IS NOT COMPLETE. idle/checking/error answer null, and null must
+      // leave the question open rather than lock it on a guess. Under the API
+      // adapter the check is still in flight at click time, so null is the
+      // ordinary case here, not an edge one.
+      if (isMultiModeAR &&
+          allCorrectSelectedFromVerdict(this.resolveVerdictStateForComp(comp)) !== true) {
+        return;
+      }
+
       // All incorrects exhausted — auto-reveal the correct answer(s).
       const { correctIdxsAR, correctSetAR, historySetAR } =
         this.enterAutoRevealState(comp, index, qIdx, displayIdx, bindingsAR, bindingNormsAR, pristineCorrectTextsAR, isMultiModeAR);
@@ -1329,6 +1357,19 @@ export class SocAnswerProcessingService {
    * That is the Directives Q8 report: pick two correct, then the one wrong
    * option, and all three go red while the untouched third correct one goes
    * green.
+   *
+   * ── REACHABILITY, once the caller gates on authorized completion ──
+   *
+   * The caller now refuses to run this until the verdict says the correct set
+   * is complete. Its own trigger already requires every INCORRECT option to be
+   * selected, so the two conditions together mean every option is selected —
+   * and the grey-leftover branch below cannot fire, because a leftover could
+   * only ever be an unpicked CORRECT option. What survives is the green/red
+   * paint of the user's own picks.
+   *
+   * Unselected WRONG options still grey out on completion; that comes from
+   * `option-item.isDisabled()` re-deriving the lock from completion state, not
+   * from here, and is the case the CONTROL e2e covers.
    */
   private applyMultiAnswerLockBindings(comp: any, bindingsAR: any[], correctSetAR: Set<number>, historySetAR: Set<number>, index: number): void {
     comp.optionBindings.set(bindingsAR.map((ob: any, bi: number) => {

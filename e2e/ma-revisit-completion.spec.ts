@@ -57,6 +57,40 @@ test('CONTROL: first-visit — selecting all correct grays the remaining options
   }
 });
 
+/**
+ * WRONG FIRST. The target question has exactly ONE wrong option, so clicking it
+ * exhausts every incorrect option on the user's first click — which used to fire
+ * the terminal auto-reveal and disable every correct option they had not yet
+ * found. The question became unanswerable on click one, and it shipped
+ * (main d3d13ee7). Ordering is the whole point of this test: the two cases below
+ * cover wrong-LAST, which is a different thing.
+ */
+test('wrong pick FIRST leaves the question answerable and completable', async ({ page }) => {
+  const { rows, corrects, wrongs } = await gotoMulti(page);
+  expect(corrects.length).toBe(MULTI.correctCount);
+  expect(wrongs.length).toBeGreaterThan(0);
+
+  // The wrong option, before anything else.
+  await rows.nth(wrongs[0]).click();
+  await expect(rows.nth(wrongs[0])).toHaveClass(/incorrect-option/);
+
+  // Every correct option is still live: not disabled, not greyed out.
+  for (const c of corrects) {
+    await expect(rows.nth(c)).toBeEnabled();
+    await expect(rows.nth(c)).not.toHaveCSS('background-color', DISABLED_GRAY);
+    // And none of them was handed over as an answer.
+    await expect(rows.nth(c)).not.toHaveClass(/correct-option/);
+  }
+
+  // The user can still finish the question — the clicks must actually land.
+  for (const c of corrects) await rows.nth(c).click();
+  for (const c of corrects) await expect(rows.nth(c)).toHaveClass(/correct-option/);
+
+  // Completed with a wrong pick present: the wrong pick stays red rather than
+  // being greyed out with the losers.
+  await expect(rows.nth(wrongs[0])).toHaveClass(/incorrect-option/);
+});
+
 test('revisit via previous question — a partial multi-answer keeps its remembered colors', async ({ page }) => {
   const { rows, corrects, wrongs } = await gotoMulti(page);
   expect(corrects.length).toBeGreaterThan(0);

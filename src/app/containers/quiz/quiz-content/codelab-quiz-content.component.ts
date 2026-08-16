@@ -45,6 +45,7 @@ import { FeedbackPolicyService } from '../../../shared/services/features/intervi
 import { QuizQuestionComponent } from '../../../components/question/quiz-question/quiz-question.component';
 
 import { QuestionVerdictService } from '../../../shared/services/features/verdict/question-verdict.service';
+import { TopicQuizTypeRegistry } from '../../../shared/services/api/topic-quiz-type-registry.service';
 
 import { buildHeadingInputs } from '../../../shared/utils/heading-inputs';
 import { deriveHeadingHtml, shouldShowFet } from '../../../shared/utils/heading-model';
@@ -62,6 +63,8 @@ export class CodelabQuizContentComponent implements OnInit {
   private readonly displayService = inject(QuizContentDisplayService);
   public readonly explanationTextService = inject(ExplanationTextService);
   private readonly questionVerdictService = inject(QuestionVerdictService);
+  // Declared question metadata: the type, and the correct-COUNT the banner shows.
+  private readonly topicQuizTypeRegistry = inject(TopicQuizTypeRegistry);
   private readonly orchestrator = inject(CqcOrchestratorService);
   public readonly quizDataService = inject(QuizDataService);
   private readonly quizNavigationService = inject(QuizNavigationService);
@@ -183,6 +186,7 @@ export class CodelabQuizContentComponent implements OnInit {
       quizQuestionManagerService: this.quizQuestionManagerService,
       feedbackPolicyService: this.feedbackPolicyService,
       questionVerdictService: this.questionVerdictService,
+      topicQuizTypeRegistry: this.topicQuizTypeRegistry,
     });
     if (!inputs) return '';
 

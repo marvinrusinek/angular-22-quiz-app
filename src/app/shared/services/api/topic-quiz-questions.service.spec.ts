@@ -126,9 +126,11 @@ describe('the mapped questions', () => {
     expect(Object.keys(option)).toEqual(['text']);
   });
 
-  it('exposes only the four public fields on a question', () => {
+  it('exposes only the five public fields on a question', () => {
+    // `correctCount` joined them deliberately (S2): the cardinality behind the
+    // "(N answers are correct)" banner. Identity is still absent — see below.
     expect(Object.keys(load()[0]!).sort())
-      .toEqual(['difficulty', 'options', 'questionText', 'type']);
+      .toEqual(['correctCount', 'difficulty', 'options', 'questionText', 'type']);
   });
 });
 
@@ -147,7 +149,22 @@ describe('the response cannot smuggle correctness through', () => {
     });
 
     expect(views[0]!.options[0]).toEqual({ text: 'A' });
-    expect(JSON.stringify(views)).not.toContain('correct');
+
+    // STRICTER than the substring ban this replaces, which `correctCount` now
+    // trips for the wrong reason. Cardinality is allowed; IDENTITY is not — so
+    // assert on the shape rather than on the letters:
+    //   every option carries `text` and nothing else, and
+    //   no correctness flag survives anywhere in the mapped views.
+    for (const view of views) {
+      for (const option of view.options) {
+        expect(Object.keys(option)).toEqual(['text']);
+      }
+    }
+    const wire = JSON.stringify(views);
+    expect(wire).not.toContain('"correct"');
+    expect(wire).not.toContain('isCorrect');
+    expect(wire).not.toContain('true');
+    expect(wire).not.toContain('false');
   });
 
   it('drops explanation and identifier fields', () => {

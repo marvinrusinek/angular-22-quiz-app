@@ -19,6 +19,9 @@ import { QuizQuestion } from '../../../models/QuizQuestion.model';
 import { CqcQuestionNavService } from './cqc-question-nav.service';
 import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
 
+import { TopicQuizTypeRegistry } from '../../api/topic-quiz-type-registry.service';
+
+import { bannerCorrectCount } from '../../../utils/question-type-authority';
 import { swallow } from '../../../utils/error-logging';
 
 import type { CodelabQuizContentComponent } from '../../../../containers/quiz/quiz-content/codelab-quiz-content.component';
@@ -33,6 +36,7 @@ export class CqcOrchestratorService {
   // ── injects ─────────────────────────────────────────────────────
   private readonly questionNav = inject(CqcQuestionNavService);
   private readonly dotStatusService = inject(QuizDotStatusService);
+  private readonly topicQuizTypeRegistry = inject(TopicQuizTypeRegistry);
 
   async runOnInit(host: Host): Promise<void> {
     await this.runInitialSetup(host);
@@ -300,12 +304,16 @@ export class CqcOrchestratorService {
       .isMultipleAnswerQuestion(question)
       .pipe(
         tap((isMultipleAnswer: boolean) => {
-          const correctAnswers = question.options.filter((option) => option.correct).length;
+          // DECLARED, not tallied — `question.options.filter(o => o.correct)`
+          // made this banner an answer-key read. Null omits it.
+          const bannerCount = bannerCorrectCount(
+            isMultipleAnswer, this.topicQuizTypeRegistry, question.questionText
+          );
           const explanationDisplayed = host.explanationTextService.isExplanationTextDisplayedSig();
           const newCorrectAnswersText =
-            isMultipleAnswer && !explanationDisplayed
+            bannerCount !== null && !explanationDisplayed
               ? host.quizQuestionManagerService.getNumberOfCorrectAnswersText(
-                correctAnswers,
+                bannerCount,
                 question.options?.length ?? 0
               )
               : '';
@@ -537,10 +545,15 @@ export class CqcOrchestratorService {
         ? currentQuestion.options.filter((option) => option.correct).length > 1
         : false);
 
+    // DECLARED, not tallied. `normalizedCorrectCount` is derived from the local
+    // key upstream; the banner no longer consumes it.
+    const bannerCount = bannerCorrectCount(
+      isMultipleAnswerQuestion, this.topicQuizTypeRegistry, currentQuestion.questionText
+    );
     const correctAnswersText =
-      isMultipleAnswerQuestion && normalizedCorrectCount > 0
+      bannerCount !== null
         ? host.quizQuestionManagerService.getNumberOfCorrectAnswersText(
-          normalizedCorrectCount, totalOptions
+          bannerCount, totalOptions
         )
         : '';
 

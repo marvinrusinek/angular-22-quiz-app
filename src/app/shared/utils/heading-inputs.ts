@@ -4,6 +4,7 @@ import {
   verdictStateForDisplayIndex
 } from '../services/features/verdict/authorized-correctness';
 import { withCorrectCountBanner } from './correct-count-banner';
+import { bannerCorrectCount } from './question-type-authority';
 import { HeadingInputs } from './heading-model';
 import { withTerminalPeriod } from './terminal-period';
 import { norm } from './text-norm';
@@ -34,6 +35,13 @@ export interface HeadingInputDeps {
    * but when present it decides BOTH whether the FET may show and what it says.
    */
   questionVerdictService?: any;
+  /**
+   * Declared question metadata from `GET /questions` — the source of the
+   * "(N answers are correct)" count. Optional so callers that predate it keep
+   * working; absent means the banner simply does not render, which is the
+   * correct fail-closed behaviour for a number nobody has authorized.
+   */
+  topicQuizTypeRegistry?: any;
 }
 
 /**
@@ -88,10 +96,24 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
   // markup, byte-identical to the legacy buildQuestionDisplay path (same helper +
   // formatter). Required now that the computed drives the DOM directly: without
   // this the banner span is missing in single-source mode.
+  //
+  // THE COUNT IS DECLARED METADATA, NOT A LOCAL TALLY.
+  //
+  // `pristine.length` counted the bundled answer key, which made the banner a
+  // reason the asset had to stay. `GET /questions` declares `correctCount`
+  // alongside the type, so both facts about a question arrive from the same
+  // authoritative load.
+  //
+  // NULL IS NOT ZERO. Unknown means the banner does not render — a supplemental
+  // hint is worth losing; a wrong or locally-reconstructed one is not.
   let questionHtml = qText;
   const totalOpts = (dq.options?.length ?? 0);
-  if (isMultiAnswer && totalOpts > 0) {
-    const banner = d.quizQuestionManagerService.getNumberOfCorrectAnswersText(pristine.length, totalOpts);
+  const bannerCount = bannerCorrectCount(isMultiAnswer, d.topicQuizTypeRegistry, dq.questionText);
+
+  if (bannerCount !== null && totalOpts > 0) {
+    const banner = d.quizQuestionManagerService.getNumberOfCorrectAnswersText(
+      bannerCount, totalOpts
+    );
     questionHtml = withCorrectCountBanner(qText, banner);
   }
 

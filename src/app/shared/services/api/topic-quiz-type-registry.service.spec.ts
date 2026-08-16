@@ -183,6 +183,16 @@ describe('lifecycle', () => {
     expect(stored).toEqual(['multiple']);
     expect(JSON.stringify(stored)).not.toContain('LEAKED');
 
+    // S2 added ONE more retained fact: how many options are correct. It is a
+    // number, held separately from the types, and it is still not identity —
+    // there is nowhere here recording WHICH option was flagged.
+    const counts = [...(registry as unknown as {
+      correctCounts: Map<string, number>
+    }).correctCounts.values()];
+    expect(counts.every((n) => typeof n === 'number')).toBe(true);
+    expect(JSON.stringify(counts)).not.toContain('map');
+    expect(JSON.stringify(counts)).not.toContain('LEAKED');
+
     // And the public surface offers no way to ask for anything else. Every
     // name here answers "what TYPE is this question?" in some form —
     // `applyDeclaredTypes` writes the type onto locally-loaded questions and
@@ -190,8 +200,8 @@ describe('lifecycle', () => {
     // that could return options, correctness or an explanation, this fails.
     expect(Object.getOwnPropertyNames(Object.getPrototypeOf(registry)).sort())
       .toEqual([
-        'applyDeclaredTypes', 'clear', 'constructor', 'isMultiAnswer',
-        'key', 'load', 'questionTypeOf', 'typeOf'
+        'applyDeclaredTypes', 'clear', 'constructor', 'correctCountOf',
+        'isMultiAnswer', 'key', 'load', 'questionTypeOf', 'typeOf'
       ]);
   });
 });

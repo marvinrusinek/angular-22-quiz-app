@@ -15,12 +15,14 @@ import { OptionLockStateService } from '../state/option-lock-state.service';
 import { QqcQuestionLoaderService } from '../features/qqc/qqc-question-loader.service';
 import { QuizDataService } from '../data/quizdata.service';
 import { QuizQuestionManagerService } from '../flow/quizquestionmgr.service';
+import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
 import { QuizService } from '../data/quiz.service';
 import { QuizStateService } from '../state/quizstate.service';
 import { SelectedOptionService } from '../state/selectedoption.service';
 import { TimerService } from '../features/timer/timer.service';
 import { SK_CORRECT_ANSWERS_COUNT, SK_SAVED_QUESTION_INDEX, SK_SELECTED_OPTIONS_MAP, SK_USER_ANSWERS } from '../../constants/session-keys';
 
+import { bannerCorrectCount } from '../../utils/question-type-authority';
 import { swallow } from '../../utils/error-logging';
 
 @Service()
@@ -33,6 +35,7 @@ export class QuizNavigationService {
   private quizDataService = inject(QuizDataService);
   private quizQuestionLoaderService = inject(QqcQuestionLoaderService);
   private quizQuestionManagerService = inject(QuizQuestionManagerService);
+  private topicQuizTypeRegistry = inject(TopicQuizTypeRegistry);
   private quizService = inject(QuizService);
   private quizStateService = inject(QuizStateService);
   private router = inject(Router);
@@ -397,12 +400,14 @@ export class QuizNavigationService {
 
     const trimmedQ = (fresh.questionText ?? '').trim();
     const explanationRaw = (fresh.explanation ?? '').trim();
-    const numCorrect = (fresh.options ?? []).filter((o) => o.correct).length;
+    // DECLARED, not tallied — same rule as every other banner site. Unknown
+    // omits the banner rather than counting `option.correct` locally.
+    const bannerCount = bannerCorrectCount(isMulti, this.topicQuizTypeRegistry, fresh.questionText);
     const totalOpts = (fresh.options ?? []).length;
 
-    const banner = isMulti
+    const banner = bannerCount !== null
       ? this.quizQuestionManagerService.getNumberOfCorrectAnswersText(
-        numCorrect,
+        bannerCount,
         totalOpts
       )
       : '';

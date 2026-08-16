@@ -40,6 +40,7 @@ interface TopicQuizQuestionDto {
   readonly questionText: string;
   readonly type: TopicQuizQuestionType;
   readonly difficulty: string | null;
+  readonly correctCount: number;
   readonly options: readonly TopicQuizOptionDto[];
 }
 
@@ -70,6 +71,17 @@ export interface TopicQuizQuestionView {
   readonly questionText: string;
   readonly type: TopicQuizQuestionType;
   readonly difficulty: string | null;
+  /**
+   * HOW MANY options are correct — never which.
+   *
+   * The "(N answers are correct)" banner has always shown this number before
+   * the user answers; it used to be counted from `option.correct` in the
+   * bundled bank. Cardinality is not identity, and this view still has no
+   * `correct` field for a consumer to read.
+   *
+   * NOT a type signal. `type` above is declared and authoritative.
+   */
+  readonly correctCount: number;
   readonly options: readonly TopicQuizOptionView[];
 }
 
@@ -137,10 +149,21 @@ export class TopicQuizQuestionsService {
         throw new TopicQuizQuestionsError('Could not load questions');
       }
 
+      // A missing or malformed count is NOT reconstructed from anything local —
+      // it becomes -1, which `correctCountOf` reports as unknown and the banner
+      // treats as "do not show". Zero would be a claim ("no option is
+      // correct"); -1 is the absence of a claim.
+      const rawCount = (question as { correctCount?: unknown }).correctCount;
+      const correctCount =
+        typeof rawCount === 'number' && Number.isInteger(rawCount) && rawCount >= 0
+          ? rawCount
+          : -1;
+
       return {
         questionText: question.questionText,
         type: question.type,
         difficulty: typeof question.difficulty === 'string' ? question.difficulty : null,
+        correctCount,
         options: question.options.map((option: TopicQuizOptionDto) => {
           if (!option || typeof option.text !== 'string' || !option.text) {
             throw new TopicQuizQuestionsError('Could not load questions');

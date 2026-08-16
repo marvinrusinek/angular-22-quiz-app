@@ -42,6 +42,19 @@ export class TopicQuizTypeRegistry {
   /** Canonical question text → declared type, for the loaded quiz. */
   private readonly types = new Map<string, TopicQuizQuestionType>();
 
+  /**
+   * Canonical question text → HOW MANY options are correct.
+   *
+   * Held beside the type rather than in a second registry so both facts share
+   * one question identity and one load — a parallel store would be a second
+   * chance to key them to different questions.
+   *
+   * Kept SEPARATE from `types` in meaning, though: this number must never
+   * decide single-vs-multiple. That inference is what the type-authority work
+   * removed, and `isMultiAnswer` below deliberately reads `types`, not this.
+   */
+  private readonly correctCounts = new Map<string, number>();
+
   /** The quiz currently loaded. Switching quizzes discards the old types. */
   private loadedQuizId: string | null = null;
 
@@ -72,12 +85,19 @@ export class TopicQuizTypeRegistry {
 
     this.loadedQuizId = quizId;
     this.types.clear();
+    this.correctCounts.clear();
     this.ready.set(false);
 
     this.inFlight = this.questionsApi.loadQuestions(quizId).pipe(
       tap((questions) => {
         for (const question of questions) {
-          this.types.set(this.key(question.questionText), question.type);
+          const key = this.key(question.questionText);
+          this.types.set(key, question.type);
+          // -1 is the service's "the server did not give us a usable count".
+          // Not recorded at all, so `correctCountOf` reports unknown.
+          if (question.correctCount >= 0) {
+            this.correctCounts.set(key, question.correctCount);
+          }
         }
         this.ready.set(true);
       }),
@@ -103,6 +123,22 @@ export class TopicQuizTypeRegistry {
   typeOf(questionText: string | null | undefined): TopicQuizQuestionType | null {
     if (!questionText) return null;
     return this.types.get(this.key(questionText)) ?? null;
+  }
+
+  /**
+   * HOW MANY options are correct, or null when the API has not said.
+   *
+   * Null is NOT zero. Zero would assert that no option is correct; null says
+   * nobody has told us, and the banner's contract is to render nothing rather
+   * than guess — never to count `option.correct` in the local bank, which is
+   * the dependency this exists to remove.
+   *
+   * Cardinality only. There is no accessor here for WHICH options are correct,
+   * because the endpoint this reads does not carry that and must not.
+   */
+  correctCountOf(questionText: string | null | undefined): number | null {
+    if (!questionText) return null;
+    return this.correctCounts.get(this.key(questionText)) ?? null;
   }
 
   /**

@@ -15,10 +15,12 @@ import { ExplanationTextService } from '../features/explanation/explanation-text
 import { QclFetGateService } from './qcl-fet-gate.service';
 import { QclQuestionFetchService } from './qcl-question-fetch.service';
 import { QclSessionRestoreService } from './qcl-session-restore.service';
+import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
 import { QuizService } from '../data/quiz.service';
 import { QuizStateService } from '../state/quizstate.service';
 import { SelectedOptionService } from '../state/selectedoption.service';
 
+import { bannerCorrectCount } from '../../utils/question-type-authority';
 import { isOptionCorrect } from '../../utils/is-option-correct';
 import { swallow } from '../../utils/error-logging';
 
@@ -96,6 +98,7 @@ export class QuizContentLoaderService {
   private fetGate = inject(QclFetGateService);
   private questionFetch = inject(QclQuestionFetchService);
   private quizService = inject(QuizService);
+  private topicQuizTypeRegistry = inject(TopicQuizTypeRegistry);
   private quizStateService = inject(QuizStateService);
   private selectedOptionService = inject(SelectedOptionService);
   private sessionRestore = inject(QclSessionRestoreService);
@@ -319,9 +322,14 @@ export class QuizContentLoaderService {
       fresh.options.filter((o: Option) => isOptionCorrect(o)).length > 1;
     (fresh as any).isMulti = isMulti;
 
-    const numCorrect = fresh.options.filter((o: Option) => isOptionCorrect(o)).length;
+    // THE COUNT IS DECLARED, NOT TALLIED. Counting the local `correct` flags
+    // here made the banner an answer-key read. `GET /questions` declares it;
+    // null means nobody has, and the banner is then omitted rather than guessed.
+    const bannerCount = bannerCorrectCount(isMulti, this.topicQuizTypeRegistry, fresh.questionText);
     const totalOpts = fresh.options.length;
-    const banner = isMulti ? getNumberOfCorrectAnswersText(numCorrect, totalOpts) : '';
+    const banner = bannerCount !== null
+      ? getNumberOfCorrectAnswersText(bannerCount, totalOpts)
+      : '';
 
     this.quizService.updateCorrectAnswersText(banner);
   }

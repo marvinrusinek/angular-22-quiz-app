@@ -69,3 +69,54 @@ export function isDeclaredTrueFalse(
 ): boolean {
   return question?.type === QuestionType.TrueFalse;
 }
+
+/**
+ * The DECLARED correct-option count for a question, or null when undeclared.
+ *
+ * `GET /questions` reports `correctCount` beside the type, so both declared
+ * facts about a question come from the same authoritative load and share one
+ * question identity.
+ *
+ * ── Cardinality, never identity ────────────────────────────────────
+ *
+ * This answers HOW MANY options are correct, never WHICH. It exists for the
+ * "(N answers are correct)" banner, a number the UI has always shown before
+ * the user answers — so serving it changes where it comes from, not what a
+ * player knows. The reveal still requires `/check`.
+ *
+ * ── Null is not zero, and never a type signal ──────────────────────
+ *
+ * Zero would assert that no option is correct. Null says nobody has told us,
+ * and every caller renders no banner rather than counting `option.correct` in
+ * the local bank — the dependency this removes. And unlike
+ * `resolveIsMultiAnswer` above there is deliberately NO counted fallback
+ * parameter: reintroducing one here would be the answer key drawing the banner
+ * again.
+ *
+ * It must also never decide single-vs-multiple. That is `declaredIsMultiAnswer`
+ * above, from `type`. A declared MULTIPLE question with a count of 1 is still
+ * multiple.
+ */
+export function declaredCorrectCount(
+  typeRegistry: { correctCountOf?: (text: string | null | undefined) => number | null } | null | undefined,
+  questionText: string | null | undefined
+): number | null {
+  if (!typeRegistry?.correctCountOf || !questionText) return null;
+  return typeRegistry.correctCountOf(questionText) ?? null;
+}
+
+/**
+ * The banner count to render, or null to render no banner.
+ *
+ * Folds the two questions every banner site asks — "is this multi-answer?" and
+ * "how many are correct?" — into one call, so the fail-closed rule is written
+ * once instead of at five call sites that could drift apart.
+ */
+export function bannerCorrectCount(
+  isMultiAnswer: boolean,
+  typeRegistry: { correctCountOf?: (text: string | null | undefined) => number | null } | null | undefined,
+  questionText: string | null | undefined
+): number | null {
+  if (!isMultiAnswer) return null;
+  return declaredCorrectCount(typeRegistry, questionText);
+}

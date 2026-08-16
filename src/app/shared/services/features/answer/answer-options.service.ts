@@ -51,13 +51,4 @@ export class AnswerOptionsService {
 
     return currentType === 'multiple' || correctCount > 1;
   }
-
-  getQuestionTypeFromOptions(options: Option[]): 'single' | 'multiple' {
-    const correctCount =
-      options.filter((option: any) =>
-        isOptionCorrect(option)
-      ).length;
-
-    return correctCount > 1 ? 'multiple' : 'single';
-  }
 }

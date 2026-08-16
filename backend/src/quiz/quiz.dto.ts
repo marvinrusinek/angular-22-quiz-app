@@ -116,6 +116,24 @@ export interface TopicQuizQuestionDto {
    * bank sets it.
    */
   readonly difficulty: string | null;
+  /**
+   * HOW MANY options are correct. Never WHICH.
+   *
+   * A deliberate, narrow disclosure. The UI has always shown a
+   * "(N answers are correct)" banner before the user answers, so this count is
+   * already public knowledge to anyone reading the screen — serving it is not
+   * new information, it is the same information from an authoritative source
+   * instead of from a bundled answer key.
+   *
+   * CARDINALITY IS NOT IDENTITY. Knowing three options are correct narrows
+   * nothing about which three; the reveal still requires `/check`. This is the
+   * same line `remainingCorrectCount` already draws on the check response.
+   *
+   * NOT a type signal. `type` is declared separately and authoritatively, and a
+   * client must never infer single-vs-multiple from this number — that
+   * inference is exactly what the type-authority work removed.
+   */
+  readonly correctCount: number;
   readonly options: readonly TopicQuizOptionDto[];
 }
 
@@ -138,6 +156,11 @@ export function toTopicQuizQuestionDto(
     questionText: question.questionText,
     type: question.type,
     difficulty,
+    // Derived from the SAME authoritative options this mapper is about to
+    // strip. Counting here rather than storing a column keeps the number
+    // impossible to disagree with the relationship it summarizes — there is no
+    // second place for it to drift.
+    correctCount: question.options.filter((option) => option.isCorrect).length,
     // Source order preserved. Ordering is expressed ONLY by array position —
     // there is no displayOrder field on the wire.
     options: question.options.map(toTopicQuizOptionDto)

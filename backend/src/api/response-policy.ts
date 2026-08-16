@@ -152,8 +152,15 @@ const POLICIES: Record<ResponsePolicyName, ReadonlySet<string>> = {
    * silently allow identifiers back into a contract defined to have none.
    *
    * Bans identity, correctness, explanations and backend internals. Allows only
-   * `quizId`, `questions`, `questionText`, `type`, `difficulty`, `options` and
-   * `text`.
+   * `quizId`, `questions`, `questionText`, `type`, `difficulty`, `correctCount`,
+   * `options` and `text`.
+   *
+   * `correctCount` is CARDINALITY, not identity, and is permitted deliberately:
+   * the UI has always shown "(N answers are correct)" before the user answers,
+   * so the number is on screen either way — this only changes where it comes
+   * from. It normalizes to `correctcount`, which is distinct from the banned
+   * `correctAnswers`/`correctOptionIds`, and it is the same line
+   * `remainingCorrectCount` already draws on the check response.
    */
   QUIZ_QUESTIONS: banned(
     ...ANSWER_KEY_FIELDS,

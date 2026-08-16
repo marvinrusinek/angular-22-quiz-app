@@ -189,7 +189,7 @@ describe('contract shape', () => {
     expect(Object.keys(res.body).sort()).toEqual(['questions', 'quizId']);
     for (const question of res.body.questions) {
       expect(Object.keys(question).sort())
-        .toEqual(['difficulty', 'options', 'questionText', 'type']);
+        .toEqual(['correctCount', 'difficulty', 'options', 'questionText', 'type']);
       for (const option of question.options) {
         expect(Object.keys(option)).toEqual(['text']);
       }
@@ -292,7 +292,7 @@ describe('raw-response security', () => {
     for (const bannedKey of BANNED_KEYS) {
       expect(keys.has(bannedKey)).toBe(false);
     }
-    expect([...keys].sort()).toEqual(['difficulty', 'options', 'questionText', 'questions', 'quizId', 'text', 'type']);
+    expect([...keys].sort()).toEqual(['correctCount', 'difficulty', 'options', 'questionText', 'questions', 'quizId', 'text', 'type']);
   });
 
   it('does not leak the answer key or explanations for ANY quiz', async () => {
@@ -411,5 +411,83 @@ describe('existing routes are unchanged', () => {
     ]) {
       expect((await request(app).get(path)).status).toBe(404);
     }
+  });
+});
+
+/**
+ * CORRECT-COUNT METADATA (S2).
+ *
+ * The "(N answers are correct)" banner has always been drawn by counting
+ * `option.correct` in the browser, which made a piece of the answer key a
+ * RENDERING dependency. The count now travels as question metadata.
+ *
+ * The disclosure is deliberate and narrow: cardinality, never identity. The
+ * number is already on screen before the user answers, so serving it changes
+ * where it comes from, not what a player knows.
+ */
+describe('correctCount metadata', () => {
+  it('reports the real count for a single-answer question', async () => {
+    const res = await get('rxjs');
+    const q = res.body.questions.find(
+      (question: { questionText: string }) => question.questionText === 'Which answer is correct?'
+    );
+    expect(q.correctCount).toBe(1);
+    expect(typeof q.correctCount).toBe('number');
+  });
+
+  it('reports the real count for a MULTI-answer question', async () => {
+    const res = await get('rxjs');
+    const q = res.body.questions.find((question: { questionText: string }) =>
+      question.questionText.startsWith('In a standalone component'));
+    expect(q.correctCount).toBe(2);
+    expect(q.type).toBe('multiple');
+  });
+
+  it('reports a count for trueFalse without changing its type', async () => {
+    const res = await get('rxjs');
+    const q = res.body.questions.find(
+      (question: { questionText: string }) => question.questionText === 'Is this true or false?'
+    );
+    expect(q.type).toBe('trueFalse');
+    expect(q.correctCount).toBe(1);
+  });
+
+  it('is present on EVERY question, as a non-negative integer', async () => {
+    for (const quizId of ['rxjs', 'signals']) {
+      for (const q of (await get(quizId)).body.questions) {
+        expect(Number.isInteger(q.correctCount)).toBe(true);
+        expect(q.correctCount).toBeGreaterThanOrEqual(0);
+        expect(q.correctCount).toBeLessThanOrEqual(q.options.length);
+      }
+    }
+  });
+
+  it('matches the seeded bank exactly, question by question', async () => {
+    for (const quiz of BANK.quizzes) {
+      const served = (await get(quiz.quizId)).body.questions;
+      for (const [i, question] of quiz.questions.entries()) {
+        const expected = question.options.filter((o) => 'correct' in o).length;
+        expect(served[i].correctCount).toBe(expected);
+      }
+    }
+  });
+
+  it('DISCLOSES CARDINALITY BUT NOT IDENTITY', async () => {
+    // The whole justification for the field. Knowing two of three options are
+    // correct must not narrow WHICH two — the options carry text and nothing
+    // else, so the count cannot be attached to any particular one.
+    const res = await get('rxjs');
+    for (const q of res.body.questions) {
+      for (const option of q.options) {
+        expect(Object.keys(option)).toEqual(['text']);
+      }
+    }
+  });
+
+  it('adds no banned key alongside it', async () => {
+    const keys = new Set(keysDeep((await get('rxjs')).body));
+    for (const banned of BANNED_KEYS) expect(keys.has(banned)).toBe(false);
+    // …and the new key really is there, so the assertion above is not vacuous.
+    expect(keys.has('correctCount')).toBe(true);
   });
 });

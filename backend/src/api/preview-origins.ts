@@ -32,8 +32,19 @@
  * without an answer key. It does not widen what the API discloses.
  */
 
-/** Vendor domains observed serving StackBlitz previews. */
+/**
+ * Vendor domains observed serving StackBlitz previews.
+ *
+ * `webcontainer.io` and `webcontainer-api.io` are DIFFERENT domains and both
+ * are real. The EDITOR reports its own origin on `w-credentialless-staticblitz
+ * .com`, while the APP preview iframe runs on
+ * `<project>--<port>--<hash>.local-credentialless.webcontainer.io`. Reading an
+ * origin out of a console error therefore captures the editor, not the app —
+ * which is how the first version of this list shipped without the one domain
+ * that actually serves the application making the API calls.
+ */
 export const STACKBLITZ_PREVIEW_DOMAINS: readonly string[] = [
+  'local-credentialless.webcontainer.io',
   'local-credentialless.webcontainer-api.io',
   'w-credentialless-staticblitz.com',
   'stackblitz.io'

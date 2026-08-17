@@ -69,6 +69,11 @@ const acao = (res: request.Response): string =>
 
 describe('isStackBlitzPreviewOrigin — allowed families', () => {
   it.each([
+    // The REAL preview origin observed serving this project. `webcontainer.io`
+    // is a different domain from `webcontainer-api.io`; the first version of
+    // this list had only the latter, so the app's own origin was blocked.
+    'https://angular22quizapp-uyfq--4200--017acfb7.local-credentialless.webcontainer.io',
+    'https://abc123.local-credentialless.webcontainer.io',
     'https://abc123.local-credentialless.webcontainer-api.io',
     'https://abc123--4200.local-credentialless.webcontainer-api.io',
     'https://abc123.w-credentialless-staticblitz.com',
@@ -90,6 +95,8 @@ describe('isStackBlitzPreviewOrigin — rejections', () => {
     ['https://w-credentialless-staticblitz.com.evil.com', 'vendor name is only a label'],
     // no dot before the suffix — must not match as a subdomain
     ['https://evilwebcontainer-api.io', 'no dot boundary'],
+    ['https://evilwebcontainer.io', 'no dot boundary'],
+    ['https://webcontainer.io.evil.com', 'vendor name is only a label of evil.com'],
     ['https://evilstackblitz.io', 'no dot boundary'],
     ['https://notstackblitz.io', 'no dot boundary'],
     // unrelated

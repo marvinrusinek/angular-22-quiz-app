@@ -14,7 +14,9 @@ import { SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID } from '../../cons
 
 import { QuizShuffleService } from '../flow/quiz-shuffle.service';
 
+import { TopicQuizQuestionsService } from '../api/topic-quiz-questions.service';
 import { getQuizData, getQuizResources } from '../../quiz-data-cache';
+import { questionsFromApiViews } from '../../utils/topic-quiz-content';
 import { isOptionCorrect } from '../../utils/is-option-correct';
 import { ArrayUtils } from '../../utils/array-utils';
 import { swallow } from '../../utils/error-logging';
@@ -25,6 +27,7 @@ export class QuizDataLoaderService {
   private readonly quizShuffleService = inject(QuizShuffleService);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly http = inject(HttpClient);
+  private readonly topicQuizQuestions = inject(TopicQuizQuestionsService);
 
   // ── remaining variables ─────────────────────────────────────────
   quizInitialState: Quiz[] = structuredClone(getQuizData());
@@ -87,24 +90,38 @@ export class QuizDataLoaderService {
     if (this.quizData.length > 0) {
       // Always clone from the cached pristine dataset — never from
       // this.quizData which may carry mutations from prior quiz runs.
+      // `quizInitialState` is the PRISTINE ANSWER KEY and is untouched here:
+      // the pre-verdict correctness machinery still reads it, and removing it
+      // is S5's job, not this one.
       this.quizInitialState = structuredClone(getQuizData());
-      let selectedQuiz = quizId
+      const selectedQuiz = quizId
         ? this.quizData.find((quiz) => quiz.quizId === quizId) : undefined;
 
       if (!selectedQuiz && quizId) {
-        console.warn(`[QuizDataLoader] Quiz id=${quizId} not found, using default`);
+        console.warn(`[QuizDataLoader] Quiz id=${quizId} not found`);
       }
 
-      selectedQuiz = selectedQuiz ?? this.quizData[0];
-      resolvedQuizId = selectedQuiz.quizId;
+      resolvedQuizId = selectedQuiz?.quizId ?? quizId;
 
-      if (Array.isArray(selectedQuiz.questions) && selectedQuiz.questions.length > 0) {
-        questions = [...selectedQuiz.questions];
-      } else {
-        questions = [];
-      }
-
-      totalQuestions = questions.length;
+      // ── NO CONSTRUCTOR-TIME QUESTION SEED ─────────────────────────
+      //
+      // This used to fall back to `this.quizData[0]` and hand back ITS
+      // questions. QuizService calls initializeData() from its CONSTRUCTOR,
+      // where `quizId` is still empty — so the fallback seeded every session
+      // with the FIRST quiz in the bank (TypeScript), regardless of the route.
+      //
+      // That was invisible while content loaded synchronously: the real quiz's
+      // questions overwrote the stale set before anything read it. Once content
+      // came from `/questions` the stale set survived long enough to be used,
+      // and `activateQuestionTiming` posted TypeScript's Q1 to
+      // `/quizzes/change-detection/questions/start`. The server correctly
+      // rejected it (400), so no question receipt was issued, the timer never
+      // started, expiry never fired, and the timeout FET never appeared.
+      //
+      // Questions now come from ONE place — the authoritative `/questions`
+      // response — and an unidentified quiz simply has none yet.
+      questions = [];
+      totalQuestions = 0;
     } else {
       questions = [];
     }
@@ -269,20 +286,26 @@ export class QuizDataLoaderService {
     try {
       if (!quizId) return [];
 
-      const response = await firstValueFrom(
-        this.http.get<{ quizzes: Quiz[] }>(this.quizUrl)
-      );
-      const quizzes = response?.quizzes ?? [];
-
-      const quiz = quizzes.find((q) => String(q.quizId) === String(quizId));
-      if (!quiz) return [];
-
-      this.currentQuizSig.set(quiz);
+      // ── QUESTION CONTENT COMES FROM THE API ──────────────────────
+      //
+      // This fetched `assets/data/quiz.json` and read `quiz.questions` off it,
+      // which is what made the bundled answer key a RENDERING dependency: the
+      // same objects that carried `questionText` and the option texts also
+      // carried `correct` and `explanation`.
+      //
+      // `/questions` carries content only. The mapper builds `QuizQuestion`s
+      // with no `correct`, no `explanation` and no `answer`, so there is
+      // nothing for a downstream consumer to mistake for correctness.
+      //
+      // FAILS CLOSED. `loadQuestions` throws rather than returning empty, and
+      // the catch below turns that into no questions — never a read of the
+      // local bank. The request is shared with TopicQuizTypeRegistry, so this
+      // rides the response that was already in flight.
+      const views = await firstValueFrom(this.topicQuizQuestions.loadQuestions(quizId));
 
       const isSameQuiz = quizId && this.questionsQuizId === quizId;
       const cachedLen = this.shuffledQuestions?.length || 0;
-      const metadataLen = quiz.questions?.length || 0;
-      const lengthMatches = cachedLen > 0 && cachedLen === metadataLen;
+      const lengthMatches = cachedLen > 0 && cachedLen === views.length;
 
       if (isSameQuiz && lengthMatches) {
         questionsSig.set(this.shuffledQuestions);
@@ -293,7 +316,10 @@ export class QuizDataLoaderService {
       setInternalQuestions([]);
       this.questionsQuizId = quizId;
 
-      const normalized = this.normalizeQuizQuestions(quiz);
+      // Option ids are assigned by the mapper, so the local `normalizeQuizQuestions`
+      // (which also stamped `correct` flags and aligned `answer`) is bypassed —
+      // there is no answer key to align.
+      const normalized = questionsFromApiViews(views);
 
       this.canonicalQuestionsByQuiz.set(quizId, JSON.parse(JSON.stringify(normalized)));
       setInternalQuestions(JSON.parse(JSON.stringify(normalized)));

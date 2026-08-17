@@ -106,7 +106,12 @@ beforeEach(() => {
   verdicts = TestBed.inject(QuestionVerdictService);
   quizService = TestBed.inject(QuizService);
   (quizService as any).quizId = QUIZ;
-  quizService.questionsSig.set(JSON.parse(JSON.stringify(LYING_BANK[0]!.questions)) as never);
+  // Stated explicitly through the setter. These specs used to set only the
+  // SIGNAL and let QuizService's constructor seed the backing array from the
+  // mocked bank. S4 removed that constructor-time seed (it was handing every
+  // session the FIRST quiz in the bank regardless of route), so a spec that
+  // needs questions now has to say so.
+  quizService.questions = JSON.parse(JSON.stringify(LYING_BANK[0]!.questions)) as never;
 });
 
 /**

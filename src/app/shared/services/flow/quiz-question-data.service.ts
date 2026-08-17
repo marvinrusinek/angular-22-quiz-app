@@ -160,10 +160,14 @@ export class QuizQuestionDataService {
         index
       );
 
+      // `?? ''` matches formatExplanationsForQuestions above. Questions from
+      // `/questions` carry no explanation at all — the FET body is authorized
+      // by the verdict — so this formats an empty body rather than reaching
+      // for a bank value that no longer exists.
       const formattedExplanation = this.explanationTextService.formatExplanation(
         question,
         correctIndices,
-        question.explanation
+        question.explanation ?? ''
       );
 
       this.explanationTextService.storeFormattedExplanation(

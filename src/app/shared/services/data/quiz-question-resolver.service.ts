@@ -222,11 +222,24 @@ export class QuizQuestionResolverService {
         const normAnsText = normalize(rawAns.text);
         const ansId = Number(rawAns.optionId);
 
-        const match = normalizedOptions.find(o => {
-          const normOptText = normalize(o.text);
-          return (normOptText && normAnsText && normOptText === normAnsText) ||
-            (!isNaN(ansId) && Number(o.optionId) === ansId);
-        });
+        // TEXT WINS, ID IS THE FALLBACK.
+        //
+        // These were one `find` with an OR, which let a STALE id match beat a
+        // correct text match. Phase 1 above renumbers `optionId` by display
+        // position, so after a shuffle the id an answer carries belongs to
+        // whichever option now sits in that slot — a different option. The OR
+        // matched that one first (it appears earlier in the array), so the
+        // wrong option was recorded as correct and the right one as incorrect.
+        //
+        // Option text is the identity the server itself uses, and it survives
+        // reordering; the id does not. Only fall back to the id when no text
+        // matches at all.
+        const match =
+          normalizedOptions.find(o => {
+            const normOptText = normalize(o.text);
+            return !!normOptText && !!normAnsText && normOptText === normAnsText;
+          }) ??
+          normalizedOptions.find(o => !isNaN(ansId) && Number(o.optionId) === ansId);
 
         if (match) {
           finalAnswers.push({
@@ -253,6 +266,24 @@ export class QuizQuestionResolverService {
     }
 
     // Phase 3: Synchronize 'correct' flag
+    //
+    // NO ANSWER KEY, NO CLAIM. Synchronizing against an empty `finalAnswers`
+    // stamps `correct: false` on every option and returns `answer: []` — which
+    // asserts that each option is WRONG and that the question has no correct
+    // answer at all. Questions from `GET /questions` carry neither, so this
+    // manufactured an answer key out of the absence of one, on the very array
+    // the view renders.
+    //
+    // Presence is still synchronized exactly as before; only absence is left
+    // alone, so the bank-sourced paths (Weak Areas, pristine lookups) are
+    // unaffected.
+    const hasCorrectness = Array.isArray(deepClone.answer) && deepClone.answer.length > 0
+      || normalizedOptions.some(o => (o as any).correct !== undefined);
+
+    if (!hasCorrectness) {
+      return { ...deepClone, options: normalizedOptions, answer: undefined };
+    }
+
     const correctIds = new Set(finalAnswers.map(a => Number(a.optionId)));
     const finalOptions = normalizedOptions.map(o => ({
       ...o,

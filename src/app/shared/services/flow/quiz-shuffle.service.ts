@@ -165,13 +165,15 @@ export class QuizShuffleService {
           question.options ?? [],
           index  // use loop index as question index
         );
+        const hasAnswerKey = Array.isArray(question.answer) && question.answer.length > 0;
         return {
           ...question,
           options: normalizedOptions.map((option) => ({ ...option })),
-          answer: this.alignAnswersWithOptions(
-            question.answer,
-            normalizedOptions
-          )
+          // An empty `answer` array reads as "this question has no correct
+          // options". Undefined says nobody has told us. See the note below.
+          answer: hasAnswerKey
+            ? this.alignAnswersWithOptions(question.answer, normalizedOptions)
+            : undefined
         };
       });
     }
@@ -194,15 +196,25 @@ export class QuizShuffleService {
         const correctIds = new Set(alignedAnswers.map(a => Number(a.optionId)));
         const correctTexts = new Set(alignedAnswers.map(a => norm(a.text)));
 
+        // NO ANSWER KEY, NO CLAIM — the same rule `normalizeQuestion` applies.
+        // Aligning against an answer key is right when there IS one; with API
+        // questions there is none, so every option would be stamped
+        // `correct: false` and `answer` would become `[]` — asserting that no
+        // option is correct rather than that nobody has said.
+        const hasAnswerKey = Array.isArray(source.answer) && source.answer.length > 0;
+
         return {
           ...source,
-          options: orderedOptions.map((option) => ({
-            ...option,
-            correct: isOptionCorrect(option) ||
-              (option.optionId !== undefined && correctIds.has(Number(option.optionId))) ||
-              (option.text !== undefined && correctTexts.has(norm(option.text)))
-          })),
-          answer: alignedAnswers
+          options: orderedOptions.map((option) => {
+            if (!hasAnswerKey && option.correct === undefined) return { ...option };
+            return {
+              ...option,
+              correct: isOptionCorrect(option) ||
+                (option.optionId !== undefined && correctIds.has(Number(option.optionId))) ||
+                (option.text !== undefined && correctTexts.has(norm(option.text)))
+            };
+          }),
+          answer: hasAnswerKey ? alignedAnswers : undefined
         } as QuizQuestion;
       })
       .filter((question): question is QuizQuestion => question !== null);
@@ -219,16 +231,20 @@ export class QuizShuffleService {
         );
         const correctIds = new Set(alignedAnswers.map(a => Number(a.optionId)));
         const correctTexts = new Set(alignedAnswers.map(a => norm(a.text)));
+        const hasAnswerKey = Array.isArray(question.answer) && question.answer.length > 0;
 
         return {
           ...question,
-          options: normalizedOptions.map((option) => ({
-            ...option,
-            correct: isOptionCorrect(option) ||
-              (option.optionId !== undefined && correctIds.has(Number(option.optionId))) ||
-              (option.text !== undefined && correctTexts.has(norm(option.text)))
-          })),
-          answer: alignedAnswers
+          options: normalizedOptions.map((option) => {
+            if (!hasAnswerKey && option.correct === undefined) return { ...option };
+            return {
+              ...option,
+              correct: isOptionCorrect(option) ||
+                (option.optionId !== undefined && correctIds.has(Number(option.optionId))) ||
+                (option.text !== undefined && correctTexts.has(norm(option.text)))
+            };
+          }),
+          answer: hasAnswerKey ? alignedAnswers : undefined
         };
       });
     }
@@ -417,7 +433,12 @@ export class QuizShuffleService {
     return withIds.map((option, index) => ({
       ...option,
       displayOrder: index,
-      correct: (option.correct as any) === true || (option.correct as any) === 'true',
+      // ABSENCE IS PRESERVED. Writing `correct: false` for an option that
+      // carries no correctness at all asserts the option is WRONG, which is a
+      // claim nobody has made — API options carry no `correct` by design, and
+      // the verdict is the only thing entitled to answer it. Normalizing a
+      // present flag is still fine; manufacturing an absent one is not.
+      ...(option.correct === undefined ? {} : { correct: isOptionCorrect(option) }),
       selected: option.selected === true,
       highlight: option.highlight ?? false,
       showIcon: option.showIcon ?? false

@@ -11,7 +11,24 @@ import { InjectionToken, isDevMode, type Provider } from '@angular/core';
  * The URL is PUBLIC configuration, not a secret. No token or credential is
  * ever stored alongside it.
  */
-export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL');
+/**
+ * A ROOT DEFAULT, not merely a token.
+ *
+ * Bootstrap still provides this explicitly (`provideApiBaseUrl()` in main.ts)
+ * and a test that provides its own literal still wins — the default only
+ * decides what happens when nobody said anything.
+ *
+ * It exists because question CONTENT now arrives from the API, so the data
+ * loader injects the questions service transitively. Without a default, every
+ * TestBed that constructs QuizService for an unrelated reason has to know about
+ * an API three layers away, and ~15 specs failed with NG0201 for a dependency
+ * they never asked for. The factory is the same resolution the provider uses,
+ * so there is one rule rather than two.
+ */
+export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL', {
+  providedIn: 'root',
+  factory: () => normalizeBaseUrl(resolveApiBaseUrl())
+});
 
 /** Local backend during `ng serve`. */
 export const DEV_API_BASE_URL = 'http://localhost:3000/api';

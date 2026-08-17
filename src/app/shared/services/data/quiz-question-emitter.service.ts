@@ -137,7 +137,12 @@ export class QuizQuestionEmitterService {
             ...option,
             optionId: this.toNumericId(option.optionId, index + 1),
             displayOrder: index,
-            correct: isOptionCorrect(option),
+            // PRESERVE ABSENCE. `isOptionCorrect` answers false for an option
+            // that carries no `correct` at all, so restating it here turned
+            // "nobody has said" into "this option is wrong" — and this result is
+            // assigned back onto the displayed question below, so the claim
+            // reached the rendered options.
+            ...(option.correct === undefined ? {} : { correct: isOptionCorrect(option) }),
             selected: option.selected === true,
             highlight: option.highlight ?? false,
             showIcon: option.showIcon ?? false

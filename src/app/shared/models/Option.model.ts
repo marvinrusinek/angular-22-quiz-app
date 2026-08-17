@@ -5,7 +5,10 @@ export interface Option {
   displayOrder?: number;
   text: string;
   correct?: boolean;
-  value?: number;
+  // Runtime reality: the local pipeline assigns the option TEXT here
+  // (quiz-shuffle.assignOptionIds: `o.value ?? o.text ?? id`) and casts past
+  // this type. Widened so the declaration matches what is actually stored.
+  value?: string | number;
   answer?: Answer;
   selected?: boolean;
   active?: boolean;

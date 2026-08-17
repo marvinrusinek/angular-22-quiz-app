@@ -148,12 +148,12 @@ describe('FET display integration', () => {
 
     describe('formatExplanation', () => {
       it('formats a single-answer explanation with "Option N is correct because ..."', () => {
-        const result = service.formatExplanation(singleAnswerQ, [2], singleAnswerQ.explanation, 0);
+        const result = service.formatExplanation(singleAnswerQ, [2], singleAnswerQ.explanation!, 0);
         expect(result).toBe('Option 2 is correct because 2 + 2 equals 4.');
       });
 
       it('formats a 2-answer multi explanation with "Options A and B are correct because ..."', () => {
-        const result = service.formatExplanation(multiAnswerQ, [2, 4], multiAnswerQ.explanation, 1);
+        const result = service.formatExplanation(multiAnswerQ, [2, 4], multiAnswerQ.explanation!, 1);
         // The explanation body's leading letter is lowercased so it reads as one
         // sentence after "… correct because" ("Both" -> "both").
         expect(result).toBe('Options 2 and 4 are correct because both 2 and 4 are even.');
@@ -171,7 +171,7 @@ describe('FET display integration', () => {
           ],
           explanation: 'Primes have exactly two divisors.'
         };
-        const result = service.formatExplanation(q, [1, 2, 4], q.explanation, 0);
+        const result = service.formatExplanation(q, [1, 2, 4], q.explanation!, 0);
         expect(result).toBe('Options 1, 2, and 4 are correct because primes have exactly two divisors.');
       });
 
@@ -194,7 +194,7 @@ describe('FET display integration', () => {
 
       it('infers MultipleAnswer when data shows >1 correct, regardless of input indices count', () => {
         // Caller passes a single index but the question data has 2 correct opts → multi phrasing
-        const result = service.formatExplanation(multiAnswerQ, [2, 4], multiAnswerQ.explanation, 1);
+        const result = service.formatExplanation(multiAnswerQ, [2, 4], multiAnswerQ.explanation!, 1);
         expect(result.startsWith('Options ')).toBe(true);
       });
     });
@@ -239,14 +239,14 @@ describe('FET display integration', () => {
     describe('end-to-end FET round-trip', () => {
       it('single-answer Q1 → produces the expected cached text', () => {
         const indices = service.getCorrectOptionIndices(singleAnswerQ, singleAnswerQ.options, 0);
-        const formatted = service.formatExplanation(singleAnswerQ, indices, singleAnswerQ.explanation, 0);
+        const formatted = service.formatExplanation(singleAnswerQ, indices, singleAnswerQ.explanation!, 0);
         service.storeFormattedExplanation(0, formatted, singleAnswerQ, singleAnswerQ.options);
         expect(service.getFormattedSync(0)).toBe('Option 2 is correct because 2 + 2 equals 4.');
       });
 
       it('multi-answer Q2 → produces the expected cached text with multi phrasing', () => {
         const indices = service.getCorrectOptionIndices(multiAnswerQ, multiAnswerQ.options, 1);
-        const formatted = service.formatExplanation(multiAnswerQ, indices, multiAnswerQ.explanation, 1);
+        const formatted = service.formatExplanation(multiAnswerQ, indices, multiAnswerQ.explanation!, 1);
         service.storeFormattedExplanation(1, formatted, multiAnswerQ, multiAnswerQ.options);
         expect(service.getFormattedSync(1)).toBe('Options 2 and 4 are correct because both 2 and 4 are even.');
       });

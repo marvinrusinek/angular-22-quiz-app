@@ -9,6 +9,8 @@ import { Option } from '../../../../shared/models/Option.model';
 import { QuizQuestion } from '../../../../shared/models/QuizQuestion.model';
 
 import { FeedbackService } from '../../../../shared/services/features/feedback/feedback.service';
+import { QuestionVerdictService } from '../../../../shared/services/features/verdict/question-verdict.service';
+import { authorizedCorrectTexts, selectedVerdictFor, verdictStateForDisplayIndex } from '../../../../shared/services/features/verdict/authorized-correctness';
 import { QuizService } from '../../../../shared/services/data/quiz.service';
 import { SelectedOptionService } from '../../../../shared/services/state/selectedoption.service';
 
@@ -28,6 +30,7 @@ export class FeedbackComponent {
   // ── injects ─────────────────────────────────────────────────────
   private readonly feedbackService = inject(FeedbackService);
   private readonly quizService = inject(QuizService);
+  private readonly questionVerdictService = inject(QuestionVerdictService);
   private readonly selectedOptionService = inject(SelectedOptionService);
 
   // ── inputs ──────────────────────────────────────────────────────
@@ -49,6 +52,20 @@ export class FeedbackComponent {
       // (e.g. COMPLETING a multi-answer on REVISIT, where the parent doesn't push
       // a fresh feedbackConfig) so the win message can replace "select N more".
       this.selectedOptionService.uiSelectedTextsSig();
+
+      // Reactive dependency: RECOMPUTE WHEN THE VERDICT ARRIVES.
+      //
+      // Correctness comes from `/check`, which is still in flight at click
+      // time, so the first pass has nothing authorized to describe and renders
+      // nothing. Without this read the blank would simply persist — the same
+      // click-vs-authorization gap the FET had to close.
+      //
+      // A signal read rather than a subscription: it re-runs only while this
+      // component is alive, is torn down with it, and always recomputes from
+      // the CURRENT `feedbackConfig`, so a verdict landing after navigation
+      // cannot write question A's feedback onto question B.
+      this.questionVerdictService.states();
+
       if (cfg) this.updateFeedback();
     });
   }
@@ -63,9 +80,41 @@ export class FeedbackComponent {
   }
 
 
+  /**
+   * Was the user's own pick correct, per the AUTHORIZED verdict?
+   *
+   * The template chose its icon from `selectedOption.correct`, which
+   * API-sourced options do not carry — so a correct answer showed the sad face
+   * beside a message reading "You're right!". Same rule as the message class.
+   */
+  readonly isSelectedOptionCorrect = (): boolean =>
+    this.determineFeedbackMessageClass() === 'correct-message';
+
   private determineFeedbackMessageClass(): string {
-    const isCorrect = !!this.feedbackConfig()?.selectedOption?.correct;
-    return isCorrect ? 'correct-message' : 'wrong-message';
+    // AUTHORIZED FIRST. This read `selectedOption.correct`, which API-sourced
+    // options do not carry — so a correct answer was styled (and iconed) as
+    // wrong even while the message itself said "You're right!".
+    //
+    // `selectedVerdictFor` answers only for an option the user actually
+    // submitted, and only once checked; `undefined` means not yet known, and
+    // the neutral class is the honest state for that moment.
+    const selected = this.feedbackConfig()?.selectedOption;
+    const state = verdictStateForDisplayIndex(
+      this.quizService,
+      this.quizService.currentQuestionIndex ?? 0,
+      this.questionVerdictService
+    );
+    const authorized = selectedVerdictFor(state, selected?.text);
+
+    if (authorized === true) return 'correct-message';
+    if (authorized === false) return 'wrong-message';
+
+    // Nothing authorized yet — fall back to the local flag only while it still
+    // exists (bank-sourced quizzes); absent, stay neutral rather than claim
+    // wrong.
+    if (selected?.correct === true) return 'correct-message';
+    if (selected?.correct === false) return 'wrong-message';
+    return '';
   }
 
   private updateDisplayMessage(): void {
@@ -152,12 +201,20 @@ export class FeedbackComponent {
       const opts: Option[] = liveQ?.options ?? [];
       if (!opts.length) return false;
 
-      const correctTexts = new Set<string>();
+      // AUTHORIZED FIRST. The correct set was built from `isOptionCorrect`,
+      // which is empty for API-sourced options — so completion never registered
+      // and a stale "select N more" message survived the completing click on a
+      // REVISIT, hiding the win.
+      const authorized = authorizedCorrectTexts(
+        this.quizService, urlIdx, this.questionVerdictService
+      );
+
+      const correctTexts = new Set<string>(authorized ?? []);
       const allTexts = new Set<string>();
       for (const o of opts) {
         const t = norm(o?.text);
         if (t) allTexts.add(t);
-        if (isOptionCorrect(o) && t) correctTexts.add(t);
+        if (!authorized && isOptionCorrect(o) && t) correctTexts.add(t);
       }
       if (correctTexts.size <= 1) return false;  // multi-answer only
 

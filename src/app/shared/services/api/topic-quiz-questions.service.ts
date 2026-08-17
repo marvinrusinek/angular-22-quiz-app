@@ -1,7 +1,7 @@
 import { Service, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, shareReplay } from 'rxjs/operators';
 
 import { API_BASE_URL } from '../../tokens/api-base-url.token';
 
@@ -97,6 +97,21 @@ export class TopicQuizQuestionsService {
   private readonly apiBaseUrl = inject(API_BASE_URL);
 
   /**
+   * One shared response per quiz.
+   *
+   * Two consumers now want this payload — TopicQuizTypeRegistry for the
+   * declared type and count, and the content loader for the questions
+   * themselves. Caching here means they share ONE request instead of racing
+   * two, and neither has to know the other exists.
+   *
+   * Keyed by quiz id and never evicted: the bank is small, a quiz's content
+   * does not change within a session, and re-entering a quiz is common.
+   * `refCount: false` keeps the value after the last unsubscribe, so a second
+   * consumer arriving late gets the cached response rather than a refetch.
+   */
+  private readonly cache = new Map<string, Observable<readonly TopicQuizQuestionView[]>>();
+
+  /**
    * Load one quiz's public questions.
    *
    * Fails CLOSED. There is no fallback to the local bank — a fallback would
@@ -108,18 +123,28 @@ export class TopicQuizQuestionsService {
       return throwError(() => new TopicQuizQuestionsError('Unknown quiz'));
     }
 
+    const cached = this.cache.get(quizId);
+    if (cached) return cached;
+
     const url = `${this.apiBaseUrl}/quizzes/${encodeURIComponent(quizId)}/questions`;
 
-    return this.http.get<TopicQuizQuestionsDto>(url).pipe(
+    const request = this.http.get<TopicQuizQuestionsDto>(url).pipe(
       map((body) => this.toViews(body)),
-      catchError((err: unknown) =>
-        throwError(() =>
+      catchError((err: unknown) => {
+        // A failure is NOT cached — the next attempt re-requests. Caching it
+        // would make one flaky response permanent for the session.
+        this.cache.delete(quizId);
+        return throwError(() =>
           err instanceof TopicQuizQuestionsError
             ? err
             : new TopicQuizQuestionsError('Could not load questions')
-        )
-      )
+        );
+      }),
+      shareReplay({ bufferSize: 1, refCount: false })
     );
+
+    this.cache.set(quizId, request);
+    return request;
   }
 
   /**

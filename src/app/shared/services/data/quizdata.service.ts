@@ -22,10 +22,13 @@ import { Option } from '../../models/Option.model';
 import { Quiz } from '../../models/Quiz.model';
 import { QuizQuestion } from '../../models/QuizQuestion.model';
 
+import { TopicQuizQuestionsService } from '../api/topic-quiz-questions.service';
+import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
 import { QuizService } from './quiz.service';
 import { QuizShuffleService } from '../flow/quiz-shuffle.service';
 
 import { isOptionCorrect } from '../../utils/is-option-correct';
+import { questionsFromApiViews } from '../../utils/topic-quiz-content';
 import { swallow } from '../../utils/error-logging';
 
 @Service()
@@ -34,6 +37,8 @@ export class QuizDataService {
   private readonly quizService = inject(QuizService);
   private readonly quizShuffleService = inject(QuizShuffleService);
   private readonly http = inject(HttpClient);
+  private readonly topicQuizQuestions = inject(TopicQuizQuestionsService);
+  private readonly topicQuizTypeRegistry = inject(TopicQuizTypeRegistry);
 
   // ── remaining variables ─────────────────────────────────────────
   private quizUrl = 'assets/data/quiz.json'; // single source of truth: { quizzes, resources }
@@ -248,13 +253,16 @@ export class QuizDataService {
       }
 
       if (hasShuffled && (!baseCached || baseCached.length === 0)) {
-        return this.getQuiz(quizId).pipe(
-          map((quiz) => {
-            const base = (quiz?.questions ?? []).map((q, i) => this.normalizeQuestion(q, i));
+        // API-sourced, like every other content path since S4.
+        return this.topicQuizQuestions.loadQuestions(quizId).pipe(
+          map((views) => {
+            const base = questionsFromApiViews(views)
+              .map((q, i) => this.normalizeQuestion(q, i));
             this.baseQuizQuestionCache.set(quizId, base);
             this.quizService.setCanonicalQuestions(quizId, base);
             return this.cloneQuestions(this.quizService.shuffledQuestions!);
-          })
+          }),
+          catchError(() => of([] as QuizQuestion[]))
         );
       }
       return this.prepareQuizSession(quizId);
@@ -268,18 +276,19 @@ export class QuizDataService {
       return of(this.cloneQuestions(cachedQuestions));
     }
 
-    return this.getQuiz(quizId).pipe(
-      map((quiz) => {
-        if (!quiz) {
-          throw new Error(`Quiz with ID ${quizId} not found`);
-        }
-        if (!quiz.questions || quiz.questions.length === 0) {
+    // CONTENT FROM THE API. This read `quiz.questions` off the bank; only the
+    // metadata argument to syncSelectedQuizState is gone with it (that
+    // parameter is optional, and the sibling call at the cached branch above
+    // already omits it).
+    return this.topicQuizQuestions.loadQuestions(quizId).pipe(
+      map((views) => {
+        if (!views.length) {
           throw new Error(`Quiz with ID ${quizId} has no questions`);
         }
 
         // Build normalized base questions (clone options per question)
-        const baseQuestions: QuizQuestion[] = (quiz.questions ?? []).map((question, index) =>
-          this.normalizeQuestion(question, index)
+        const baseQuestions: QuizQuestion[] = questionsFromApiViews(views).map(
+          (question, index) => this.normalizeQuestion(question, index)
         );
 
         this.baseQuizQuestionCache.set(quizId, this.cloneQuestions(baseQuestions));
@@ -290,7 +299,7 @@ export class QuizDataService {
 
         this.quizQuestionCache.set(quizId, this.cloneQuestions(sessionQuestions));
         this.quizService.applySessionQuestions(quizId, this.cloneQuestions(sessionQuestions));
-        this.syncSelectedQuizState(quizId, sessionQuestions, quiz);
+        this.syncSelectedQuizState(quizId, sessionQuestions);
 
         // Assign questions to QuizService so UI can access them
         this.quizService.questions = this.cloneQuestions(sessionQuestions);
@@ -360,9 +369,9 @@ export class QuizDataService {
       return of(this.cloneQuestions(sessionClone));
     }
 
-    return this.getQuiz(quizId).pipe(
-      map((quiz) => {
-        const base = this.ensureBaseQuestions(quizId, quiz);
+    // CONTENT FROM THE API — the third and last of the bank reads on this path.
+    return this.apiBaseQuestions$(quizId).pipe(
+      map((base) => {
         const sessionQuestions = this.buildSessionQuestions(quizId, base, shouldShuffle);
 
         this.quizQuestionCache.set(quizId, this.cloneQuestions(sessionQuestions));
@@ -370,7 +379,7 @@ export class QuizDataService {
         const sessionClone = this.cloneQuestions(sessionQuestions);
         this.quizService.setCanonicalQuestions(quizId, base);
         this.quizService.applySessionQuestions(quizId, sessionClone);
-        this.syncSelectedQuizState(quizId, sessionClone, quiz);
+        this.syncSelectedQuizState(quizId, sessionClone);
 
         return this.cloneQuestions(sessionClone);
       }),
@@ -418,7 +427,11 @@ export class QuizDataService {
       return {
         ...option,
         value: numericValue,
-        correct: isOptionCorrect(option),
+        // PRESERVE ABSENCE. `isOptionCorrect` answers false for an option that
+        // carries no `correct` field, so restating it unconditionally turned
+        // "nobody has said" into "this option is wrong" for every API-sourced
+        // option. Only re-derive a flag that is actually present.
+        ...(option.correct === undefined ? {} : { correct: isOptionCorrect(option) }),
         selected: option.selected === true,
         highlight: option.highlight ?? false,
         showIcon: option.showIcon ?? false,
@@ -433,17 +446,32 @@ export class QuizDataService {
       sanitizedOptions
     );
 
-    // Sync correct flag on options based on the newly aligned answers
+    // NO ANSWER KEY, NO CLAIM.
+    //
+    // This stamped `correct` on EVERY option from the aligned answers, which is
+    // right when there is an answer key to align against. Questions from
+    // `GET /questions` carry no `answer` at all, so `alignedAnswers` is empty
+    // and every option would be stamped `correct: false` — asserting that each
+    // one is WRONG rather than that nobody has said.
+    //
+    // `false` is not "unknown", and the distinction is the whole point of the
+    // migration: absence is the only honest representation, and correctness
+    // comes from the verdict.
+    const hasAnswerKey = Array.isArray(question.answer) && question.answer.length > 0;
     const correctIds = new Set(alignedAnswers.map((a) => Number(a.optionId)));
-    const finalOptions = sanitizedOptions.map((o) => ({
-      ...o,
-      correct: correctIds.has(Number(o.optionId)),
-    }));
+    const finalOptions = hasAnswerKey
+      ? sanitizedOptions.map((o) => ({
+          ...o,
+          correct: correctIds.has(Number(o.optionId)),
+        }))
+      : sanitizedOptions;
 
     return {
       ...question,
       options: finalOptions.map((option) => ({ ...option })),
-      answer: alignedAnswers.map((option) => ({ ...option })),
+      // Same rule: an empty `answer` array reads as "this question has no
+      // correct options", which is a claim. Undefined says nobody has said.
+      answer: hasAnswerKey ? alignedAnswers.map((option) => ({ ...option })) : undefined,
       selectedOptions: Array.isArray(question.selectedOptions)
         ? question.selectedOptions.map((option) => ({ ...option }))
         : undefined,
@@ -477,14 +505,45 @@ export class QuizDataService {
     return this.cloneQuestions([question])[0] ?? null;
   }
 
-  private ensureBaseQuestions(quizId: string, quiz: Quiz | null): QuizQuestion[] {
+  /**
+   * The quiz's base questions, from the API.
+   *
+   * `getQuestionsForQuiz` and `prepareQuizSession` used to read
+   * `quiz.questions` off the object `getQuiz()` returns — that is, off
+   * `assets/data/quiz.json`. This is the second content path S4 had to cut
+   * over; the first was `quiz-data-loader.performFetch`.
+   *
+   * `getQuiz()` still supplies METADATA (milestone, image, summary) and is
+   * deliberately untouched — that is S7's problem, not this slice's.
+   *
+   * Shares the cached request with the type registry and the other loader, so
+   * this costs no extra round trip. FAILS CLOSED: an error propagates and the
+   * callers' existing `catchError` turns it into no questions, never a read of
+   * the local bank.
+   */
+  private apiBaseQuestions$(quizId: string): Observable<QuizQuestion[]> {
+    const cached = this.baseQuizQuestionCache.get(quizId);
+    if (Array.isArray(cached) && cached.length > 0) {
+      this.quizService.setCanonicalQuestions(quizId, cached);
+      return of(this.cloneQuestions(cached));
+    }
+
+    return this.topicQuizQuestions.loadQuestions(quizId).pipe(
+      map((views) => this.ensureBaseQuestions(quizId, questionsFromApiViews(views)))
+    );
+  }
+
+  private ensureBaseQuestions(quizId: string, apiQuestions: QuizQuestion[]): QuizQuestion[] {
     const cached = this.baseQuizQuestionCache.get(quizId);
     if (Array.isArray(cached) && cached.length > 0) {
       this.quizService.setCanonicalQuestions(quizId, cached);
       return this.cloneQuestions(cached);
     }
 
-    const normalized = (quiz?.questions ?? []).map((question, index) =>
+    // `normalizeQuestion` assigns ids and aligns answers. With no `answer` on
+    // an API question it now leaves correctness alone rather than stamping
+    // `correct: false` on everything — see the note there.
+    const normalized = apiQuestions.map((question, index) =>
       this.normalizeQuestion(question, index)
     );
 
@@ -503,14 +562,15 @@ export class QuizDataService {
       return of<[QuizQuestion | null, Option[] | null]>([null, null]);
     }
 
-    return this.getQuiz(quizId).pipe(
-      map((quiz) => {
-        if (!quiz) return [null, null] as [QuizQuestion | null, Option[] | null];
-
+    // CONTENT FROM THE API — the fourth and last bank read on this service's
+    // question paths. `getQuiz()` is no longer consulted here at all; it only
+    // ever supplied `quiz.questions`, and the metadata it also carries was
+    // never used by this method.
+    return this.apiBaseQuestions$(quizId).pipe(
+      map((base) => {
         let questionsToUse = this.quizQuestionCache.get(quizId);
 
         if (!Array.isArray(questionsToUse) || questionsToUse.length === 0) {
-          const base = this.ensureBaseQuestions(quizId, quiz);
           const sessionQuestions = this.buildSessionQuestions(
             quizId,
             base,
@@ -533,16 +593,22 @@ export class QuizDataService {
           return [null, null] as [QuizQuestion | null, Option[] | null];
         }
 
+        // `correct: isOptionCorrect(option)` used to be stamped here. With no
+        // answer key on an API question that evaluates to FALSE for every
+        // option — a claim that each is wrong. Display flags only now;
+        // correctness is the verdict's to state.
         const options = (question.options ?? []).map((option) => ({
           ...option,
-          correct: isOptionCorrect(option),
           selected: option.selected === true,
           highlight: option.highlight ?? false,
           showIcon: option.showIcon ?? false,
         }));
 
         question.options = [...options];
-        question.answer = this.quizShuffleService.alignAnswersWithOptions(question.answer, options);
+        // Only align an answer key that actually exists — see normalizeQuestion.
+        if (Array.isArray(question.answer) && question.answer.length > 0) {
+          question.answer = this.quizShuffleService.alignAnswersWithOptions(question.answer, options);
+        }
 
         return [question, options] as [QuizQuestion | null, Option[] | null];
       }),
@@ -674,10 +740,38 @@ export class QuizDataService {
     }
   }
 
+  /**
+   * The question's selection type — DECLARED FIRST, counted only as a fallback.
+   *
+   * This used to count `option.correct` unconditionally and assign the result.
+   * With question content coming from `/questions` there is no `correct` to
+   * count, so the count is always 0 and every question it touched was rewritten
+   * to SingleAnswer — silently DEMOTING declared multi-answer questions.
+   *
+   * The damage was invisible on single-answer questions (SingleAnswer is what
+   * they already were) and, in the unshuffled path, was repaired moments later
+   * when `applyDeclaredTypes` stamped the same array. Under shuffle the repair
+   * lands on the loader's array while the view renders the SESSION array, so
+   * nothing repaired it: the question rendered as radio buttons, a second
+   * correct pick was refused as if it were a wrong answer on a single-answer
+   * question, and `/check` therefore received an incomplete selection — which
+   * the server correctly judged `incomplete`, so the score never credited.
+   *
+   * A COUNT MAY NEVER OVERRULE A DECLARATION. The registry is keyed by question
+   * text and is authoritative; the count survives only for questions nobody has
+   * declared, and disappears with the local bank.
+   */
   setQuestionType(question: QuizQuestion): void {
     if (!question) return;
     if (!Array.isArray(question.options)) return;
     if (question.options.length === 0) return;
+
+    const declared = this.topicQuizTypeRegistry.questionTypeOf(question.questionText);
+    if (declared !== null) {
+      question.type = declared;
+      this.questionType = declared;
+      return;
+    }
 
     const numCorrectAnswers = question.options.filter((option) => option?.correct ?? false).length;
     question.type = numCorrectAnswers > 1 ? QuestionType.MultipleAnswer : QuestionType.SingleAnswer;

@@ -81,13 +81,31 @@ export class FeedbackService {
       : optionsRaw) as Option[];
     correctIndices = this.crossValidateCorrectIndices(correctIndices, truthOptions);
 
+    // ── UNKNOWN IS NOT WRONG ─────────────────────────────────────────
+    //
+    // Empty means nobody has said which options are correct: the verdict is
+    // still `checking` (or idle/error) and, since questions come from
+    // `/questions`, there are no `correct` flags to fall back on.
+    //
+    // Every branch below treats "not in correctIndices" as WRONG, so an empty
+    // set made a correct click render "Not this one, try again!" — on the very
+    // click whose answer was still in flight. The local key used to hide this
+    // by answering instantly.
+    //
+    // A blank message is the honest transient state, and the component
+    // recomputes when the terminal verdict lands. Deliberately NOT
+    // reconstructed from `quizInitialState` or the pristine sets.
+    if (correctIndices.length === 0) {
+      return '';
+    }
+
     const isMultiMode =
       correctIndices.length > 1 ||
       question.type === QuestionType.MultipleAnswer ||
       (question as any).multipleAnswer === true;
 
     const { numCorrectSelected, numIncorrectSelected, dedupedSelected } =
-      this.countSelectedCorrectness(selected, optionsRaw, correctIndices, resolvedQuestion, quizSvc, isMultiMode, targetOption);
+      this.countSelectedCorrectness(selected, optionsRaw, correctIndices, resolvedQuestion, quizSvc, isMultiMode, targetOption, idxForLookup);
 
     const totalCorrectRequired = correctIndices.length > 0 ? correctIndices.length : 1;
     // Resolved ONLY when every correct option is selected AND no incorrect option
@@ -347,7 +365,8 @@ export class FeedbackService {
     resolvedQuestion: QuizQuestion,
     quizSvc: any,
     isMultiMode: boolean,
-    targetOption?: Option
+    targetOption?: Option,
+    displayIndex?: number
   ): { numCorrectSelected: number; numIncorrectSelected: number; dedupedSelected: any[] } {
     const dedupedSelected = this.dedupeSelected(selected);
     const canonicalOptionsForMatch = this.resolveCanonicalOptionsForMatch(quizSvc, resolvedQuestion);
@@ -355,9 +374,76 @@ export class FeedbackService {
       this.evaluateSelectionCounts(dedupedSelected, optionsRaw, correctIndices, canonicalOptionsForMatch);
     if (isMultiMode && optionsRaw.length > 0) {
       ({ numCorrectSelected, numIncorrectSelected } =
-        this.crossCheckMultiCounts(optionsRaw, targetOption, numCorrectSelected, numIncorrectSelected));
+        this.crossCheckMultiCounts(
+          optionsRaw, targetOption, numCorrectSelected, numIncorrectSelected, correctIndices, displayIndex
+        ));
     }
+
+    // ── THE AUTHORITATIVE COUNT, LAST WORD ───────────────────────────
+    //
+    // Everything above counts from the per-click `selected` array (plus a
+    // reconciliation pass over the option objects). On a REVISIT that array
+    // holds only THIS visit's click, so a question whose correct options were
+    // chosen across two visits counted 1 instead of 3 and reported
+    // "select 2 more" — while the app's own `/check` payload, sent moments
+    // earlier, listed all three.
+    //
+    // Both authoritative facts are already in hand: WHICH options are correct
+    // (`correctIndices`, resolved from `authorizedCorrectTexts`) and WHICH the
+    // user has selected (`uiSelectedTextsForQuestion` — the same union
+    // submitted to `/check`). Their intersection is the count.
+    //
+    // `Math.max` so this can only RAISE a count the earlier passes undercounted;
+    // it never discards a selection they saw and this set does not. Nothing
+    // here reads `option.correct` or the pristine key.
+    const authoritative = this.authoritativeSelectionCounts(
+      optionsRaw, correctIndices, displayIndex
+    );
+    if (authoritative) {
+      numCorrectSelected = Math.max(numCorrectSelected, authoritative.correct);
+      numIncorrectSelected = Math.max(numIncorrectSelected, authoritative.incorrect);
+    }
+
     return { numCorrectSelected, numIncorrectSelected, dedupedSelected };
+  }
+
+  /**
+   * Selected-correct / selected-incorrect from AUTHORIZED identity alone.
+   *
+   * Null when nothing is authorized yet, or when the app has no recorded
+   * selection set for this question — both mean "cannot answer", never zero.
+   *
+   * Text identity throughout, normalized with the same `norm` the verdict
+   * helpers use, and resolved against the options AS DISPLAYED, so shuffle
+   * needs no special handling.
+   */
+  private authoritativeSelectionCounts(
+    optionsRaw: Option[],
+    correctIndices: number[],
+    displayIndex?: number
+  ): { correct: number; incorrect: number } | null {
+    if (!correctIndices.length || displayIndex == null || displayIndex < 0) return null;
+
+    const ui = this.selectedOptionService?.uiSelectedTextsForQuestion?.(displayIndex);
+    if (!ui || ui.size === 0) return null;
+
+    const correctTexts = new Set<string>();
+    const allTexts = new Set<string>();
+    for (const [i, option] of optionsRaw.entries()) {
+      const t = norm(option?.text);
+      if (!t) continue;
+      allTexts.add(t);
+      if (correctIndices.includes(i + 1)) correctTexts.add(t);
+    }
+    if (correctTexts.size === 0) return null;
+
+    let correct = 0;
+    let incorrect = 0;
+    for (const text of ui) {
+      if (correctTexts.has(text)) correct++;
+      else if (allTexts.has(text)) incorrect++;
+    }
+    return { correct, incorrect };
   }
 
   /** Deduplicate the selected options by optionId (or text). Extracted verbatim. */
@@ -457,22 +543,73 @@ export class FeedbackService {
     optionsRaw: Option[],
     targetOption: Option | undefined,
     numCorrectSelected: number,
-    numIncorrectSelected: number
+    numIncorrectSelected: number,
+    correctIndices: number[] = [],
+    displayIndex?: number
   ): { numCorrectSelected: number; numIncorrectSelected: number } {
+    // ── RECONCILIATION IS AUTHORIZED ─────────────────────────────────
+    //
+    // This exists for REVISITS: `selectedOptionsMap` holds only the current
+    // visit's clicks, while the option objects keep `selected` across visits.
+    // Recovering the true count therefore means classifying the SELECTED
+    // options — and it did that with `isOptionCorrect(o)`.
+    //
+    // API-sourced options carry no `correct`, so every selected option counted
+    // as INCORRECT, the recovery produced a lower number than the live count,
+    // and a question with every correct option chosen still read
+    // "select 1 more correct answer".
+    //
+    // `correctIndices` is the authorized identity already resolved upstream
+    // (from `authorizedCorrectTexts`, matched against the DISPLAYED options and
+    // expressed as 1-based display positions), so classifying by membership
+    // reuses that single derivation rather than adding a second matcher — and
+    // it is shuffle-correct for the same reason.
+    const hasAuthorizedIdentity = correctIndices.length > 0;
+    const isCorrectAt = (option: Option, index: number): boolean =>
+      hasAuthorizedIdentity ? correctIndices.includes(index + 1) : isOptionCorrect(option);
+
+    // CROSS-VISIT SELECTIONS. `o.selected` is rebuilt per visit, so on a REVISIT
+    // the first visit's picks are absent from it and the recovery this method
+    // exists to perform recovers nothing — a question with every correct option
+    // chosen across two visits still read "select N more".
+    //
+    // `uiSelectedTextsForQuestion` is the union the rest of the revisit work
+    // already relies on (bindings ∪ first-visit snapshot), and it is used a few
+    // methods below for exactly this reason. Selection is the USER'S OWN
+    // history, not answer-key material.
+    const uiSelected = displayIndex != null
+      ? (this.selectedOptionService?.uiSelectedTextsForQuestion?.(displayIndex) ?? null)
+      : null;
+
+    const isSelected = (option: Option): boolean =>
+      option.selected === true
+      || (!!uiSelected && !!option?.text && uiSelected.has(norm(option.text)));
+
     let rawCorrectSelected = 0;
     let rawIncorrectSelected = 0;
-    for (const o of optionsRaw) {
-      if (o.selected) {
-        if (isOptionCorrect(o)) {
+    for (const [i, o] of optionsRaw.entries()) {
+      if (isSelected(o)) {
+        if (isCorrectAt(o, i)) {
           rawCorrectSelected++;
         } else {
           rawIncorrectSelected++;
         }
       }
     }
-    if (targetOption && targetOption.selected && isOptionCorrect(targetOption)) {
-      const alreadyCounted = optionsRaw.some(o =>
-        o.selected && isOptionCorrect(o) &&
+
+    const targetIdx = targetOption
+      ? optionsRaw.findIndex(o =>
+          o === targetOption ||
+          (o.optionId != null && targetOption.optionId != null
+            && String(o.optionId) === String(targetOption.optionId)) ||
+          (o.text && targetOption.text
+            && String(o.text).trim() === String(targetOption.text).trim()))
+      : -1;
+
+    if (targetOption && targetOption.selected
+        && (targetIdx >= 0 ? isCorrectAt(targetOption, targetIdx) : isOptionCorrect(targetOption))) {
+      const alreadyCounted = optionsRaw.some((o, i) =>
+        o.selected && isCorrectAt(o, i) &&
         ((o.text && targetOption.text && String(o.text).trim() === String(targetOption.text).trim()) ||
           (o.optionId != null && targetOption.optionId != null && String(o.optionId) === String(targetOption.optionId)))
       );

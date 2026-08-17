@@ -30,7 +30,9 @@ export class QuizOptionsService {
         ...opt,
         optionId: safeId,
         text: safeText,
-        correct: isOptionCorrect(opt),
+        // PRESERVE ABSENCE — `false` claims the option is wrong; absence says
+        // nobody has said. Correctness belongs to the verdict.
+        ...(opt?.correct === undefined ? {} : { correct: isOptionCorrect(opt) }),
         value: typeof opt?.value === 'number' ? opt.value : safeId,
         answer: opt?.answer ?? undefined,
         selected: opt?.selected === true,
@@ -218,7 +220,10 @@ export class QuizOptionsService {
         ...option,
         optionId: id,
         displayOrder: index,
-        correct: isOptionCorrect(option),
+        // PRESERVE ABSENCE — see sanitizeOptions above. The canonical option is
+        // merged for identity and display state, not to invent correctness.
+        ...(option.correct === undefined && (match as any)?.correct === undefined
+          ? {} : { correct: isOptionCorrect(option) }),
         selected: match?.selected === true || option.selected === true,
         highlight: match?.highlight ?? option.highlight ?? false,
         showIcon: match?.showIcon ?? option.showIcon ?? false

@@ -10,11 +10,12 @@ import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
 import { ExplanationTextService } from '../explanation/explanation-text.service';
 import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { authorizedExplanation } from '../verdict/authorized-correctness';
+import { authorizedCorrectTexts, authorizedExplanation } from '../verdict/authorized-correctness';
 import { QuizService } from '../../data/quiz.service';
 import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { norm } from '../../../utils/text-norm';
 import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 
 /**
@@ -703,11 +704,32 @@ export class SharedOptionExplanationService {
       }
     }
 
-    // 4. Calculate indices based on VISUAL POSITIONS
+    // 4. Calculate indices based on VISUAL POSITIONS.
+    //
+    // AUTHORIZED IDENTITY FIRST. Steps 2–3 above build `correctIds`/
+    // `correctTexts` from the canonical question's `answer` array and `correct`
+    // flags — the local answer key, which API-sourced questions do not carry.
+    // With both sets empty every option scored false, so the composed prefix
+    // ("Option 1 is correct because …") lost its numbers and the FET rendered
+    // as a bare body.
+    //
+    // The verdict discloses `correctOptionTexts` once terminal, matched here
+    // against the options AS DISPLAYED so shuffle numbers what is on screen.
+    // Same helper and same rule the formatter uses; the local sets remain only
+    // for as long as a bank-sourced quiz still populates them.
+    const authorizedTexts = authorizedCorrectTexts(
+      this.quizService, displayIndex, this.verdicts
+    );
+
     const correctIndices = displayOptions
       .map((opt, i) => {
-        const id = Number(opt.optionId);
         const text = this.normalize(opt.text);
+
+        if (authorizedTexts && authorizedTexts.size > 0) {
+          return authorizedTexts.has(norm(opt.text)) ? i + 1 : null;
+        }
+
+        const id = Number(opt.optionId);
         const isCorrect = (!isNaN(id) && correctIds.has(id)) ||
           (text && correctTexts.has(text)) ||
           !!opt.correct;

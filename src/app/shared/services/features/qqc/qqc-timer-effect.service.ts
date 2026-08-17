@@ -10,6 +10,8 @@ import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
 import { ExplanationTextService } from '../explanation/explanation-text.service';
 import { NextButtonStateService } from '../../state/next-button-state.service';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { authorizedExplanation } from '../verdict/authorized-correctness';
 import { QuizService } from '../../data/quiz.service';
 import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
@@ -18,6 +20,7 @@ import { SoundService } from '../../ui/sound.service';
 import { TimerService } from '../timer/timer.service';
 
 import { delay } from '../../../utils/delay';
+import { norm } from '../../../utils/text-norm';
 
 /**
  * Handles timer expiry, lock, and disable logic for QQC.
@@ -29,6 +32,7 @@ export class QqcTimerEffectService {
   private readonly explanationTextService = inject(ExplanationTextService);
   private readonly nextButtonStateService = inject(NextButtonStateService);
   private readonly quizService = inject(QuizService);
+  private readonly verdicts = inject(QuestionVerdictService);
   private readonly quizStateService = inject(QuizStateService);
   private readonly selectedOptionService = inject(SelectedOptionService);
   private readonly selectionMessageService = inject(SelectionMessageService);
@@ -250,11 +254,32 @@ export class QqcTimerEffectService {
         ?? this.explanationTextService.fetByIndex?.get(i0)
         ?? this.explanationTextService.formattedExplanations?.[i0]?.explanation
         ?? '';
-      const rawTrue =
-        (q?.explanation ?? params.currentQuestion?.explanation ?? '').trim();
+
+      // ── TIMEOUT FET BODY IS AUTHORIZED, NOT LOCAL ────────────────
+      //
+      // This read `q?.explanation` — the bundled answer key — which is
+      // `undefined` once questions come from `/questions`. With the formatter
+      // cache also empty it fell through to a `Formatting…` PLACEHOLDER, and
+      // `setExplanationFor` wrote that placeholder into the explanation store.
+      // The heading reads that store BEFORE its authorized-explanation last
+      // resort, so the placeholder shadowed the real explanation that `/check`
+      // had already returned on the expired verdict — the timeout FET never
+      // appeared at all.
+      //
+      // AUTHORIZATION IS UNCHANGED. Expiry still decides WHEN a timeout FET may
+      // show; this decides only WHERE its words come from. `/check` returns the
+      // explanation on `expired`, so by the time this runs the verdict either
+      // has it or nothing is authorized yet.
+      const authorized = (authorizedExplanation(this.quizService, i0, this.verdicts) ?? '').trim();
       const hasFet = cached && cached.toLowerCase().includes('correct because');
-      const immediateTxt = (hasFet ? cached.trim() : '') || rawTrue || '<span class="muted">Formatting…</span>';
-      params.setExplanationFor(i0, immediateTxt);
+      const immediateTxt = (hasFet ? cached.trim() : '') || authorized;
+
+      // NOTHING AUTHORIZED, NOTHING WRITTEN. Storing a placeholder would put a
+      // non-explanation into the store that every later reader treats as real
+      // content — and would shadow the authorized text when it arrives.
+      if (immediateTxt) {
+        params.setExplanationFor(i0, immediateTxt);
+      }
       explanationToDisplay = immediateTxt;
 
       // Emit FET to the service
@@ -264,13 +289,40 @@ export class QqcTimerEffectService {
 
       // If no cached FET, resolve asynchronously
       if (!hasFet) {
-        params.resolveFormatted(i0).then(formatted => {
+        const compose = () => params.resolveFormatted(i0).then(formatted => {
           if (formatted) {
             params.setExplanationFor(i0, formatted);
             this.explanationTextService.setExplanationText(formatted, { index: i0, force: true });
             params.markForCheck();
           }
         }).catch(() => {});
+
+        compose();
+
+        // COMPOSE AGAIN WHEN THE VERDICT LANDS.
+        //
+        // The composed prefix ("Option 1 is correct because …") needs the
+        // authorized correct-option identity, and expiry starts BOTH this
+        // handler and the `/check` reveal at once. On a cold first question the
+        // reveal loses that race, so the first compose has no identity to work
+        // with and produces the bare body — which is what shipped to the screen
+        // and stayed there, because nothing ran again.
+        //
+        // One shot, per question, dropped when it fires. Recomposing after the
+        // verdict is idempotent when the first attempt already succeeded.
+        const quizId = (this.quizService as any)?.quizId as string | undefined;
+        const questionText = (this.quizService as any)
+          ?.getQuestionsInDisplayOrder?.()?.[i0]?.questionText as string | undefined;
+
+        if (quizId && questionText) {
+          this.verdicts.terminalVerdicts$
+            .pipe(
+              filter((arrival) => arrival.quizId === quizId
+                && norm(arrival.questionText) === norm(questionText)),
+              take(1)
+            )
+            .subscribe(() => compose());
+        }
       }
     } catch { }
 

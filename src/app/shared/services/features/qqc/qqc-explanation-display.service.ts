@@ -13,6 +13,8 @@ import { ExplanationTextService } from '../explanation/explanation-text.service'
 import { QqcExplanationManagerService } from './qqc-explanation-manager.service';
 import { QuizDataService } from '../../data/quizdata.service';
 import { QuizQuestionManagerService } from '../../flow/quizquestionmgr.service';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { authorizedExplanation } from '../verdict/authorized-correctness';
 import { QuizService } from '../../data/quiz.service';
 import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
@@ -34,6 +36,7 @@ export class QqcExplanationDisplayService {
   private readonly quizDataService = inject(QuizDataService);
   private readonly quizQuestionManagerService = inject(QuizQuestionManagerService);
   private readonly quizService = inject(QuizService);
+  private readonly verdicts = inject(QuestionVerdictService);
   private readonly quizStateService = inject(QuizStateService);
   private readonly selectedOptionService = inject(SelectedOptionService);
 
@@ -55,7 +58,20 @@ export class QqcExplanationDisplayService {
     const q = this.resolveQuestionForIndex(params.questionsArray, params.currentQuestionIndex, params.currentQuestion, i0);
     if (!q) return '';  // Question object could not be resolved for this index
 
-    const baseRaw = (q?.explanation ?? '').toString().trim();
+    // THE BODY IS AUTHORIZED; THE COMPOSITION IS STILL THE FORMATTER'S.
+    //
+    // `q?.explanation` is the bundled answer key and is `undefined` once
+    // questions come from `/questions`, so the formatter received an empty body
+    // and returned nothing — leaving the raw authorized text on screen instead
+    // of the composed "Option N is correct because …" the UI has always shown.
+    //
+    // Same rule and same helper S1 applied to the shared-option resolver; this
+    // is the qqc path it did not cover. Authorization is unchanged — the helper
+    // answers only on a terminal verdict — and the local value is preferred
+    // only while it still exists, so nothing changes for a bank-sourced quiz.
+    const baseRaw = (
+      q?.explanation ?? authorizedExplanation(this.quizService, i0, this.verdicts) ?? ''
+    ).toString().trim();
 
     await this.prepareForFormat(i0);
 

@@ -1,7 +1,7 @@
 <section class="message" [class.feedback-inline]="stylePreset() === 'inline'" role="status" aria-live="polite" aria-atomic="true">
   @if (feedbackConfig()?.showFeedback) {
     <div class="feedback-message" [ngClass]="feedbackMessageClass()">
-      @if (feedbackConfig()?.selectedOption?.correct) {
+      @if (isSelectedOptionCorrect()) {
         <mat-icon class="material-icons" aria-label="Correct answer" i18n-aria-label> sentiment_very_satisfied </mat-icon>
       } @else {
         <mat-icon class="material-icons wrong-icon" aria-label="Wrong answer" i18n-aria-label>

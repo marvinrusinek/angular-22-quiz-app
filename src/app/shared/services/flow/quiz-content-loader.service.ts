@@ -453,8 +453,13 @@ export class QuizContentLoaderService {
     this.quizService.setSelectedQuiz(quizData);
 
     if (!isShuffled) {
+      // Pre-seeding the explanation store from the bank was a warm-up from the
+      // era when the FET body came from `question.explanation`. Since S1 the
+      // body is authorized by the verdict and written at answer time, and
+      // questions from `/questions` carry no explanation to seed with — so this
+      // reserves the slots without claiming any text for them.
       this.explanationTextService.initializeExplanationTexts(
-        (quizData.questions ?? []).map((q: QuizQuestion) => q.explanation)
+        (quizData.questions ?? []).map((q: QuizQuestion) => q.explanation ?? '')
       );
     }
   }

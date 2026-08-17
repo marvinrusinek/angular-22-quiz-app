@@ -9,6 +9,8 @@ import { FormattedExplanation } from '../../../models/FormattedExplanation.model
 import { Option } from '../../../models/Option.model';
 import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { authorizedCorrectTexts } from '../verdict/authorized-correctness';
 import { QuizService } from '../../data/quiz.service';
 import { QuizShuffleService } from '../../flow/quiz-shuffle.service';
 import { pinAllOfTheAboveLast, pinnedIndex1Based } from '../../../utils/all-of-the-above';
@@ -324,11 +326,69 @@ export class ExplanationFormatterService {
     const isSingleChoice = this.computeIsSingleChoice(question, opts, qTextNormFull);
     const lowerExpContent = (question?.explanation || '').toLowerCase();
 
+    // ── AUTHORIZED IDENTITY FIRST, AND ALONE ─────────────────────────
+    //
+    // Every strategy below reconstructs WHICH options are correct from the
+    // local answer key — `option.correct`, keyword scans over the explanation,
+    // the pristine sets. None of them can answer once questions arrive from
+    // `/questions` carrying no correctness, which left the composed FET
+    // ("Option 2 is correct because …") with no indices and therefore no
+    // prefix.
+    //
+    // The verdict discloses `correctOptionTexts` on a terminal phase, so once
+    // it has, that IS the identity — and the local chain must not run at all.
+    // Falling through to it would let a stale flag contradict an authorized
+    // reveal, which is the precise inversion this migration removes.
+    //
+    // PRESENTATION ONLY. This changes where the numbers come from, never when
+    // a FET may show, nor scoring, completion or the verdict itself.
+    const authorized = this.authorizedCorrectIndices(opts, displayIndex);
+    if (authorized) return authorized;
+
     return this.tryInternalCorrectFlags(opts, isSingleChoice, lowerExpContent)
       ?? this.tryExplanationKeywordScan(opts, lowerExpContent)
       ?? this.tryVisualCorrectFlags(opts)
       ?? this.resolveByCorrectSets(question, opts, qIdx, targetQuestionText, isSingleChoice, lowerExpContent, qTextNormFull)
       ?? this.tryQuickVisualScan(opts);
+  }
+
+  /**
+   * 1-based indices of the correct options, from the AUTHORIZED reveal.
+   *
+   * Null when nothing is authorized — never an empty array, which downstream
+   * would read as "no option is correct" and compose a prefix claiming so.
+   *
+   * Matched by TEXT against the options as DISPLAYED, so a shuffled quiz
+   * numbers them by what the user is looking at rather than by any canonical
+   * position. `authorizedCorrectTexts` normalizes with the shared `norm`, and
+   * this side uses the same helper, so the two agree by construction.
+   */
+  private authorizedCorrectIndices(
+    opts: Option[],
+    displayIndex?: number
+  ): number[] | null {
+    if (!Array.isArray(opts) || opts.length === 0) return null;
+    if (typeof displayIndex !== 'number' || displayIndex < 0) return null;
+
+    // Resolved lazily through the injector, like every other service reference
+    // in this file — a constructor-injected QuizService would drag its graph
+    // into the formatter's own construction.
+    const quizSvc = this.injector.get(QuizService, null);
+    const verdicts = this.injector.get(QuestionVerdictService, null);
+    if (!quizSvc || !verdicts) return null;
+
+    const correctTexts = authorizedCorrectTexts(quizSvc, displayIndex, verdicts);
+    if (!correctTexts || correctTexts.size === 0) return null;
+
+    const indices = opts
+      .map((opt, i) => (correctTexts.has(norm(opt?.text)) ? i + 1 : null))
+      .filter((n): n is number => n !== null);
+
+    // An authorized set that matches NOTHING on screen means the options and
+    // the verdict describe different questions. Answering null sends the
+    // caller down the legacy chain rather than composing a prefix from an
+    // empty match, which would be worse than not composing one.
+    return indices.length > 0 ? indices : null;
   }
 
   /** HTML/entity-stripping normalizer used by the correct-index matchers. Extracted verbatim. */

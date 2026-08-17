@@ -6,6 +6,7 @@ import type { AppDependencies } from './dependencies';
 import { createErrorHandler, notFoundHandler } from './shared/error-handler';
 import { securityHeaders } from './shared/security-headers';
 import { createResponseGuard } from './api/response-guard';
+import { isStackBlitzPreviewOrigin } from './api/preview-origins';
 import { createHealthRouter } from './routes/health.route';
 import { createQuizzesRouter } from './routes/quizzes.route';
 import { createRateLimiter } from './shared/rate-limit';
@@ -90,7 +91,11 @@ function buildCorsOptions(config: AppConfig): CorsOptions {
         callback(null, true);
         return;
       }
-      callback(null, allowed.has(origin));
+      // The exact list still decides for every deployed host. StackBlitz is the
+      // one caller whose origin is regenerated per session, so it cannot be
+      // enumerated ahead of time — see preview-origins.ts for why this is a
+      // parsed hostname test on three named vendor domains and not a wildcard.
+      callback(null, allowed.has(origin) || isStackBlitzPreviewOrigin(origin));
     },
     methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
     // The two Topic Quiz receipt headers must be listed explicitly.

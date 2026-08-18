@@ -393,15 +393,30 @@ export class FeedbackService {
     // user has selected (`uiSelectedTextsForQuestion` — the same union
     // submitted to `/check`). Their intersection is the count.
     //
-    // `Math.max` so this can only RAISE a count the earlier passes undercounted;
-    // it never discards a selection they saw and this set does not. Nothing
-    // here reads `option.correct` or the pristine key.
+    // IT REPLACES, IT DOES NOT MERGE. Nothing here reads `option.correct` or
+    // the pristine key.
+    //
+    // This used `Math.max`, reasoning that it could only RAISE a count the
+    // earlier passes undercounted. That holds for the revisit case above, but
+    // not the reverse one: when a selection is REMOVED — picking a second
+    // option on a single-answer question replaces the first — the earlier
+    // passes still count the option the user just abandoned, and `max` made
+    // that stale count permanent. Answering wrongly and then CORRECTLY kept
+    // `numIncorrectSelected` at 1 forever, so the message read "Not this one,
+    // try again!" beside a green box and a happy icon.
+    //
+    // `ui` is the exact set submitted to `/check`, intersected with the
+    // authorized correct texts — the same facts the server judged. When that is
+    // available it is not one opinion among several, it is the answer; the
+    // earlier passes are the approximation it supersedes. When it is
+    // unavailable `authoritativeSelectionCounts` returns null and they stand
+    // unchanged.
     const authoritative = this.authoritativeSelectionCounts(
       optionsRaw, correctIndices, displayIndex
     );
     if (authoritative) {
-      numCorrectSelected = Math.max(numCorrectSelected, authoritative.correct);
-      numIncorrectSelected = Math.max(numIncorrectSelected, authoritative.incorrect);
+      numCorrectSelected = authoritative.correct;
+      numIncorrectSelected = authoritative.incorrect;
     }
 
     return { numCorrectSelected, numIncorrectSelected, dedupedSelected };

@@ -29,6 +29,7 @@ import { OptionUiSyncContext } from '../../../../shared/services/options/engine/
 import { OptionUiSyncEffectsService } from '../../../../shared/services/features/shared-option/option-ui-sync-effects.service';
 import { QuestionResolutionService } from '../../../../shared/services/options/engine/question-resolution.service';
 import { pinAllOfTheAboveLast } from '../../../../shared/utils/all-of-the-above';
+import { declaredIsMultiAnswer } from '../../../../shared/utils/question-type-authority';
 import { QuizService } from '../../../../shared/services/data/quiz.service';
 import { SelectedOptionService } from '../../../../shared/services/state/selectedoption.service';
 import { SharedOptionBindingService } from '../../../../shared/services/options/engine/shared-option-binding.service';
@@ -313,9 +314,52 @@ export class SharedOptionComponent
 
         if (userSelected) texts.push(opt.text);
       }
-      const snapshot = this.selectedOptionService.getRevisitDisplayTexts(qIdx);
-      if (snapshot) texts.push(...snapshot);
-      this.selectedOptionService.setUiSelectedTextsForQuestion(qIdx, texts);
+
+      // A SINGLE-ANSWER QUESTION HAS EXACTLY ONE SELECTION.
+      //
+      // The union above is right for multi-answer: `highlight` keeps a
+      // previously-clicked option counted after the bindings are rebuilt, and
+      // the revisit snapshot is what lets a partial multi-answer be COMPLETED on
+      // a later visit. On a single-answer question both of those are wrong,
+      // because picking a second option REPLACES the first rather than adding
+      // to it.
+      //
+      // The consequence was not cosmetic. Answering wrongly and then correctly
+      // published {wrong, correct}, which went to POST /check as two selections
+      // for a single-answer question — the server rejected it with 400, and
+      // that error overwrote the `resolved correct:true` verdict the correct
+      // pick had just earned. The user saw a red box with no feedback text on a
+      // right answer.
+      //
+      // ONLY ON A POSITIVE DECLARATION. `declaredIsMultiAnswer` returns `false`
+      // when the question is declared single-answer and `null` when nobody has
+      // said — and those must not be conflated. Treating unknown as single
+      // would truncate a genuine multi-answer selection set the moment the
+      // declared type were slow or absent, which is the same "absence is not a
+      // claim" error this migration exists to remove.
+      const declared = declaredIsMultiAnswer(this.getQuestionAtDisplayIndex?.(qIdx) ?? null);
+
+      let published: string[];
+      if (declared === false) {
+        // Prefer an EXPLICIT selection over a `highlight`-only leftover: after
+        // picking a second option the first still carries `highlight`, so both
+        // appear in `texts` though only one is selected. Last explicit wins,
+        // matching "the newest pick replaces the older one".
+        const explicit: string[] = [];
+        for (const b of this.optionBindings() ?? []) {
+          const opt = b?.option;
+          if (!opt?.text) continue;
+          if (b.isSelected === true || opt.selected === true) explicit.push(opt.text);
+        }
+        published = explicit.length > 0
+          ? [explicit[explicit.length - 1]!]
+          : (texts.length > 0 ? [texts[texts.length - 1]!] : []);
+      } else {
+        const snapshot = this.selectedOptionService.getRevisitDisplayTexts(qIdx);
+        published = snapshot ? [...texts, ...snapshot] : texts;
+      }
+
+      this.selectedOptionService.setUiSelectedTextsForQuestion(qIdx, published);
     } catch { /* non-fatal — lock falls back to selectedOptionsMap */ }
   }
 

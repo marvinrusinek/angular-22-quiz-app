@@ -1,5 +1,19 @@
 <section class="message" [class.feedback-inline]="stylePreset() === 'inline'" role="status" aria-live="polite" aria-atomic="true">
-  @if (feedbackConfig()?.showFeedback) {
+  <!--
+    NOTHING RENDERS UNTIL THERE IS SOMETHING TO SAY.
+
+    `showFeedback` alone was enough to render, and the icon below is an
+    if/else — so it ALWAYS produced one. While `/check` is in flight the class
+    and message are deliberately empty (a check is not a verdict), which showed
+    a lone sad face for the length of the round trip, then the border and text
+    arriving after it.
+
+    Gating on the MESSAGE renders the box once, complete: `updateFeedback()`
+    sets the message and the class together in one pass, so icon, border and
+    text land in the same change-detection cycle. Bank-sourced quizzes decide
+    synchronously, so nothing changes for them.
+  -->
+  @if (feedbackConfig()?.showFeedback && displayMessage()) {
     <div class="feedback-message" [ngClass]="feedbackMessageClass()">
       @if (isSelectedOptionCorrect()) {
         <mat-icon class="material-icons" aria-label="Correct answer" i18n-aria-label> sentiment_very_satisfied </mat-icon>

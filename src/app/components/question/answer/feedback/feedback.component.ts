@@ -109,6 +109,20 @@ export class FeedbackComponent {
     if (authorized === true) return 'correct-message';
     if (authorized === false) return 'wrong-message';
 
+    // A CHECK IN FLIGHT IS NOT A VERDICT.
+    //
+    // While `/check` is outstanding the answer is genuinely unknown, so the
+    // fallback below must not speak for it. It used to: a correct click painted
+    // the box RED for the length of the round trip and then flipped to green
+    // when the verdict landed — visible as a red-to-green flash, and on a slow
+    // connection long enough to read as "wrong" before correcting itself.
+    //
+    // The flash came from the fallback reading a `correct: false` that no
+    // server ever sent (some construction paths still materialize that flag
+    // from absent correctness). Neutral is the honest state for this moment
+    // either way, and it costs nothing: the verdict arrives and repaints.
+    if (state?.phase === 'checking') return '';
+
     // Nothing authorized yet — fall back to the local flag only while it still
     // exists (bank-sourced quizzes); absent, stay neutral rather than claim
     // wrong.

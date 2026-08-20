@@ -54,7 +54,8 @@ export class QqcQlOptionBuildService {
       showIcon: option.showIcon ?? false,
       active: option.active ?? true,
       selected: option.selected ?? false,
-      correct: option.correct ?? false
+      // PRESERVE ABSENCE — feeds optionsToDisplay via QqcQuestionLoaderService.
+      ...(option.correct === undefined ? {} : { correct: isOptionCorrect(option) })
     }));
   }
 
@@ -101,7 +102,8 @@ export class QqcQlOptionBuildService {
     const populated = currentQuestion.options.map((option, index) => ({
       ...option,
       optionId: option.optionId ?? index,
-      correct: option.correct ?? false
+      // PRESERVE ABSENCE — populateOptionsToDisplay writes live renderer state.
+      ...(option.correct === undefined ? {} : { correct: isOptionCorrect(option) })
     }));
 
     return { options: populated, signature };

@@ -25,6 +25,7 @@ import { SelectionMessageService } from '../selection-message/selection-message.
 import { TimerService } from '../timer/timer.service';
 
 import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
+import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { delay } from '../../../utils/delay';
 import { swallow } from '../../../utils/error-logging';
 
@@ -474,7 +475,10 @@ export class QqcQlStreamService {
     const hydrated: Option[] = baseOpts.map((o: Option, i: number) => ({
       ...o,
       optionId: o.optionId ?? i,
-      correct: !!o.correct,
+      // PRESERVE ABSENCE — hydrateAndClone feeds optionsSig -> optionsStream$
+      // -> the answer component -> optionsToDisplay. `!!o.correct` asserted
+      // WRONG for every API-sourced option.
+      ...(o.correct === undefined ? {} : { correct: isOptionCorrect(o) }),
       feedback: o.feedback ?? '',
       selected: false,
       highlight: false,
@@ -832,7 +836,11 @@ export class QqcQlStreamService {
         active: o.active ?? true,
         showIcon: !!o.showIcon,
         selected: !!o.selected,
-        correct: !!o.correct,
+        // PRESERVE ABSENCE. `!!o.correct` is FALSE for an option that carries no
+        // `correct` at all, so every API-sourced option was written into
+        // `currentQuestionSig` asserting it is WRONG. Absence says nobody has
+        // said; correctness belongs to the /check verdict.
+        ...(o.correct === undefined ? {} : { correct: isOptionCorrect(o) }),
         feedback: o.feedback ?? correctLabel
       }));
 

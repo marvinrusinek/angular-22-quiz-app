@@ -23,6 +23,7 @@ import { TimerService } from '../../features/timer/timer.service';
 
 import { norm } from '../../../utils/text-norm';
 import { swallow } from '../../../utils/error-logging';
+import { isOptionCorrect } from '../../../utils/is-option-correct';
 
 /**
  * Interface representing the component surface area that the init service needs.
@@ -679,7 +680,9 @@ export class SharedOptionInitService {
       return {
         ...opt,
         optionId: finalId,
-        correct: opt.correct ?? false,
+        // PRESERVE ABSENCE — feeds optionsToDisplay; `?? false` asserted WRONG
+        // for every API-sourced option. Correctness belongs to the verdict.
+        ...(opt.correct === undefined ? {} : { correct: isOptionCorrect(opt) }),
         feedback: typeof opt.feedback === 'string' ? opt.feedback.trim() : '',
         selected: opt.selected ?? false,
         active: true,

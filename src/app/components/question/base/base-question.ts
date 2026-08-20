@@ -24,6 +24,7 @@ import { FeedbackService } from '../../../shared/services/features/feedback/feed
 import { QuizService } from '../../../shared/services/data/quiz.service';
 import { QuizStateService } from '../../../shared/services/state/quizstate.service';
 import { SelectedOptionService } from '../../../shared/services/state/selectedoption.service';
+import { isOptionCorrect } from '../../../shared/utils/is-option-correct';
 import { swallow } from '../../../shared/utils/error-logging';
 
 /** Event payload emitted when an option is clicked */
@@ -102,7 +103,13 @@ export abstract class BaseQuestion<
     const clonedOptions = (options ?? this.question()!.options ?? []).map((opt, idx) => ({
       ...opt,
       optionId: opt.optionId ?? idx,
-      correct: opt.correct ?? false,
+      // PRESERVE ABSENCE. `opt.correct ?? false` turns "nobody has said" into
+      // "this option is WRONG" for every API-sourced option, and this array
+      // becomes `sharedOptionConfig.optionsToDisplay` — which the binding
+      // rebuild then clones into `optionBindings[].option`. That is why BOTH
+      // renderer containers carried the claim while every question container
+      // was already clean.
+      ...(opt.correct === undefined ? {} : { correct: isOptionCorrect(opt) }),
       feedback: opt.feedback,
     }));
 

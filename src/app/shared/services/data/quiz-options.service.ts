@@ -99,7 +99,13 @@ export class QuizOptionsService {
         const sanitized = question.options.map((opt, index) => ({
           ...deepClone(opt),
           optionId: typeof opt.optionId === 'number' ? opt.optionId : index,
-          correct: opt.correct ?? false,
+          // PRESERVE ABSENCE. `opt.correct ?? false` turned "nobody has said"
+          // into "this option is WRONG" for every API-sourced option, and this
+          // Observable feeds `optionsToDisplay` — and from there the option
+          // bindings. Because the result is EMITTED rather than returned, it was
+          // invisible to array-based tracing; it is the renderer-side twin of
+          // the question-array producers.
+          ...(opt.correct === undefined ? {} : { correct: isOptionCorrect(opt) }),
           feedback:
             opt.feedback ??
             `Generated feedback for Q${questionIndex} Option ${index}`

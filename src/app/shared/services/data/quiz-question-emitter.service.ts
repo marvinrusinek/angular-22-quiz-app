@@ -97,7 +97,19 @@ export class QuizQuestionEmitterService {
           ...option,
           optionId: this.toNumericId(option.optionId, index + 1),
           displayOrder: index,
-          correct: (option.correct as any) === true || (option.correct as any) === 'true',
+          // PRESERVE ABSENCE — the shuffle branch fabricated `correct: false`.
+          //
+          // `(option.correct as any) === true || … === 'true'` evaluates to
+          // FALSE for an option that carries no `correct` at all, so every
+          // API-sourced option came out of here asserting it is WRONG. The
+          // result is written back onto the question below
+          // (`currentQuestion.options = normalizedOptions`), so the claim
+          // reached the session array, the display order and the renderer.
+          //
+          // Shuffle-only by construction: the `else` branch takes the canonical
+          // path, which is why an unshuffled deep-link stayed clean and this
+          // survived every earlier sweep.
+          ...(option.correct === undefined ? {} : { correct: isOptionCorrect(option) }),
           selected: option.selected === true,
           highlight: option.highlight ?? false,
           showIcon: option.showIcon ?? false

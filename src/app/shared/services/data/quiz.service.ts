@@ -659,7 +659,10 @@ export class QuizService {
     const updatedOptions = question.options.map((option, index) => ({
       ...option,
       optionId: option.optionId ?? index,
-      correct: option.correct ?? false,
+      // PRESERVE ABSENCE. `option.correct ?? false` turns "nobody has said" into
+      // "this option is WRONG" for every API-sourced option, and the result is
+      // published to `currentQuestionSig`, which consumers read as live state.
+      ...(option.correct === undefined ? {} : { correct: isOptionCorrect(option) }),
       selected: option.selected ?? false,
       active: option.active ?? true,
       showIcon: option.showIcon ?? false

@@ -34,6 +34,7 @@ export interface QuizSource {
   readonly summary?: unknown;
   readonly image?: unknown;
   readonly difficulty?: unknown;
+  readonly facts?: unknown;
   readonly questions?: unknown;
 }
 
@@ -83,6 +84,8 @@ export interface PrivateQuiz {
   readonly summary: string;
   readonly image: string;
   readonly difficulty: string | null;
+  /** PUBLIC trivia for the Results page. Never answer-key material. */
+  readonly facts: readonly string[];
   readonly questions: readonly PrivateQuestion[];
 }
 
@@ -93,6 +96,8 @@ export interface QuizMetadata {
   readonly summary: string;
   readonly image: string;
   readonly difficulty: string | null;
+  /** PUBLIC trivia for the Results page. Never answer-key material. */
+  readonly facts: readonly string[];
   readonly questionCount: number;
 }
 

@@ -38,7 +38,7 @@ describe('loading the real private bank', () => {
       expect(serialized).not.toContain(banned);
     }
     expect(Object.keys(metadata[0]!).sort()).toEqual([
-      'difficulty', 'image', 'milestone', 'questionCount', 'quizId', 'summary'
+      'difficulty', 'facts', 'image', 'milestone', 'questionCount', 'quizId', 'summary'
     ]);
   });
 });

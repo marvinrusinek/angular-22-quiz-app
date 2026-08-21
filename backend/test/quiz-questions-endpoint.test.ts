@@ -395,7 +395,7 @@ describe('existing routes are unchanged', () => {
     const res = await request(app).get('/api/quizzes/rxjs');
     expect(res.status).toBe(200);
     expect(Object.keys(res.body).sort())
-      .toEqual(['difficulty', 'image', 'milestone', 'questionCount', 'quizId', 'summary']);
+      .toEqual(['difficulty', 'facts', 'image', 'milestone', 'questionCount', 'quizId', 'summary']);
   });
 
   it('Interview routes still exist and still require authentication', async () => {

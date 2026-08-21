@@ -171,3 +171,43 @@ describe('policy separation', () => {
     expect(findPolicyViolation(body, 'SUBMITTED_REVIEW')).toBeNull();
   });
 });
+
+/**
+ * `facts` is PUBLIC trivia, served on the metadata contract only.
+ *
+ * A fact is a sentence about the topic, never a statement about which option is
+ * correct — so it is metadata rather than answer key. But it must still not
+ * ride along with pre-answer question content, which is what the QUIZ_QUESTIONS
+ * ban enforces. These pin both halves, because the field moved from "dropped
+ * everywhere" to "served in exactly one place".
+ */
+describe('facts — served on metadata, banned from question delivery', () => {
+  it('is PERMITTED on the public metadata contract', () => {
+    expect(isKeyBanned('facts', 'PUBLIC_METADATA')).toBe(false);
+    const metadata = {
+      quizzes: [
+        { quizId: 'rxjs', milestone: 'RxJS', facts: ['RxJS predates Angular.'], questionCount: 10 }
+      ]
+    };
+    expect(findPolicyViolation(metadata, 'PUBLIC_METADATA')).toBeNull();
+  });
+
+  it('is BANNED from the question-delivery contract', () => {
+    expect(isKeyBanned('facts', 'QUIZ_QUESTIONS')).toBe(true);
+  });
+
+  it('is caught even when NESTED inside a questions payload', () => {
+    const leak = {
+      quizId: 'rxjs',
+      questions: [{ questionText: 'Q?', facts: ['leaked'], options: [{ text: 'a' }] }]
+    };
+    const found = findPolicyViolation(leak, 'QUIZ_QUESTIONS');
+    expect(found?.key).toBe('facts');
+    expect(found?.path).toBe('questions[0].facts');
+  });
+
+  it('metadata carrying facts still cannot carry answer-key fields', () => {
+    const bad = { quizzes: [{ quizId: 'rxjs', facts: ['ok'], correct: true }] };
+    expect(findPolicyViolation(bad, 'PUBLIC_METADATA')?.key).toBe('correct');
+  });
+});

@@ -45,7 +45,7 @@ describe('GET /api/quizzes — shape', () => {
     const res = await request(app()).get('/api/quizzes');
     for (const quiz of res.body.quizzes) {
       expect(Object.keys(quiz).sort()).toEqual([
-        'difficulty', 'image', 'milestone', 'questionCount', 'quizId', 'summary'
+        'difficulty', 'facts', 'image', 'milestone', 'questionCount', 'quizId', 'summary'
       ]);
     }
   });
@@ -108,7 +108,7 @@ describe('GET /api/quizzes/:quizId — metadata only', () => {
     expect(res.status).toBe(200);
     expect(res.body.quizId).toBe('rxjs');
     expect(Object.keys(res.body).sort()).toEqual([
-      'difficulty', 'image', 'milestone', 'questionCount', 'quizId', 'summary'
+      'difficulty', 'facts', 'image', 'milestone', 'questionCount', 'quizId', 'summary'
     ]);
   });
 

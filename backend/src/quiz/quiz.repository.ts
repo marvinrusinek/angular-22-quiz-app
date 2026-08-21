@@ -128,6 +128,7 @@ export function createQuizRepository(options: RepositoryOptions = {}): QuizRepos
       summary: quiz.summary,
       image: quiz.image,
       difficulty: quiz.difficulty,
+      facts: quiz.facts,
       questionCount: quiz.questions.length
     }))
   );

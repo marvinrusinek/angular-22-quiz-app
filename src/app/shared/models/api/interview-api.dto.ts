@@ -158,6 +158,14 @@ export interface QuizMetadataDto {
   readonly summary: string;
   readonly image: string;
   readonly difficulty: string;
+  /**
+   * PUBLIC trivia for the Results page, 0-3 per quiz.
+   *
+   * Optional on the client so a backend that predates the field still
+   * deserializes — an older server simply yields no facts, which is the same
+   * state the twelve quizzes without any are already in.
+   */
+  readonly facts?: readonly string[];
   readonly questionCount: number;
 }
 

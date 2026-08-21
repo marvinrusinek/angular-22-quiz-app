@@ -22,6 +22,15 @@ export interface QuizMetadataDto {
   readonly summary: string;
   readonly image: string;
   readonly difficulty: string | null;
+  /**
+   * PUBLIC trivia shown on the Results page, 0-3 per quiz.
+   *
+   * Served HERE and nowhere else. A fact is a sentence about the topic, never a
+   * statement about which option is correct, so it is metadata rather than
+   * answer key — but it is still banned from the QUESTIONS contract, because
+   * nothing supplemental may ride along with pre-answer content.
+   */
+  readonly facts: readonly string[];
   readonly questionCount: number;
 }
 
@@ -32,6 +41,7 @@ export function toQuizMetadataDto(metadata: QuizMetadata): QuizMetadataDto {
     summary: metadata.summary,
     image: metadata.image,
     difficulty: metadata.difficulty,
+    facts: [...metadata.facts],
     questionCount: metadata.questionCount
   };
 }

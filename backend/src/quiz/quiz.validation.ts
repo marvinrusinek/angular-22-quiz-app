@@ -212,8 +212,31 @@ function normalizeQuiz(
     summary: typeof source.summary === 'string' ? source.summary : '',
     image: typeof source.image === 'string' ? source.image : '',
     difficulty: isNonEmptyString(source.difficulty) ? source.difficulty.trim() : null,
+    // PUBLIC trivia shown on the Results page. Carried through normalization so
+    // the metadata endpoint can serve it — it was silently dropped here, which
+    // is why `facts` reached PostgreSQL but never reached the client.
+    //
+    // Not answer-key material: a fact is a sentence about the topic, never about
+    // which option is right. `response-policy` still bans it from the QUESTIONS
+    // contract so it cannot ride along with pre-answer content.
+    facts: normalizeFacts(source.facts),
     questions
   };
+}
+
+/**
+ * Facts as a list of non-empty strings, or an empty list.
+ *
+ * Absent and malformed both become `[]` — "this quiz has no trivia" is an
+ * ordinary state that twelve-odd quizzes are already in, and the Results panel
+ * renders nothing for it.
+ */
+function normalizeFacts(raw: unknown): readonly string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
 }
 
 function normalizeQuestion(

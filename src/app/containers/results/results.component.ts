@@ -63,6 +63,8 @@ import { ReturnComponent } from './return/return.component';
 import { StatisticsComponent } from './statistics/statistics.component';
 import { SummaryReportComponent } from './summary-report/summary-report.component';
 
+import { TopicQuizMetadataService } from '../../shared/services/api/topic-quiz-metadata.service';
+
 import { getQuizData } from '../../shared/quiz-data-cache';
 import { swallow } from '../../shared/utils/error-logging';
 
@@ -110,6 +112,7 @@ export class ResultsComponent implements OnInit {
   private readonly cdRef = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
+  private readonly metadataApi = inject(TopicQuizMetadataService);
 
   // ── remaining variables ─────────────────────────────────────────
   readonly quizData: Quiz[] = getQuizData();
@@ -133,9 +136,18 @@ export class ResultsComponent implements OnInit {
   private achievementsProcessed = false;
 
   // Facts (0-3) for the completed quiz; QuizFactComponent shows one at random.
-  readonly currentQuizFacts = computed<string[]>(
-    () => this.quizData.find((quiz) => quiz.quizId === this.quizId())?.facts ?? []
-  );
+  //
+  // FROM THE API, NOT THE LOCAL BANK. `facts` reached PostgreSQL but was dropped
+  // by `normalizeQuiz` on the way into the private model, so the metadata
+  // endpoint could not serve it and this read `assets/data/quiz.json` instead —
+  // one of the last runtime dependencies on that asset.
+  //
+  // The service resolves to nothing on failure rather than falling back, which
+  // matches how the panel already behaves for quizzes that have no facts.
+  readonly currentQuizFacts = computed<readonly string[]>(() => {
+    this.metadataApi.factsByQuiz();   // track the signal so this recomputes on load
+    return this.metadataApi.factsFor(this.quizId());
+  });
 
 
   // Tracks whether ngOnInit already applied a synchronous snapshot, so the
@@ -162,6 +174,9 @@ export class ResultsComponent implements OnInit {
   ngOnInit(): void {
     window.scrollTo(0, 0);
     this.quizDataService.loadQuizzes().pipe(take(1)).subscribe();
+    // Facts come from the metadata endpoint. Not awaited: the panel renders
+    // nothing until they arrive, and never blocks the rest of the page.
+    this.metadataApi.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
     this.fetchQuizIdFromParams();
     this.setCompletedQuiz();
     this.findQuizIndex();

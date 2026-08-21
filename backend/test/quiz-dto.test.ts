@@ -27,7 +27,7 @@ describe('quiz metadata mapper', () => {
     const metadata = repo().getQuizMetadata()[0]!;
     const dto = toQuizMetadataDto(metadata);
     expect(Object.keys(dto).sort()).toEqual([
-      'difficulty', 'image', 'milestone', 'questionCount', 'quizId', 'summary'
+      'difficulty', 'facts', 'image', 'milestone', 'questionCount', 'quizId', 'summary'
     ]);
     expect(dto.quizId).toBe('rxjs');
     expect(dto.questionCount).toBe(2);

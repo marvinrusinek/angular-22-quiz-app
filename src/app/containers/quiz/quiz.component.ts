@@ -44,6 +44,8 @@ import { QuizPersistenceService } from '../../shared/services/state/quiz-persist
 import { QuizResetService } from '../../shared/services/flow/quiz-reset.service';
 import { QuizRouteService } from '../../shared/services/flow/quiz-route.service';
 import { QuizService } from '../../shared/services/data/quiz.service';
+import { TopicQuizTypeRegistry } from '../../shared/services/api/topic-quiz-type-registry.service';
+import { QuizQuestionManagerService } from '../../shared/services/flow/quizquestionmgr.service';
 import { QuestionVerdictService } from '../../shared/services/features/verdict/question-verdict.service';
 import { QuizSetupService } from '../../shared/services/flow/quiz-setup.service';
 import { QuizStateService } from '../../shared/services/state/quizstate.service';
@@ -68,7 +70,6 @@ import { QUESTION_ROUTE_REGEX } from '../../shared/constants/route-patterns';
 
 import { ChangeRouteAnimation } from '../../animations/animations';
 import { withCorrectCountBanner } from '../../shared/utils/correct-count-banner';
-import { isOptionCorrect } from '../../shared/utils/is-option-correct';
 import { norm } from '../../shared/utils/text-norm';
 import { swallow } from '../../shared/utils/error-logging';
 
@@ -114,6 +115,8 @@ export class QuizComponent implements OnInit, AfterViewInit {
   private readonly quizResetService = inject(QuizResetService);
   private readonly quizRouteService = inject(QuizRouteService);
   public readonly quizService = inject(QuizService);
+  private readonly topicQuizTypeRegistry = inject(TopicQuizTypeRegistry);
+  private readonly quizQuestionManagerService = inject(QuizQuestionManagerService);
   private readonly verdicts = inject(QuestionVerdictService);
   private readonly quizSetupService = inject(QuizSetupService);
   public readonly quizStateService = inject(QuizStateService);
@@ -233,24 +236,33 @@ export class QuizComponent implements OnInit, AfterViewInit {
     const baseText = (view?.question?.questionText ?? this.questionToDisplaySig() ?? '').trim();
     if (!baseText) return '';
 
-    let opts = view?.options ?? [];
+    // THE COUNT IS DECLARED, NOT COUNTED.
+    //
+    // This filtered `option.correct` over the rendered options, which made the
+    // banner an answer-key derivative: API-sourced options carry no `correct`,
+    // so the count was always 0 and the banner silently vanished. It is also
+    // why a shuffled question needed a canonical re-lookup by text before the
+    // first selection — the view's options were empty and the count collapsed.
+    //
+    // `correctCount` is CARDINALITY, not identity: how many options are right,
+    // never which. `/questions` ships it deliberately (the number has always
+    // been on screen before the user answers), and TopicQuizTypeRegistry stores
+    // it keyed by question text — so this is a metadata read, and neither the
+    // options nor the pristine bank are consulted at all.
+    //
+    // FAILS CLOSED. `null` means the API has not told us, and an undeclared
+    // count renders NO banner rather than a reconstructed one. Showing nothing
+    // is the same state every single-answer question is already in.
+    const declaredCount = this.topicQuizTypeRegistry.correctCountOf(baseText);
+    if (declaredCount === null || declaredCount <= 1) return baseText;
 
-    // The view's options can be empty on the initial render of a shuffled
-    // question (before the first selection), which would suppress the
-    // "(N answers are correct)" banner. Fall back to the canonical
-    // question matched by text so the banner still shows. Banner-only —
-    // this does NOT change which question text renders.
-    if (opts.length === 0) {
-      const canonical = this.quizService.questions ?? [];
-      const match = canonical.find((q: QuizQuestion) => norm(q?.questionText) === norm(baseText));
-      opts = match?.options ?? [];
-    }
-
-    const numCorrect = opts.filter((o: any) => isOptionCorrect(o)).length;
-    if (numCorrect <= 1 || opts.length === 0) return baseText;
-
-    const suffix = numCorrect === 1 ? 'answer is' : 'answers are';
-    const banner = `(${numCorrect} ${suffix} correct)`;
+    // Both helpers already exist and are the single sources of truth for their
+    // half: the manager owns the wording and pluralisation, `withCorrectCountBanner`
+    // owns the markup that downstream code detects by class.
+    const banner = this.quizQuestionManagerService.getNumberOfCorrectAnswersText(
+      declaredCount,
+      view?.options?.length
+    );
     return withCorrectCountBanner(baseText, banner);
   });
 

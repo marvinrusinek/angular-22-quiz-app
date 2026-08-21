@@ -5,7 +5,6 @@ import { PracticeResult } from '../../../models/PracticeResult.model';
 import { QuizQuestion } from '../../../models/QuizQuestion.model';
 import { SK_PRACTICE_SESSION } from '../../../constants/session-keys';
 import { readSessionJson, removeSessionKey, writeSessionJson } from '../../../utils/session-storage';
-import { getQuizData } from '../../../quiz-data-cache';
 import {
   canAdvanceFromQuestion,
   computePracticeResult,
@@ -16,6 +15,7 @@ import {
 import { firstValueFrom } from 'rxjs';
 
 import { TopicQuizQuestionsService } from '../../api/topic-quiz-questions.service';
+import { TopicQuizMetadataService } from '../../api/topic-quiz-metadata.service';
 import { questionsFromApiViews } from '../../../utils/topic-quiz-content';
 import { PracticeVerdictService } from './practice-verdict.service';
 import { AssessmentBuilderService } from '../assessment/assessment-builder.service';
@@ -55,6 +55,7 @@ export class PracticeSessionService {
   private readonly weakAreas = inject(WeakAreasService);
   private readonly topicHistory = inject(TopicPerformanceHistoryService);
   private readonly questionsApi = inject(TopicQuizQuestionsService);
+  private readonly metadataApi = inject(TopicQuizMetadataService);
   private readonly verdicts = inject(PracticeVerdictService);
 
   private readonly _sessionId = signal<string>('');
@@ -167,6 +168,10 @@ export class PracticeSessionService {
     // and option texts — and no answer key. A failure returns false and the
     // caller shows its empty state; there is deliberately NO fallback to the
     // local bank, which would reintroduce the dependency this slice removes.
+    // Topic display names come from /quizzes. Fire-and-forget: the label falls
+    // back to the topic id until it lands, exactly as it used to on a miss.
+    this.metadataApi.load().subscribe({ error: () => undefined });
+
     const pools = await this.loadApiPools(topicIds);
     if (!pools) return false;
 
@@ -312,9 +317,15 @@ export class PracticeSessionService {
     removeSessionKey(SK_PRACTICE_SESSION);
   }
 
-  /** Display title for a sourceQuizId — the same lookup Interview Mode uses. */
+  /**
+   * Display title for a sourceQuizId.
+   *
+   * FROM /quizzes, not the local bank. `milestoneFor` keeps the same id
+   * fallback this had, so a slow or failed metadata load degrades to the topic
+   * id exactly as before rather than blanking the label.
+   */
   private topicNameFor(topicId: string): string {
-    return getQuizData().find((quiz) => quiz.quizId === topicId)?.milestone ?? topicId;
+    return this.metadataApi.milestoneFor(topicId);
   }
 
   // ── persistence ─────────────────────────────────────────────────

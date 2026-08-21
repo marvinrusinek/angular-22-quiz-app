@@ -501,7 +501,9 @@ export class ResultsComponent implements OnInit {
       'topic-quiz',
       [{
         topicId: result.quizId,
-        topicName: this.quizData.find((q) => q.quizId === result.quizId)?.milestone ?? result.quizId,
+        // FROM /quizzes — `milestone` IS the topic name, and topicId IS the
+        // quizId. Same id fallback as before if metadata has not landed.
+        topicName: this.metadataApi.milestoneFor(result.quizId),
         correct: result.correct,
         total: result.total
       }]

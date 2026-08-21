@@ -70,6 +70,12 @@ export class TopicQuizMetadataService {
   /** Exposed so a template-facing computed can track it. */
   readonly imageByQuiz: Signal<ReadonlyMap<string, string>> = this._imageByQuiz.asReadonly();
 
+  /** quizId → display title (`milestone`), from the same response. */
+  private readonly _milestoneByQuiz = signal<ReadonlyMap<string, string>>(new Map());
+
+  readonly milestoneByQuiz: Signal<ReadonlyMap<string, string>> =
+    this._milestoneByQuiz.asReadonly();
+
   /** One in-flight request shared by every caller. */
   private inFlight: Observable<readonly QuizMetadataEntryDto[]> | null = null;
 
@@ -88,6 +94,7 @@ export class TopicQuizMetadataService {
         tap((entries) => {
           const facts = new Map<string, readonly string[]>();
           const images = new Map<string, string>();
+          const milestones = new Map<string, string>();
           for (const entry of entries) {
             if (!entry?.quizId) continue;
             facts.set(
@@ -99,9 +106,13 @@ export class TopicQuizMetadataService {
             if (typeof entry.image === 'string' && entry.image.trim().length > 0) {
               images.set(entry.quizId, entry.image.trim());
             }
+            if (typeof entry.milestone === 'string' && entry.milestone.trim().length > 0) {
+              milestones.set(entry.quizId, entry.milestone.trim());
+            }
           }
           this._factsByQuiz.set(facts);
           this._imageByQuiz.set(images);
+          this._milestoneByQuiz.set(milestones);
         }),
         catchError(() => of([] as readonly QuizMetadataEntryDto[])),
         shareReplay({ bufferSize: 1, refCount: false })
@@ -138,5 +149,19 @@ export class TopicQuizMetadataService {
   imageFor(quizId: string | null | undefined): string {
     if (!quizId) return '';
     return this._imageByQuiz().get(quizId) ?? '';
+  }
+
+  /**
+   * The display title for one quiz, falling back to the id itself.
+   *
+   * Callers previously resolved this out of the local bank with
+   * `getQuizData().find(...)?.milestone ?? topicId`. The id fallback is the
+   * SAME one they already had, so a slow or failed metadata load degrades
+   * exactly as before rather than showing a blank topic — and there is no read
+   * of the local bank on any path here.
+   */
+  milestoneFor(quizId: string | null | undefined): string {
+    if (!quizId) return '';
+    return this._milestoneByQuiz().get(quizId) ?? quizId;
   }
 }

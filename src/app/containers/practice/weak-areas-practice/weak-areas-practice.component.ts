@@ -13,9 +13,9 @@ import { Router, RouterLink } from '@angular/router';
 import { PracticeSessionService } from '../../../shared/services/features/practice/practice-session.service';
 import { PracticeOptionsComponent } from '../../../components/practice/practice-options/practice-options.component';
 import { PracticeVerdictService } from '../../../shared/services/features/practice/practice-verdict.service';
+import { TopicQuizMetadataService } from '../../../shared/services/api/topic-quiz-metadata.service';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 import { ScrollDownIndicatorComponent } from '../../../components/scroll-down-indicator/scroll-down-indicator.component';
-import { getQuizData } from '../../../shared/quiz-data-cache';
 
 /**
  * Weak Areas Practice session — a THIN container.
@@ -49,6 +49,7 @@ export class WeakAreasPracticeComponent {
 
   readonly total = this.session.total;
   private readonly verdicts = inject(PracticeVerdictService);
+  private readonly metadataApi = inject(TopicQuizMetadataService);
 
   readonly currentIndex = this.session.currentIndex;
   readonly currentQuestion = this.session.currentQuestion;
@@ -70,7 +71,11 @@ export class WeakAreasPracticeComponent {
   readonly currentTopicName = computed(() => {
     const sourceQuizId = this.currentQuestion()?.sourceQuizId;
     if (!sourceQuizId) return '';
-    return getQuizData().find((q) => q.quizId === sourceQuizId)?.milestone ?? sourceQuizId;
+    // FROM /quizzes. "Topic name" and the catalogue's `milestone` are the same
+    // field — topicId IS the quizId — so this is a metadata lookup, not a bank
+    // read. Falls back to the id exactly as before if metadata is not in yet.
+    this.metadataApi.milestoneByQuiz();   // track so the label fills in on load
+    return this.metadataApi.milestoneFor(sourceQuizId);
   });
 
   /**

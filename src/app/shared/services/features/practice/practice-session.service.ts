@@ -13,6 +13,11 @@ import {
   isQuestionResolved
 } from '../../../utils/practice-scoring';
 
+import { firstValueFrom } from 'rxjs';
+
+import { TopicQuizQuestionsService } from '../../api/topic-quiz-questions.service';
+import { questionsFromApiViews } from '../../../utils/topic-quiz-content';
+import { PracticeVerdictService } from './practice-verdict.service';
 import { AssessmentBuilderService } from '../assessment/assessment-builder.service';
 import { TopicPerformanceHistoryService } from '../../progress/topic-performance-history.service';
 import { WeakAreasService } from '../../progress/weak-areas.service';
@@ -49,6 +54,8 @@ export class PracticeSessionService {
   private readonly builder = inject(AssessmentBuilderService);
   private readonly weakAreas = inject(WeakAreasService);
   private readonly topicHistory = inject(TopicPerformanceHistoryService);
+  private readonly questionsApi = inject(TopicQuizQuestionsService);
+  private readonly verdicts = inject(PracticeVerdictService);
 
   private readonly _sessionId = signal<string>('');
   private readonly _questions = signal<QuizQuestion[]>([]);
@@ -96,10 +103,27 @@ export class PracticeSessionService {
     () => this._answersByIndex()[this._currentIndex()] ?? []
   );
 
+  /**
+   * The authorized verdict reader handed to the pure scoring helpers.
+   *
+   * Reads `PracticeVerdictService`, i.e. what `POST /check` said. Declared as a
+   * field so every call site shares one definition and none can substitute a
+   * local recount.
+   */
+  private readonly authorizedResolved = (question: QuizQuestion): boolean =>
+    this.verdicts.isResolved(question?.sourceQuizId ?? '', question?.questionText ?? '');
+
+  private readonly authorizedCorrectTexts = (question: QuizQuestion): readonly string[] =>
+    this.verdicts.verdictFor(question?.sourceQuizId ?? '', question?.questionText ?? '').correctTexts;
+
   /** Current question is fully, exactly right — reveals FET and locks options. */
-  readonly isCurrentResolved = computed(() =>
-    isQuestionResolved(this.currentQuestion(), this.currentSelection())
-  );
+  readonly isCurrentResolved = computed(() => {
+    // Read the verdict signal so this recomputes when a verdict lands.
+    this.verdicts.verdicts();
+    return isQuestionResolved(
+      this.currentQuestion(), this.currentSelection(), this.authorizedResolved
+    );
+  });
 
   readonly isCurrentMultiAnswer = computed(() => isMultiAnswerQuestion(this.currentQuestion()));
 
@@ -107,9 +131,12 @@ export class PracticeSessionService {
    * The SINGLE advance gate. Next, the right-arrow shortcut and Submit all read
    * it, so a keyboard user can never bypass a gate the button enforces.
    */
-  readonly canAdvance = computed(() =>
-    canAdvanceFromQuestion(this.currentQuestion(), this.currentSelection())
-  );
+  readonly canAdvance = computed(() => {
+    this.verdicts.verdicts();
+    return canAdvanceFromQuestion(
+      this.currentQuestion(), this.currentSelection(), this.authorizedResolved
+    );
+  });
 
   readonly isLastQuestion = computed(() => this._currentIndex() === this.total() - 1);
 
@@ -132,10 +159,23 @@ export class PracticeSessionService {
    * false when there is nothing to practise, so callers never start an empty
    * session. Always reshuffles — this is never a replay of a previous session.
    */
-  start(): boolean {
+  async start(): Promise<boolean> {
     const topicIds = this.weakAreas.weakTopicIds();
-    const built: GeneratedAssessment | null = this.builder.buildPractice(topicIds);
+    if (topicIds.length === 0) return false;
+
+    // Questions come from the API, which ships question text, the DECLARED type
+    // and option texts — and no answer key. A failure returns false and the
+    // caller shows its empty state; there is deliberately NO fallback to the
+    // local bank, which would reintroduce the dependency this slice removes.
+    const pools = await this.loadApiPools(topicIds);
+    if (!pools) return false;
+
+    const built: GeneratedAssessment | null =
+      this.builder.buildPractice(topicIds, 10, pools);
     if (!built || built.questions.length === 0) return false;
+
+    // A new session must not inherit the previous one's verdicts.
+    this.verdicts.clear();
 
     // A NEW sessionId is minted here and nowhere else, so `practice:{sessionId}`
     // stays stable across every remount and refresh of this attempt.
@@ -158,11 +198,33 @@ export class PracticeSessionService {
    * Returns false when no weak topics remain — the caller shows the
    * "No weak areas detected" state instead of starting an empty session.
    */
-  practiceAgain(): boolean {
+  practiceAgain(): Promise<boolean> {
     this.ensureRecorded();
     // weakAreas.weakTopicIds() is computed over the topic-performance signal that
     // ensureRecorded() just wrote, so start() draws from the UPDATED weak topics.
     return this.start();
+  }
+
+  /**
+   * Fetch each weak topic's questions from the API.
+   *
+   * Returns null if ANY topic fails, so a session is never built from a partial
+   * pool that would silently change the question mix. No local-bank fallback:
+   * an unreachable API means no practice session, which is the honest outcome.
+   */
+  private async loadApiPools(
+    topicIds: readonly string[]
+  ): Promise<Map<string, QuizQuestion[]> | null> {
+    const pools = new Map<string, QuizQuestion[]>();
+    for (const topicId of topicIds) {
+      try {
+        const views = await firstValueFrom(this.questionsApi.loadQuestions(topicId));
+        pools.set(topicId, questionsFromApiViews(views));
+      } catch {
+        return null;
+      }
+    }
+    return pools;
   }
 
   select(index: number, optionIds: number[]): void {
@@ -202,7 +264,9 @@ export class PracticeSessionService {
         questions: this._questions(),
         answersByIndex: this._answersByIndex(),
         completedAt: new Date().toISOString(),
-        topicNameFor: (topicId) => this.topicNameFor(topicId)
+        topicNameFor: (topicId) => this.topicNameFor(topicId),
+        authorizedResolved: this.authorizedResolved,
+        authorizedCorrectTexts: this.authorizedCorrectTexts
       })
     );
     this._status.set('submitted');

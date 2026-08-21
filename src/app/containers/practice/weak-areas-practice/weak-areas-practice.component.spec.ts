@@ -4,7 +4,9 @@ import { computed, signal } from '@angular/core';
 
 import { WeakAreasPracticeComponent } from './weak-areas-practice.component';
 import { PracticeSessionService } from '../../../shared/services/features/practice/practice-session.service';
+import { PracticeVerdictService } from '../../../shared/services/features/practice/practice-verdict.service';
 import { QuizQuestion } from '../../../shared/models/QuizQuestion.model';
+import { QuestionType } from '../../../shared/models/question-type.enum';
 import {
   canAdvanceFromQuestion,
   isQuestionResolved
@@ -13,6 +15,8 @@ import { setQuizDataCache } from '../../../shared/quiz-data-cache';
 
 const SINGLE: QuizQuestion = {
   questionText: 'Single?',
+  // DECLARED type — the gate no longer counts correct options to infer it.
+  type: QuestionType.SingleAnswer,
   explanation: 'SINGLE-FET',
   sourceQuizId: 'rxjs',
   options: [
@@ -23,6 +27,7 @@ const SINGLE: QuizQuestion = {
 
 const MULTI: QuizQuestion = {
   questionText: 'Pick two',
+  type: QuestionType.MultipleAnswer,
   explanation: 'MULTI-FET',
   sourceQuizId: 'rxjs',
   options: [
@@ -43,7 +48,28 @@ function makeSessionStub(questions: QuizQuestion[]) {
 
   const currentQuestion = computed(() => questions[currentIndex()] ?? null);
   const currentSelection = computed<number[]>(() => answersByIndex()[currentIndex()] ?? []);
-  const canAdvance = computed(() => canAdvanceFromQuestion(currentQuestion(), currentSelection()));
+
+  /**
+   * Stands in for the AUTHORIZED verdict the real session reads from
+   * PracticeVerdictService. It reproduces the backend's rule from the fixture's
+   * own flags so these DOM assertions still pin real gating behaviour — the
+   * production path has no such computation, which is the point of S6.
+   */
+  const authorizedResolved = (q: QuizQuestion): boolean => {
+    const selected = currentSelection();
+    if (selected.length === 0) return false;
+    const correct = (q.options ?? [])
+      .filter((o) => (o as { correct?: boolean }).correct === true)
+      .map((o) => o.optionId as number);
+    if (q.type === QuestionType.MultipleAnswer) {
+      return correct.every((id) => selected.includes(id));
+    }
+    return selected.length === 1 && correct.includes(selected[0]);
+  };
+
+  const canAdvance = computed(() =>
+    canAdvanceFromQuestion(currentQuestion(), currentSelection(), authorizedResolved)
+  );
   const isLastQuestion = computed(() => currentIndex() === questions.length - 1);
 
   return {
@@ -59,7 +85,9 @@ function makeSessionStub(questions: QuizQuestion[]) {
     canGoNext: computed(() => canAdvance() && !isLastQuestion()),
     canSubmit: computed(() => isLastQuestion() && canAdvance()),
     isCurrentAnswered: computed(() => currentSelection().length > 0),
-    isCurrentResolved: computed(() => isQuestionResolved(currentQuestion(), currentSelection())),
+    // Declared-type driven, exactly as the real session computes it.
+    isCurrentMultiAnswer: computed(() => currentQuestion()?.type === QuestionType.MultipleAnswer),
+    isCurrentResolved: computed(() => isQuestionResolved(currentQuestion(), currentSelection(), authorizedResolved)),
     currentSelection,
     submitted,
     select: (index: number, ids: number[]) =>
@@ -78,10 +106,57 @@ async function mount(questions: QuizQuestion[]): Promise<{
   session: SessionStub;
 }> {
   const session = makeSessionStub(questions);
+
+  /**
+   * Stands in for PracticeVerdictService, i.e. for what `POST /check` returned.
+   *
+   * It derives its answers from the fixture's own flags so these DOM assertions
+   * keep pinning real behaviour — but note what that proves: the COMPONENT now
+   * paints and reveals purely from this, never from `option.correct`. Feeding it
+   * nothing would leave every option unpainted, which is exactly the
+   * no-local-fallback guarantee.
+   */
+  const verdictStub = {
+    verdicts: signal(new Map()),
+    verdictFor: (_quizId: string, questionText: string) => {
+      const q = questions.find((x) => x.questionText === questionText);
+      const selected = session.currentSelection();
+      const correctTexts = (q?.options ?? [])
+        .filter((o) => (o as { correct?: boolean }).correct === true)
+        .map((o) => o.text ?? '');
+      const resolved = q ? session.isCurrentResolved() : false;
+      const selectedVerdicts = new Map<string, boolean>();
+      for (const option of q?.options ?? []) {
+        if (option.optionId != null && selected.includes(option.optionId)) {
+          selectedVerdicts.set(
+            (option.text ?? '').normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase(),
+            (option as { correct?: boolean }).correct === true
+          );
+        }
+      }
+      return {
+        resolved,
+        terminal: resolved || selected.length > 0,
+        selectedVerdicts,
+        correctTexts: resolved ? correctTexts : [],
+        remainingCorrectCount: null,
+        explanation: resolved ? (q?.explanation ?? '') : '',
+        errored: false
+      };
+    },
+    isResolved: () => session.isCurrentResolved(),
+    check: () => ({ subscribe: () => ({ unsubscribe: () => undefined }) }),
+    clear: jest.fn()
+  };
+
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [WeakAreasPracticeComponent],
-    providers: [provideRouter([]), { provide: PracticeSessionService, useValue: session }]
+    providers: [
+      provideRouter([]),
+      { provide: PracticeSessionService, useValue: session },
+      { provide: PracticeVerdictService, useValue: verdictStub }
+    ]
   });
   const fixture = TestBed.createComponent(WeakAreasPracticeComponent);
   fixture.detectChanges();

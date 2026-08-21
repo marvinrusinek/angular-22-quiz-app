@@ -27,6 +27,9 @@
         [options]="question.options ?? []"
         [selectedIds]="currentSelection()"
         [resolved]="isCurrentResolved()"
+        [multiSelect]="isCurrentMultiAnswer()"
+        [revealedCorrectTexts]="revealedCorrectTexts()"
+        [knownIncorrectTexts]="knownIncorrectTexts()"
         (selectionChange)="onSelectionChange($event)"
       />
 

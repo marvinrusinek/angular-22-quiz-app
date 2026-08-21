@@ -132,9 +132,44 @@ describe('Topic Quizzes are untouched', () => {
 
   it('still score locally over the local questions', () => {
     expect(read('shared/services/data/quiz-scoring.service.ts')).toBeTruthy();
-    // Weak Areas Practice deliberately remains a local mode.
-    expect(read('shared/utils/practice-scoring.ts')).toContain('isAnswerCorrect');
     expect(read('shared/services/features/practice/practice-session.service.ts'))
       .toContain('AssessmentBuilderService');
+  });
+});
+
+describe('Weak Areas Practice no longer holds an answer key (Stage 14 S6)', () => {
+  /**
+   * This replaces an assertion that practice "deliberately remains a local
+   * mode". S6 reversed that premise on purpose, so the check is inverted rather
+   * than dropped: the same file is still pinned, now against the OPPOSITE
+   * property, which is what stops the local scorer quietly coming back.
+   */
+  it('practice-scoring decides nothing locally', () => {
+    const scoring = read('shared/utils/practice-scoring.ts');
+    // The shared local scorer is gone from this path.
+    expect(scoring).not.toContain('isAnswerCorrect');
+    // …and so is every way of recomputing correctness from the options.
+    expect(scoring).not.toContain('isOptionCorrect');
+    // Correctness arrives as an authorized verdict instead.
+    expect(scoring).toContain('AuthorizedResolved');
+  });
+
+  it('practice questions come from the API, not the local bank', () => {
+    const session = read('shared/services/features/practice/practice-session.service.ts');
+    expect(session).toContain('TopicQuizQuestionsService');
+    expect(session).toContain('questionsFromApiViews');
+    expect(session).toContain('PracticeVerdictService');
+  });
+
+  it('the builder does not fabricate correctness for practice options', () => {
+    const builder = read('shared/services/features/assessment/assessment-builder.service.ts');
+    expect(builder).not.toContain('correct: option.correct === true');
+  });
+
+  it('practice uses an UNTIMED receipt, never the cached timed one', () => {
+    const verdict = read('shared/services/features/practice/practice-verdict.service.ts');
+    expect(verdict).toContain('withFreshUntimedPracticeReceipt');
+    // The Topic Quiz's cached activation must not be reused for practice.
+    expect(verdict).not.toContain('withQuestionReceipt(');
   });
 });

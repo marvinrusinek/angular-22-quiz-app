@@ -20,6 +20,7 @@ import {
 import { getQuizData } from '../../../quiz-data-cache';
 import { ArrayUtils } from '../../../utils/array-utils';
 import { pinAllOfTheAboveLast } from '../../../utils/all-of-the-above';
+import { isOptionCorrect } from '../../../utils/is-option-correct';
 
 // Deep clone helper. Prefers structuredClone (used across the app, e.g.
 // QuizService.quizInitialState) but falls back to JSON so unit tests running
@@ -99,17 +100,28 @@ export class AssessmentBuilderService {
    * defensive). Randomness is confined to ArrayUtils.shuffleArray, so mocking it
    * makes the whole build deterministic for tests.
    */
-  build(config: AssessmentConfig): GeneratedAssessment {
+  build(
+    config: AssessmentConfig,
+    sourceByTopic?: ReadonlyMap<string, readonly QuizQuestion[]>
+  ): GeneratedAssessment {
     const topicIds = this.dedupe(config.topicIds);
     if (topicIds.length === 0) {
       throw new Error('AssessmentBuilder: at least one topic must be selected');
     }
 
     // 1. Gather each topic's pool as deep clones with answer state reset. The
-    //    clone means Interview answer selection can never mutate the catalog.
+    //    clone means answer selection can never mutate the source.
+    //
+    //    `sourceByTopic` lets a caller supply the questions instead of reading
+    //    the local catalog — Weak Areas Practice passes API-sourced questions,
+    //    which carry a declared type and NO answer key. Balancing, cloning,
+    //    shuffling and the AOTA pin stay right here, so there is still exactly
+    //    one generator rather than a second, divergent one.
     const pools = new Map<string, QuizQuestion[]>();
     for (const id of topicIds) {
-      const source = this.findQuiz(id)?.questions ?? [];
+      const source = sourceByTopic
+        ? [...(sourceByTopic.get(id) ?? [])]
+        : (this.findQuiz(id)?.questions ?? []);
       pools.set(id, source.map((q, i) => this.cloneQuestion(q, id, i)));
     }
 
@@ -148,8 +160,23 @@ export class AssessmentBuilderService {
 
   // ── weak areas practice ─────────────────────────────────────────
 
-  /** Questions available across the given weak topics. */
-  practiceCapacity(topicIds: readonly string[]): number {
+  /**
+   * Questions available across the given weak topics.
+   *
+   * With `sourceByTopic` the count comes from the supplied questions, so the
+   * API-sourced practice path never consults the local catalog — not even to
+   * size itself.
+   */
+  practiceCapacity(
+    topicIds: readonly string[],
+    sourceByTopic?: ReadonlyMap<string, readonly QuizQuestion[]>
+  ): number {
+    if (sourceByTopic) {
+      return this.dedupe([...topicIds]).reduce(
+        (sum, id) => sum + (sourceByTopic.get(id)?.length ?? 0),
+        0
+      );
+    }
     return this.countEligible([...topicIds]).total;
   }
 
@@ -168,19 +195,26 @@ export class AssessmentBuilderService {
    * hold fewer. Returns null when there is nothing to practise, so callers never
    * start an empty session.
    */
-  buildPractice(topicIds: readonly string[], max = 10): GeneratedAssessment | null {
+  buildPractice(
+    topicIds: readonly string[],
+    max = 10,
+    sourceByTopic?: ReadonlyMap<string, readonly QuizQuestion[]>
+  ): GeneratedAssessment | null {
     const ids = this.dedupe([...topicIds]);
     if (ids.length === 0) return null;
 
-    const available = this.practiceCapacity(ids);
+    const available = this.practiceCapacity(ids, sourceByTopic);
     if (available <= 0) return null;
 
     const questionCount = Math.min(max, available);
-    const built = this.build({
-      difficulty: 'mixed',
-      topicIds: ids,
-      questionCount: questionCount as AssessmentConfig['questionCount']
-    });
+    const built = this.build(
+      {
+        difficulty: 'mixed',
+        topicIds: ids,
+        questionCount: questionCount as AssessmentConfig['questionCount']
+      },
+      sourceByTopic
+    );
 
     // Practice is UNTIMED: no countdown is derived or displayed.
     return { ...built, id: `practice-${built.id}`, title: 'Weak Areas Practice', durationSeconds: 0 };
@@ -412,7 +446,13 @@ export class AssessmentBuilderService {
         ...option,
         optionId: existingId,
         displayOrder: i,
-        correct: option.correct === true,
+        // PRESERVE ABSENCE. `option.correct === true` is FALSE for an option
+        // that carries no `correct` at all, so an API-sourced practice option
+        // came out of here asserting it is WRONG. Weak Areas questions now come
+        // from `GET /questions`, which ships no answer key, and correctness is
+        // the /check verdict's to give. Bank-sourced options (the Interview
+        // generator's other callers) keep whatever flag they genuinely have.
+        ...(option.correct === undefined ? {} : { correct: isOptionCorrect(option) }),
         value: typeof option.value === 'number' ? option.value : existingId,
         selected: false,
         highlight: false,

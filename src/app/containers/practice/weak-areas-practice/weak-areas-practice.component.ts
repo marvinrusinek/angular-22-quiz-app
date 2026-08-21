@@ -12,6 +12,7 @@ import { Router, RouterLink } from '@angular/router';
 
 import { PracticeSessionService } from '../../../shared/services/features/practice/practice-session.service';
 import { PracticeOptionsComponent } from '../../../components/practice/practice-options/practice-options.component';
+import { PracticeVerdictService } from '../../../shared/services/features/practice/practice-verdict.service';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 import { ScrollDownIndicatorComponent } from '../../../components/scroll-down-indicator/scroll-down-indicator.component';
 import { getQuizData } from '../../../shared/quiz-data-cache';
@@ -47,6 +48,8 @@ export class WeakAreasPracticeComponent {
   private readonly heading = viewChild<ElementRef<HTMLElement>>('heading');
 
   readonly total = this.session.total;
+  private readonly verdicts = inject(PracticeVerdictService);
+
   readonly currentIndex = this.session.currentIndex;
   readonly currentQuestion = this.session.currentQuestion;
   readonly answersByIndex = this.session.answersByIndex;
@@ -58,6 +61,7 @@ export class WeakAreasPracticeComponent {
   readonly isLastQuestion = this.session.isLastQuestion;
   readonly isCurrentAnswered = this.session.isCurrentAnswered;
   readonly isCurrentResolved = this.session.isCurrentResolved;
+  readonly isCurrentMultiAnswer = this.session.isCurrentMultiAnswer;
   readonly currentSelection = this.session.currentSelection;
 
   readonly displayNumber = computed(() => this.currentIndex() + 1);
@@ -76,9 +80,15 @@ export class WeakAreasPracticeComponent {
    * Explanations for questions the user got wrong are available afterwards in
    * Practice Results → Answer Review.
    */
-  readonly explanation = computed(() =>
-    this.isCurrentResolved() ? (this.currentQuestion()?.explanation ?? '') : ''
-  );
+  readonly explanation = computed(() => {
+    if (!this.isCurrentResolved()) return '';
+    const question = this.currentQuestion();
+    if (!question?.sourceQuizId) return '';
+    // The explanation is released BY THE SERVER with the reveal. API-sourced
+    // questions carry none of their own — it is answer-key material, and the
+    // /check response is the only thing entitled to hand it over.
+    return this.verdicts.verdictFor(question.sourceQuizId, question.questionText ?? '').explanation;
+  });
 
   constructor() {
     // Move focus to the practice heading after navigation so keyboard and screen
@@ -86,9 +96,54 @@ export class WeakAreasPracticeComponent {
     afterNextRender(() => this.heading()?.nativeElement.focus());
   }
 
+  /**
+   * Record the selection, then ask the SERVER whether it is right.
+   *
+   * The check is fired on every selection change, which is what keeps a wrong
+   * pick marked immediately and a completed multi-answer set resolving on the
+   * click that completes it. A failed check leaves the question unresolved
+   * rather than guessing — there is no local answer key to fall back on.
+   */
   onSelectionChange(optionIds: number[]): void {
-    this.session.select(this.currentIndex(), optionIds);
+    const index = this.currentIndex();
+    this.session.select(index, optionIds);
+
+    const question = this.currentQuestion();
+    const quizId = question?.sourceQuizId;
+    if (!question || !quizId) return;
+
+    const selectedTexts = (question.options ?? [])
+      .filter((option) => option.optionId != null && optionIds.includes(option.optionId))
+      .map((option) => option.text ?? '')
+      .filter((text) => text.length > 0);
+
+    if (selectedTexts.length === 0) return;
+
+    this.verdicts
+      .check(quizId, question.questionText ?? '', selectedTexts)
+      .subscribe({ error: () => { /* verdict marked errored; UI stays neutral */ } });
   }
+
+  /** Correct option texts the server released for the current question. */
+  readonly revealedCorrectTexts = computed<readonly string[]>(() => {
+    const question = this.currentQuestion();
+    if (!question?.sourceQuizId) return [];
+    return this.verdicts.verdictFor(question.sourceQuizId, question.questionText ?? '').correctTexts;
+  });
+
+  /** Picked option texts the server judged wrong. Never unpicked options. */
+  readonly knownIncorrectTexts = computed<readonly string[]>(() => {
+    const question = this.currentQuestion();
+    if (!question?.sourceQuizId) return [];
+    const verdict = this.verdicts.verdictFor(question.sourceQuizId, question.questionText ?? '');
+    const wrong: string[] = [];
+    for (const option of question.options ?? []) {
+      const text = option.text ?? '';
+      if (!text) continue;
+      if (verdict.selectedVerdicts.get(normalizeText(text)) === false) wrong.push(text);
+    }
+    return wrong;
+  });
 
   previous(): void {
     this.session.previous();
@@ -132,4 +187,9 @@ export class WeakAreasPracticeComponent {
     this.session.clear();
     await this.router.navigate(['/quiz'], { replaceUrl: true });
   }
+}
+
+/** Matches the server's canonicalization closely enough to compare texts. */
+function normalizeText(text: string | null | undefined): string {
+  return (text ?? '').normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
 }

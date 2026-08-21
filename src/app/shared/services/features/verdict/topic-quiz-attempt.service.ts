@@ -59,6 +59,15 @@ export class TopicQuizAttemptService {
   private readonly questionReceipts = new Map<string, Observable<QuestionActivation>>();
 
   /**
+   * Source quiz id → practice attempt receipt, for UNTIMED Weak Areas Practice.
+   *
+   * Separate from `attempt$` on purpose: practice draws questions from several
+   * source quizzes at once, whereas `attempt$` models the one quiz a Topic Quiz
+   * run belongs to and is discarded whenever that quiz changes.
+   */
+  private readonly untimedPracticeAttempts = new Map<string, Observable<string>>();
+
+  /**
    * Match the server's canonicalization closely enough to key the cache.
    *
    * This is a CACHE KEY, not an identity assertion — the server still resolves
@@ -194,6 +203,93 @@ export class TopicQuizAttemptService {
     return this.activation(quizId, questionText).pipe(
       switchMap(({ receipt }) => project({ 'X-Question-Receipt': receipt }))
     );
+  }
+
+  /**
+   * A receipt for ONE untimed Weak Areas Practice check, obtained FRESH every
+   * single time and never cached.
+   *
+   * ── Why practice cannot use `withQuestionReceipt` ──────────────────
+   *
+   * That path caches a question's receipt forever and pins its 30-second
+   * deadline at the moment the question first became active — exactly right for
+   * a timed Topic Quiz, where a revisit must not restart the countdown.
+   *
+   * Practice is UNTIMED. A user is expected to sit and think, and the server's
+   * `checkAnswer` evaluates expiry BEFORE any selection logic: a receipt older
+   * than its deadline returns `expired` with a full reveal and NO grading at
+   * all. Reusing the cached receipt would therefore silently stop scoring the
+   * moment someone paused for half a minute.
+   *
+   * Asking for a new receipt immediately before each check closes that window
+   * to a single round trip. This is a CREDENTIAL POLICY, not a second scorer:
+   * the request, the endpoint and the server's `checkAnswer` are identical, and
+   * the client still cannot assert expiry — only decline to have aged into it.
+   *
+   * ── Deliberately isolated from Topic Quiz state ────────────────────
+   *
+   * `ensureQuiz` is NOT called, and attempt receipts live in their own map.
+   * Practice interleaves several source quizzes within one session, so sharing
+   * the single-quiz cache would both thrash it and wipe the Topic Quiz's own
+   * attempt and receipts as a side effect. Nothing here can change the timing
+   * or caching of a real quiz.
+   */
+  withFreshUntimedPracticeReceipt<T>(
+    quizId: string,
+    questionText: string,
+    project: (headers: Record<string, string>) => Observable<T>
+  ): Observable<T> {
+    return this.untimedPracticeAttemptReceipt(quizId).pipe(
+      switchMap((attemptReceipt) =>
+        this.http.post<QuestionStartResponse>(
+          `${this.baseUrl(quizId)}/questions/start`,
+          { questionText },
+          { headers: { 'X-Attempt-Receipt': attemptReceipt } }
+        )
+      ),
+      switchMap((body) => project({ 'X-Question-Receipt': body.questionReceipt })),
+      catchError((err: unknown) =>
+        throwError(() =>
+          err instanceof QuestionVerdictError ? err : new QuestionVerdictError('Invalid submission')
+        )
+      )
+    );
+  }
+
+  /**
+   * The practice attempt receipt for one source quiz, created at most once per
+   * quiz and held SEPARATELY from `attempt$`.
+   *
+   * Attempt receipts are safe to reuse for the whole session: the server checks
+   * only their shape and signature, never the wall clock, so an aging attempt
+   * receipt still authorizes `/questions/start`. Only the per-question deadline
+   * is time-sensitive, which is what the fresh call above deals with.
+   */
+  private untimedPracticeAttemptReceipt(quizId: string): Observable<string> {
+    const cached = this.untimedPracticeAttempts.get(quizId);
+    if (cached) return cached;
+
+    const request$ = this.http
+      .post<{ attemptReceipt: string }>(`${this.baseUrl(quizId)}/attempts`, {})
+      .pipe(
+        map((body) => body.attemptReceipt),
+        catchError((err: unknown) => {
+          // A failed attempt must not poison the map — practice may retry.
+          this.untimedPracticeAttempts.delete(quizId);
+          return throwError(() =>
+            err instanceof QuestionVerdictError ? err : new QuestionVerdictError('Invalid submission')
+          );
+        }),
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+
+    this.untimedPracticeAttempts.set(quizId, request$);
+    return request$;
+  }
+
+  /** Discard practice credentials when a session ends. Topic Quiz untouched. */
+  clearUntimedPracticeReceipts(): void {
+    this.untimedPracticeAttempts.clear();
   }
 }
 

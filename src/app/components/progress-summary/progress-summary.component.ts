@@ -340,7 +340,7 @@ export class ProgressSummaryComponent {
    * so an eligible-looking action can never navigate into an empty session.
    */
   async startPractice(): Promise<void> {
-    if (!this.practiceSession.start()) return;
+    if (!(await this.practiceSession.start())) return;
     await this.router.navigate(['/practice/weak-areas']);
   }
 

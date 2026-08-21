@@ -5,15 +5,34 @@ import {
   PracticeReviewEntry,
   PracticeTopicScore
 } from '../models/PracticeResult.model';
-import { isAnswerCorrect } from './interview-scoring';
-import { isOptionCorrect } from './is-option-correct';
+import { declaredIsMultiAnswer } from './question-type-authority';
+
+/**
+ * "Was this question answered correctly?", answered by the AUTHORIZED verdict.
+ *
+ * Practice passes a reader over `PracticeVerdictService`, which holds what
+ * `POST /check` said. It is a parameter rather than an import so this module
+ * stays pure and testable, and — more importantly — so there is no way for a
+ * local answer-key recomputation to creep back in as a fallback.
+ *
+ * `false` means the server said not-correct OR has not answered yet. Practice
+ * treats "not yet authorized" as not-resolved, never as correct.
+ */
+export type AuthorizedResolved = (question: QuizQuestion) => boolean;
 
 /**
  * Weak Areas Practice gating + scoring.
  *
- * CORRECTNESS IS NOT REDEFINED HERE. Every judgement below delegates to the
- * shared `isAnswerCorrect()` — the same exact-set rule the app already uses, so
- * a partial multi-answer is incorrect and an unanswered question is incorrect.
+ * CORRECTNESS IS NOT DECIDED HERE. Every judgement below delegates to the
+ * AUTHORIZED verdict passed in by the caller, which holds what
+ * `POST /api/quizzes/:quizId/check` said. A partial multi-answer is not
+ * resolved and an unanswered question is not resolved, exactly as before — but
+ * the server, not the browser, is what decides it.
+ *
+ * Practice questions come from `GET /questions` and carry NO answer key, so
+ * there is nothing here to recount even as a fallback. That is deliberate: a
+ * fallback would work in development and fail silently in production the day
+ * the local bank is deleted.
  *
  * The gating rules reproduce the VERIFIED topic-quiz behaviour:
  *
@@ -35,24 +54,25 @@ import { isOptionCorrect } from './is-option-correct';
  * answer still selected scores incorrect.
  */
 
-function optionIdsWhere(
-  question: QuizQuestion | null | undefined,
-  predicate: (option: Option) => boolean
-): number[] {
-  return (question?.options ?? [])
-    .filter((option) => predicate(option))
-    .map((option) => option.optionId)
-    .filter((id): id is number => id != null);
+/**
+ * Multi-answer per the DECLARED type. Never counted from the answer key.
+ *
+ * Counting `option.correct` made question type a derivative of the answer key,
+ * which cannot survive the key leaving the browser: with API-sourced practice
+ * questions the count is always zero, so every multi-answer question would
+ * silently render as single-select. The type is declared by `GET /questions`
+ * and travels on the question itself.
+ *
+ * `null` means UNDECLARED — never "single". Callers fail closed on it rather
+ * than guessing; see `canAdvanceFromQuestion`.
+ */
+export function declaredMultiAnswer(question: QuizQuestion | null | undefined): boolean | null {
+  return declaredIsMultiAnswer(question);
 }
 
-/** The correct option ids, tolerant of the data's boolean/string variants. */
-export function correctOptionIds(question: QuizQuestion | null | undefined): number[] {
-  return optionIdsWhere(question, (option) => isOptionCorrect(option));
-}
-
-/** Multi-answer means MORE THAN ONE correct option — the same test the app uses. */
+/** Multi-answer, for consumers that only render. Undeclared renders single. */
 export function isMultiAnswerQuestion(question: QuizQuestion | null | undefined): boolean {
-  return correctOptionIds(question).length > 1;
+  return declaredIsMultiAnswer(question) === true;
 }
 
 /**
@@ -62,10 +82,15 @@ export function isMultiAnswerQuestion(question: QuizQuestion | null | undefined)
  */
 export function isQuestionResolved(
   question: QuizQuestion | null | undefined,
-  selectedIds: readonly number[] | undefined
+  selectedIds: readonly number[] | undefined,
+  authorizedResolved: AuthorizedResolved
 ): boolean {
   if (!question) return false;
-  return isAnswerCorrect(question, [...(selectedIds ?? [])]);
+  if ((selectedIds ?? []).length === 0) return false;
+  // The ONLY source. There is deliberately no local recomputation to fall back
+  // on: `option.correct` is absent from API-sourced practice questions, and a
+  // fallback would quietly grade every answer wrong.
+  return authorizedResolved(question) === true;
 }
 
 /**
@@ -76,12 +101,23 @@ export function isQuestionResolved(
  */
 export function canAdvanceFromQuestion(
   question: QuizQuestion | null | undefined,
-  selectedIds: readonly number[] | undefined
+  selectedIds: readonly number[] | undefined,
+  authorizedResolved: AuthorizedResolved
 ): boolean {
   if (!question) return false;
   const selected = (selectedIds ?? []).filter((id) => id != null);
   if (selected.length === 0) return false;
-  if (isMultiAnswerQuestion(question)) return isQuestionResolved(question, selected);
+
+  const declared = declaredMultiAnswer(question);
+
+  // FAIL CLOSED on an undeclared type. Treating unknown as single-answer would
+  // let a multi-answer question advance on one pick, which is the exact
+  // demotion the declared-type work exists to prevent. Requiring the authorized
+  // verdict is the strict reading, and it is also always satisfiable: a
+  // correctly answered question resolves either way.
+  if (declared === true || declared === null) {
+    return isQuestionResolved(question, selected, authorizedResolved);
+  }
   return true;
 }
 
@@ -109,8 +145,19 @@ export function computePracticeResult(params: {
   answersByIndex: Record<number, number[]>;
   completedAt: string;
   topicNameFor: (topicId: string) => string;
+  /** The authorized verdict. See `AuthorizedResolved` — never a local recount. */
+  authorizedResolved: AuthorizedResolved;
+  /**
+   * The correct option texts the SERVER revealed for a question, or [] when it
+   * has not revealed them. Practice never derives these from `option.correct`:
+   * an unanswered question's answers are not the client's to know.
+   */
+  authorizedCorrectTexts: (question: QuizQuestion) => readonly string[];
 }): PracticeResult {
-  const { sessionId, questions, answersByIndex, completedAt, topicNameFor } = params;
+  const {
+    sessionId, questions, answersByIndex, completedAt, topicNameFor,
+    authorizedResolved, authorizedCorrectTexts
+  } = params;
 
   const total = questions.length;
   let correct = 0;
@@ -122,7 +169,7 @@ export function computePracticeResult(params: {
   for (const [index, question] of questions.entries()) {
     const selectedIds = (answersByIndex[index] ?? []).filter((id) => id != null);
     const isAnswered = selectedIds.length > 0;
-    const isCorrect = isQuestionResolved(question, selectedIds);
+    const isCorrect = isQuestionResolved(question, selectedIds, authorizedResolved);
 
     if (isAnswered) answered++;
     if (isCorrect) correct++;
@@ -142,7 +189,7 @@ export function computePracticeResult(params: {
       topicId,
       topicName,
       selectedTexts: optionTextsForIds(question, selectedIds),
-      correctTexts: optionTextsForIds(question, correctOptionIds(question)),
+      correctTexts: [...authorizedCorrectTexts(question)],
       answered: isAnswered,
       isCorrect,
       explanation: question.explanation ?? ''

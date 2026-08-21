@@ -48,6 +48,8 @@ import { ThemeToggleComponent } from '../../components/theme-toggle/theme-toggle
 import { ScrollDownIndicatorComponent } from '../../components/scroll-down-indicator/scroll-down-indicator.component';
 import { CountUpDirective } from '../../directives/count-up.directive';
 
+import { TopicQuizMetadataService } from '../../shared/services/api/topic-quiz-metadata.service';
+
 import { getQuizData } from '../../shared/quiz-data-cache';
 import { SlideLeftToRightAnimation } from '../../animations/animations';
 import { swallow } from '../../shared/utils/error-logging';
@@ -92,6 +94,7 @@ export class QuizSelectionComponent implements OnInit {
   private readonly difficultyService = inject(DifficultyRecommendationService);
   private readonly bestScoreService = inject(BestScoreService);
   private readonly sessionEngagement = inject(SessionEngagementService);
+  private readonly metadataApi = inject(TopicQuizMetadataService);
   private readonly router = inject(Router);
 
   // Gates the progress-driven pieces on THIS screen. Shown whenever the user has
@@ -292,6 +295,10 @@ export class QuizSelectionComponent implements OnInit {
   readonly selectionParams = signal<QuizSelectionParams | null>(null);
 
   ngOnInit(): void {
+    // Tile imagery comes from /quizzes. Fire-and-forget: the bundled value keeps
+    // tiles painted until this lands, and the service never throws.
+    this.metadataApi.load().subscribe({ error: () => undefined });
+
     // Open at the TOP of the page — otherwise navigating here (e.g. "Select
     // Quiz" from a scrolled-down Results page) inherits the previous scroll
     // offset and lands partway down the list.
@@ -379,7 +386,14 @@ export class QuizSelectionComponent implements OnInit {
   }
 
   getQuizTileStyles(quiz: Quiz): QuizTileStyles {
-    const image = this.safeImageUrl(quiz?.image);
+    // API-FIRST. `/quizzes` is the authority for tile imagery; the bundled value
+    // is a transitional fallback that keeps tiles from going blank while a cold
+    // backend answers. Both carry identical URLs today, so the swap is invisible.
+    // The fallback goes with the asset in S7b-2.
+    this.metadataApi.imageByQuiz();   // track the signal so tiles restyle on load
+    const image = this.safeImageUrl(
+      this.metadataApi.imageFor(quiz?.quizId) || quiz?.image
+    );
     return {
       background: image
         ? `url("${image}") no-repeat center 10px`

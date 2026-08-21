@@ -109,3 +109,78 @@ describe('TopicQuizMetadataService', () => {
     req.flush({ quizzes: [] });
   });
 });
+
+/**
+ * Imagery moved to the metadata endpoint alongside facts.
+ *
+ * The consumers apply `api || bundled`, so the meaningful contract here is that
+ * an ABSENT image reports '' rather than undefined — that is what lets the
+ * transitional fallback trigger, and what will degrade to "no background" once
+ * the asset is deleted.
+ */
+describe('TopicQuizMetadataService — imagery', () => {
+  let http: HttpTestingController;
+  let service: TopicQuizMetadataService;
+
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: BASE },
+        TopicQuizMetadataService
+      ]
+    });
+    http = TestBed.inject(HttpTestingController);
+    service = TestBed.inject(TopicQuizMetadataService);
+  });
+
+  afterEach(() => http.verify());
+
+  it('serves the image from the metadata response', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).flush({
+      quizzes: [{ quizId: 'rxjs', image: 'https://cdn.test/rxjs.png', facts: [] }]
+    });
+    expect(service.imageFor('rxjs')).toBe('https://cdn.test/rxjs.png');
+  });
+
+  it('reports an EMPTY STRING when the server gives no image', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).flush({ quizzes: [{ quizId: 'rxjs', facts: [] }] });
+    // '' is what makes `api || bundled` fall through to the transitional value.
+    expect(service.imageFor('rxjs')).toBe('');
+    expect(service.imageFor('unknown')).toBe('');
+    expect(service.imageFor(null)).toBe('');
+  });
+
+  it('ignores blank and non-string images rather than serving them', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).flush({
+      quizzes: [
+        { quizId: 'a', image: '   ' },
+        { quizId: 'b', image: 42 },
+        { quizId: 'c', image: 'https://cdn.test/c.png' }
+      ]
+    });
+    expect(service.imageFor('a')).toBe('');
+    expect(service.imageFor('b')).toBe('');
+    expect(service.imageFor('c')).toBe('https://cdn.test/c.png');
+  });
+
+  it('a failed load leaves imagery empty — consumers fall back, never crash', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
+    expect(service.imageFor('rxjs')).toBe('');
+  });
+
+  it('facts and imagery arrive from the SAME single request', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).flush({
+      quizzes: [{ quizId: 'rxjs', image: 'https://cdn.test/rxjs.png', facts: ['A'] }]
+    });
+    expect(service.imageFor('rxjs')).toBe('https://cdn.test/rxjs.png');
+    expect(service.factsFor('rxjs')).toEqual(['A']);
+  });
+});

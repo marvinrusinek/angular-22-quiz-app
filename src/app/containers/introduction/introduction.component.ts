@@ -17,6 +17,7 @@ import { Quiz } from '../../shared/models/Quiz.model';
 import { QuizQuestion } from '../../shared/models/QuizQuestion.model';
 
 import { QuizDataService } from '../../shared/services/data/quizdata.service';
+import { TopicQuizMetadataService } from '../../shared/services/api/topic-quiz-metadata.service';
 import { QuizDotStatusService } from '../../shared/services/flow/quiz-dot-status.service';
 import { QuizNavigationService } from '../../shared/services/flow/quiz-navigation.service';
 import { QuizPersistenceService } from '../../shared/services/state/quiz-persistence.service';
@@ -51,6 +52,7 @@ export interface QuizPreferencesModel {
 export class IntroductionComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
   private readonly dotStatusService = inject(QuizDotStatusService);
+  private readonly metadataApi = inject(TopicQuizMetadataService);
   private readonly quizDataService = inject(QuizDataService);
   private readonly quizNavigationService = inject(QuizNavigationService);
   private readonly quizPersistence = inject(QuizPersistenceService);
@@ -106,6 +108,8 @@ export class IntroductionComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Intro imagery comes from /quizzes; the bundled value covers the gap.
+    this.metadataApi.load().subscribe({ error: () => undefined });
     this.quizService.clearStoredCorrectAnswersText();
     this.subscribeToRouteParameters();
   }
@@ -198,7 +202,9 @@ export class IntroductionComponent implements OnInit {
       const questionCount = quiz.questions?.length ?? 0;
 
       this.selectedQuiz.set(quiz);
-      this.introImgSig.set(quiz.image);
+      // API-FIRST: /quizzes is the authority for imagery; the bundled value is
+      // a transitional fallback for a cold backend. Removed with the asset in S7b-2.
+      this.introImgSig.set(this.metadataApi.imageFor(quiz.quizId) || quiz.image);
       this.questionCountSig.set(questionCount);
     } else {
       console.warn('[QuizSelection] Quiz was not found or failed to load.');

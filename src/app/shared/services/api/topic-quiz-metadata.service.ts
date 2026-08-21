@@ -64,6 +64,12 @@ export class TopicQuizMetadataService {
   readonly factsByQuiz: Signal<ReadonlyMap<string, readonly string[]>> =
     this._factsByQuiz.asReadonly();
 
+  /** quizId → tile/intro image URL, from the same metadata response. */
+  private readonly _imageByQuiz = signal<ReadonlyMap<string, string>>(new Map());
+
+  /** Exposed so a template-facing computed can track it. */
+  readonly imageByQuiz: Signal<ReadonlyMap<string, string>> = this._imageByQuiz.asReadonly();
+
   /** One in-flight request shared by every caller. */
   private inFlight: Observable<readonly QuizMetadataEntryDto[]> | null = null;
 
@@ -80,15 +86,22 @@ export class TopicQuizMetadataService {
       .pipe(
         map((body) => body?.quizzes ?? []),
         tap((entries) => {
-          const next = new Map<string, readonly string[]>();
+          const facts = new Map<string, readonly string[]>();
+          const images = new Map<string, string>();
           for (const entry of entries) {
             if (!entry?.quizId) continue;
-            const facts = Array.isArray(entry.facts)
-              ? entry.facts.filter((f): f is string => typeof f === 'string' && f.trim().length > 0)
-              : [];
-            next.set(entry.quizId, facts);
+            facts.set(
+              entry.quizId,
+              Array.isArray(entry.facts)
+                ? entry.facts.filter((f): f is string => typeof f === 'string' && f.trim().length > 0)
+                : []
+            );
+            if (typeof entry.image === 'string' && entry.image.trim().length > 0) {
+              images.set(entry.quizId, entry.image.trim());
+            }
           }
-          this._factsByQuiz.set(next);
+          this._factsByQuiz.set(facts);
+          this._imageByQuiz.set(images);
         }),
         catchError(() => of([] as readonly QuizMetadataEntryDto[])),
         shareReplay({ bufferSize: 1, refCount: false })
@@ -106,5 +119,24 @@ export class TopicQuizMetadataService {
   factsFor(quizId: string | null | undefined): readonly string[] {
     if (!quizId) return [];
     return this._factsByQuiz().get(quizId) ?? [];
+  }
+
+  /**
+   * The tile / intro image for one quiz, or '' when the server has not said.
+   *
+   * Consumers treat '' as "fall back to the bundled value FOR NOW". That
+   * fallback is transitional and exists for one reason: the metadata call can
+   * be slow on a cold backend, and a bundled image renders instantly, so
+   * API-only would leave every tile blank for as long as the cold start takes.
+   * Because both sources carry the identical URLs today, API-first is invisible
+   * when it lands and harmless when it does not.
+   *
+   * REMOVE THE FALLBACK WITH THE ASSET (S7b-2), at which point '' simply means
+   * no background — the same degraded state `safeImageUrl` already produces for
+   * a value it rejects.
+   */
+  imageFor(quizId: string | null | undefined): string {
+    if (!quizId) return '';
+    return this._imageByQuiz().get(quizId) ?? '';
   }
 }

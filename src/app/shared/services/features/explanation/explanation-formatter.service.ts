@@ -10,7 +10,7 @@ import { Option } from '../../../models/Option.model';
 import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
 import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { authorizedCorrectTexts } from '../verdict/authorized-correctness';
+import { authorizedCorrectTexts, authorizedExplanation } from '../verdict/authorized-correctness';
 import { QuizService } from '../../data/quiz.service';
 import { QuizShuffleService } from '../../flow/quiz-shuffle.service';
 import { pinAllOfTheAboveLast, pinnedIndex1Based } from '../../../utils/all-of-the-above';
@@ -93,9 +93,27 @@ export class ExplanationFormatterService {
       return of({ questionIndex, explanation: '' });
     }
 
-    // Explanation fallback if missing or blank
+    // NOTHING IS SAID UNTIL THERE IS SOMETHING TO SAY.
+    //
+    // This fabricated `'Explanation not provided'` whenever the question
+    // carried no explanation of its own — and then STORED it, into both
+    // `formattedExplanations[idx]` and `fetByIndex`. Since S4 an API-sourced
+    // question never carries one (the explanation names the correct options, so
+    // only `/check` may release it), which means the placeholder was written on
+    // every question while the verdict was still `idle`, before anything had
+    // been asked. `heading-inputs` prefers those stored values over the
+    // authorized explanation, so the fabrication won until something overwrote
+    // it — and stayed on screen whenever nothing did.
+    //
+    // An empty raw explanation now falls to the AUTHORIZED one, and if that has
+    // not arrived either, this returns without storing anything at all. The
+    // heading renders nothing, which is the honest state for "not yet checked".
     const rawExplanation =
-      question?.explanation?.trim() || 'Explanation not provided';
+      question?.explanation?.trim() || this.authorizedExplanationFor(questionIndex);
+
+    if (!rawExplanation) {
+      return of({ questionIndex, explanation: '' });
+    }
 
     // Idempotency detector (same as in formatExplanation)
     const alreadyFormattedRe =
@@ -192,6 +210,22 @@ export class ExplanationFormatterService {
     return Array.from(new Set(
       rawNumbers.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)
     )).sort((a, b) => a - b);
+  }
+
+  /**
+   * The AUTHORIZED explanation for a display index, or '' when none exists yet.
+   *
+   * Same lazy-injector approach as the authorized-indices helper below, and the
+   * same authority: `authorizedExplanation` answers only on a TERMINAL verdict
+   * (resolved or expired), so this is empty while idle or checking — which is
+   * exactly when nothing should be rendered.
+   */
+  private authorizedExplanationFor(displayIndex: number): string {
+    if (typeof displayIndex !== 'number' || displayIndex < 0) return '';
+    const quizSvc = this.injector.get(QuizService, null);
+    const verdicts = this.injector.get(QuestionVerdictService, null);
+    if (!quizSvc || !verdicts) return '';
+    return (authorizedExplanation(quizSvc, displayIndex, verdicts) ?? '').trim();
   }
 
   /** Visual correct-option indices from the snapshot: by answer-text first, then by correct flags. */

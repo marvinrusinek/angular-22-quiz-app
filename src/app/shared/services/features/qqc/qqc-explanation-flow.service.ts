@@ -307,7 +307,23 @@ export class QqcExplanationFlowService {
     if (!q) return null;
 
     const correctIdxs = this.explanationTextService.getCorrectOptionIndices(q);
-    const rawExpl = (q.explanation ?? '').trim() || 'Explanation not provided';
+
+    // NOTHING TO SAY YET IS NOT A SENTENCE.
+    //
+    // This fabricated `'Explanation not provided'` when the question carried no
+    // explanation, and the caller then applied and displayed it. Since S4 an
+    // API-sourced question never carries one — the explanation names the
+    // correct options, so only `/check` may release it — so the placeholder
+    // stood in for an answer nobody had authorized yet.
+    //
+    // Returning null is the shape this method already uses for "nothing to
+    // compute" (see the `!q` guard above), and `runOnSubmitMultiple` bails on it
+    // without writing anything. The authorized explanation still reaches the
+    // heading through the formatter, which composes it once the verdict is
+    // terminal — so this only removes the fabrication, never the real text.
+    const rawExpl = (q.explanation ?? '').trim();
+    if (!rawExpl) return null;
+
     const formatted = this.explanationTextService.formatExplanation(q, correctIdxs, rawExpl).trim();
 
     let correctAnswersText = '';

@@ -24,7 +24,8 @@ import { TimerService } from '../features/timer/timer.service';
 
 import type { QuizComponent } from '../../../containers/quiz/quiz.component';
 import { withCorrectCountBanner } from '../../utils/correct-count-banner';
-import { isOptionCorrect } from '../../utils/is-option-correct';
+import { bannerCorrectCount, declaredIsMultiAnswer } from '../../utils/question-type-authority';
+import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
 import { swallow } from '../../utils/error-logging';
 
 type Host = QuizComponent;
@@ -46,6 +47,7 @@ export class QuizSetupRouteService {
   private quizRouteService = inject(QuizRouteService);
   private quizService = inject(QuizService);
   private quizStateService = inject(QuizStateService);
+  private topicQuizTypeRegistry = inject(TopicQuizTypeRegistry);
   private router = inject(Router);
   private selectedOptionService = inject(SelectedOptionService);
   private selectionMessageService = inject(SelectionMessageService);
@@ -371,25 +373,38 @@ export class QuizSetupRouteService {
 
   /**
    * Build question display HTML including the multi-answer banner.
-   * Uses pristine quizInitialState for accurate correct-answer count.
+   *
+   * THE COUNT IS DECLARED METADATA, NOT A LOCAL TALLY.
+   *
+   * This counted `option.correct` over the rendered options and then took the
+   * larger of that and a PRISTINE recount — two readings of the same answer
+   * key. Both are zero for a question from `/questions`, so the banner silently
+   * vanished: `.correct-count` never entered the DOM at all.
+   *
+   * It is the third and last writer of this banner. The other two — the
+   * single-source heading and the quiz component — already read the declared
+   * `correctCount`, which is why only the legacy route-setup path still needed
+   * the bundled key. All three now agree on the source.
+   *
+   * `correctCount` is CARDINALITY, not identity: how many options are right,
+   * never which. NULL IS NOT ZERO — an undeclared count renders NO banner
+   * rather than a reconstructed one, the same state every single-answer
+   * question is already in.
    */
   buildQuestionDisplayHTML(question: QuizQuestion): string {
     const rawQ = (question.questionText ?? '').trim();
     if (!rawQ) return '';
 
     const opts = question.options ?? [];
-    let numCorrect = opts.filter((o: Option) => isOptionCorrect(o)).length;
 
-    // Cross-check against pristine data for accurate count
-    try {
-      const pq = this.quizService?.getPristineQuestionByText(rawQ);
-      if (pq) {
-        const pc = (pq.options ?? []).filter(
-          (o: any) => isOptionCorrect(o)
-        ).length;
-        if (pc > numCorrect) numCorrect = pc;
-      }
-    } catch (err: unknown) { swallow('quiz-setup-route.service.ts', err); }
+    const numCorrect = bannerCorrectCount(
+      declaredIsMultiAnswer(question) === true,
+      this.topicQuizTypeRegistry,
+      rawQ
+    );
+
+    // FAILS CLOSED: nothing declared means no banner, never a local recount.
+    if (numCorrect === null) return rawQ;
 
     if (numCorrect > 1 && opts.length > 0) {
       const pluralSuffix = numCorrect === 1 ? 'answer is' : 'answers are';

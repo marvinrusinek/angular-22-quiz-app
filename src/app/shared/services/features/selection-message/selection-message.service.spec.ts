@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
 import { QuestionType } from '../../../models/question-type.enum';
 
@@ -8,6 +8,9 @@ import { QuizDotStatusService } from '../../../services/flow/quiz-dot-status.ser
 import { QuizService } from '../../../services/data/quiz.service';
 import { SelectedOptionService } from '../../../services/state/selectedoption.service';
 import { SelectionMessageService } from './selection-message.service';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { IDLE_VERDICT_STATE } from '../verdict/question-verdict.types';
+import type { QuestionVerdictState } from '../verdict/question-verdict.types';
 
 /**
  * DESIGN NOTE — initial state is CONTINUE_MSG, not START_MSG
@@ -28,6 +31,7 @@ import { SelectionMessageService } from './selection-message.service';
 describe('SelectionMessageService', () => {
   let service: SelectionMessageService;
   let quizServiceMock: any;
+  let verdictState: QuestionVerdictState;
   let selectedOptionServiceMock: any;
 
   const START_MSG = 'Please start the quiz by selecting an option.';
@@ -36,7 +40,14 @@ describe('SelectionMessageService', () => {
   const SHOW_RESULTS_MSG = 'Please click the Show Results button.';
 
   beforeEach(() => {
+    verdictState = IDLE_VERDICT_STATE;
+
     quizServiceMock = {
+      quizId: 'typescript',
+      getQuestionsInDisplayOrder: () => [
+        { questionText: 'Q1' }, { questionText: 'Q2' }, { questionText: 'Q3' },
+        { questionText: 'Q4' }, { questionText: 'Q5' }, { questionText: 'Q6' }
+      ],
       currentQuestionIndex: 0,
       currentQuestionIndexSig: () => 0,
       totalQuestions: () => 6,
@@ -58,6 +69,13 @@ describe('SelectionMessageService', () => {
       providers: [
         SelectionMessageService,
         { provide: QuizService, useValue: quizServiceMock },
+        {
+          provide: QuestionVerdictService,
+          useValue: {
+            verdictFor: () => verdictState,
+            terminalVerdicts$: new Subject()
+          }
+        },
         { provide: SelectedOptionService, useValue: selectedOptionServiceMock },
         { provide: QuizDotStatusService, useValue: { timedOutFetForced: new Set<number>() } },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
@@ -79,6 +97,27 @@ describe('SelectionMessageService', () => {
   });
 
   // ── resetAll ────────────────────────────────────────────────
+
+  /**
+   * The verdict the server returned for the question under test.
+   *
+   * These three cases used to pass by setting `option.correct` — the local
+   * answer key. That is exactly the read the fix removed: an API-sourced
+   * option carries no such flag, so classifying from it told a user who had
+   * answered CORRECTLY to "select the correct answer". Correctness is stated
+   * here instead, as the authority states it.
+   */
+  function resolvedWith(correctText: string, selectedText: string): void {
+    verdictState = {
+      ...IDLE_VERDICT_STATE,
+      phase: 'resolved',
+      selectedOptionTexts: [selectedText],
+      selectedVerdicts: new Map([[selectedText, selectedText === correctText]]),
+      correctOptionTexts: [correctText],
+      remainingCorrectCount: 0,
+      isResolvedCorrect: selectedText === correctText
+    } as QuestionVerdictState;
+  }
 
   describe('resetAll', () => {
     it('should reset back to derived default after resetAll', () => {
@@ -140,6 +179,7 @@ describe('SelectionMessageService', () => {
     });
 
     it('should return NEXT_BTN_MSG when correct single answer is selected', () => {
+      resolvedWith('A', 'A');
       const msg = service.computeFinalMessage({
         index: 0,
         total: 6,
@@ -153,6 +193,7 @@ describe('SelectionMessageService', () => {
     });
 
     it('should return SHOW_RESULTS_MSG when correct answer selected on last question', () => {
+      resolvedWith('A', 'A');
       const msg = service.computeFinalMessage({
         index: 5,
         total: 6,
@@ -166,6 +207,7 @@ describe('SelectionMessageService', () => {
     });
 
     it('should return "select correct answer" when wrong answer selected', () => {
+      resolvedWith('A', 'B');
       const msg = service.computeFinalMessage({
         index: 0,
         total: 6,
@@ -290,6 +332,101 @@ describe('SelectionMessageService', () => {
     it('should release baseline for the index', () => {
       service.forceNextButtonMessage(2);
       expect(service._baselineReleased.has(2)).toBe(true);
+    });
+  });
+  /**
+   * SINGLE-ANSWER MESSAGES COME FROM THE VERDICT.
+   *
+   * The regression: a CORRECT pick was told "Please select the correct answer to
+   * continue." Tracing the live path showed both halves —
+   *
+   *     selected=[{"t":"constructor","corr":false,"own":false}]  phase=checking
+   *     selectedCorrect=0  selectedWrong=1  -> BRANCH=wrong
+   *
+   * `own=false`: an API-sourced option carries no `correct` at all, so the old
+   * `isOptionCorrect` scan classified every pick as wrong. `phase=checking`: at
+   * click time nothing has judged it yet, so no source could have answered.
+   *
+   * The branch therefore has to WAIT, and the arrival has to recompute. These pin
+   * both, plus the latch that made the wrong message survive navigation.
+   */
+  describe('single-answer selection message — authorized, and never latched early', () => {
+    const CHECKING = 'Checking…';
+
+    /** An API-sourced option: text and selection state, and NO correct flag. */
+    function apiOpts(selectedText: string) {
+      return [
+        { text: 'A', selected: selectedText === 'A', value: 1 },
+        { text: 'B', selected: selectedText === 'B', value: 2 }
+      ] as any[];
+    }
+
+    it('CHECKING: a pick with no verdict says "Checking", not "wrong"', () => {
+      verdictState = { ...IDLE_VERDICT_STATE, phase: 'checking' } as QuestionVerdictState;
+      const msg = service.computeFinalMessage({
+        index: 0, total: 6, qType: QuestionType.SingleAnswer, opts: apiOpts('A')
+      });
+      expect(msg).toBe(CHECKING);
+      expect(msg).not.toContain('select the correct answer');
+    });
+
+    it('CHECKING writes NEITHER lock — this is what made the bad message stick', () => {
+      verdictState = { ...IDLE_VERDICT_STATE, phase: 'checking' } as QuestionVerdictState;
+      service.computeFinalMessage({
+        index: 2, total: 6, qType: QuestionType.SingleAnswer, opts: apiOpts('A')
+      });
+      expect((service as any)._singleAnswerIncorrectLock.has(2)).toBe(false);
+      expect((service as any)._singleAnswerCorrectLock.has(2)).toBe(false);
+    });
+
+    it('RESOLVED + correct: Next button, from options carrying NO correct flag', () => {
+      resolvedWith('A', 'A');
+      const opts = apiOpts('A');
+      for (const o of opts) {
+        expect(Object.prototype.hasOwnProperty.call(o, 'correct')).toBe(false);
+      }
+      const msg = service.computeFinalMessage({
+        index: 0, total: 6, qType: QuestionType.SingleAnswer, opts
+      });
+      expect(msg).toBe(NEXT_BTN_MSG);
+    });
+
+    it('RESOLVED + wrong: the select-correct prompt', () => {
+      resolvedWith('A', 'B');
+      const msg = service.computeFinalMessage({
+        index: 0, total: 6, qType: QuestionType.SingleAnswer, opts: apiOpts('B')
+      });
+      expect(msg).toBe('Please select the correct answer to continue.');
+    });
+
+    it('a correct answer CLEARS any earlier incorrect lock', () => {
+      (service as any)._singleAnswerIncorrectLock.add(3);
+      resolvedWith('A', 'A');
+      const msg = service.computeFinalMessage({
+        index: 3, total: 6, qType: QuestionType.SingleAnswer, opts: apiOpts('A')
+      });
+      expect(msg).toBe(NEXT_BTN_MSG);
+      expect((service as any)._singleAnswerIncorrectLock.has(3)).toBe(false);
+      expect((service as any)._singleAnswerCorrectLock.has(3)).toBe(true);
+    });
+
+    it('REVISIT: recomputing a resolved-correct question still says Next', () => {
+      resolvedWith('A', 'A');
+      const args = {
+        index: 1, total: 6, qType: QuestionType.SingleAnswer, opts: apiOpts('A')
+      };
+      expect(service.computeFinalMessage(args)).toBe(NEXT_BTN_MSG);
+      // Navigating away and back recomputes from the same authorized verdict.
+      expect(service.computeFinalMessage(args)).toBe(NEXT_BTN_MSG);
+    });
+
+    it('no selection at all still yields the ordinary prompt', () => {
+      verdictState = IDLE_VERDICT_STATE;
+      const msg = service.computeFinalMessage({
+        index: 2, total: 6, qType: QuestionType.SingleAnswer,
+        opts: [{ text: 'A', selected: false, value: 1 }] as any[]
+      });
+      expect(msg).toBe(CONTINUE_MSG);
     });
   });
 });

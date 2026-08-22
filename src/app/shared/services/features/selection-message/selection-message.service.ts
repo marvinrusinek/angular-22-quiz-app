@@ -1,7 +1,7 @@
 import { computed, effect, Service, inject, signal, untracked } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { Observable } from 'rxjs';
-import { distinctUntilChanged } from 'rxjs/operators';
+import { Observable, Subscription } from 'rxjs';
+import { distinctUntilChanged, filter, take } from 'rxjs/operators';
 
 import { ExplanationTextService } from '../explanation/explanation-text.service';
 
@@ -12,10 +12,12 @@ import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
 import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
+import { selectedVerdictFor } from '../verdict/authorized-correctness';
 import { norm } from '../../../utils/text-norm';
 
 import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
 import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import type { QuestionVerdictState } from '../verdict/question-verdict.types';
 import { QuizService } from '../../data/quiz.service';
 import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
@@ -35,6 +37,14 @@ export const SELECT_ALL_THAT_APPLY_MSG = 'Select all that apply';
 const START_MSG = 'Please start the quiz by selecting an option.';
 const CONTINUE_MSG = 'Please select an option to continue...';
 const NEXT_BTN_MSG = 'Please click the Next button to continue.';
+/**
+ * Shown while `/check` is in flight for a single-answer question.
+ *
+ * The pick has been made but nobody has judged it yet. Saying "select the
+ * correct answer" there asserts the pick was WRONG, which is a claim no
+ * authority has made — and it was latched, so it survived navigation.
+ */
+const CHECKING_MSG = 'Checking…';
 export const SHOW_RESULTS_MSG = 'Please click the Show Results button.';
 
 interface OptionSnapshot {
@@ -336,6 +346,27 @@ export class SelectionMessageService {
    * Shuffle-aware: the display-order array is the only correct source, since
    * `index` is a display index.
    */
+  /**
+   * The recorded verdict for the question at a DISPLAY index, or null.
+   *
+   * Shuffle-aware for the same reason `remainingCorrectFromVerdict` is: the
+   * display-order array is the only correct source when `index` is a display
+   * index.
+   */
+  private verdictStateFor(index: number): QuestionVerdictState | null {
+    try {
+      const service = this.quizService as any;
+      const quizId = service?.quizId;
+      const questionText =
+        service?.getQuestionsInDisplayOrder?.()?.[index]?.questionText
+        ?? service?.questions?.[index]?.questionText;
+      if (!quizId || !questionText) return null;
+      return this.verdicts.verdictFor(quizId, questionText);
+    } catch {
+      return null;
+    }
+  }
+
   private remainingCorrectFromVerdict(index: number): number | null {
     try {
       const service = this.quizService as any;
@@ -367,35 +398,61 @@ export class SelectionMessageService {
     const selectedWrong = opts.filter(o => o.selected && !isOptionCorrect(o)).length;
 
     if (qType === QuestionType.SingleAnswer) {
-      if (selectedCorrect > 0) {
+      // CORRECTNESS COMES FROM THE VERDICT, AND ONLY ONCE IT EXISTS.
+      //
+      // This branch classified the pick with `isOptionCorrect(option)` while
+      // its multi-answer sibling had already moved to the authorized verdict.
+      // An API-sourced option carries no `correct` at all, so a CORRECT pick
+      // counted as zero-correct/one-wrong and the user was told to "select the
+      // correct answer" — then `_singleAnswerIncorrectLock` latched it, so the
+      // wrong message survived Next/Previous and every later revisit.
+      //
+      // Tracing the live path showed both halves of the defect: `own=false`
+      // (no flag on the option) AND `phase=checking` (no verdict yet). Reading
+      // a different source alone would not have fixed it — at click time there
+      // is nothing to read. So this waits, and the arrival recomputes.
+      const state = this.verdictStateFor(index);
+      const phase = state?.phase ?? "idle";
+      const selectedTexts = opts.filter((o) => o.selected).map((o) => o.text ?? "");
+
+      if (selectedTexts.length === 0) {
+        return index === 0 ? START_MSG : CONTINUE_MSG;
+      }
+
+      // A pick exists but nothing has judged it. Claim NOTHING, and write
+      // neither lock — a lock here is what made the wrong state permanent.
+      if (phase !== "resolved" && phase !== "expired") {
+        this.recomputeWhenVerdictArrives({ index, total, qType, opts });
+        return CHECKING_MSG;
+      }
+
+      const answeredCorrectly = selectedTexts.some(
+        (text) => selectedVerdictFor(state, text) === true
+      );
+
+      if (answeredCorrectly) {
         this._singleAnswerCorrectLock.add(index);
         this._singleAnswerIncorrectLock.delete(index);
         return isLastQuestion ? SHOW_RESULTS_MSG : NEXT_BTN_MSG;
       }
-      if (selectedWrong > 0) {
-        this._singleAnswerIncorrectLock.add(index);
-        // Track cumulative wrong clicks per question for last-question logic.
-        if (!this._wrongClickCounts) this._wrongClickCounts = new Map();
-        const prevCount = this._wrongClickCounts.get(index) ?? 0;
-        this._wrongClickCounts.set(index, prevCount + 1);
-        // On the last question, show "Show Results" only when ALL incorrect
-        // options have been exhausted (correct auto-revealed).
-        //
-        // The incorrect count used to come from `opts.filter(o => !isOptionCorrect(o))`
-        // — a scan of the private answer key. It does not need to: a
-        // single-answer question has exactly ONE correct option by definition,
-        // so the number of wrong ones is simply "every option but one". That is
-        // derived from the option count, which is public, and is arithmetically
-        // identical to the old scan.
-        if (isLastQuestion) {
-          const totalIncorrect = Math.max(0, opts.length - 1);
-          if (this._wrongClickCounts.get(index)! >= totalIncorrect) {
-            return SHOW_RESULTS_MSG;
-          }
+
+      this._singleAnswerIncorrectLock.add(index);
+      // Track cumulative wrong clicks per question for last-question logic.
+      if (!this._wrongClickCounts) this._wrongClickCounts = new Map();
+      const prevCount = this._wrongClickCounts.get(index) ?? 0;
+      this._wrongClickCounts.set(index, prevCount + 1);
+      // On the last question, show "Show Results" only when ALL incorrect
+      // options have been exhausted (correct auto-revealed). A single-answer
+      // question has exactly ONE correct option by definition, so the number of
+      // wrong ones is every option but one — derived from the public option
+      // count, never from a scan of the answer key.
+      if (isLastQuestion) {
+        const totalIncorrect = Math.max(0, opts.length - 1);
+        if (this._wrongClickCounts.get(index)! >= totalIncorrect) {
+          return SHOW_RESULTS_MSG;
         }
-        return 'Please select the correct answer to continue.';
       }
-      return index === 0 ? START_MSG : CONTINUE_MSG;
+      return 'Please select the correct answer to continue.';
     }
 
     if (qType === QuestionType.MultipleAnswer) {
@@ -442,6 +499,64 @@ export class SelectionMessageService {
     }
 
     return index === 0 ? START_MSG : CONTINUE_MSG;
+  }
+
+  /** In-flight message recomputations, keyed by quiz + canonical question. */
+  private readonly pendingMessageRecompute = new Map<string, Subscription>();
+
+  /**
+   * Recompute this question's selection message once its verdict is terminal.
+   *
+   * "Checking..." is honest but it must not be the last word. Nothing else
+   * recomputes the message: the click path computes it once, and the verdict
+   * arrives milliseconds later with no one listening — the message would sit
+   * at "Checking..." forever.
+   *
+   * One-shot, keyed, self-cleaning, and stale-guarded, mirroring the pattern
+   * `soc-answer-processing` already uses for its respread. No polling, no
+   * delays: the verdict announces itself.
+   */
+  private recomputeWhenVerdictArrives(args: {
+    index: number; total: number; qType: QuestionType; opts: Option[];
+  }): void {
+    const service = this.quizService as any;
+    const quizId = service?.quizId;
+    const questionText =
+      service?.getQuestionsInDisplayOrder?.()?.[args.index]?.questionText
+      ?? service?.questions?.[args.index]?.questionText;
+    if (!quizId || !questionText) return;
+
+    const arrivals = this.verdicts?.terminalVerdicts$;
+    if (!arrivals || typeof arrivals.pipe !== 'function') return;
+
+    const key = `${quizId} ${norm(questionText)}`;
+    if (this.pendingMessageRecompute.has(key)) return;
+
+    const sub = arrivals
+      .pipe(
+        filter((arrival) =>
+          arrival.quizId === quizId && norm(arrival.questionText) === norm(questionText)),
+        take(1)
+      )
+      .subscribe(() => {
+        this.pendingMessageRecompute.delete(key);
+
+        // STALE GUARD: the verdict is current for ITS question, but the user
+        // may have moved on — pushing now would put one question's message on
+        // another's screen.
+        const showing =
+          service?.getQuestionsInDisplayOrder?.()?.[args.index]?.questionText;
+        if (showing && norm(showing) !== norm(questionText)) return;
+
+        // Re-entry is bounded: the phase is terminal now, so the branch
+        // classifies and returns a final message rather than registering again.
+        const msg = this.computeFinalMessage(args);
+        this._lastMessageByIndex.set(args.index, msg);
+        this.pushMessage(msg, args.index);
+      });
+
+    if (sub.closed) this.pendingMessageRecompute.delete(key);
+    else this.pendingMessageRecompute.set(key, sub);
   }
 
   public pushMessage(newMsg: string, _index: number): void {

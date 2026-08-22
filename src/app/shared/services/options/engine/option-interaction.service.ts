@@ -19,7 +19,7 @@ import { SelectedOptionService } from '../../state/selectedoption.service';
 import { SelectionMessageService } from '../../features/selection-message/selection-message.service';
 import { TimerService } from '../../features/timer/timer.service';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
+import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 import { norm } from '../../../utils/text-norm';
 
 export interface OptionInteractionState {
@@ -238,8 +238,7 @@ export class OptionInteractionService {
     this.recordCorrectClickForScoring(qIdx, binding, isPristineCorrect);
 
     const correctCountInBindings = this.resolveCorrectCountInBindings(state);
-    const pristineCorrectCount = this.resolvePristineCorrectCount(correctCountInBindings, qIdx, state);
-    const isMultipleMode = this.resolveIsMultipleMode(state, correctCountInBindings, pristineCorrectCount);
+    const isMultipleMode = this.resolveIsMultipleMode(state, correctCountInBindings);
 
     // Guard: prevent deselection of correct answers in multiple.
     if (isMultipleMode && binding.isSelected && isPristineCorrect(binding.option)) {
@@ -357,11 +356,18 @@ export class OptionInteractionService {
     this.stopTimerIfAnswerCorrect(isShuffleActive, isMultipleMode, isPristineCorrect, binding.option, allCorrectFound, question);
 
     // In shuffled mode scoring/FET is handled by the SOC, so OIS must not score
-    // or emit there. The pristine multi-answer probe guards against bindings
-    // showing only 1 correct due to mutation.
-    const pristineIsMultiAnswer = this.resolvePristineIsMultiAnswer(question, qIdx, state);
+    // or emit there.
+    //
+    // This guard existed because bindings can show only 1 correct after
+    // mutation, so it re-derived the cardinality from the bundled answer key.
+    // The DECLARED type answers the same question without it, and unknown falls
+    // back to the mode already resolved above — which folds in `state.type`,
+    // `isMultiMode`, the "select all" wording and the binding count. Unknown
+    // must not collapse to "single": that would turn a multi-answer question
+    // single for as long as the type is missing.
+    const declaredMultiAnswer = declaredIsMultiAnswer(question) ?? isMultipleMode;
     this.scoreAndEmitIfUnshuffledPerfect(
-      isShuffleActive, allCorrectFound, isMultipleMode, pristineIsMultiAnswer,
+      isShuffleActive, allCorrectFound, isMultipleMode, declaredMultiAnswer,
       qIdx, state, emitExplanation
     );
 
@@ -481,16 +487,16 @@ export class OptionInteractionService {
     isShuffleActive: boolean,
     allCorrectFound: boolean,
     isMultipleMode: boolean,
-    pristineIsMultiAnswer: boolean,
+    declaredMultiAnswer: boolean,
     qIdx: number,
     state: OptionInteractionState,
     emitExplanation: (idx: number, skipGuard?: boolean) => void
   ): void {
     if (isShuffleActive) return;
     let scoreFired = false;
-    if (allCorrectFound && !isMultipleMode && !pristineIsMultiAnswer) {
+    if (allCorrectFound && !isMultipleMode && !declaredMultiAnswer) {
       // SINGLE-ANSWER resolved — the gate is `!isMultipleMode &&
-      // !pristineIsMultiAnswer`. Despite the field name this is not a
+      // !declaredMultiAnswer`. Despite the field name this is not a
       // multi-answer fact, so neither multi map is written; the legacy union
       // carries it until its readers are migrated.
       // RESOLVED only. A single-answer question that resolves is not a
@@ -711,8 +717,7 @@ export class OptionInteractionService {
    */
   private resolveIsMultipleMode(
     state: OptionInteractionState,
-    correctCountInBindings: number,
-    pristineCorrectCount: number
+    correctCountInBindings: number
   ): boolean {
     const qText = state.currentQuestion?.questionText?.toLowerCase() || '';
     const isExplicitMulti = qText.includes('select all') || qText.includes('multiple') || qText.includes('apply');
@@ -723,16 +728,21 @@ export class OptionInteractionService {
     // `GET /questions` declares it — so the counted guess is demoted to a
     // fallback rather than an equal voice.
     //
-    // REMOVE THE COUNTED ARGUMENT IN /questions CONTENT CUTOVER.
+    // THE PRISTINE COUNT IS GONE. Tracing a live click showed the declared type
+    // is present when this runs (`single_answer` / `multiple_answer`), so
+    // `resolveIsMultiAnswer` returned the DECLARED answer and the counted
+    // fallback was never consulted — the trace recorded declared-only and
+    // with-counts agreeing on both a single- and a multi-answer question. The
+    // same trace showed `correctCountInBindings` is 0 for both, because
+    // API-sourced bindings carry no `correct` flags, so the bundled answer key
+    // was the only thing still feeding this fallback.
+    //
     // MODE INPUTS STILL PROMOTE. Passing them as the fallback ARGUMENT meant a
     // declared type discarded them; declared type replaces the COUNTS only.
     return state.type === 'multiple'
       || (state as any).isMultiMode === true
       || isExplicitMulti
-      || resolveIsMultiAnswer(
-        state.currentQuestion,
-        correctCountInBindings > 1 || pristineCorrectCount > 1
-      );
+      || resolveIsMultiAnswer(state.currentQuestion, correctCountInBindings > 1);
   }
 
   /**
@@ -1126,58 +1136,6 @@ export class OptionInteractionService {
     }
 
     return correctIndicesSet;
-  }
-
-  /**
-   * Pristine correct-count probe: looks up the pristine quiz data for the
-   * current question and returns the count of correct options. Bindings can
-   * carry mutated correct flags (only 1 of 2 shown as correct), so this
-   * cross-check ensures multi-answer questions aren't misidentified as
-   * single-answer.
-   *
-   * Returns `seed` if the pristine lookup fails or yields nothing. Returns
-   * the pristine count when available (which OVERWRITES seed — same as
-   * the original inline behavior; may shrink seed in odd binding states).
-   */
-  private resolvePristineCorrectCount(seed: number, qIdx: number, state: OptionInteractionState): number {
-    try {
-      const qTextLookup = state.currentQuestion?.questionText
-        || this.quizService.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText
-        || (this.quizService as any)?.questions?.[qIdx]?.questionText;
-      const pristineTexts = this.quizService.getPristineCorrectTextsForQuestion(qTextLookup);
-      if (pristineTexts.size > 0) {
-        return pristineTexts.size;
-      }
-    } catch { /* ignore */ }
-    return seed;
-  }
-
-  /**
-   * Pristine multi-answer probe: looks up the pristine quiz data by the
-   * current question text (shuffle-aware) and returns true when there's
-   * more than one correct answer. Bindings can carry stale/mutated correct
-   * flags, so this is the authoritative single/multi classifier inside
-   * handleOptionClick.
-   */
-  private resolvePristineIsMultiAnswer(
-    question: QuizQuestion | null,
-    qIdx: number,
-    state: OptionInteractionState
-  ): boolean {
-    try {
-      const isShuffledPM = (this.quizService as any)?.isShuffleEnabled?.()
-        && (this.quizService as any)?.shuffledQuestions?.length > 0;
-      const qTextForLookup = isShuffledPM
-        ? (question?.questionText
-          ?? this.quizService.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText
-          ?? (this.quizService as any)?.shuffledQuestions?.[qIdx]?.questionText
-          ?? state.currentQuestion?.questionText)
-        : (question?.questionText ?? state.currentQuestion?.questionText);
-      const pristineTexts = this.quizService.getPristineCorrectTextsForQuestion(qTextForLookup);
-      return pristineTexts.size > 1;
-    } catch {
-      return false;
-    }
   }
 
   /**

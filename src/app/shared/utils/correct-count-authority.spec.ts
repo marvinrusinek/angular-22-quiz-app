@@ -111,6 +111,46 @@ describe('the banner uses the DECLARED count, not the local flags', () => {
   });
 });
 
+describe('the banner survives an EMPTY pristine bank', () => {
+  /**
+   * THE REAL POST-CUTOVER SHAPE.
+   *
+   * Every other test here populates `getPristineCorrectTextsForQuestion`, so
+   * the banner rendered for a reason nobody was asserting: `isMultiAnswer` was
+   * `pristine.length > 1`. Once the bundled bank is gone that set is EMPTY,
+   * the question reads as single-answer, and the banner vanishes — with the
+   * declared count sitting right there, already fetched and unused.
+   *
+   * `type` is the authority for single-vs-multiple (declaredIsMultiAnswer);
+   * `correctCount` is the authority for how many. Neither needs the bank.
+   */
+  const withoutPristine = (overrides: Parameters<typeof deps>[0] = {}) => {
+    const d = deps(overrides) as unknown as {
+      quizService: { getPristineCorrectTextsForQuestion: () => Set<string> };
+    };
+    d.quizService.getPristineCorrectTextsForQuestion = () => new Set<string>();
+    return d as never;
+  };
+
+  it('renders the declared count with NO pristine data at all', () => {
+    expect(bannerOf(withoutPristine({ declaredCount: 3 }))).toContain('(3 answers are correct)');
+  });
+
+  it('a DECLARED single-answer question still renders no banner', () => {
+    const html = bannerOf(withoutPristine({ declaredCount: 1, type: QuestionType.SingleAnswer }));
+    expect(html).not.toContain('answers are correct');
+    expect(html).not.toContain('answer is correct');
+  });
+
+  it('FAILS CLOSED: declared multiple but no declared count renders no banner', () => {
+    // NB: the question text itself ends "...are correct?", so the assertion
+    // has to target the banner's own wording.
+    const html = bannerOf(withoutPristine({ declaredCount: null }));
+    expect(html).not.toContain('answers are correct');
+    expect(html).not.toContain('answer is correct');
+  });
+});
+
 describe('singular and plural wording are preserved exactly', () => {
   it('1 → singular', () => {
     expect(bannerOf(deps({ declaredCount: 1 }))).toContain('(1 answer is correct)');

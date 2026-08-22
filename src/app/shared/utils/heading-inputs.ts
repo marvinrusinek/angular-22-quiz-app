@@ -4,7 +4,7 @@ import {
   verdictStateForDisplayIndex
 } from '../services/features/verdict/authorized-correctness';
 import { withCorrectCountBanner } from './correct-count-banner';
-import { bannerCorrectCount } from './question-type-authority';
+import { bannerCorrectCount, resolveIsMultiAnswer } from './question-type-authority';
 import { HeadingInputs } from './heading-model';
 import { withTerminalPeriod } from './terminal-period';
 import { norm } from './text-norm';
@@ -63,7 +63,19 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
       .filter((o) => o?.selected !== false)
       .map((o) => norm(o?.text))
   );
-  const isMultiAnswer = pristine.length > 1;
+  // SINGLE-VS-MULTIPLE IS DECLARED, NOT COUNTED.
+  //
+  // This read `pristine.length > 1` — the bundled answer key — which made the
+  // "(N answers are correct)" banner depend on the very asset the migration
+  // removes. With an empty bank every question reads as single-answer, so the
+  // banner silently vanishes even though `correctCount` has already been
+  // fetched and is sitting unused. Counting also can't be right in principle:
+  // a declared MULTIPLE question with one correct option is still multiple.
+  //
+  // `resolveIsMultiAnswer` is the existing authority helper — the declared
+  // `type` wins, and the count is consulted only when nothing was declared,
+  // which keeps quizzes playable while the type request is in flight.
+  const isMultiAnswer = resolveIsMultiAnswer(dq, pristine.length > 1);
   const selectedCorrect = pristine.filter((t) => selectedTexts.has(t));
   const ets = d.explanationTextService;
 

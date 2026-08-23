@@ -427,18 +427,37 @@ export class QuestionVerdictService {
       // the consumer asked whether the option was in the (now empty) correct
       // set and got "no".
       //
-      // The new selection verdicts and the outstanding count are current and do
-      // replace the old ones. What carries forward is only what the server had
-      // already disclosed for this question — never anything it has not.
+      // NEITHER IS A VERDICT ON THE PLAYER'S OWN PICK.
+      //
+      // The same argument applies to `selectedVerdicts`, and this used to
+      // replace them outright. For a SINGLE-select question the server returns
+      // `incomplete` with an EMPTY verdict list whenever the submission carries
+      // no selection (answer-check.ts:184) — exactly what a revisit produces —
+      // so replacing wiped the verdict the player had already earned on their
+      // pick. The revisit painter asks `selectedVerdictFor`, got `undefined`,
+      // and cleared the option to neutral: a remembered WRONG pick stopped
+      // showing red.
+      //
+      // Merging keeps every fact the server has already stated about an option
+      // this player selected, and lets a newer verdict for the same option win.
+      // Nothing unauthorized is invented — every preserved entry came from a
+      // prior /check — and a stale entry for an option since deselected is
+      // harmless, because the painter only consults options it knows were
+      // selected.
+      //
+      // The outstanding count IS current and still replaces the old one.
       const previous = this.verdictFor(quizId, questionText);
       const alreadyRevealed = previous.correctOptionTexts.length > 0;
+
+      const mergedVerdicts = new Map(previous.selectedVerdicts);
+      for (const verdict of result.selectedVerdicts) {
+        mergedVerdicts.set(canonicalize(verdict.text), verdict.correct);
+      }
 
       this.write(quizId, questionText, {
         phase: 'incomplete',
         selectedOptionTexts: selected,
-        selectedVerdicts: new Map(
-          result.selectedVerdicts.map((verdict) => [canonicalize(verdict.text), verdict.correct])
-        ),
+        selectedVerdicts: mergedVerdicts,
         remainingCorrectCount: result.remainingCorrectCount,
         correctOptionTexts: alreadyRevealed ? previous.correctOptionTexts : [],
         explanation: alreadyRevealed ? previous.explanation : null,

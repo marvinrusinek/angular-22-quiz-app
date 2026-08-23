@@ -166,22 +166,38 @@ export class QqcDisplayStateManagerService {
       .map((answer: any) => answer?.value)
       .filter((value: any): value is Option['value'] => value !== undefined && value !== null);
 
-    const resolveCorrect = (option: Option): boolean => {
-      if (isOptionCorrect(option)) return true;
+    // ABSENT CORRECTNESS IS PRESERVED AS ABSENT.
+    //
+    // This stamped `correct: resolveCorrect(option)` onto every option, and
+    // `resolveCorrect` answers false when it cannot tell. An API-sourced option
+    // carries no `correct` property and no `answer` array to fall back on, so
+    // every option came out of here flagged `correct: false` — a fabricated
+    // claim that nothing is correct, written onto the objects the rest of the
+    // app reads.
+    //
+    // That is worse than leaving the field off: `undefined` means "nobody has
+    // said", which downstream code tests for, while `false` is an assertion no
+    // authority made. Same rule as the producer cleanup in 9b054bb5, and the
+    // shape `shared-option-init` already uses.
+    const resolveCorrect = (option: Option): boolean | undefined => {
+      if (option.correct !== undefined) return isOptionCorrect(option);
 
       if (Array.isArray(answerValues) && answerValues.length > 0) {
         return answerValues.includes(option.value);
       }
 
-      return false;
+      return undefined;   // unknown, not "not correct"
     };
 
-    return options.map((option, index) => ({
-      ...option,
-      correct: resolveCorrect(option),
-      selected: false,
-      displayOrder: index
-    }));
+    return options.map((option, index) => {
+      const correct = resolveCorrect(option);
+      return {
+        ...option,
+        ...(correct === undefined ? {} : { correct }),
+        selected: false,
+        displayOrder: index
+      };
+    });
   }
 
   /**

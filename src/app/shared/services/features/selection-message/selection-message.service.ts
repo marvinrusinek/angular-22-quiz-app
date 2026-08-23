@@ -12,7 +12,7 @@ import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
 import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
-import { selectedVerdictFor } from '../verdict/authorized-correctness';
+import { allCorrectSelectedFromVerdict, selectedVerdictFor } from '../verdict/authorized-correctness';
 import { norm } from '../../../utils/text-norm';
 
 import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
@@ -78,13 +78,6 @@ export class SelectionMessageService {
   public _baselineReleased = new Set<number>();
   public _wrongClickCounts = new Map<number, number>();
 
-  // In-session "this idx was completed" tracker. Populated only when
-  // pushMessage records a real completion message (NEXT_BTN / SHOW_RESULTS /
-  // "Answered ✓..."). Used by deriveNavMessageForIdx as the authoritative
-  // answered probe — external maps (questionCorrectness, questionResolved,
-  // quizStateService.isQuestionAnswered) leak across sessions / collide in
-  // shuffled mode.
-  private _completedIdxSet = new Set<number>();
 
   private _pendingMsgTokens = new Map<number, number>();
 
@@ -96,7 +89,7 @@ export class SelectionMessageService {
   private selectedOptionService = inject(SelectedOptionService);
 
   // Strict computed: click override (if for current idx) → derive from
-  // currentQuestionIndexSig + _completedIdxSet. No writers anywhere.
+  // currentQuestionIndexSig + the authorized completion state.
   public readonly selectionMessageSig = computed<string>(() => {
     const idx = this.quizService.currentQuestionIndexSig();
     if (!Number.isFinite(idx) || idx < 0) return START_MSG;
@@ -174,7 +167,7 @@ export class SelectionMessageService {
     // completed so its Next/Show-Results button stays enabled — but it is not
     // truly answered, so on revisit prompt the user to select rather than
     // claim "Answered ✓".
-    const answered = this._completedIdxSet.has(idx) && !this.isTimedOutUnanswered(idx);
+    const answered = this.isQuestionCompleted(idx);
 
     const isLast = total > 0 && idx === total - 1;
     return answered
@@ -188,17 +181,6 @@ export class SelectionMessageService {
   // click-confirmed dot status — set ONLY by real option clicks, never by a
   // timeout — NOT quizStateService.isQuestionAnswered, which a timed-out
   // question can spuriously pick up on revisit (the Q2-vs-Q6 discrepancy).
-  private isTimedOutUnanswered(idx: number): boolean {
-    if (this.dotStatusService?.timedOutFetForced?.has(idx) !== true) return false;
-    const qs: any = this.quizService;
-    const dot = this.selectedOptionService?.clickConfirmedDotStatus?.get?.(idx);
-    const genuinelyAnswered =
-      dot === 'correct' || dot === 'wrong'
-      || qs?.isQuestionResolved?.(idx) === true
-      || qs?.questionCorrectness?.get?.(idx) === true;
-    return !genuinelyAnswered;
-  }
-
   // Cheap check used by enforceBaselineAtInit to skip pushing the baseline
   // ("Select N correct options...") when the question is already answered —
   // otherwise the baseline overwrites the nav-driven Next/Show-Results
@@ -231,10 +213,11 @@ export class SelectionMessageService {
   }
 
   public isCompletedInSession(idx: number): boolean {
-    return this._completedIdxSet.has(idx);
+    return this.isQuestionCompleted(idx);
   }
 
   public resetAll(): void {
+    this._completedQuestions.clear();
     this._singleAnswerCorrectLock.clear();
     this._singleAnswerIncorrectLock.clear();
     this._multiAnswerInProgressLock.clear();
@@ -245,7 +228,6 @@ export class SelectionMessageService {
     this._pendingMsgTokens.clear();
     this._idMapByIndex.clear();
     this._wrongClickCounts?.clear();
-    this._completedIdxSet.clear();
     this.optionsSnapshotSig.set([]);
     this._clickOverride.set(null);
   }
@@ -362,6 +344,112 @@ export class SelectionMessageService {
         ?? service?.questions?.[index]?.questionText;
       if (!quizId || !questionText) return null;
       return this.verdicts.verdictFor(quizId, questionText);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Has the question at this DISPLAY index been COMPLETED — not merely attempted?
+   *
+   * ── Why this exists ───────────────────────────────────────────────
+   *
+   * Completion used to be recorded by `pushMessage` matching the message TEXT:
+   * anything that rendered "Please click the Next button to continue." (or Show
+   * Results, or "Answered ✓") added the index to a `_completedIdxSet`, and the
+   * revisit derivation trusted that set.
+   *
+   * A display string is a RENDERING of completion, not evidence of it, so every
+   * path that merely enables Next registered as success. That produced three
+   * shipped defects in turn: a timed-out unanswered question claiming
+   * completion, a partially-answered multi-answer question claiming completion,
+   * and "Answered ✓" appearing on questions the user never finished. Each was
+   * patched at its own call site — `&& !isTimedOutUnanswered(idx)` is one such
+   * patch — while the coupling stayed.
+   *
+   * Completion is now ASKED of the authority that decides it. Note the store is
+   * keyed by question TEXT, so unlike the old index-keyed set it cannot collide
+   * under shuffle, and it is never cleared during a session.
+   *
+   * ── The rule ──────────────────────────────────────────────────────
+   *
+   *   multi-answer  → every required correct option selected (superset rule)
+   *   single / T-F  → the question resolved AND resolved CORRECT
+   *   wrong-only    → resolved, not correct → NOT complete
+   *   partial multi → no authorized completion → NOT complete
+   *   timed out     → expired, never resolved correct → NOT complete
+   *
+   * Unknown is never completion: idle/checking/error all answer false, which is
+   * the honest state before `/check` has spoken.
+   */
+  /**
+   * Questions an authorized verdict has ALREADY judged complete this session,
+   * keyed by canonical question text.
+   *
+   * ── Why a latch is required ───────────────────────────────────────
+   *
+   * The verdict is a snapshot of the LATEST submission, and it is not
+   * monotonic. Revisiting an answered question re-submits, and the live
+   * bindings on a revisit do not carry the first-visit picks — so the re-check
+   * sees a smaller selection and answers `incomplete`, overwriting the
+   * `resolved` state that recorded the user's correct answer. Traced directly:
+   *
+   *     idx 0  phase=resolved    isResolvedCorrect=true    ← answered correctly
+   *     idx 0  phase=checking    isResolvedCorrect=true    ← revisit re-submits
+   *     idx 0  phase=incomplete  isResolvedCorrect=null    ← state clobbered
+   *
+   * "Did the user complete this question at some point this session?" is a
+   * different question from "what does the newest check say?", and only the
+   * first one should drive the revisit message and the Show Results gate.
+   *
+   * This is keyed by TEXT, so unlike the index-keyed set it replaced it cannot
+   * collide under shuffle. Crucially it can only ever be SET by an authorized
+   * verdict — no message, no display string, and no local flag can write here.
+   */
+  private readonly _completedQuestions = new Set<string>();
+
+  private isQuestionCompleted(index: number): boolean {
+    try {
+      const key = this.completionKeyFor(index);
+      if (key && this._completedQuestions.has(key)) return true;
+
+      const state = this.verdictStateFor(index);
+      if (!state) return false;
+
+      // Declared type decides which rule applies. A miss falls back to the
+      // question's own stamped type; unknown takes the single-answer rule,
+      // which is the stricter of the two (it demands resolved-correct).
+      const question = this.getQuestion(index);
+      const declaredMulti = declaredIsMultiAnswer(question ?? undefined);
+
+      const completed = declaredMulti === true
+        ? allCorrectSelectedFromVerdict(state) === true
+        : state.phase === 'resolved' && state.isResolvedCorrect === true;
+
+      // Latch it. A later re-check may downgrade the verdict, but the user did
+      // complete the question, and that fact does not un-happen.
+      if (completed && key) this._completedQuestions.add(key);
+
+      return completed;
+    } catch {
+      return false;   // never let a message computation throw
+    }
+  }
+
+  /**
+   * Canonical key for the completion latch — the question's own text.
+   *
+   * Text rather than index because a display index means different questions
+   * under shuffle, and the latch has to survive navigation.
+   */
+  private completionKeyFor(index: number): string | null {
+    try {
+      const service = this.quizService as any;
+      const text =
+        service?.getQuestionsInDisplayOrder?.()?.[index]?.questionText
+        ?? service?.questions?.[index]?.questionText;
+      const key = norm(text);
+      return key ? key : null;
     } catch {
       return null;
     }
@@ -584,12 +672,19 @@ export class SelectionMessageService {
     else this.pendingMessageRecompute.set(key, sub);
   }
 
+  /**
+   * Publish a message for an index. PURELY a display write.
+   *
+   * This used to ALSO record completion, by matching the string against
+   * NEXT_BTN_MSG / SHOW_RESULTS_MSG / "Answered ✓". That made a rendering the
+   * source of truth for a fact about the user's answer, so every path that
+   * merely enabled Next — auto-reveal, timer expiry, a message computed before
+   * the verdict landed — silently claimed the question was finished.
+   *
+   * Completion is now asked of `isQuestionCompleted`, which reads the verdict.
+   * Changing what this renders can no longer change what the app believes.
+   */
   public pushMessage(newMsg: string, _index: number): void {
-    if (newMsg === NEXT_BTN_MSG
-        || newMsg === SHOW_RESULTS_MSG
-        || (typeof newMsg === 'string' && newMsg.startsWith('Answered ✓'))) {
-      this._completedIdxSet.add(_index);
-    }
     this._clickOverride.set({ idx: _index, msg: newMsg });
   }
 
@@ -613,7 +708,7 @@ export class SelectionMessageService {
     // would overwrite the nav-driven Answered ✓ message on revisit. A
     // timed-out-but-unanswered question is NOT genuinely answered, so let it
     // fall through to the select-prompt baseline below.
-    if (this._completedIdxSet.has(i0) && !this.isTimedOutUnanswered(i0)) {
+    if (this.isQuestionCompleted(i0)) {
       const total = this.quizService.totalQuestions();
       const isLast = total > 0 && i0 === total - 1;
       const navMsg = isLast

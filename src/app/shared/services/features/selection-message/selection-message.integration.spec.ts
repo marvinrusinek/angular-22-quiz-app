@@ -25,6 +25,9 @@ import { QuizDotStatusService } from '../../../services/flow/quiz-dot-status.ser
 import { QuizService } from '../../../services/data/quiz.service';
 import { SelectedOptionService } from '../../../services/state/selectedoption.service';
 import { SelectionMessageService } from './selection-message.service';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '../verdict/question-verdict.types';
+import { QuestionType } from '../../../models/question-type.enum';
 
 describe('SelectionMessageService integration', () => {
   let service: SelectionMessageService;
@@ -37,14 +40,68 @@ describe('SelectionMessageService integration', () => {
   const ANSWERED_NEXT = 'Answered ✓ Click Next to continue...';
   const ANSWERED_SHOW = 'Answered ✓ Click Show Results...';
 
+  /**
+   * COMPLETION IS DRIVEN THROUGH THE VERDICT, NOT THROUGH MESSAGES.
+   *
+   * These tests used to mark a question complete by pushing NEXT_BTN_MSG,
+   * because that is literally how the service recorded it. That coupling is
+   * the defect this refactor removes: a display string decided a fact about
+   * the answer, so auto-reveal, timer expiry and a message computed
+   * before the verdict landed all registered as success.
+   *
+   * The behavioural intent of every test below is unchanged — per-index
+   * isolation, no leakage across navigation, external maps never promoting
+   * themselves into completion. Only the way completion is ESTABLISHED moved.
+   */
+  let verdictByText: Map<string, QuestionVerdictState>;
+  /**
+   * The real QuestionVerdictService keeps its states in a SIGNAL, so a
+   * computed reading verdictFor() re-runs when a verdict lands. A plain Map
+   * would leave the computed memoized and the harness would not reflect
+   * production. This tick makes the stub track the same way.
+   */
+  let verdictTick: WritableSignal<number>;
+
+  const qText = (idx: number) => `Q${idx} text`;
+
+  /** Verdict fixtures, named for the user-visible situation they represent. */
+  const setVerdict = (idx: number, state: Partial<QuestionVerdictState>) => {
+    verdictByText.set(qText(idx), { ...IDLE_VERDICT_STATE, ...state } as QuestionVerdictState);
+    verdictTick.update((n) => n + 1);
+  };
+
+  const clearVerdicts = () => {
+    verdictByText.clear();
+    verdictTick.update((n) => n + 1);
+  };
+
+  const singleCorrect = (idx: number) => setVerdict(idx, { phase: 'resolved', isResolvedCorrect: true });
+  const singleWrong = (idx: number) => setVerdict(idx, { phase: 'resolved', isResolvedCorrect: false });
+  const multiPartial = (idx: number) => setVerdict(idx, { phase: 'incomplete', remainingCorrectCount: 2 });
+  const multiComplete = (idx: number) => setVerdict(idx, { phase: 'resolved', isResolvedCorrect: true, remainingCorrectCount: 0 });
+  const timedOutUnanswered = (idx: number) => setVerdict(idx, { phase: 'expired', isResolvedCorrect: null });
+
+  /** Declare a question multi-answer so the multi completion rule applies. */
+  const asMulti = (idx: number) => {
+    quizServiceMock.questions[idx].type = QuestionType.MultipleAnswer;
+  };
+
   beforeEach(() => {
     currentIdxSig = signal(0);
+    verdictByText = new Map<string, QuestionVerdictState>();
+    verdictTick = signal(0);
     quizServiceMock = {
       // Real signal so the computed tracks it and re-runs on changes.
       currentQuestionIndexSig: currentIdxSig,
       currentQuestionIndex: 0,
       totalQuestions: () => 6,
-      questions: [],
+      quizId: "integration-quiz",
+      questions: Array.from({ length: 6 }, (_, i) => ({
+        questionText: `Q${i} text`,
+        type: QuestionType.SingleAnswer,
+        options: []
+      })),
+      getQuestionsInDisplayOrder: () => quizServiceMock.questions,
       shuffledQuestions: [],
       quizInitialState: [],
       isShuffleEnabled: jest.fn().mockReturnValue(false),
@@ -60,6 +117,16 @@ describe('SelectionMessageService integration', () => {
         { provide: QuizService, useValue: quizServiceMock },
         { provide: SelectedOptionService, useValue: { selectedOptionsMap: new Map() } },
         { provide: QuizDotStatusService, useValue: { timedOutFetForced: new Set<number>() } },
+        {
+          provide: QuestionVerdictService,
+          useValue: {
+            verdictFor: (_quizId: string, text: string) => {
+              verdictTick();   // signal read — mirrors the real service
+              return verdictByText.get(text) ?? IDLE_VERDICT_STATE;
+            },
+            terminalVerdicts$: { pipe: () => ({ subscribe: () => ({ closed: true, unsubscribe() {} }) }) }
+          }
+        },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
       ],
     });
@@ -124,7 +191,8 @@ describe('SelectionMessageService integration', () => {
     // we explicitly DISPLACE the override by pushing a non-completion
     // message at the intermediate idx — this is what the click pipeline
     // would do in production after the user clicks on the new question.
-    service.pushMessage(NEXT_BTN_MSG, 0);          // marks 0 in completed-set
+    singleCorrect(0);                              // the VERDICT establishes completion
+    service.pushMessage(NEXT_BTN_MSG, 0);          // display only
     currentIdxSig.set(1);
     service.pushMessage('Select 1 more correct answer to continue...', 1);
     currentIdxSig.set(0);
@@ -135,7 +203,8 @@ describe('SelectionMessageService integration', () => {
 
   it('revisit-derivation last Q: completed-set drives "Answered ✓ Click Show Results..."', () => {
     currentIdxSig.set(5);
-    service.pushMessage(SHOW_RESULTS_MSG, 5);     // marks 5 in completed-set
+    singleCorrect(5);                             // the VERDICT establishes completion
+    service.pushMessage(SHOW_RESULTS_MSG, 5);     // display only
     currentIdxSig.set(4);
     service.pushMessage('Select 1 more correct answer to continue...', 4);
     currentIdxSig.set(5);
@@ -144,18 +213,35 @@ describe('SelectionMessageService integration', () => {
 
   // ── isCompletedInSession public probe ──────────────────────
 
-  it('isCompletedInSession() returns true only after a completion push', () => {
+  it('isCompletedInSession() reports completion once the VERDICT resolves correct', () => {
     expect(service.isCompletedInSession(0)).toBe(false);
+    singleCorrect(0);
     service.pushMessage(NEXT_BTN_MSG, 0);
     expect(service.isCompletedInSession(0)).toBe(true);
     expect(service.isCompletedInSession(1)).toBe(false);
   });
 
-  it('isCompletedInSession() recognises SHOW_RESULTS_MSG and "Answered ✓..." too', () => {
+  /**
+   * THE REGRESSION PROOF for the architectural defect this refactor removes.
+   *
+   * Completion used to be recorded by matching the message TEXT, so rendering
+   * "Please click the Next button" — from auto-reveal, from timer expiry, or
+   * from a message computed before the verdict landed — silently claimed the
+   * question was finished. Emitting a string must no longer be able to say
+   * anything about whether the user answered.
+   */
+  it('emitting a completion-looking MESSAGE cannot make a question completed', () => {
     service.pushMessage(SHOW_RESULTS_MSG, 5);
-    expect(service.isCompletedInSession(5)).toBe(true);
+    expect(service.isCompletedInSession(5)).toBe(false);
 
-    service.pushMessage(ANSWERED_NEXT, 3);
+    service.pushMessage(NEXT_BTN_MSG, 3);
+    expect(service.isCompletedInSession(3)).toBe(false);
+
+    service.pushMessage(ANSWERED_NEXT, 2);
+    expect(service.isCompletedInSession(2)).toBe(false);
+
+    // Only the verdict can say so.
+    singleCorrect(3);
     expect(service.isCompletedInSession(3)).toBe(true);
   });
 
@@ -166,13 +252,24 @@ describe('SelectionMessageService integration', () => {
 
   // ── resetAll restores derived default ──────────────────────
 
-  it('resetAll() clears the completed-set and override', () => {
+  it('resetAll() clears the override; completion still follows the verdict', () => {
+    singleCorrect(0);
     service.pushMessage(NEXT_BTN_MSG, 0);
     expect(service.isCompletedInSession(0)).toBe(true);
 
+    // A later re-check can DOWNGRADE the verdict — revisiting re-submits, and
+    // the live bindings do not carry the first-visit picks, so the server sees
+    // a smaller selection and answers `incomplete`. Completing a question is
+    // not undone by that, so the latch holds.
+    clearVerdicts();
+    multiPartial(0);
+    expect(service.isCompletedInSession(0)).toBe(true);
+
+    // resetAll is the quiz-restart boundary: it clears the latch, and with no
+    // authorized verdict left the derived default returns.
     service.resetAll();
+    clearVerdicts();
     expect(service.isCompletedInSession(0)).toBe(false);
-    // After reset the computed re-derives default for the current idx
     expect(service.selectionMessageSig()).toBe(CONTINUE_MSG);
   });
 
@@ -197,8 +294,8 @@ describe('SelectionMessageService integration', () => {
   // shuffled mode could leak completed-set or override state across
   // indices, breaking the Next button or the multi-answer banner.
 
-  it('completed-set entries are isolated per index (Q0 completion does not leak to Q1)', () => {
-    service.pushMessage(NEXT_BTN_MSG, 0);
+  it('completion is isolated per index (Q0 completion does not leak to Q1)', () => {
+    singleCorrect(0);
     expect(service.isCompletedInSession(0)).toBe(true);
     expect(service.isCompletedInSession(1)).toBe(false);
     expect(service.isCompletedInSession(2)).toBe(false);
@@ -206,12 +303,12 @@ describe('SelectionMessageService integration', () => {
   });
 
   it('Q0→Q1→Q0→Q1 rapid nav: both indices completed, neither leaks', () => {
-    // Click Q0 to completion
-    service.pushMessage(NEXT_BTN_MSG, 0);
+    // Answer Q0 correctly
+    singleCorrect(0);
     // Nav to Q1
     currentIdxSig.set(1);
-    // Click Q1 to completion
-    service.pushMessage(NEXT_BTN_MSG, 1);
+    // Answer Q1 correctly
+    singleCorrect(1);
     // Nav back to Q0
     currentIdxSig.set(0);
     expect(service.isCompletedInSession(0)).toBe(true);
@@ -226,7 +323,7 @@ describe('SelectionMessageService integration', () => {
     // Walk through Q0..Q4, mark each completed
     for (let i = 0; i < 5; i++) {
       currentIdxSig.set(i);
-      service.pushMessage(NEXT_BTN_MSG, i);
+      singleCorrect(i);
     }
     // Now check ALL indices: 0-4 completed, 5 NOT completed
     for (let i = 0; i < 5; i++) {
@@ -238,12 +335,14 @@ describe('SelectionMessageService integration', () => {
 
   it('non-completion pushes do not pollute the completed-set across nav', () => {
     // Multi-answer partial-correct on Q0 ("Select 1 more...")
+    asMulti(0);
+    multiPartial(0);
     service.pushMessage('Select 1 more correct answer to continue...', 0);
     expect(service.isCompletedInSession(0)).toBe(false);
 
     // Nav to Q1, complete it
     currentIdxSig.set(1);
-    service.pushMessage(NEXT_BTN_MSG, 1);
+    singleCorrect(1);
 
     // Nav back to Q0 — still NOT completed
     currentIdxSig.set(0);
@@ -253,16 +352,82 @@ describe('SelectionMessageService integration', () => {
 
   it('resetAll clears completed-set entirely (no per-index leakage post-reset)', () => {
     // Complete Q0, Q2, Q4
-    service.pushMessage(NEXT_BTN_MSG, 0);
-    service.pushMessage(NEXT_BTN_MSG, 2);
-    service.pushMessage(NEXT_BTN_MSG, 4);
+    singleCorrect(0);
+    singleCorrect(2);
+    singleCorrect(4);
     expect(service.isCompletedInSession(0)).toBe(true);
     expect(service.isCompletedInSession(2)).toBe(true);
     expect(service.isCompletedInSession(4)).toBe(true);
 
+    // resetAll is the quiz-restart boundary and clears the completion latch;
+    // clearing the verdicts alone would not, because a completed question stays
+    // completed even when a later re-check downgrades its verdict.
     service.resetAll();
+    clearVerdicts();
     for (let i = 0; i < 6; i++) {
       expect(service.isCompletedInSession(i)).toBe(false);
     }
+  });
+
+  // ══════════════════════════════════════════════════════════════════
+  // COMPLETION CONTRACT — attempted is not completed
+  //
+  // Each case states a situation a user can actually be in, and asserts
+  // whether the app should consider the question FINISHED. Completion drives
+  // the revisit message and the Show Results gate, so a false positive tells
+  // the user they answered something they did not.
+  // ══════════════════════════════════════════════════════════════════
+
+  describe('completion is established by the verdict', () => {
+    it('single-answer answered CORRECTLY is completed', () => {
+      singleCorrect(0);
+      expect(service.isCompletedInSession(0)).toBe(true);
+      expect(service.selectionMessageSig()).toBe(ANSWERED_NEXT);
+    });
+
+    it('single-answer answered WRONGLY is NOT completed', () => {
+      singleWrong(0);
+      expect(service.isCompletedInSession(0)).toBe(false);
+      expect(service.selectionMessageSig()).not.toBe(ANSWERED_NEXT);
+    });
+
+    it('multi-answer PARTIALLY answered is NOT completed', () => {
+      asMulti(0);
+      multiPartial(0);
+      expect(service.isCompletedInSession(0)).toBe(false);
+      expect(service.selectionMessageSig()).not.toBe(ANSWERED_NEXT);
+    });
+
+    it('multi-answer FULLY answered is completed', () => {
+      asMulti(0);
+      multiComplete(0);
+      expect(service.isCompletedInSession(0)).toBe(true);
+      expect(service.selectionMessageSig()).toBe(ANSWERED_NEXT);
+    });
+
+    it('WRONG first, then completed correctly, is completed', () => {
+      asMulti(0);
+      multiPartial(0);
+      expect(service.isCompletedInSession(0)).toBe(false);
+
+      // The user keeps going and finishes the set. The verdict reflects the
+      // FINAL state, so an earlier wrong pick does not deny them credit.
+      multiComplete(0);
+      expect(service.isCompletedInSession(0)).toBe(true);
+    });
+
+    it('a TIMED-OUT unanswered question is NOT completed', () => {
+      timedOutUnanswered(0);
+      expect(service.isCompletedInSession(0)).toBe(false);
+      expect(service.selectionMessageSig()).not.toBe(ANSWERED_NEXT);
+    });
+
+    it('idle, checking and error are UNKNOWN — never completion', () => {
+      expect(service.isCompletedInSession(0)).toBe(false);   // idle
+      setVerdict(0, { phase: 'checking' });
+      expect(service.isCompletedInSession(0)).toBe(false);
+      setVerdict(0, { phase: 'error' });
+      expect(service.isCompletedInSession(0)).toBe(false);
+    });
   });
 });

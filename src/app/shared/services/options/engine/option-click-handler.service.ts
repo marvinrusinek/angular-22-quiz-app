@@ -9,6 +9,11 @@ import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
 import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
+import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
+import {
+  selectedVerdictFor,
+  verdictStateForDisplayIndex
+} from '../../features/verdict/authorized-correctness';
 import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '../../../utils/question-type-authority';
 import { norm } from '../../../utils/text-norm';
@@ -75,6 +80,7 @@ export class OptionClickHandlerService {
   // ── injects ─────────────────────────────────────────────────────
   private quizService = inject(QuizService);
   private selectedOptionService = inject(SelectedOptionService);
+  private verdicts = inject(QuestionVerdictService);
 
   // ── public methods ──────────────────────────────────────────────
 
@@ -472,11 +478,9 @@ export class OptionClickHandlerService {
   // leak true on incorrect-only single-answer clicks; bypass them here
   // until the user actually picks the correct answer.
   //
-  // PRISTINE-FIRST: read correct flags from quizInitialState (the
-  // immutable structuredClone of QUIZ_DATA) since live quizService
-  // .questions[].options[].correct can get mutated during gameplay,
-  // making the size===1 gate fail on Q3/Q5+ even though pristine
-  // clearly shows one correct option.
+  // "Has a correct option been selected?" is answered by the verdict for the
+  // player's own picks, and the question's shape by its declared type. Neither
+  // asks the bank, and neither asks about an option nobody selected.
   private singleAnswerStaysClickable(qIndex: number, forceDisableAll: boolean): boolean | undefined {
     if (!forceDisableAll) {
       try {
@@ -488,19 +492,31 @@ export class OptionClickHandlerService {
           ? this.quizService?.getQuestionsInDisplayOrder?.()?.[qIndex]
             ?? this.quizService?.shuffledQuestions?.[qIndex]
           : this.quizService?.questions?.[qIndex];
-        const correctTextsSA =
-          this.quizService.getPristineCorrectTextsForQuestion(liveSAQ?.questionText);
-        // anyCorrectSelected: trust the selection's own `correct` flag
-        // (spread from the canonical binding option) as a fallback when
-        // the cache misses — stale questionText on Q3+ would otherwise
-        // wrongly leave siblings clickable after a real correct pick.
-        const anyCorrectSelected = saSelections.some((s: any) => {
-          if (isOptionCorrect(s)) {
-            return true;
-          }
-          return correctTextsSA.has(norm(s?.text));
-        });
-        if (!anyCorrectSelected && correctTextsSA.size <= 1) return false;
+        // THE VERDICT ON THE USER'S OWN PICKS DECIDES THIS.
+        //
+        // The question being asked is "has this player already found the
+        // correct answer?", and the only authority on that is the verdict for
+        // the options they actually selected. The bank scan answered it by
+        // rebuilding the correct set and testing membership, which is the
+        // answer key deciding a live UI state.
+        //
+        // `selectedVerdictFor` is undefined until the check lands, and
+        // undefined is NOT "wrong" — it means nothing has been resolved yet.
+        // Treating it as not-yet-correct is exactly what this guard wants:
+        // options stay clickable while a check is in flight, and lock when the
+        // verdict arrives and re-runs this. That is the same recovery window
+        // the guard already gave a wrong pick.
+        const verdictState = verdictStateForDisplayIndex(this.quizService, qIndex, this.verdicts);
+        const anyCorrectSelected = saSelections.some(
+          (s: any) => selectedVerdictFor(verdictState, s?.text) === true
+        );
+
+        // CARDINALITY COMES FROM THE DECLARED TYPE, not from counting flagged
+        // options. An undeclared type reads as single here, which keeps the
+        // options clickable — the permissive outcome, and the right one for a
+        // multi-answer question too, where clicking must continue anyway.
+        const isSingleAnswer = declaredIsMultiAnswer(liveSAQ) !== true;
+        if (!anyCorrectSelected && isSingleAnswer) return false;
       } catch { /* ignore — fall through to legacy lock checks */ }
     }
     return undefined;

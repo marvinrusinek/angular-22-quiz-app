@@ -8,9 +8,14 @@ import { QuizQuestion } from '../../../models/QuizQuestion.model';
 import { SelectedOption } from '../../../models/SelectedOption.model';
 
 import { QuizService } from '../../data/quiz.service';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import {
+  allCorrectSelectedFromVerdict,
+  selectedVerdictFor
+} from '../verdict/authorized-correctness';
+import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { readSessionJson } from '../../../utils/session-storage';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { swallow } from '../../../utils/error-logging';
 
 interface StopTimerAttemptOptions {
@@ -65,6 +70,7 @@ export class TimerService implements OnDestroy {
   public readonly expiredForQuestionIndexSig = signal(-1);
 
   private quizService = inject(QuizService);
+  private verdicts = inject(QuestionVerdictService);
   private selectedOptionService = inject(SelectedOptionService);
 
   constructor() {
@@ -425,10 +431,19 @@ export class TimerService implements OnDestroy {
       const normalizedIndex = this.normalizeQuestionIndex(questionIndex);
       if (normalizedIndex < 0) return;
 
-      // Determine correct answers
-      const correctOptions = question.options.filter((opt) => opt.correct);
-      const correctOptionIds = correctOptions.map((opt) => String(opt.optionId));
-      const isMultiple = correctOptionIds.length > 1;
+      // WHETHER THE QUESTION IS ANSWERED IS THE VERDICT'S CALL.
+      //
+      // This built the correct set from `opt.correct`, derived the question
+      // TYPE from how many were flagged, and then compared ids. All three came
+      // from the bundled answer key, and an API-sourced option carries no
+      // `correct` at all — so the set was empty, every question read as
+      // single-answer, and the timer stopped on the first click regardless of
+      // whether it was right.
+      //
+      // The verdict answers the actual question — "is this question finished
+      // and finished correctly?" — for both shapes, and TYPE comes from the
+      // declared metadata rather than from a count of correctness.
+      const isMultiple = declaredIsMultiAnswer(question) === true;
 
       // Build SELECTED set
       //  - For MULTIPLE: prefer SelectedOptionService
@@ -452,31 +467,24 @@ export class TimerService implements OnDestroy {
         selectedOptionsFinal = selectedOptionsFromQQC ?? [];
       }
 
-      const selectedIds = selectedOptionsFinal.map((o) =>
-        String((o as any).optionId ?? '')
-      );
+      const quizId = (this.quizService as any)?.quizId as string | undefined;
+      const questionText = question.questionText;
+      const verdictState = quizId && questionText
+        ? this.verdicts.verdictFor(quizId, questionText)
+        : null;
 
       let shouldStop = false;
 
-      // MULTIPLE-ANSWER LOGIC (match computeCorrectness)
       if (isMultiple) {
-        const selectedSet = new Set(selectedIds);
-
-        const selectedCorrectCount = correctOptionIds.filter((id) =>
-          selectedSet.has(id)
-        ).length;
-
-        // Exact match: all and only correct options selected
-        shouldStop =
-          correctOptionIds.length > 0 &&
-          selectedCorrectCount === correctOptionIds.length;
-      }
-
-      // Single-answer logic
-      else {
+        // Every required correct option selected, under the audited superset
+        // rule. Null (nothing checked yet) is not completion.
+        shouldStop = allCorrectSelectedFromVerdict(verdictState) === true;
+      } else {
+        // Single-answer: did the user's OWN pick come back correct? Absent
+        // means the check is still in flight, which is not a reason to stop —
+        // the timer keeps running and this re-runs when the verdict lands.
         const firstSelected = selectedOptionsFinal[0] as any;
-        const isCorrect = isOptionCorrect(firstSelected);
-        shouldStop = isCorrect;
+        shouldStop = selectedVerdictFor(verdictState, firstSelected?.text) === true;
       }
 
       // Stop timer if conditions met

@@ -541,21 +541,19 @@ export class SocAnswerProcessingService {
           return authorizedAll && !anyWrongPicked;
         }
 
-        // REMOVE WITH THE IDLE/CHECKING/ERROR CLEANUP — reached only when no
-        // verdict has been recorded. A revisit in a fresh session has none, and
-        // absence is not a negative verdict, so the pristine comparison still
-        // answers here.
-        const pristineCorrectTextsAC =
-          this.quizService.getPristineCorrectTextsForQuestion(questionText);
-        if (pristineCorrectTextsAC.size > 0) {
-          const selectedCorrectTexts = new Set<string>();
-          let hasIncorrectSelected = false;
-          for (const t of selectedTexts) {
-            if (pristineCorrectTextsAC.has(t)) selectedCorrectTexts.add(t);
-            else hasIncorrectSelected = true;
-          }
-          allCorrectInDurable =
-            selectedCorrectTexts.size >= pristineCorrectTextsAC.size && !hasIncorrectSelected;
+        // NO USABLE SNAPSHOT — but the question may already have been completed
+        // earlier this session, which is a different fact from what the newest
+        // check reports. The bank comparison that used to answer here rebuilt
+        // the correct set from the answer key; the session latch answers the
+        // same question and can only be set by an authorized verdict.
+        //
+        // PERFECT still means nothing wrong was picked, so the no-incorrect
+        // guard is kept against whatever verdicts the user's own picks carry.
+        if (this.selectionMessageService.isCompletedInSession(displayIdx)) {
+          const anyWrongPickedLatched = [...selectedTexts].some(
+            (t) => selectedVerdictFor(state, t) === false
+          );
+          allCorrectInDurable = !anyWrongPickedLatched;
         }
       }
     } catch (err: unknown) { console.error('processMultiAnswerClick allCorrectInDurable check failed:', err); }

@@ -363,29 +363,21 @@ export class QqcOrchClickService {
     return false;
   }
 
-  /** Are all pristine-correct texts for this multi-answer question selected? (true on error = trust upstream). Extracted verbatim. */
-  private isMultiFullySelected(host: Host, idx: number, q: QuizQuestion | null): boolean {
-    try {
-      const displayQ: any = host.quizService.getQuestionsInDisplayOrder?.()?.[idx]
-        ?? host.quizService?.questions?.[idx]
-        ?? q;
-      let rawCorrectTexts = new Set<string>();
-      try {
-        rawCorrectTexts = host.quizService.getPristineCorrectTextsForQuestion(displayQ?.questionText);
-      } catch (err: unknown) { swallow('qqc-orch-click.service.ts pristine correct-texts read', err); }
-      if (rawCorrectTexts.size === 0) {
-        const rawOpts: any[] = displayQ?.options ?? [];
-        rawCorrectTexts = new Set(
-          rawOpts.filter((o: any) => isOptionCorrect(o))
-            .map((o: any) => norm(o?.text))
-            .filter((t: string) => !!t)
-        );
-      }
-      const svcSel = host.selectedOptionService.getSelectedOptionsForQuestion(idx) ?? [];
-      const selTexts = new Set(svcSel.map((s: any) => norm(s?.text)).filter((t: string) => !!t));
-      return rawCorrectTexts.size > 0 && [...rawCorrectTexts].every(t => selTexts.has(t));
-    } catch {
-      return true; // trust upstream
-    }
+  /**
+   * Has this multi-answer question been completed? Gates the early multi-answer
+   * FET.
+   *
+   * Rebuilding the correct set from the bank — or, when that missed, from the
+   * options' own `correct` flags — and testing whether the selection covered it
+   * was the answer key deciding when to release the explanation.
+   *
+   * The session latch answers it instead, and is the right authority rather
+   * than the newest verdict: a revisit re-submits only the live bindings and
+   * comes back `incomplete`, which would withhold the FET on a question the
+   * player has already finished. It can only be set by an authorized verdict,
+   * so this never releases the explanation early.
+   */
+  private isMultiFullySelected(host: Host, idx: number, _q: QuizQuestion | null): boolean {
+    return host.selectionMessageService.isCompletedInSession(idx) === true;
   }
 }

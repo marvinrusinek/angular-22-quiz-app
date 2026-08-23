@@ -5,6 +5,11 @@ import { catchError, map, tap } from 'rxjs/operators';
 import { canonicalize } from './local-verdict.adapter';
 import { TOPIC_QUIZ_VERDICT_ADAPTER } from './verdict-adapter';
 import {
+  clearEarnedVerdicts as clearEarned,
+  readPayload,
+  saveEarnedVerdict
+} from './earned-verdict-storage';
+import {
   IDLE_VERDICT_STATE,
   QuestionVerdictError,
   type QuestionCheckResult,
@@ -42,11 +47,20 @@ import {
  * starts coming from the network. Paying that cost now keeps stage 10 to a
  * one-file change.
  *
- * ── No persistence ─────────────────────────────────────────────────
+ * ── Persistence is limited to what the user has EARNED ─────────────
  *
- * Verdicts, correct-option sets and explanations are held in memory only and
- * are never written to localStorage or sessionStorage. Persisting them would
- * put the answer key back on disk — the exact problem being removed.
+ * This previously stored nothing at all, on the reasoning that persisting
+ * verdicts would put the answer key back on disk. That holds for the key — but
+ * it also meant a page reload emptied the store, and the UI then repainted an
+ * already-answered question from the bundled bank. That fallback was the last
+ * correctness dependency on the asset, so "persist nothing" was in practice
+ * keeping the whole key in the browser.
+ *
+ * Terminal verdicts are therefore written to sessionStorage
+ * (`earned-verdict-storage.ts`), and only those: the judgement of the user's own
+ * picks, and the reveal for questions the server has already revealed. Nothing
+ * is stored for an unanswered question, so the storage discloses exactly what
+ * the player has already seen and nothing more.
  */
 @Service()
 export class QuestionVerdictService {
@@ -309,8 +323,64 @@ export class QuestionVerdictService {
     // announced — subscribers inherit the generation protection instead of
     // re-implementing it.
     if (state.phase === 'resolved' || state.phase === 'expired') {
+      // EARNED STATE SURVIVES A RELOAD.
+      //
+      // The store is in memory, so a refresh used to lose every verdict and the
+      // UI repainted an already-answered question from the bundled answer key.
+      // That was the last correctness dependency on the asset. Only terminal
+      // verdicts are written, and only the facts this check already showed the
+      // user — never a key, and nothing for a question they have not answered.
+      saveEarnedVerdict(quizId, questionText, state);
       this._terminal.next({ quizId, questionText, state });
     }
+  }
+
+  /**
+   * Restore verdicts this session already earned, after a reload.
+   *
+   * Idempotent and non-destructive: an in-memory verdict always wins, because a
+   * live check is fresher than anything persisted. Entries whose question the
+   * API no longer serves are dropped — `knownQuestionTexts` is the caller's
+   * current `/questions` set, so persisted state cannot resurrect a question
+   * that no longer exists or belongs to another quiz.
+   */
+  rehydrateEarnedVerdicts(quizId: string, knownQuestionTexts: readonly string[]): number {
+    if (!quizId) return 0;
+
+    const known = new Set(knownQuestionTexts.map((t) => canonicalize(t)));
+    const entries = readPayload(quizId);
+    if (entries.length === 0) return 0;
+
+    const next = new Map(this._states());
+    let restored = 0;
+
+    for (const entry of entries) {
+      if (!known.has(canonicalize(entry.questionText))) continue;   // fail closed
+
+      const mapKey = this.key(quizId, entry.questionText);
+      if (next.has(mapKey)) continue;   // a live verdict is authoritative
+
+      next.set(mapKey, {
+        phase: entry.phase,
+        selectedOptionTexts: entry.selectedVerdicts.map(([text]) => text),
+        selectedVerdicts: new Map(entry.selectedVerdicts.map(([t, c]) => [t, c])),
+        // Never persisted: it is only meaningful for the `incomplete` phase,
+        // and a terminal question has nothing outstanding.
+        remainingCorrectCount: entry.phase === 'resolved' ? 0 : null,
+        correctOptionTexts: entry.correctOptionTexts ?? [],
+        explanation: entry.explanation ?? null,
+        isResolvedCorrect: entry.isResolvedCorrect
+      });
+      restored++;
+    }
+
+    if (restored > 0) this._states.set(next);
+    return restored;
+  }
+
+  /** Drop this quiz's earned snapshot — quiz restart, or leaving the quiz. */
+  clearEarnedVerdicts(quizId: string): void {
+    clearEarned(quizId);
   }
 
   private markChecking(

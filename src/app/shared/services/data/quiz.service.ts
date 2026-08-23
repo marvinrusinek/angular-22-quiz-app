@@ -25,6 +25,7 @@ import { QuizScoringService } from './quiz-scoring.service';
 import { QuizSessionManagerService } from './quiz-session-manager.service';
 import { QuizShuffleService } from '../flow/quiz-shuffle.service';
 import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
+import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
 import { QuizStateService } from '../state/quizstate.service';
 
 import { SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID, SK_USER_ANSWERS } from '../../constants/session-keys';
@@ -599,6 +600,26 @@ export class QuizService {
     // count-based fallback, which is the race this slice exists to close.
     await typesLoaded;
     registry?.applyDeclaredTypes(questions);
+
+    // RESTORE WHAT THIS SESSION ALREADY EARNED.
+    //
+    // The verdict store is in memory, so a reload empties it and the UI used to
+    // repaint an already-answered question from the bundled answer key — the
+    // last correctness dependency on that asset.
+    //
+    // Deliberately here and not earlier: rehydration is validated against the
+    // CURRENT question set, so it can only run once `/questions` has answered.
+    // A persisted entry for a question this quiz no longer serves is dropped,
+    // and a live in-memory verdict always wins over a persisted one.
+    //
+    // Resolved lazily for the same reason as the registry above — constructing
+    // the verdict service eagerly here would pull its HTTP stack into
+    // QuizService's own construction.
+    try {
+      this.injector
+        .get(QuestionVerdictService, null)
+        ?.rehydrateEarnedVerdicts(quizId, questions.map((q) => q?.questionText ?? ''));
+    } catch (err: unknown) { swallow('quiz.service.ts earned-verdict rehydrate', err); }
 
     this.quizId = quizId;
     this.totalQuestions.set(questions.length);

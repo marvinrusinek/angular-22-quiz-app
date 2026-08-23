@@ -413,16 +413,43 @@ describe('containment guarantees', () => {
     }
   });
 
-  it('does NOT write to localStorage or sessionStorage', async () => {
-    const local = jest.spyOn(Storage.prototype, 'setItem');
+  it('NEVER writes to localStorage, and writes only EARNED state to sessionStorage', async () => {
+    // This asserted that nothing was persisted at all. That rule had a cost
+    // nobody had priced: a reload emptied the in-memory store, and the UI then
+    // repainted an already-answered question from the bundled answer key — so
+    // "persist nothing" was in practice keeping the whole key in the browser.
+    //
+    // The boundary is now narrower and checkable. localStorage stays forbidden
+    // outright: it outlives the session that earned the state. sessionStorage
+    // receives terminal verdicts only, and only under the earned-verdict key.
+    const localSet = jest.spyOn(Storage.prototype, 'setItem');
+    sessionStorage.clear();
 
     await check('rxjs', 'Select every operator', ['map', 'filter']);
     await firstValueFrom(service.revealExpiredQuestion('rxjs', 'Which answer is correct?'));
 
-    // Verdicts and explanations are answer-key material; persisting them would
-    // put the answer key back on disk.
-    expect(local).not.toHaveBeenCalled();
-    local.mockRestore();
+    for (const [key] of localSet.mock.calls as [string, string][]) {
+      expect(key.startsWith('earnedVerdicts:')).toBe(true);
+    }
+    expect(localStorage.length).toBe(0);
+    localSet.mockRestore();
+  });
+
+  it('persists nothing for a question the user has not answered', async () => {
+    sessionStorage.clear();
+
+    // One question is answered; a second is never touched.
+    await check('rxjs', 'Select every operator', ['map', 'filter']);
+
+    const stored = Object.keys(sessionStorage)
+      .filter((k) => k.startsWith('earnedVerdicts:'))
+      .map((k) => sessionStorage.getItem(k) ?? '')
+      .join(' ');
+
+    expect(stored).toContain('Select every operator');
+    // The unanswered question contributes no entry, so its text — and with it
+    // any hint about its answers — never reaches storage.
+    expect(stored).not.toContain('Which answer is correct?');
   });
 
   it('mutating a returned result does not corrupt stored state', async () => {

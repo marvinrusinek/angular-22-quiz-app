@@ -366,7 +366,8 @@ export class OptionItemComponent implements OnInit {
       const {
         fullyResolvedCorrect,
         fullyResolvedWrong,
-        correctOpts
+        revealedCorrectOptionTexts,
+        selectedVerdicts
       } = this.questionResolution.resolveQuestionState(questionIndex, {
         includeWrongDetection: true
       });
@@ -374,7 +375,7 @@ export class OptionItemComponent implements OnInit {
       const option = this.binding()?.option;
 
       if (fullyResolvedCorrect) {
-        return this.getFullyResolvedCorrectClasses(classes, option, correctOpts, questionIndex);
+        return this.getFullyResolvedCorrectClasses(classes, option, revealedCorrectOptionTexts, questionIndex);
       }
 
       // Engaged-but-partial question on revisit: repaint the first-visit colors
@@ -384,7 +385,7 @@ export class OptionItemComponent implements OnInit {
       // so restoring it can't trigger the "all incorrects selected" reveal.
       if (!this._userHasClicked &&
           this.selectedOptionService.hasRevisitDisplay(questionIndex)) {
-        return this.getPartialRevisitClasses(classes, option, correctOpts, questionIndex);
+        return this.getPartialRevisitClasses(classes, option, selectedVerdicts, questionIndex);
       }
 
       if (fullyResolvedWrong && !this._userHasClicked) {
@@ -398,14 +399,29 @@ export class OptionItemComponent implements OnInit {
     }
   }
 
+  /**
+
+   * #3 FULL REVEAL — reached only behind `fullyResolvedCorrect`, so the reveal
+
+   * has been authorized and naming the correct options discloses nothing new.
+
+   */
+
   private getFullyResolvedCorrectClasses(
+
     classes: { [key: string]: boolean },
+
     option: Option | undefined,
-    correctOpts: Option[],
+
+    revealedCorrectOptionTexts: ReadonlySet<string>,
+
     questionIndex: number
+
   ): { [key: string]: boolean } {
+
     const isCanonCorrectHere =
-      this.questionResolution.isOptionCanonCorrect(option, correctOpts);
+
+      this.questionResolution.isOptionInRevealedCorrectSet(option, revealedCorrectOptionTexts);
 
     if (isCanonCorrectHere) {
       return {
@@ -437,26 +453,79 @@ export class OptionItemComponent implements OnInit {
   // left it: each option that was selected shows green (if canon-correct) or red
   // (if incorrect); untouched options stay neutral + interactive so the user can
   // keep answering. Driven purely by the display-only revisit snapshot.
+  /**
+
+   * #4 SELECTED-OPTION PAINTING — the one path that runs while a multi-answer
+
+   * question is still INCOMPLETE.
+
+   *
+
+   * It must never consult the reveal. It only ever classifies options the user
+
+   * selected (untouched ones return neutral above), so the user's own verdicts
+
+   * answer it completely — and they are available from `incomplete` onwards,
+
+   * whereas the reveal is withheld until the question resolves.
+
+   *
+
+   * Reaching for the reveal here is what broke every multi-answer behaviour
+
+   * when this field was first migrated: mid-question the set is empty, so every
+
+   * pick painted red.
+
+   *
+
+   * UNJUDGED IS NOT WRONG. A pick with no verdict yet stays neutral rather than
+
+   * being called incorrect.
+
+   */
+
   private getPartialRevisitClasses(
+
     classes: { [key: string]: boolean },
+
     option: Option | undefined,
-    correctOpts: Option[],
+
+    selectedVerdicts: ReadonlyMap<string, boolean>,
+
     questionIndex: number
+
   ): { [key: string]: boolean } {
+
     const wasSelected = this.selectedOptionService.wasTextSelectedOnLastVisit(
+
       questionIndex, option?.text ?? ''
+
     );
+
     if (!wasSelected) {
+
       // Untouched on the last visit → neutral, still clickable on revisit.
+
       return this.clearRevisitClasses(classes);
+
     }
-    const isCorrect = this.questionResolution.isOptionCanonCorrect(option, correctOpts);
+
+    const verdict = this.questionResolution.selectedVerdictForOption(option, selectedVerdicts);
+
+    if (verdict === undefined) return this.clearRevisitClasses(classes);
+
     return {
+
       ...classes,
+
       selected: true,
+
       'selected-option': true,
-      'correct-option': isCorrect,
-      'incorrect-option': !isCorrect,
+
+      'correct-option': verdict === true,
+
+      'incorrect-option': verdict === false,
       highlighted: true,
       'disabled-option': false
     };
@@ -542,8 +611,8 @@ export class OptionItemComponent implements OnInit {
 
       const res = this.questionResolution.resolveQuestionState(_qIdxRev);
       if (res.fullyResolvedCorrect) {
-        const isCanonCorrectHere = this.questionResolution.isOptionCanonCorrect(
-          this.binding()?.option, res.correctOpts
+        const isCanonCorrectHere = this.questionResolution.isOptionInRevealedCorrectSet(
+          this.binding()?.option, res.revealedCorrectOptionTexts
         );
         if (!isCanonCorrectHere) return true;
       }
@@ -790,8 +859,8 @@ export class OptionItemComponent implements OnInit {
       const _qIdxFR = this.resolveQuestionIndex();
       const resFR = this.questionResolution.resolveQuestionState(_qIdxFR, { includeDot: false });
       if (resFR.fullyResolvedCorrect) {
-        const isCanonCorrect = this.questionResolution.isOptionCanonCorrect(
-          this.binding()?.option, resFR.correctOpts
+        const isCanonCorrect = this.questionResolution.isOptionInRevealedCorrectSet(
+          this.binding()?.option, resFR.revealedCorrectOptionTexts
         );
         return isCanonCorrect ? CORRECT_COLOR : DISABLED_COLOR;
       }
@@ -813,7 +882,7 @@ export class OptionItemComponent implements OnInit {
         const _qIdxRev = this.resolveQuestionIndex();
 
         const res = this.questionResolution.resolveQuestionState(_qIdxRev, { includeDot: false });
-        if (!res.fullyResolvedCorrect && res.isCanonMulti) {
+        if (!res.fullyResolvedCorrect && res.isMultiAnswer) {
           return null;
         }
       }

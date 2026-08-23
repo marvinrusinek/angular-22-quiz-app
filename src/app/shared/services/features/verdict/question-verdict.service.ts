@@ -417,6 +417,22 @@ export class QuestionVerdictService {
     const selected = [...selectedOptionTexts];
 
     if (result.status === 'incomplete') {
+      // A REVEAL, ONCE EARNED, IS NOT TAKEN BACK.
+      //
+      // Revisiting an answered question re-submits, and the live bindings on a
+      // revisit do not carry the first-visit picks — so the server sees a
+      // smaller selection and answers `incomplete`. Blanking the reveal here
+      // then erased what the player had already been shown: a correctly
+      // answered question came back from a revisit painted INCORRECT, because
+      // the consumer asked whether the option was in the (now empty) correct
+      // set and got "no".
+      //
+      // The new selection verdicts and the outstanding count are current and do
+      // replace the old ones. What carries forward is only what the server had
+      // already disclosed for this question — never anything it has not.
+      const previous = this.verdictFor(quizId, questionText);
+      const alreadyRevealed = previous.correctOptionTexts.length > 0;
+
       this.write(quizId, questionText, {
         phase: 'incomplete',
         selectedOptionTexts: selected,
@@ -424,9 +440,8 @@ export class QuestionVerdictService {
           result.selectedVerdicts.map((verdict) => [canonicalize(verdict.text), verdict.correct])
         ),
         remainingCorrectCount: result.remainingCorrectCount,
-        // Nothing revealed yet.
-        correctOptionTexts: [],
-        explanation: null,
+        correctOptionTexts: alreadyRevealed ? previous.correctOptionTexts : [],
+        explanation: alreadyRevealed ? previous.explanation : null,
         isResolvedCorrect: null,
       });
       return;

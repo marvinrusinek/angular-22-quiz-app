@@ -182,26 +182,38 @@ describe('the local answer key cannot override the verdict', () => {
   });
 });
 
-describe('with no verdict, the existing comparison still answers', () => {
+describe('with no verdict, nothing is claimed either way', () => {
+  /**
+   * WAS the pristine fallback, justified as "a revisit in a fresh session must
+   * still restore correctly". Measured against the committed build, that
+   * restore does not happen — a reload brings back neither a wrong pick's red
+   * nor a partial multi's colours. The cases that DO restore are now carried by
+   * the earned-verdict snapshot, which is authorized rather than local.
+   *
+   * So an absent verdict yields no claim in EITHER direction. Both perfect and
+   * imperfect are assertions about correctness, and calling an unfinished
+   * selection "imperfect" says the user got something wrong when no authority
+   * has said so — they may simply not have finished.
+   */
   it.each([['idle'], ['checking'], ['error']] as const)(
-    'falls back to the pristine comparison while %s',
+    'claims neither perfect nor imperfect while %s',
     (phase) => {
-      // Absence of a verdict is not a negative one — a revisit in a fresh
-      // session must still restore correctly.
       selections = picked('map', 'filter');
       verdictState = state({ phase });
 
-      expect(resolve().computedPerfect).toBe(true);
+      const res = resolve();
+      expect(res.computedPerfect).toBe(false);
+      expect(res.computedImperfect).toBe(false);
     }
   );
 
-  it('still reports imperfect for a partial selection with no verdict', () => {
+  it('a partial selection with no verdict is not called imperfect', () => {
     selections = picked('map');
     verdictState = state({ phase: 'idle' });
 
     const res = resolve();
     expect(res.computedPerfect).toBe(false);
-    expect(res.computedImperfect).toBe(true);
+    expect(res.computedImperfect).toBe(false);
   });
 });
 

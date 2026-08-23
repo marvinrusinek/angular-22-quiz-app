@@ -82,7 +82,20 @@ export function authorizedCorrectTexts(
 ): ReadonlySet<string> | null {
   const state = verdictStateForDisplayIndex(quizService, qIdx, verdicts);
   if (!state) return null;
-  if (state.phase !== 'resolved' && state.phase !== 'expired') return null;
+
+  // NON-EMPTINESS *IS* THE AUTHORIZATION.
+  //
+  // This also required a terminal phase. That reads as the stricter rule but is
+  // actually redundant — `correctOptionTexts` is only ever populated by a
+  // server reveal — and it cost real behaviour: revisiting an answered question
+  // re-submits, the re-check answers `incomplete`, and the phase gate then
+  // withheld a reveal the player had already been shown. A correctly answered
+  // question came back from a revisit painted INCORRECT.
+  //
+  // An empty set still means "not revealed" and still returns null, so nothing
+  // is disclosed early; what changed is that a reveal already granted is not
+  // rescinded by a later partial submission.
+  if (state.correctOptionTexts.length === 0) return null;
 
   return new Set(state.correctOptionTexts.map((text) => norm(text)));
 }

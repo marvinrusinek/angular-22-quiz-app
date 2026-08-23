@@ -456,14 +456,6 @@ export class SelectionMessageService {
     }
 
     if (qType === QuestionType.MultipleAnswer) {
-      // How many CORRECT options are still unselected, from the verdict
-      // service rather than a scan of `correct` flags. Incorrect picks cannot
-      // move this number — the verdict counts only missing correct options,
-      // which is exactly the existing behaviour (`totalCorrect -
-      // selectedCorrect` likewise ignored wrong selections).
-      const remaining = this.remainingCorrectFromVerdict(index)
-        ?? (totalCorrect - selectedCorrect);
-
       // How many options the user has picked — NOT how many were right.
       //
       // This was `selectedCorrect + selectedWrong`, which is the same number
@@ -473,12 +465,6 @@ export class SelectionMessageService {
       // nothing in this branch reads a `correct` flag at all.
       const totalSelected = opts.filter((o) => o.selected).length;
 
-      // All correct answers selected → Next button or Show Results
-      if (remaining === 0) {
-        this._multiAnswerCompletionLock.add(index);
-        return isLastQuestion ? SHOW_RESULTS_MSG : NEXT_BTN_MSG;
-      }
-
       // Nothing selected yet → a COUNT-FREE prompt.
       //
       // This used to read `Select ${totalCorrect} correct options`, which told
@@ -487,10 +473,49 @@ export class SelectionMessageService {
       // recoverable from public question data, and exposing it through
       // /questions would hand every visitor a materially useful hint.
       //
-      // After the first selection the count is legitimate: it comes from the
-      // authorized /check response as remainingCorrectCount, below.
+      // Checked FIRST so an untouched question reads as a prompt rather than as
+      // a check in flight — nothing has been submitted for it.
       if (totalSelected === 0) {
         return SELECT_ALL_THAT_APPLY_MSG;
+      }
+
+      // ── UNKNOWN REMAINING IS NOT ZERO REMAINING ──────────────────────
+      //
+      // This read `remainingCorrectFromVerdict(index) ?? (totalCorrect -
+      // selectedCorrect)`. The verdict answers null while the check is in
+      // flight — which is ALWAYS the case at click time under the API adapter —
+      // so the fallback decided it, and API-sourced options carry no `correct`
+      // flag, making `totalCorrect` and `selectedCorrect` both 0.
+      //
+      // `0 - 0 === 0` then satisfied "all correct answers selected", so a
+      // partially-answered question emitted the Next-button message. That is
+      // more than a wrong string: `pushMessage` adds any Next/Show-Results
+      // message to `_completedIdxSet`, which is what the revisit derivation
+      // reads — so one click on a 3-correct question made it report
+      // "Answered ✓ Click Next to continue..." forever after.
+      //
+      // The local fallback is KEPT where it can actually answer: a question
+      // whose options still carry `correct` flags has a real count, and
+      // `multi-answer-message-authority.spec.ts` pins that behaviour for the
+      // idle/checking/error phases. What is rejected is the case where NEITHER
+      // source knows anything — `totalCorrect === 0` means no option is flagged
+      // correct, so `totalCorrect - selectedCorrect` is 0 by ignorance, not by
+      // completion.
+      //
+      // Unknown then renders "Checking…" and writes no completion, exactly as
+      // the single-answer branch already does, and the message is recomputed
+      // when the verdict lands via the same one-shot arrival subscription.
+      const remainingFromVerdict = this.remainingCorrectFromVerdict(index);
+      if (remainingFromVerdict === null && totalCorrect === 0) {
+        this.recomputeWhenVerdictArrives({ index, total, qType, opts });
+        return CHECKING_MSG;
+      }
+      const remaining = remainingFromVerdict ?? (totalCorrect - selectedCorrect);
+
+      // All correct answers selected → Next button or Show Results
+      if (remaining === 0) {
+        this._multiAnswerCompletionLock.add(index);
+        return isLastQuestion ? SHOW_RESULTS_MSG : NEXT_BTN_MSG;
       }
 
       // Some selected but not all correct yet → show remaining correct needed

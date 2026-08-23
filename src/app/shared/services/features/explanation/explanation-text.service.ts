@@ -5,12 +5,14 @@ import { FormattedExplanation } from '../../../models/FormattedExplanation.model
 import { Option } from '../../../models/Option.model';
 import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
-import { SK_SEL_Q } from '../../../constants/session-keys';
 
 import { ExplanationDisplayStateService, FETPayload } from './explanation-display-state.service';
 import { ExplanationFormatterService } from './explanation-formatter.service';
 import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { allCorrectSelectedFromVerdict } from '../verdict/authorized-correctness';
+import { TopicQuizTypeRegistry } from '../../api/topic-quiz-type-registry.service';
+import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
 import { norm } from '../../../utils/text-norm';
 import { swallow } from '../../../utils/error-logging';
 
@@ -26,7 +28,8 @@ export class ExplanationTextService {
   private readonly displayState = inject(ExplanationDisplayStateService);
   private readonly formatter = inject(ExplanationFormatterService);
   private readonly quizService = inject(QuizService);
-  private readonly selectedOptionService = inject(SelectedOptionService);
+  private readonly verdicts = inject(QuestionVerdictService);
+  private readonly typeRegistry = inject(TopicQuizTypeRegistry);
 
   // ── optional back-reference ─────────────────────────────────────
   _loaderRef?: any;
@@ -40,11 +43,11 @@ export class ExplanationTextService {
   fetBypassForQuestion = new Map<number, boolean>();
 
   /**
-   * Central pristine-source FET gate. For multi-answer questions,
-   * verifies that every pristine correct-option text (from
-   * quizService.quizInitialState) is currently selected in
-   * selectedOptionsMap. Returns false if any correct option is not
-   * actually selected right now — meaning the FET must not be shown.
+   * Central FET completion gate for multi-answer questions.
+   *
+   * Asks the AUTHORIZED verdict whether every required correct option has
+   * been selected. It used to compare the user selections against the bundled
+   * answer key, which made the key decide when the user had earned it.
    */
   private isMultiAnswerPristineResolved(index: number): boolean | null {
     try {
@@ -68,56 +71,33 @@ export class ExplanationTextService {
       const qText = norm(liveQ?.questionText ?? '');
       if (!qText) return null;
 
-      const pristineCorrectTexts = Array.from(
-        this.quizService.getPristineCorrectTextsForQuestion(qText)
+      // MULTI-ANSWER ONLY, AND THE TYPE IS DECLARED.
+      //
+      // This was `pristineCorrectTexts.length < 2` — a count of the bundled
+      // answer key stood in for "is this multi-answer?". The declared type says
+      // so directly. Unknown returns null, exactly as a short pristine set did:
+      // callers block only on `false`, so null stays permissive and this gate
+      // simply declines to have an opinion.
+      const declaredMulti =
+        declaredIsMultiAnswer(liveQ) ?? this.typeRegistry?.isMultiAnswer?.(qText) ?? null;
+      if (declaredMulti !== true) return null;  // not multi-answer, or unknown
+
+      // COMPLETION IS THE VERDICT'S ANSWER.
+      //
+      // Everything between here and the return used to GATHER the user's
+      // selections from three places (live options, the selection map, session
+      // storage) purely to compare them against the bundled correct set. The
+      // verdict already knows both halves — what the user picked and how many
+      // correct options remain — so the comparison, and the gathering that
+      // existed for it, are both gone.
+      //
+      // Null while nothing has been checked, which callers treat as "no
+      // opinion" rather than as permission or refusal.
+      const quizId = (this.quizService as any)?.quizId as string | undefined;
+      if (!quizId) return null;
+      return allCorrectSelectedFromVerdict(
+        this.verdicts.verdictFor(quizId, liveQ?.questionText ?? qText)
       );
-
-      if (pristineCorrectTexts.length < 2) return null;  // not multi-answer
-
-      const selectedTexts = new Set<string>();
-
-      // Live question options
-      const liveOpts: any[] = Array.isArray(liveQ?.options) ? liveQ.options : [];
-      for (const o of liveOpts) {
-        const isSel = o?.selected === true
-          || o?.highlight === true
-          || o?.showIcon === true;
-        if (!isSel) continue;
-        const t = norm(o?.text);
-        if (t) selectedTexts.add(t);
-      }
-
-      // selectedOptionsMap
-      try {
-        const rawMap = this.selectedOptionService?.selectedOptionsMap;
-        if (rawMap && typeof rawMap.get === 'function') {
-          const mapSel: any[] = rawMap.get(idx) ?? [];
-          for (const o of mapSel) {
-            if (o?.selected === false) continue;
-            const t = norm(o?.text);
-            if (t) selectedTexts.add(t);
-          }
-        }
-      } catch (err: unknown) { swallow('explanation-text.service.ts selectedOptionsMap read', err); }
-
-      // sessionStorage sel_Q{idx}
-      try {
-        const raw = typeof sessionStorage !== 'undefined'
-          ? sessionStorage.getItem(SK_SEL_Q + idx) : null;
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            for (const o of parsed) {
-              if (o?.selected !== true) continue;
-              const t = norm(o?.text);
-              if (t) selectedTexts.add(t);
-            }
-          }
-        }
-      } catch (err: unknown) { swallow('explanation-text.service.ts sessionStorage sel_Q read', err); }
-
-      const allCorrect = pristineCorrectTexts.every(t => selectedTexts.has(t));
-      return allCorrect;
     } catch {
       return null;
     }

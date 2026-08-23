@@ -140,14 +140,26 @@ describe('a verdict that SAYS not-yet withholds the explanation', () => {
  * when the explanation pipeline itself is migrated; until then these tests
  * document it honestly so nobody reads the slice as finished.
  */
-describe('TRANSITIONAL: with no verdict at all, the local comparison still decides', () => {
+describe('with no verdict at all, nothing is disclosed', () => {
+  /**
+   * WAS TRANSITIONAL, NOW THE CONTRACT.
+   *
+   * These pinned the local-bank fallback: while the verdict was idle/checking/
+   * error, the FET was released if the BUNDLED ANSWER KEY said the question was
+   * complete. That fallback is gone with the bank, and its removal is the point
+   * of the migration — the key can no longer decide when the user has earned
+   * the explanation.
+   *
+   * Unknown withholds. A FET that arrives a moment later when /check answers is
+   * a delay; one released on an unauthorized guess is a disclosure.
+   */
   it.each([['idle'], ['checking'], ['error']] as const)(
-    'still shows the FET while %s when the local bank says the question is complete',
+    'withholds the FET while %s, whatever the local options claim',
     (phase) => {
       const i = buildHeadingInputs(deps({ selected: ['map', 'filter'], verdict: state({ phase }) }))!;
 
-      expect(i.isMultiAnswerComplete).toBe(true);
-      expect(shouldShowFet(i)).toBe(true);
+      expect(i.isMultiAnswerComplete).toBe(false);
+      expect(shouldShowFet(i)).toBe(false);
     }
   );
 
@@ -219,11 +231,15 @@ describe('a resolved question is authorized, and the verdict supplies the words'
 });
 
 describe('callers without a verdict service keep working', () => {
-  it('falls back to the pristine comparison when no authority is supplied', () => {
-    // The optional dep must not break a caller that predates it.
+  it('still builds, and discloses nothing, when no authority is supplied', () => {
+    // The optional dep must not break a caller that predates it — but its
+    // absence used to fall back to the pristine comparison and RELEASE the FET.
+    // With no authority there is no authorization, so the honest result is to
+    // withhold: a missing verdict service is not permission to reveal.
     const i = buildHeadingInputs(deps({ selected: ['map', 'filter'], verdict: null }))!;
 
-    expect(i.isMultiAnswerComplete).toBe(true);
-    expect(shouldShowFet(i)).toBe(true);
+    expect(i).not.toBeNull();
+    expect(i.isMultiAnswerComplete).toBe(false);
+    expect(shouldShowFet(i)).toBe(false);
   });
 });

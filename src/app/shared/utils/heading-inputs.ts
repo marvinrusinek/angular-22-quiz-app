@@ -4,7 +4,7 @@ import {
   verdictStateForDisplayIndex
 } from '../services/features/verdict/authorized-correctness';
 import { withCorrectCountBanner } from './correct-count-banner';
-import { bannerCorrectCount, resolveIsMultiAnswer } from './question-type-authority';
+import { bannerCorrectCount, declaredIsMultiAnswer } from './question-type-authority';
 import { HeadingInputs } from './heading-model';
 import { withTerminalPeriod } from './terminal-period';
 import { norm } from './text-norm';
@@ -56,8 +56,6 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
   }
 
   const qText = dq.questionText ?? '';
-  const pristine = Array.from(d.quizService.getPristineCorrectTextsForQuestion?.(qText) ?? [])
-    .map((t: any) => norm(t));
   const selectedTexts = new Set<string>(
     ((((d.selectedOptionService as any).selectedOptionsMap?.get?.(idx)) ?? []) as any[])
       .filter((o) => o?.selected !== false)
@@ -73,10 +71,25 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
   // a declared MULTIPLE question with one correct option is still multiple.
   //
   // `resolveIsMultiAnswer` is the existing authority helper — the declared
-  // `type` wins, and the count is consulted only when nothing was declared,
+  // `type` wins, and the fallback is consulted only when nothing was declared,
   // which keeps quizzes playable while the type request is in flight.
-  const isMultiAnswer = resolveIsMultiAnswer(dq, pristine.length > 1);
-  const selectedCorrect = pristine.filter((t) => selectedTexts.has(t));
+  //
+  // THE FALLBACK NO LONGER COUNTS THE BANK. It was `pristine.length > 1`, a
+  // read of the bundled answer key. The registry describes the SAME quiz from
+  // `/questions` and is already this function's authority for the banner count,
+  // so it answers the identical question without the asset.
+  //
+  // UNKNOWN MUST NOT COLLAPSE TO SINGLE. When neither the stamped type nor the
+  // registry knows, this keeps the question MULTI rather than single, and the
+  // difference is not cosmetic: `isSingleAnswered` is `!isMultiAnswer && one
+  // correct pick`, so calling an unknown question single-answer reveals its
+  // explanation after a single correct click — disclosing the answer to a
+  // multi-answer question the user has not finished. `heading-fet-authority`
+  // pins exactly that. Treating unknown as multi withholds instead, which is
+  // the safe direction: it can delay a FET, never leak one.
+  const declaredMulti =
+    declaredIsMultiAnswer(dq) ?? d.topicQuizTypeRegistry?.isMultiAnswer?.(qText) ?? null;
+  const isMultiAnswer = declaredMulti !== false;
   const ets = d.explanationTextService;
 
   // ── The authority for showing an explanation ─────────────────────
@@ -96,13 +109,16 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
       ? (verdict.explanation ?? '')
       : '';
 
-  // Single-answer "answered correctly", from the user's OWN verdicted pick
-  // rather than by matching their selection against the pristine correct set.
-  // `idle` means nothing has been checked, so the old comparison still stands.
+  // Single-answer "answered correctly", from the user's OWN verdicted pick.
+  //
+  // `idle` used to fall back to matching the selection against the pristine
+  // correct set. That arm is gone with the bank, and it could only ever have
+  // returned 0 in practice: `idle` means no check has been submitted, and a
+  // selection submits one — so there is nothing selected for it to match.
   const selectedCorrectFromAuthority =
     verdict && verdict.phase !== 'idle'
       ? [...selectedTexts].filter((t) => selectedVerdictFor(verdict, t) === true).length
-      : selectedCorrect.length;
+      : 0;
 
   // Compose the multi-answer "(N answers are correct)" banner into the question
   // markup, byte-identical to the legacy buildQuestionDisplay path (same helper +
@@ -160,13 +176,17 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
     // Completion decides when a multi-answer question earns its explanation.
     // The verdict answers it from the user's own selections plus the count of
     // correct options still outstanding — never from which unselected options
-    // are correct. Falls back to the pristine comparison only while no verdict
-    // has been recorded (idle), which is also the only time it cannot lie.
+    // are correct.
+    //
+    // The pristine comparison that stood in while no verdict existed is gone
+    // with the bank. The two remaining fallbacks are RECORDED completion state,
+    // not an answer key: `isMultiAnswerComplete` is written when an authorized
+    // verdict established completion, and the FET bypass is set by the click
+    // pipeline after the same. Neither asks which options are correct.
     isMultiAnswerComplete:
       verdictComplete !== null
         ? verdictComplete
-        : (pristine.length > 0 && selectedCorrect.length >= pristine.length)
-          || d.quizService.isMultiAnswerComplete?.(idx) === true
+        : d.quizService.isMultiAnswerComplete?.(idx) === true
           || ets.fetBypassForQuestion?.get?.(idx) === true,
     isSingleAnswered: !isMultiAnswer && selectedCorrectFromAuthority > 0,
     // A LIVE timeout only.

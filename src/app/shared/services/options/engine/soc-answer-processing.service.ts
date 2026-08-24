@@ -17,6 +17,11 @@ import { FeedbackService } from '../../features/feedback/feedback.service';
 import { NextButtonStateService } from '../../state/next-button-state.service';
 import { OptionClickHandlerService } from './option-click-handler.service';
 import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
+import { TopicQuizTypeRegistry } from '../../api/topic-quiz-type-registry.service';
+import {
+  declaredCorrectCount,
+  declaredIsMultiAnswer
+} from '../../../utils/question-type-authority';
 import type { QuestionVerdictState } from '../../features/verdict/question-verdict.types';
 import {
   allCorrectSelectedFromVerdict,
@@ -51,6 +56,7 @@ export class SocAnswerProcessingService {
   private sharedOptionExplanationService = inject(SharedOptionExplanationService);
   private timerService = inject(TimerService);
   private verdicts = inject(QuestionVerdictService);
+  private typeRegistry = inject(TopicQuizTypeRegistry);
 
   /**
    * Questions with a terminal-repaint wait outstanding, keyed by quiz+question.
@@ -699,27 +705,31 @@ export class SocAnswerProcessingService {
   }
 
   /**
-   * Q2/Q4 GUARD: when pristine has more correct than the user has selected,
-   * suppress disabled=true on bindings other than the clicked-incorrect one(s)
-   * so they can still pick the remaining correct answer. Verbatim.
+   * Q2/Q4 GUARD: while correct answers are still outstanding, suppress
+   * disabled=true on bindings other than the clicked-incorrect one(s), so the
+   * player can still pick the ones they have not found.
+   *
+   * THE VERDICT COUNTS WHAT IS LEFT. This rebuilt the correct set from the
+   * bank and counted how many of them the player had selected — deriving a
+   * remainder the server already reports directly, and reading the answer key
+   * to do it.
+   *
+   * `remainingCorrectCount` is `null` until something has been checked, and
+   * null is NOT zero. Zero would mean "nothing left to find" and would let the
+   * remaining options be disabled on a question the player has barely started.
+   * Unknown therefore keeps them enabled, which is the same permissive side
+   * this guard has always taken.
    */
-  private computeSuppressDisableForUnselected(comp: any, qIdx: number, displayIdx: number, durableSet: Set<number>): boolean {
+  private computeSuppressDisableForUnselected(comp: any, qIdx: number, displayIdx: number, _durableSet: Set<number>): boolean {
     try {
       const liveQS: any = this.resolveLiveQuestion(comp, displayIdx, qIdx);
-      const pristineCorrectTextsS =
-        this.quizService.getPristineCorrectTextsForQuestion(liveQS?.questionText);
-      if (pristineCorrectTextsS.size > 1) {
-        const bindingsS: any[] = comp.optionBindings() ?? [];
-        let selectedCorrectS = 0;
-        for (const sIdx of durableSet) {
-          if (pristineCorrectTextsS.has(norm(bindingsS[sIdx]?.option?.text))) {
-            selectedCorrectS++;
-          }
-        }
-        if (selectedCorrectS < pristineCorrectTextsS.size) {
-          return true;
-        }
-      }
+
+      // Only a DECLARED multi-answer question can have answers outstanding.
+      if (declaredIsMultiAnswer(liveQS) !== true) return false;
+
+      const remaining = this.resolveVerdictStateForComp(comp)?.remainingCorrectCount ?? null;
+      if (remaining === null) return true;   // unknown, not "none left"
+      return remaining > 0;
     } catch (err: unknown) { console.error('processMultiAnswerClick suppressDisable-guard failed:', err); }
     return false;
   }
@@ -1003,17 +1013,26 @@ export class SocAnswerProcessingService {
       const liveQText = comp.currentQuestion()?.questionText
         ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx]?.questionText
         ?? this.quizService?.questions?.[qIdx]?.questionText;
-      const pristineCorrectTexts =
-        this.quizService.getPristineCorrectTextsForQuestion(liveQText);
-      const pristineCorrectCount = pristineCorrectTexts.size;
-      if (pristineCorrectCount > 1) {
-        const correctIndicesByText: number[] = [];
-        const bindings: any[] = comp.optionBindings() ?? [];
-        for (let i = 0; i < bindings.length; i++) {
-          if (pristineCorrectTexts.has(norm(bindings[i]?.option?.text))) {
-            correctIndicesByText.push(i);
-          }
-        }
+      // TYPE IS DECLARED, NOT COUNTED.
+      //
+      // This asked the bank for the correct set and inferred multi-answer from
+      // its SIZE — cardinality standing in for type. A declared MULTIPLE
+      // question with one correct option is still multiple, and once the bank
+      // is gone the set is empty and every question routes single.
+      //
+      // Only `true` routes to the multi path. An undeclared type stays on the
+      // single path, which is where it was already headed.
+      const liveQ = comp.currentQuestion()
+        ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx]
+        ?? this.quizService?.questions?.[qIdx];
+
+      if (declaredIsMultiAnswer(liveQ) === true) {
+        // The correct INDICES are not resolved here any more. Rebuilding them
+        // needed the answer key, and the caller already passes the set it
+        // resolved; the count comes from the declared cardinality the API
+        // publishes (never WHICH options, only how many).
+        const declaredCount = declaredCorrectCount(this.typeRegistry, liveQText);
+
         this.processMultiAnswerClick({
           comp,
           index,
@@ -1021,10 +1040,8 @@ export class SocAnswerProcessingService {
           qIdx,
           displayIdx,
           durableSet,
-          effectiveCorrectIndices: correctIndicesByText.length
-            ? correctIndicesByText
-            : effectiveCorrectIndices,
-          effectiveCorrectCount: correctIndicesByText.length || pristineCorrectCount,
+          effectiveCorrectIndices,
+          effectiveCorrectCount: declaredCount ?? effectiveCorrectIndices.length,
           isShuffled
         });
         return true;

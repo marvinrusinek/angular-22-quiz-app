@@ -5,7 +5,7 @@
 </p>
 
 <p>
-The application combines topic-based Angular quizzes with a timed Interview Mode, performance analytics, weak-area practice, progress tracking, and detailed answer review. It demonstrates modern Angular architecture, reactive state management, backend-driven assessment sessions, automated testing, accessibility, and production-oriented application design.
+The application combines topic-based Angular quizzes with a timed Interview Mode, performance analytics, weak-area practice, progress tracking, and detailed answer review. It demonstrates modern Angular architecture, reactive state management, backend-driven assessment sessions, automated testing, accessibility, and maintainable full-stack application design.
 </p>
 
 <p align="center">
@@ -143,13 +143,6 @@ angular-22-quiz-app/
 
 <hr>
 
-<h2>⭐ Support</h2>
-
-<p>If you enjoyed exploring this project or found it helpful, please consider giving it a ⭐ on GitHub. Your support helps drive continued improvements, new features, and ongoing maintenance.</p>
-<p>The project continues to evolve with new Angular topics, assessment capabilities, and architectural improvements.</p>
-
-<hr>
-
 <h2>⚙️ Getting Started</h2>
 
 <h3>Prerequisites</h3>
@@ -194,6 +187,13 @@ npm install</code></pre>
 <li>Further simplify complex feature areas through architectural refactoring</li>
 <li>Continue improving accessibility, responsive design, and touch interactions</li>
 </ul>
+
+<hr>
+
+<h2>⭐ Support</h2>
+
+<p>If you enjoyed exploring this project or found it helpful, please consider giving it a ⭐ on GitHub. Your support helps drive continued improvements, new features, and ongoing maintenance.</p>
+<p>The project continues to evolve with new Angular topics, assessment capabilities, and architectural improvements.</p>
 
 <hr>
 

@@ -117,6 +117,24 @@ export class QuestionVerdictService {
 
   private readonly _terminal = new Subject<TerminalVerdictArrival>();
 
+  private readonly _changed = new Subject<{ quizId: string; questionText: string }>();
+
+  /**
+   * Fires on EVERY verdict write, terminal or not.
+   *
+   * terminalVerdicts$ deliberately announces only resolved/expired, because
+   * only those carry the full correct set. But some UI depends on a fact that
+   * changes while a question is still INCOMPLETE: the multi-answer selection
+   * message needs `remainingCorrectCount`, which drops on each correct pick
+   * and does not go terminal until the last one.
+   *
+   * Subscribers get the question IDENTITY only. Anything about the verdict
+   * itself they must read through the normal authorized accessors, so this
+   * cannot become a side channel that discloses more than the phase allows.
+   */
+  readonly verdictChanges$: Observable<{ quizId: string; questionText: string }> =
+    this._changed.asObservable();
+
   /**
    * Fires when a question reaches an AUTHORIZED terminal state.
    *
@@ -309,6 +327,8 @@ export class QuestionVerdictService {
     const next = new Map(this._states());
     next.set(this.key(quizId, questionText), state);
     this._states.set(next);
+
+    this._changed.next({ quizId, questionText });
 
     // ARRIVAL. Correctness-dependent UI cannot run on the click that requests a
     // check — under the API adapter the phase is still `checking` then, so a

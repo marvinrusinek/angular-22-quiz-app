@@ -606,8 +606,19 @@ export class SelectionMessageService {
         return isLastQuestion ? SHOW_RESULTS_MSG : NEXT_BTN_MSG;
       }
 
-      // Some selected but not all correct yet → show remaining correct needed
+      // Some selected but not all correct yet → show remaining correct needed.
+      //
+      // THE STORED COUNT IS ONE CHECK BEHIND. This runs on the click, and the
+      // check for THIS click is still in flight, so the stored count answers
+      // the PREVIOUS submission. On a 3-correct question the second correct
+      // pick therefore re-rendered "Select 2 more" instead of "Select 1 more",
+      // and stayed there until the question resolved.
+      //
+      // Registering the recompute corrects the message the moment the new
+      // verdict lands. The stale count shows for that instant, which is better
+      // than flashing "Checking..." between every pick.
       this._multiAnswerInProgressLock.add(index);
+      this.recomputeWhenVerdictArrives({ index, total, qType, opts });
       return `Select ${remaining} more correct answer${remaining !== 1 ? 's' : ''} to continue...`;
     }
 
@@ -639,7 +650,14 @@ export class SelectionMessageService {
       ?? service?.questions?.[args.index]?.questionText;
     if (!quizId || !questionText) return;
 
-    const arrivals = this.verdicts?.terminalVerdicts$;
+    // ANY verdict change, not only terminal ones.
+    //
+    // This listened to terminalVerdicts$, which never emits for an
+    // `incomplete` phase. A multi-answer question in progress is incomplete
+    // by definition, so the corrected `remainingCorrectCount` never reached
+    // the message: the count sat at whatever the FIRST check reported until
+    // the question finally resolved.
+    const arrivals = this.verdicts?.verdictChanges$ ?? this.verdicts?.terminalVerdicts$;
     if (!arrivals || typeof arrivals.pipe !== 'function') return;
 
     const key = `${quizId} ${norm(questionText)}`;

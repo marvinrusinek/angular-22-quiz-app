@@ -91,17 +91,33 @@ export function hasAuthorizedCorrectSelection(
   return false;
 }
 
-export function isCurrentOptionCorrect(
+/**
+ * The same question, answered in THREE states instead of two.
+ *
+ * `undefined` means no authority has spoken yet — not "incorrect". Callers that
+ * paint red must test for an explicit `false`, because negating a two-state
+ * boolean turns "nothing is known" into "known wrong". That is exactly what
+ * made a correct pick flash red: the click renders while /check is still in
+ * flight, and `!isCurrentOptionCorrect()` was true for the entire pending
+ * window.
+ *
+ * `isCurrentOptionCorrect` below is kept as the two-state view for the callers
+ * that genuinely want "paint green or do not", so their behaviour is unchanged.
+ */
+export function currentOptionCorrectness(
   binding: OptionBindings | undefined,
   quizService: QuizService,
   qIdx: number,
   verdicts?: QuestionVerdictService
-): boolean {
+): boolean | undefined {
   const optionText = (binding?.option as any)?.text as string | undefined;
   const quizId = (quizService as any)?.quizId as string | undefined;
   const questionText = questionTextForDisplayIndex(quizService, qIdx);
 
-  if (!verdicts || !quizId || !questionText || !optionText) return false;
+  // Nothing to ask, so nothing is known — same rule as the phases below.
+  // Returning false here would let the caller paint red on an option no
+  // authority has ruled on.
+  if (!verdicts || !quizId || !questionText || !optionText) return undefined;
 
   // 1. The user selected this option — its own verdict is authorized.
   const own = verdicts.verdictForOption(quizId, questionText, optionText);
@@ -126,8 +142,25 @@ export function isCurrentOptionCorrect(
   //    reveal now happens on the `expired` verdict, which case 2 handles — so
   //    the fallback has nothing left to cover.
   //
-  //    Returning false here is "not authorized", not "known incorrect". The
-  //    caller renders neutral either way, and it is the only answer that stays
-  //    honest once options arrive from the API carrying no correctness at all.
-  return false;
+  //    UNDEFINED, NOT FALSE. This used to return false and describe it as "not
+  //    authorized, not known incorrect" — but that distinction only survives if
+  //    the value carries it. Two callers negated the boolean, so the pending
+  //    window painted the user's correct pick red until the verdict landed.
+  return undefined;
+}
+
+/**
+ * Two-state view: is this option AUTHORIZED correct?
+ *
+ * Unknown collapses to false here, which is right for "paint green or do not"
+ * decisions and wrong for "paint red" ones — those must use
+ * `currentOptionCorrectness` and test for an explicit false.
+ */
+export function isCurrentOptionCorrect(
+  binding: OptionBindings | undefined,
+  quizService: QuizService,
+  qIdx: number,
+  verdicts?: QuestionVerdictService
+): boolean {
+  return currentOptionCorrectness(binding, quizService, qIdx, verdicts) === true;
 }

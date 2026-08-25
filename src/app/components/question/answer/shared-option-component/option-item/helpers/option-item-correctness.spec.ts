@@ -1,7 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, Subject } from 'rxjs';
 
-import { hasAuthorizedCorrectSelection, isCurrentOptionCorrect } from './option-item-correctness';
+import {
+  currentOptionCorrectness,
+  hasAuthorizedCorrectSelection,
+  isCurrentOptionCorrect
+} from './option-item-correctness';
 import { QuestionVerdictService } from '../../../../../../shared/services/features/verdict/question-verdict.service';
 import { TOPIC_QUIZ_VERDICT_ADAPTER } from '../../../../../../shared/services/features/verdict/verdict-adapter';
 import { setQuizDataCache } from '../../../../../../shared/quiz-data-cache';
@@ -354,5 +358,94 @@ describe('the single-answer lock follows the verdict on the user own picks', () 
 
     expect(verdicts.verdictFor('rxjs', MULTI).phase).toBe('incomplete');
     expect(hasAuthorizedCorrectSelection(quizServiceStub(MULTI), 0, verdicts)).toBe(true);
+  });
+});
+
+/**
+ * PENDING IS NEITHER CORRECT NOR INCORRECT.
+ *
+ * Clicking the CORRECT option made it flash red before turning green. It was
+ * never a red->green repaint: a browser trace holding /check open showed the
+ * option carrying correct-option AND incorrect-option together for the whole
+ * pending window, with .incorrect-option winning on !important.
+ *
+ * The tests above pin the TWO-STATE view, which answers false while nothing is
+ * authorized. That is right for "paint green or do not" and wrong for "paint
+ * red": two callers in option-item negated it, so unknown became known-wrong.
+ *
+ * These pin the THREE-STATE view the painting branches now use. The
+ * distinction only survives if the value carries it.
+ */
+describe(`pending correctness is UNDEFINED, not false`, () => {
+  const bare = () => ({ option: { text: `map` } }) as unknown as OptionBindings;
+
+  it(`is undefined while idle`, () => {
+    expect(currentOptionCorrectness(bare(), quizServiceStub(MULTI), 0, verdicts))
+      .toBeUndefined();
+  });
+
+  it(`is undefined while a check is still in flight`, () => {
+    const { verdicts: v } = withPendingAdapter();
+    v.checkAnswer(`rxjs`, MULTI, [`map`]).subscribe({ error: () => undefined });
+
+    expect(v.verdictFor(`rxjs`, MULTI).phase).toBe(`checking`);
+    // THE REGRESSION: false here painted the user own correct pick red for the
+    // entire duration of the round trip.
+    expect(currentOptionCorrectness(bare(), quizServiceStub(MULTI), 0, v)).toBeUndefined();
+  });
+
+  it(`is undefined after an error`, () => {
+    const { verdicts: v, fail } = withPendingAdapter();
+    v.checkAnswer(`rxjs`, MULTI, [`map`]).subscribe({ error: () => undefined });
+    fail();
+
+    expect(currentOptionCorrectness(bare(), quizServiceStub(MULTI), 0, v)).toBeUndefined();
+  });
+
+  it(`is undefined when no verdict service is supplied`, () => {
+    expect(currentOptionCorrectness(bare(), quizServiceStub(MULTI), 0)).toBeUndefined();
+  });
+
+  it(`is TRUE once the server authorizes the player own pick`, async () => {
+    await check(MULTI, [`map`]);
+    expect(currentOptionCorrectness(bare(), quizServiceStub(MULTI), 0, verdicts)).toBe(true);
+  });
+
+  it(`is FALSE once the server calls the player own pick wrong`, async () => {
+    await check(MULTI, [`Observable`]);
+    const wrong = { option: { text: `Observable` } } as unknown as OptionBindings;
+    expect(currentOptionCorrectness(wrong, quizServiceStub(MULTI), 0, verdicts)).toBe(false);
+  });
+});
+
+describe(`the painting rule the option-item branches apply`, () => {
+  // Mirrors both migrated branches exactly:
+  //   correct-option:   correctness === true
+  //   incorrect-option: wasSelected && correctness === false
+  const paint = (correctness: boolean | undefined, wasSelected: boolean) => ({
+    green: correctness === true,
+    red: wasSelected && correctness === false
+  });
+
+  it(`paints NEITHER colour while the verdict is unknown`, () => {
+    expect(paint(undefined, true)).toEqual({ green: false, red: false });
+  });
+
+  it(`paints green on an authorized correct verdict`, () => {
+    expect(paint(true, true)).toEqual({ green: true, red: false });
+  });
+
+  it(`paints red only on an authorized wrong verdict for a SELECTED option`, () => {
+    expect(paint(false, true)).toEqual({ green: false, red: true });
+    expect(paint(false, false)).toEqual({ green: false, red: false });
+  });
+
+  it(`can never apply both classes at once, for any input`, () => {
+    for (const c of [true, false, undefined]) {
+      for (const sel of [true, false]) {
+        const { green, red } = paint(c, sel);
+        expect(green && red).toBe(false);
+      }
+    }
   });
 });

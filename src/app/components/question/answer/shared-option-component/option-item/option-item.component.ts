@@ -25,6 +25,7 @@ import { OptionItemTimerStateService } from '../../../../../shared/services/opti
 
 import {
   hasAuthorizedCorrectSelection as hasAuthCorrectSelection,
+  currentOptionCorrectness as optCorrectness,
   isCurrentOptionCorrect as isOptCorrect,
   isTimeoutRevealAuthorized
 } from './helpers/option-item-correctness';
@@ -301,17 +302,22 @@ export class OptionItemComponent implements OnInit {
 
     const showCorrect = this.shouldShowCorrectOnTimeout();
 
+    // RED ONLY ON AN AUTHORIZED FALSE.
+    //
+    // This negated a two-state boolean, so an option whose correctness nothing
+    // had authorized yet counted as wrong.
     return {
       ...classes,
       'correct-option': showCorrect,
-      'incorrect-option': wasSelected && !this.isCurrentOptionCorrect()
+      'incorrect-option': wasSelected && this.currentOptionCorrectness() === false
     };
   }
 
   private getDefaultOptionClasses(
     classes: { [key: string]: boolean }
   ): { [key: string]: boolean } {
-    const isCorrect = this.isCurrentOptionCorrect();
+    // Tri-state: undefined until something is authorized.
+    const correctness = this.currentOptionCorrectness();
     const shouldHighlight = this.shouldHighlightOption();
 
     if (!shouldHighlight) {
@@ -334,10 +340,17 @@ export class OptionItemComponent implements OnInit {
       this._wasSelected === true ||
       this.isSelectedForCurrentQuestion();
 
+    // NEITHER CLASS WHILE UNKNOWN.
+    //
+    // `!isCorrect` was true both for an authorized wrong answer and for an
+    // option nothing had ruled on. The click renders while /check is still in
+    // flight, so a CORRECT pick carried incorrect-option for the whole pending
+    // window — and `.incorrect-option` wins on !important, which is the red
+    // flash. Requiring an explicit false leaves the pending window neutral.
     return {
       ...classes,
-      'correct-option': isCorrect,
-      'incorrect-option': wasSelected && !isCorrect
+      'correct-option': correctness === true,
+      'incorrect-option': wasSelected && correctness === false
     };
   }
 
@@ -1167,6 +1180,18 @@ export class OptionItemComponent implements OnInit {
 
   private get inputType(): 'radio' | 'checkbox' {
     return this.type() === 'multiple' ? 'checkbox' : 'radio';
+  }
+
+  /**
+   * Tri-state correctness for the PAINTING decisions.
+   *
+   * `undefined` while nothing is authorized. Only an explicit `false` may paint
+   * red; `isCurrentOptionCorrect()` below stays the two-state view for the
+   * callers that only ever ask "green or not".
+   */
+  private currentOptionCorrectness(): boolean | undefined {
+    const qIdx = this.quizService.currentQuestionIndex ?? this.currentQuestionIndex();
+    return optCorrectness(this.binding(), this.quizService, qIdx, this.verdicts);
   }
 
   private isCurrentOptionCorrect(): boolean {

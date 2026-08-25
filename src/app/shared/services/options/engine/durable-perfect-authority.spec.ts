@@ -242,18 +242,37 @@ describe('the durable + revisit-snapshot union is preserved', () => {
   });
 });
 
-describe('with no verdict, the previous comparison still answers', () => {
+/**
+ * WITHOUT AN AUTHORIZED VERDICT, NOTHING IS PERFECT.
+ *
+ * These used to assert the opposite — that idle/checking/error fell back to
+ * comparing the selection against the pristine bank, and that selecting both
+ * banked-correct options was therefore "perfect" with no verdict at all.
+ *
+ * `0fde8ed1` removed that fallback. Perfect is now derived from the verdict on
+ * the player OWN selections, and an unresolved phase carries none — so the
+ * honest answer is "not perfect", never "perfect because the bank agrees".
+ *
+ * The QuizService stub above still returns a populated
+ * `getPristineCorrectTextsForQuestion`, deliberately: these pass only because
+ * the bank is IGNORED, not because it is unavailable.
+ */
+describe('with no authorized verdict, nothing is perfect', () => {
   it.each([['idle'], ['checking'], ['error']] as const)(
-    'falls back to the pristine comparison while %s',
+    'is not perfect while %s, even with every banked-correct option selected',
     (phase) => {
       verdictState = state({ phase });
 
-      expect(durablePerfect([0, 1])).toBe(true);
+      // Was `true` via the bank comparison. Selecting map+filter is only
+      // perfect once a verdict says so.
+      expect(durablePerfect([0, 1])).toBe(false);
+
+      // A partial selection was, and remains, not perfect.
       expect(durablePerfect([0])).toBe(false);
     }
   );
 
-  it('keeps the no-incorrect guard in the fallback too', () => {
+  it('is not perfect when a wrong option is in the selection either', () => {
     verdictState = state({ phase: 'idle' });
 
     expect(durablePerfect([0, 1, 2])).toBe(false);

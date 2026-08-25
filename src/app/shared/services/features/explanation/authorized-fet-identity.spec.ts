@@ -125,13 +125,43 @@ describe('identity comes from the authorized verdict', () => {
 });
 
 describe('nothing authorized means nothing fabricated', () => {
-  it('does not use the verdict before a terminal phase', () => {
-    for (const phase of ['idle', 'checking', 'incomplete', 'error'] as const) {
-      verdictState = state({ phase, correctOptionTexts: ['map', 'filter'] });
-      // Falls through to the legacy chain, which reads the (lying) local flag.
-      // The point is only that the UNAUTHORIZED verdict was not consulted.
+  /**
+   * NOTHING REVEALED MEANS NOTHING TO READ.
+   *
+   * This used to drive idle/checking/incomplete/error while ALSO handing each
+   * one a populated `correctOptionTexts`, and assert the indices were not
+   * taken from it.
+   *
+   * That state is not reachable. `correctOptionTexts` is written only by a
+   * server reveal — the resolved and expired branches — and idle/checking/
+   * error always write an empty array. The old assertion therefore described a
+   * store that cannot exist, and it only passed while `authorizedCorrectTexts`
+   * gated on the PHASE. `0fde8ed1` replaced that gate with non-emptiness,
+   * because a phase gate rescinded a reveal the player had already earned: a
+   * revisit re-submits, the re-check answers `incomplete`, and a correctly
+   * answered question came back painted as though nothing were known.
+   *
+   * So the invariant is pinned on the states the store can actually hold.
+   */
+  it('does not consult an unresolved verdict, which reveals nothing', () => {
+    for (const phase of ['idle', 'checking', 'error'] as const) {
+      // The reachable shape: unresolved phases carry NO revealed set.
+      verdictState = state({ phase, correctOptionTexts: [] });
+
+      // Falls through to the legacy chain, which reads the (lying) local flag
+      // marking 'Observable'. The point is that the verdict supplied nothing.
       expect(indices()).not.toEqual([1, 2]);
     }
+  });
+
+  it('KEEPS a reveal the player already earned when a revisit downgrades', () => {
+    // `incomplete` WITH a populated set is reachable, and only by preserving a
+    // previous reveal: re-entering an answered question re-submits, the server
+    // answers incomplete, and the store carries the earned reveal forward.
+    // Identity must survive that, or the FET prefix vanishes on revisit.
+    verdictState = state({ phase: 'incomplete', correctOptionTexts: ['map', 'filter'] });
+
+    expect(indices()).toEqual([1, 2]);
   });
 
   it('invents no index when a terminal verdict names nothing on screen', () => {

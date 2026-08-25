@@ -24,6 +24,8 @@ import { ExplanationTextService } from '../../../shared/services/features/explan
 import { QuizDataService } from '../../../shared/services/data/quizdata.service';
 import { QuizDotStatusService } from '../../../shared/services/flow/quiz-dot-status.service';
 import { QuizPersistenceService } from '../../../shared/services/state/quiz-persistence.service';
+import { QuestionTimingService } from '../../../shared/services/features/timer/question-timing.service';
+import { QuestionVerdictService } from '../../../shared/services/features/verdict/question-verdict.service';
 import { QuizService } from '../../../shared/services/data/quiz.service';
 import { SelectedOptionService } from '../../../shared/services/state/selectedoption.service';
 import { ThemeService } from '../../../shared/services/ui/theme.service';
@@ -44,6 +46,8 @@ export class ReturnComponent implements OnInit {
   private readonly explanationTextService = inject(ExplanationTextService);
   private readonly quizDataService = inject(QuizDataService);
   private readonly quizPersistence = inject(QuizPersistenceService);
+  private readonly questionTimingService = inject(QuestionTimingService);
+  private readonly questionVerdictService = inject(QuestionVerdictService);
   private readonly quizService = inject(QuizService);
   private readonly selectedOptionService = inject(SelectedOptionService);
   private readonly themeService = inject(ThemeService);
@@ -141,6 +145,38 @@ export class ReturnComponent implements OnInit {
     this.explanationTextService.resetExplanationState();
     this.timerService.clearTimerState();
     this.timerService.clearDurableCompletionTime(this.quizId());
+
+    // A RESTART IS A NEW ATTEMPT, SO THE OLD ATTEMPT STOPS COUNTING.
+    //
+    // `clearTimerState` only drops elapsed-time bookkeeping. The SIGNED
+    // DEADLINES live in QuestionTimingService, and question 1 of the completed
+    // run still had one — long past by the time anyone restarts. The restarted
+    // question then resumed against it: `startTimerUntil` computed
+    // `remainingSeconds = 0`, called `expireImmediately()`, and the timer
+    // rendered 0:00 without ever running.
+    //
+    // The in-quiz restart already does this via
+    // `QuizResetService.performRestartServiceResets`; this button hand-rolls
+    // its own sequence and had simply never been given the same call.
+    this.questionTimingService.clearTiming();
+
+    // THE COMPLETED RUN'S VERDICTS ARE NOT THIS RUN'S VERDICTS.
+    //
+    // Completion is derived from the verdict — `isQuestionCompleted` reads
+    // `phase === `resolved` && isResolvedCorrect`, then memoizes it. Restart
+    // cleared that memo through `selectionMessage.resetAll()`, but not the
+    // source it is memoizing, so the very next query rebuilt it from the old
+    // run and question 1 announced "Answered" before it had been answered.
+    //
+    // Verdicts key on quizId + question TEXT, which a restart reuses verbatim,
+    // so nothing here expires on its own. Both the in-memory store and its
+    // sessionStorage mirror are dropped — leaving the mirror would restore the
+    // same state on the next reload.
+    this.questionVerdictService.clearAll();
+    const restartingQuizId = this.quizId();
+    if (restartingQuizId) {
+      this.questionVerdictService.clearEarnedVerdicts(restartingQuizId);
+    }
   }
 
   private resetDotStatus(id: string): void {

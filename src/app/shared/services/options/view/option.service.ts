@@ -24,14 +24,35 @@ export class OptionService {
   }
 
   /**
-   * Returns the icon to display for an option based on its state
+   * The icon for an option — ✓, ✗, or nothing.
+   *
+   * CORRECTNESS IS AN ARGUMENT, NOT SOMETHING THIS DECIDES.
+   *
+   * This used to read `option.correct`, which made it an authorization
+   * decision it has no standing to make. An API-backed option carries no
+   * `correct` field at all (`questionFromApiView` never sets one), so
+   * `binding.isSelected && !option.correct` was true for EVERY selected
+   * option the instant it was clicked — stamping the ✗ on a correct pick for
+   * the whole time /check was in flight.
+   *
+   * The caller passes what the verdict authorizes:
+   *
+   *   true       the option is correct       → check
+   *   false      the option is wrong         → close, and only if selected
+   *   undefined  nothing has been authorized → no icon
+   *
+   * `undefined` is also the default, so a caller that cannot establish
+   * correctness gets the neutral render rather than a fabricated verdict.
    */
-  getOptionIcon(binding: OptionBindings, _i: number): string {
-    const option = binding.option;
-    if (option.showIcon === false) { return ''; }
+  getOptionIcon(
+    binding: OptionBindings,
+    _i: number,
+    correctness?: boolean | undefined
+  ): string {
+    if (binding.option.showIcon === false) return '';
 
-    if (option.correct) return 'check';
-    if (binding.isSelected && !option.correct) return 'close';
+    if (correctness === true) return 'check';
+    if (correctness === false && binding.isSelected) return 'close';
 
     return '';
   }

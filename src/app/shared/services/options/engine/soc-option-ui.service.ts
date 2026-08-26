@@ -9,6 +9,9 @@ import { SelectedOption } from '../../../models/SelectedOption.model';
 import { OptionLockService } from '../policy/option-lock.service';
 import { OptionSelectionPolicyService } from '../policy/option-selection-policy.service';
 import { OptionService } from '../view/option.service';
+import { QuizService } from '../../data/quiz.service';
+import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
+import { currentOptionCorrectness } from '../../../../components/question/answer/shared-option-component/option-item/helpers/option-item-correctness';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 
 /**
@@ -22,6 +25,8 @@ export class SocOptionUiService {
   private optionLockService = inject(OptionLockService);
   private optionSelectionPolicyService = inject(OptionSelectionPolicyService);
   private optionService = inject(OptionService);
+  private quizService = inject(QuizService);
+  private verdicts = inject(QuestionVerdictService);
   private selectedOptionService = inject(SelectedOptionService);
 
   // ── public methods ──────────────────────────────────────────────
@@ -163,7 +168,14 @@ export class SocOptionUiService {
           comp.timerExpiredForQuestion()
         );
 
-        binding.optionIcon = this.optionService.getOptionIcon(binding, binding.index);
+        // The icon follows the AUTHORIZED verdict, through the same helper the
+        // option-item paint paths use — one authority, not a second opinion.
+        // Undefined while a check is in flight, which renders no icon.
+        binding.optionIcon = this.optionService.getOptionIcon(
+          binding,
+          binding.index,
+          currentOptionCorrectness(binding, this.quizService, qIndex, this.verdicts)
+        );
 
         binding.optionCursor = this.optionService.getOptionCursor(
           binding,

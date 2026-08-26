@@ -449,3 +449,74 @@ describe(`the painting rule the option-item branches apply`, () => {
     }
   });
 });
+
+/**
+ * THE PAINT PATHS, NOT JUST THE CLASSES.
+ *
+ * 130eb7a1 fixed the two CSS-class branches and the live red flash SURVIVED,
+ * because the visible colour comes from an inline [style.background-color]
+ * binding that was still reading the two-state view. A frame-accurate trace of
+ * the deployed site showed the row sweeping to #ff0000 by ~1691ms and reaching
+ * green only at ~1908ms, with `incorrect-option` never applied at any point.
+ *
+ * Class-name assertions cannot catch that. These mirror the decision each paint
+ * path now makes, so a regression in any of them fails here rather than in a
+ * browser someone happens to be watching.
+ */
+describe('every paint path treats unknown as unknown', () => {
+  const CORRECT_COLOR = `#43e756`;
+  const INCORRECT_COLOR = `#ff0000`;
+
+  /** option-item getOptionBackgroundColor, live branch. */
+  const background = (correctness: boolean | undefined, wasSelected: boolean) => {
+    if (correctness === true) return CORRECT_COLOR;
+    return wasSelected && correctness === false ? INCORRECT_COLOR : null;
+  };
+
+  /** option-item getOptionIcon, feedback branch. */
+  const icon = (correctness: boolean | undefined, fallback = '') => {
+    if (correctness === true) return 'check';
+    if (correctness === false) return 'close';
+    return fallback;
+  };
+
+  /** option-item timerColor, expired-but-unrevealed branch. */
+  const timerColour = (correctness: boolean | undefined, wasSelected: boolean) =>
+    (wasSelected && correctness === false ? INCORRECT_COLOR : null);
+
+  it('paints NO background while the verdict is pending, even on the click', () => {
+    expect(background(undefined, true)).toBeNull();
+  });
+
+  it('shows NO verdict icon while pending — not the cross', () => {
+    expect(icon(undefined)).toBe('');
+  });
+
+  it('leaves the timer-expiry colour alone until the reveal arrives', () => {
+    expect(timerColour(undefined, true)).toBeNull();
+  });
+
+  it('paints green once the verdict authorizes correct', () => {
+    expect(background(true, true)).toBe(CORRECT_COLOR);
+    expect(icon(true)).toBe('check');
+  });
+
+  it('paints red once the verdict authorizes wrong, for the player OWN pick', () => {
+    expect(background(false, true)).toBe(INCORRECT_COLOR);
+    expect(icon(false)).toBe('close');
+    expect(timerColour(false, true)).toBe(INCORRECT_COLOR);
+  });
+
+  it('never paints red on an option the player did not select', () => {
+    expect(background(false, false)).toBeNull();
+    expect(timerColour(false, false)).toBeNull();
+  });
+
+  it('never yields red for ANY pending input, selected or not', () => {
+    for (const sel of [true, false]) {
+      expect(background(undefined, sel)).not.toBe(INCORRECT_COLOR);
+      expect(timerColour(undefined, sel)).not.toBe(INCORRECT_COLOR);
+    }
+    expect(icon(undefined)).not.toBe('close');
+  });
+});

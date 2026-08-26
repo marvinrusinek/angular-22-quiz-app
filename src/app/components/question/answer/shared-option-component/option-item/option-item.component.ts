@@ -240,7 +240,20 @@ export class OptionItemComponent implements OnInit {
       return this.isStampedCorrect() ? 'check' : 'close';
     }
     if (this.shouldShowFeedback() || this.shouldShowCorrectOnTimeout()) {
-      return this.isCurrentOptionCorrect() ? 'check' : 'close';
+      // SAME COLLAPSE AS THE BACKGROUND. `shouldShowFeedback()` is true from the
+      // moment the option is highlighted — the click, not the verdict — so a
+      // two-state read stamped the ✗ on a correct pick for the whole pending
+      // window. Unknown shows no verdict icon and falls through below.
+      //
+      // NOT redundant with binding().optionIcon, which now uses the same
+      // authority: that snapshot is written by updateBindingSnapshots, and
+      // verdict ARRIVAL does not call it — repaintOnVerdictArrival only
+      // re-spreads binding refs. So the snapshot still reads empty from the
+      // pending pass, and this live read is what actually shows the ✓ once the
+      // verdict lands. Deleting it would mean no icon ever appears.
+      const iconCorrectness = this.currentOptionCorrectness();
+      if (iconCorrectness === true) return 'check';
+      if (iconCorrectness === false) return 'close';
     }
     return this.binding().optionIcon || '';
   }
@@ -831,7 +844,14 @@ export class OptionItemComponent implements OnInit {
 
     // GREEN when the verdict authorized this option correct — including one the
     // user never picked, which is the terminal reveal.
-    if (this.isCurrentOptionCorrect()) return CORRECT_COLOR;
+    // TRI-STATE, because the negative branch below paints RED. 130eb7a1 fixed
+    // the two CSS-class branches and left this one on the two-state view, so
+    // the flash simply moved from a class to the inline background: measured
+    // live, the row swept to #ff0000 by ~1691ms and only reached green at
+    // ~1908ms, with NO incorrect-option class ever applied — which is why
+    // class-based assertions could not see it.
+    const correctness = this.currentOptionCorrectness();
+    if (correctness === true) return CORRECT_COLOR;
 
     // RED IS ONLY EVER THE USER'S OWN WRONG PICK.
     //
@@ -850,7 +870,10 @@ export class OptionItemComponent implements OnInit {
       this._wasSelected === true ||
       this.isSelectedForCurrentQuestion();
 
-    return wasSelected ? INCORRECT_COLOR : null;
+    // An explicit false, never a pending one. `wasSelected` is true the instant
+    // the user clicks, so gating red on anything weaker paints their correct
+    // pick red for the entire round trip.
+    return wasSelected && correctness === false ? INCORRECT_COLOR : null;
   }
 
   // AUTO-REVEAL: persistent flag wins over all other guards.
@@ -912,12 +935,18 @@ export class OptionItemComponent implements OnInit {
     }
     if (this.isTimerExpiredForThisQuestion()) {
       if (this.shouldShowCorrectOnTimeout()) return CORRECT_COLOR;
-      // Keep the user's wrong selection red on timer expiry.
+      // Keep the user's wrong selection red on timer expiry — but only once the
+      // expired reveal has actually ARRIVED. This reads the same collapsed
+      // source as the background path: the expiry flag is local and instant
+      // while the reveal is a round trip, so a two-state read painted the pick
+      // red in the gap between them.
       const wasSelected = this.binding()?.isSelected
         || !!this.binding()?.option?.highlight
         || this._wasSelected
         || this.isSelectedForCurrentQuestion();
-      return wasSelected && !this.isCurrentOptionCorrect() ? INCORRECT_COLOR : null;
+      return wasSelected && this.currentOptionCorrectness() === false
+        ? INCORRECT_COLOR
+        : null;
     }
     return undefined;
   }

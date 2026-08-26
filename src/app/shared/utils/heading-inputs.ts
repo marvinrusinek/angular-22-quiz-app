@@ -109,6 +109,19 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
       ? (verdict.explanation ?? '')
       : '';
 
+  // THE CORRECT ANSWER NAMED IN A TIMEOUT NOTICE.
+  //
+  // Only from the deadline reveal — `expired` is the phase the server sets when
+  // it discloses the answers because time ran out. A question that timed out but
+  // whose reveal has not arrived yields an empty list, and the notice then says
+  // "Time's up." without naming anything, which is the honest render.
+  //
+  // Deliberately NOT `resolved`: that reveal was earned by answering, and the
+  // heading already shows its explanation through the ordinary FET path.
+  const timeoutCorrectAnswers = verdict && verdict.phase === 'expired'
+    ? [...(verdict.correctOptionTexts ?? [])]
+    : [];
+
   // Single-answer "answered correctly", from the user's OWN verdicted pick.
   //
   // `idle` used to fall back to matching the selection against the pristine
@@ -172,6 +185,7 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
   return {
     questionHtml,
     fetHtml: _fetHtml,
+    timeoutCorrectAnswers,
     isMultiAnswer,
     // Completion decides when a multi-answer question earns its explanation.
     // The verdict answers it from the user's own selections plus the count of

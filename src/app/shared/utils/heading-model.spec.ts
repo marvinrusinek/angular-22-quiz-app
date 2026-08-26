@@ -1,4 +1,9 @@
-import { deriveHeadingHtml, shouldShowFet, HeadingInputs } from './heading-model';
+import {
+  deriveHeadingHtml,
+  shouldShowFet,
+  withTimeoutContext,
+  HeadingInputs
+} from './heading-model';
 
 /**
  * Stage 1 of the heading/FET refactor: lock the heading-derivation rules as an
@@ -150,5 +155,107 @@ describe('heading-model: deriveHeadingHtml', () => {
   it('multi-answer in progress keeps the question + banner', () => {
     const i = inputs({ isMultiAnswer: true, hasInteracted: true, questionHtml: 'Q <span class="correct-count">2 answers are correct</span>' });
     expect(deriveHeadingHtml(i)).toBe(i.questionHtml);
+  });
+});
+
+/**
+ * A TIMEOUT SAYS WHY THE EXPLANATION IS THERE.
+ *
+ * ── The report this pins ──────────────────────────────────────────
+ *
+ * A quiz was left minimised for several minutes. The question deadline passed
+ * while the window was hidden, and on returning the user found explanation text
+ * where their question had been — reading as though the app had spontaneously
+ * given away the answer.
+ *
+ * The reveal itself was correct: the deadline genuinely expired, and a timed-out
+ * question is entitled to show its explanation. What was missing was any
+ * statement of WHY, which is what made it look like a defect.
+ *
+ * ── Provenance, not just authorization ────────────────────────────
+ *
+ * These also pin where the named answer may come from. `fetHtml` is a fallback
+ * chain whose first entry is the ordinary formatted explanation, so "the FET"
+ * and "the explanation" are the same text in this codebase. The correct ANSWER
+ * is different: it may only be named from the deadline reveal the server
+ * authorized, never reconstructed locally.
+ */
+describe('heading-model: the timeout notice', () => {
+  const FET = 'Option 1 is correct because TS uses structural typing.';
+
+  it('states the reason, names the answer, and keeps the explanation', () => {
+    const html = deriveHeadingHtml(inputs({
+      isTimedOut: true,
+      fetHtml: FET,
+      timeoutCorrectAnswers: ['Structural typing']
+    }));
+
+    expect(html).toContain('Time&#39;s up.');
+    expect(html).toContain('Correct answer: Structural typing');
+    expect(html).toContain(FET);
+  });
+
+  it('pluralises when the deadline reveal names several answers', () => {
+    const html = deriveHeadingHtml(inputs({
+      isTimedOut: true,
+      fetHtml: FET,
+      timeoutCorrectAnswers: ['map', 'filter']
+    }));
+
+    expect(html).toContain('Correct answers: map, filter');
+  });
+
+  it('says Time&#39;s up WITHOUT naming an answer when no reveal is authorized', () => {
+    // A question can time out before the deadline reveal arrives. Naming
+    // nothing is right; inventing an answer would be a fabricated disclosure.
+    const html = deriveHeadingHtml(inputs({
+      isTimedOut: true,
+      fetHtml: FET,
+      timeoutCorrectAnswers: []
+    }));
+
+    expect(html).toContain('Time&#39;s up.');
+    expect(html).not.toContain('Correct answer');
+    expect(html).toContain(FET);
+  });
+
+  it('adds NO notice when the question was answered rather than timed out', () => {
+    // The user chose to see this explanation by answering. Only a timeout needs
+    // explaining, so the ordinary FET render must be untouched.
+    const html = deriveHeadingHtml(inputs({
+      hasInteracted: true,
+      isSingleAnswered: true,
+      fetHtml: FET
+    }));
+
+    expect(html).toBe(FET);
+    expect(html).not.toContain('Time&#39;s up');
+  });
+
+  it('shows the QUESTION, not a notice, when nothing may be revealed yet', () => {
+    // Unresolved and untouched: no explanation may appear at all.
+    const html = deriveHeadingHtml(inputs({ hasInteracted: true, fetHtml: FET }));
+    expect(html).toBe(base.questionHtml);
+    expect(html).not.toContain('Time&#39;s up');
+  });
+
+  it('shows the question when a timeout has no explanation text to give', () => {
+    // No FET text means nothing to contextualise — the heading stays put rather
+    // than rendering a bare notice over an empty explanation.
+    const html = deriveHeadingHtml(inputs({ isTimedOut: true, fetHtml: '' }));
+    expect(html).toBe(base.questionHtml);
+  });
+
+  it('escapes option text so tag-like answers render as written', () => {
+    // Quiz options legitimately contain things like "<div>". Sanitizing protects
+    // the document; escaping is what renders the answer faithfully.
+    const html = withTimeoutContext('expl', ['<div> element']);
+    expect(html).toContain('&lt;div&gt; element');
+    expect(html).not.toContain('<div> element');
+  });
+
+  it('ignores blank entries rather than naming an empty answer', () => {
+    const html = withTimeoutContext('expl', ['', '   ']);
+    expect(html).not.toContain('Correct answer');
   });
 });

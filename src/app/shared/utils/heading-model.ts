@@ -54,6 +54,16 @@ export interface HeadingInputs {
    *  timeout state. Optional so existing (immediate-feedback) callers are
    *  unaffected — undefined behaves exactly as before. */
   deferFeedback?: boolean;
+
+  /** The AUTHORIZED correct option texts, for the timeout notice only.
+   *
+   *  Populated from the verdict once the deadline reveal has arrived
+   *  (`phase === expired`), and empty otherwise — so a question whose reveal
+   *  has not been authorized shows the notice without naming an answer rather
+   *  than inventing one. Never sourced from the bundled bank.
+   *
+   *  Optional so existing callers are unaffected. */
+  timeoutCorrectAnswers?: readonly string[];
 }
 
 /**
@@ -104,8 +114,66 @@ export function shouldShowFet(i: HeadingInputs): boolean {
   return i.isSingleAnswered;
 }
 
+/**
+ * Option text is PLAIN TEXT and goes into an HTML heading, so it is escaped.
+ *
+ * The heading is sanitized before it reaches innerHTML, but sanitizing protects
+ * the document — it does not stop an option that legitimately reads "<div>"
+ * from being swallowed as markup. Quiz content genuinely contains tag-like
+ * text, so escaping here is about rendering it faithfully.
+ */
+function escapeText(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, `&quot;`)
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * The heading for a question whose time ran out.
+ *
+ * WHY THE NOTICE EXISTS. A timeout replaced the question text with the
+ * explanation and said nothing about why. That is confusing when it happens
+ * under the user's nose, and actively misleading when it happens while the
+ * browser is minimised: they come back to find an explanation sitting where
+ * their question used to be, with no indication that a deadline passed. It
+ * reads as the app spontaneously giving away the answer.
+ *
+ * The explanation itself is unchanged — this only states the reason for it, and
+ * names the correct answer when the deadline reveal has authorized one.
+ */
+export function withTimeoutContext(
+  fetHtml: string,
+  correctAnswers: readonly string[] = []
+): string {
+  const parts = [`<span class="timeout-notice">Time&#39;s up.</span>`];
+
+  // Named only when the reveal is authorized. No answer is better than a
+  // guessed one, and the bank is deliberately unreachable from here.
+  const named = correctAnswers.filter((t) => (t ?? '').trim().length > 0);
+  if (named.length > 0) {
+    const label = named.length > 1 ? 'Correct answers' : 'Correct answer';
+    const list = named.map((t) => escapeText(t.trim())).join(', ');
+    parts.push(
+      `<span class="timeout-answer">${label}: ${list}</span>`
+    );
+  }
+
+  parts.push(fetHtml);
+  return parts.join(' ');
+}
+
 /** The single source of truth for the heading HTML. Falls back to the question
  *  HTML whenever the FET should show but no FET text is available. */
 export function deriveHeadingHtml(i: HeadingInputs): string {
-  return shouldShowFet(i) && i.fetHtml.trim().length > 0 ? i.fetHtml : i.questionHtml;
+  const showFet = shouldShowFet(i) && i.fetHtml.trim().length > 0;
+  if (!showFet) return i.questionHtml;
+
+  // A timeout says WHY the explanation is here. Every other route to the FET
+  // was chosen by the user — they answered — so it needs no explaining.
+  return i.isTimedOut
+    ? withTimeoutContext(i.fetHtml, i.timeoutCorrectAnswers ?? [])
+    : i.fetHtml;
 }

@@ -146,6 +146,12 @@ export class ReturnComponent implements OnInit {
     this.timerService.clearTimerState();
     this.timerService.clearDurableCompletionTime(this.quizId());
 
+    // A restart keeps the same quizId, so the timer cannot notice the new run
+    // by identity — it has to be told. Without this the completed run's expiry
+    // flags survive, and every guard that reads them refuses to start
+    // question 1 again.
+    this.timerService.beginNewRun();
+
     // A RESTART IS A NEW ATTEMPT, SO THE OLD ATTEMPT STOPS COUNTING.
     //
     // `clearTimerState` only drops elapsed-time bookkeeping. The SIGNED

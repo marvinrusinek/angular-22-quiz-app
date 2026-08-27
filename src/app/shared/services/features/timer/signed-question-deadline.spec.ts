@@ -11,6 +11,7 @@ import { QuestionTimingService } from './question-timing.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { TimerService } from './timer.service';
 import { TopicQuizAttemptService } from '../verdict/topic-quiz-attempt.service';
+import { QuizService } from '../../data/quiz.service';
 
 /**
  * The signed question deadline is the ONLY timing authority for a Topic Quiz.
@@ -53,6 +54,7 @@ let attempts: TopicQuizAttemptService;
 let timerService: TimerService;
 let timing: QuestionTimingService;
 let selectedOptionService: SelectedOptionService;
+let quizService: QuizService;
 
 /** Controllable wall clock — the deadline is expressed in these milliseconds. */
 let clock = 1_000_000;
@@ -76,6 +78,7 @@ beforeEach(() => {
   timerService = TestBed.inject(TimerService);
   timing = TestBed.inject(QuestionTimingService);
   selectedOptionService = TestBed.inject(SelectedOptionService);
+  quizService = TestBed.inject(QuizService);
 });
 
 afterEach(() => {
@@ -294,6 +297,161 @@ describe('identity of a window', () => {
     grantDeadline(Q1, 'restarted-receipt');
 
     expect(timerService.elapsedTimeSig()).toBe(0);
+  });
+});
+
+describe('a new run does not inherit the previous run', () => {
+  /**
+   * THE CROSS-QUIZ LEAK.
+   *
+   * TimerService is provided at the root, so it outlives the QuizComponent
+   * that a quiz switch destroys and recreates. Everything it remembers is
+   * keyed by QUESTION INDEX — and Quiz B's first question is index 0 exactly
+   * as Quiz A's was. Leaving Quiz A on an expired question therefore left
+   * `hasExpiredForRun` set and `elapsedTimeSig` at the full duration, and
+   * every guard in `restartForQuestion` and `startTimer` reads exactly those
+   * fields. They refused to start Quiz B's question 1: it painted a permanent
+   * red 0:00, and the heading — which treats
+   * `expiredForQuestionIndexSig === idx` as "timed out" — rendered QUIZ A's
+   * correct answer and explanation over it.
+   *
+   * The circularity is the defect: the only code that cleared the stale flags
+   * was gated behind guards that read those same stale flags.
+   *
+   * These assert the run BOUNDARY, not merely that a deadline was recorded.
+   * A deadline WAS recorded throughout the live defect — the countdown just
+   * never started against it, which is why an existing
+   * `hasAuthorizedDeadline` assertion stayed green the whole time.
+   */
+  const OTHER = 'signals';
+
+  /** Quiz identity, as the route layer supplies it. */
+  const useQuiz = (id: string): void => { quizService.quizId = id; };
+
+  /** Settles both legs for a quiz other than QUIZ. */
+  function grantDeadlineFor(quizId: string, questionText: string): void {
+    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${quizId}/attempts` })
+      .flush({ quizId, attemptReceipt: 'a2', startedAt: 1, expiresAt: 30_001 });
+    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${quizId}/questions/start` })
+      .flush({
+        quizId, questionText, durationSeconds: 30,
+        startedAt: 1, expiresAt: 30_001, questionReceipt: 'r2'
+      });
+  }
+
+  /**
+   * Quiz A, question 1, left EXPIRED — via question 2, because returning
+   * straight to a question that is still the running one is refused by
+   * design (that guard is what keeps a re-emitted payload from restarting
+   * an answered question's clock).
+   */
+  function leaveQuizAExpired(): void {
+    useQuiz(QUIZ);
+    timing.activateQuestionTiming(QUIZ, Q1, 0);
+    grantDeadline(Q1);
+    timing.activateQuestionTiming(QUIZ, Q2, 1);
+    grantSecondDeadline(Q2);
+
+    advance(31_000);
+    timing.activateQuestionTiming(QUIZ, Q1, 0);
+  }
+
+  it('starts the next quiz at zero after the previous one EXPIRED', () => {
+    leaveQuizAExpired();
+    expect(timerService.elapsedTimeSig()).toBe(timerService.timePerQuestion);
+    expect(timerService.expiredForQuestionIndexSig()).toBe(0);
+
+    // Switch quizzes. Same question INDEX, different quiz.
+    useQuiz(OTHER);
+    timing.activateQuestionTiming(OTHER, Q1, 0);
+    grantDeadlineFor(OTHER, Q1);
+
+    // The countdown runs, from the top — not frozen at the full duration,
+    // which is what rendered as a permanent 0:00.
+    expect(timerService.elapsedTimeSig()).toBe(0);
+    expect(timerService.isTimerRunning).toBe(true);
+
+    // ...and nothing still claims question 0 timed out, which is what put
+    // Quiz A's correct answer on Quiz B's heading.
+    expect(timerService.expiredForQuestionIndexSig()).toBe(-1);
+    expect(timerService.expiredOnArrivalSig()).toBe(-1);
+  });
+
+  it('does not let the previous quiz\'s deadlines authorize anything', () => {
+    useQuiz(QUIZ);
+    timing.activateQuestionTiming(QUIZ, Q1, 0);
+    grantDeadline(Q1);
+    timing.activateQuestionTiming(QUIZ, Q2, 1);
+    grantSecondDeadline(Q2);
+
+    expect(timerService.hasAuthorizedDeadline(1)).toBe(true);
+
+    useQuiz(OTHER);
+    timing.activateQuestionTiming(OTHER, Q1, 0);
+    grantDeadlineFor(OTHER, Q1);
+
+    // Index 1 belongs to a quiz that is no longer running. A signed window is
+    // for one question of one attempt; an index is not a question.
+    expect(timerService.hasAuthorizedDeadline(1)).toBe(false);
+    expect(timerService.hasAuthorizedDeadline(0)).toBe(true);
+  });
+
+  it('does not carry the previous quiz\'s recorded times into the freeze', () => {
+    useQuiz(QUIZ);
+    timing.activateQuestionTiming(QUIZ, Q1, 0);
+    grantDeadline(Q1);
+    timing.activateQuestionTiming(QUIZ, Q2, 1);
+    grantSecondDeadline(Q2);
+
+    advance(5_000);
+    timing.activateQuestionTiming(QUIZ, Q1, 0);
+    timerService.recordElapsedForAnsweredQuestion(0);
+    expect(timerService.elapsedTimes[0]).toBe(5);
+
+    useQuiz(OTHER);
+    timing.activateQuestionTiming(OTHER, Q1, 0);
+    grantDeadlineFor(OTHER, Q1);
+
+    // `freezeAtRecordedTime` reads elapsedTimes[index]; Quiz A's value would
+    // otherwise paint Quiz B's question 1 with a time it never took.
+    expect(timerService.elapsedTimes[0]).toBeUndefined();
+  });
+
+  it('CONTROL: moving within ONE quiz starts no new run', () => {
+    useQuiz(QUIZ);
+    timing.activateQuestionTiming(QUIZ, Q1, 0);
+    grantDeadline(Q1);
+    timing.activateQuestionTiming(QUIZ, Q2, 1);
+    grantSecondDeadline(Q2);
+
+    advance(5_000);
+    timing.activateQuestionTiming(QUIZ, Q1, 0);
+
+    // Both windows survive and the revisit RESUMES its own — a new run here
+    // would have discarded question 2's deadline and restarted question 1
+    // from zero, buying time the server never granted.
+    expect(timerService.elapsedTimeSig()).toBe(5);
+    expect(timerService.hasAuthorizedDeadline(0)).toBe(true);
+    expect(timerService.hasAuthorizedDeadline(1)).toBe(true);
+  });
+
+  it('releases the guards for a RESTART, where the quiz id cannot change', () => {
+    leaveQuizAExpired();
+    expect(timerService.elapsedTimeSig()).toBe(timerService.timePerQuestion);
+
+    // Restarting is a new run at the SAME quiz, so identity proves nothing
+    // and the timer has to be told explicitly.
+    timerService.beginNewRun();
+    timing.clearTiming();
+
+    expect(timerService.expiredForQuestionIndexSig()).toBe(-1);
+    expect(timerService.hasAuthorizedDeadline(0)).toBe(false);
+
+    timing.activateQuestionTiming(QUIZ, Q1, 0);
+    grantDeadline(Q1, 'restarted-receipt');
+
+    expect(timerService.elapsedTimeSig()).toBe(0);
+    expect(timerService.isTimerRunning).toBe(true);
   });
 });
 

@@ -154,9 +154,81 @@ export class TimerService implements OnDestroy {
    */
   private readonly _deadlineByQuestion = new Map<number, number>();
 
+  /**
+   * The quiz whose run this timer state belongs to.
+   *
+   * Everything this service remembers is keyed by QUESTION INDEX, and an index
+   * means nothing across quizzes: Quiz B's first question is index 0 exactly as
+   * Quiz A's was. This service is provided at the root, so it outlives the
+   * QuizComponent that a quiz switch destroys and recreates — without an
+   * identity to compare against, Quiz A's expiry, deadlines and recorded times
+   * all answer for Quiz B's question 1.
+   *
+   * Named after `QuizService.questionsQuizId`, which guards its cached
+   * questions the same way and for the same reason.
+   */
+  private _runQuizId: string | null = null;
+
+  /**
+   * A NEW RUN: drop every index-keyed field.
+   *
+   * Not a per-question reset. `resetTimer` and `resetTimerFlagsFor` clear what
+   * one question owns and deliberately preserve the run's expiry and
+   * anti-thrash guards; this clears the run itself, which is the only way those
+   * guards can ever be released. Public so a restart — a new attempt at the
+   * same quiz, where the id does not change — can ask for one explicitly.
+   */
+  public beginNewRun(): void {
+    if (this.timerSubscription) {
+      this.timerSubscription.unsubscribe();
+      this.timerSubscription = null;
+    }
+
+    this.isTimerRunning = false;
+    this.isTimerStoppedForCurrentQuestion = false;
+    this.stoppedForQuestion.clear();
+    this._authoritativeStop = false;
+
+    this.hasExpiredForRun = false;
+    this.expiredForQuestionIndexSig.set(-1);
+    this.expiredOnArrivalSig.set(-1);
+
+    this._runningForQuestion = null;
+    this._lastStartedAtMs = 0;
+
+    this._deadlineByQuestion.clear();
+    this.elapsedTimes = [];
+    this.saveTimerState();
+
+    this.elapsedTimeSig.set(0);
+  }
+
+  /**
+   * Begins a new run the moment the quiz identity changes.
+   *
+   * Called from the entry points that start a question's clock rather than from
+   * the navigation layer, because the navigation layer cannot be relied on: a
+   * quiz switch destroys and recreates QuizComponent, and the NavigationEnd
+   * that drives `performQuizSwitchResets` fires before the new component's
+   * route subscription exists. These entry points always run.
+   *
+   * A no-op while the quiz is unchanged, so every anti-thrash guard behaves
+   * exactly as it did for duplicate starts and resets within one quiz.
+   */
+  private beginRunIfQuizChanged(): void {
+    const quizId = this.quizService?.quizId ?? '';
+    if (!quizId || quizId === this._runQuizId) return;
+
+    this._runQuizId = quizId;
+    this.beginNewRun();
+  }
+
   /** Records the signed deadline for a question. Does not start anything. */
   public setAuthorizedDeadline(questionIndex: number, deadlineMs: number): void {
     if (questionIndex == null || questionIndex < 0) return;
+    // Before the store, never after: beginNewRun clears the deadline map, so a
+    // late identity check would discard the very deadline being recorded.
+    this.beginRunIfQuizChanged();
     this._deadlineByQuestion.set(questionIndex, deadlineMs);
   }
 
@@ -540,6 +612,10 @@ export class TimerService implements OnDestroy {
   private _lastStartedAtMs = 0;
 
   public restartForQuestion(questionIndex: number): void {
+    // BEFORE the guards below. Every one of them reads run state that a quiz
+    // switch leaves stale, so checking identity afterwards never runs at all.
+    this.beginRunIfQuizChanged();
+
     // Block re-entry if this question is already running, expired, or
     // was already stopped via a correct-answer click. Without the
     // stoppedForQuestion check, a downstream re-emit of the same
@@ -596,6 +672,7 @@ export class TimerService implements OnDestroy {
   // was captured (e.g. after a hard refresh that clears in-memory elapsedTimes).
   public freezeAtRecordedTime(questionIndex: number): void {
     if (questionIndex == null || questionIndex < 0) return;
+    this.beginRunIfQuizChanged();
 
     // Tear down any active tick subscription DIRECTLY — stopTimer's authority
     // and anti-thrash guards can no-op here (e.g. right after a fresh start),

@@ -80,21 +80,70 @@ async function surfaces(page: Page) {
   });
 }
 
-/** Records the timer on EVERY frame from before navigation, to catch a flash. */
-async function watchTimerFromFirstPaint(page: Page): Promise<void> {
+/**
+ * Records the timer on EVERY frame, for the whole session.
+ *
+ * Installed ONCE, before the first navigation. It used to be armed per-switch
+ * via `addInitScript`, which only runs on a new document — so arming it forced
+ * a reload, and a reload destroys the root TimerService. That is exactly the
+ * state this file exists to catch, and contract G passed all the way through
+ * the cross-quiz leak because of it.
+ */
+async function installTimerWatch(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const w = window as any;
     w.__timerFrames = [];
+    let last = '';
     const sample = () => {
       const el = document.querySelector('.scoreboard-timer .scoreboard') as HTMLElement | null;
       if (el) {
         const txt = (el.textContent ?? '').trim();
-        if (txt) w.__timerFrames.push({ t: txt, c: getComputedStyle(el).color });
+        if (txt) {
+          const c = getComputedStyle(el).color;
+          const key = txt + '|' + c + '|' + location.pathname;
+          if (key !== last) {
+            last = key;
+            w.__timerFrames.push({ t: txt, c, url: location.pathname });
+          }
+        }
       }
-      if (w.__timerFrames.length < 400) requestAnimationFrame(sample);
+      requestAnimationFrame(sample);
     };
     requestAnimationFrame(sample);
   });
+}
+
+const clearTimerFrames = (page: Page): Promise<void> =>
+  page.evaluate(() => { (window as any).__timerFrames = []; });
+
+/**
+ * Back to the selection page WITHOUT reloading — the header logo, as a user
+ * clicks it. `page.goto` would tear down every root service and hide any state
+ * that leaked from the quiz being left.
+ */
+async function backToSelectionInSpa(page: Page): Promise<void> {
+  // Two exits, depending on where the quiz was left: the Results page has its
+  // own "select quiz" control, every in-quiz page has the header logo.
+  const fromResults = page.locator('[title="select quiz"]').first();
+  const link = (await fromResults.count()) > 0
+    ? fromResults
+    : page.locator('mat-card-header a[href="/select"]').first();
+
+  await link.waitFor({ state: 'visible', timeout: 30_000 });
+  await link.scrollIntoViewIfNeeded();
+  await link.click();
+  await page.locator(TILE).first().waitFor({ state: 'visible', timeout: 30_000 });
+}
+
+/** Picks a quiz from the selection page and starts it. Already on it. */
+async function pickQuiz(page: Page, needle: RegExp): Promise<void> {
+  const tile = page.locator(TILE).filter({ hasText: needle }).first();
+  await tile.scrollIntoViewIfNeeded();
+  await tile.click();
+  await page.waitForTimeout(1200);
+  const start = page.locator('.start-btn').first();
+  if (await start.count() > 0) await start.click().catch(() => {});
+  await page.locator(ROW).first().waitFor({ state: 'visible', timeout: 30_000 });
 }
 
 const timerFrames = (page: Page): Promise<{ t: string; c: string }[]> =>
@@ -160,16 +209,28 @@ test('E: advancing to an unanswered question leaves the previous one behind', as
 
 // ─── G. A DIFFERENT QUIZ STARTS CLEAN — INCLUDING FIRST PAINT ──────
 
+/**
+ * TimerService is provided at the root, so it survives the quiz switch that
+ * destroys and recreates QuizComponent. Everything it remembers is keyed by
+ * QUESTION INDEX, and Quiz B's first question is index 0 exactly as Quiz A's
+ * was — so the switch has to happen IN THE SPA for any of this to be tested.
+ * An earlier version of this contract navigated with `page.goto`, which
+ * reloads the document and rebuilds the service from scratch; it passed
+ * throughout the leak it was written to catch.
+ */
 test('G: starting a different quiz shows no 0:00 flash and no prior-quiz state', async ({ page }) => {
+  await installTimerWatch(page);
+
   // Quiz A: answer something so there is real state that could leak.
   await startViaUi(page, /typescript/i);
   const hA = (await page.locator(HEADING).first().textContent()) ?? '';
   await page.locator(ROW).nth(correctIndexForHeading(hA)).click();
   await page.waitForTimeout(2500);
 
-  // Leave through the normal UI, then start Quiz B — watching from first paint.
-  await watchTimerFromFirstPaint(page);
-  await startViaUi(page, /dependency injection/i);
+  // Leave through the normal UI — no reload — then start Quiz B.
+  await backToSelectionInSpa(page);
+  await clearTimerFrames(page);
+  await pickQuiz(page, /dependency injection/i);
   await page.waitForTimeout(1500);
 
   const frames = await timerFrames(page);
@@ -181,6 +242,11 @@ test('G: starting a different quiz shows no 0:00 flash and no prior-quiz state',
   // earlier "0:29 → 0:26" assertion could not see it.
   expect(zeroFrames, 'the timer never paints 0:00 while starting a new quiz').toEqual([]);
 
+  // EVERY question of EVERY quiz begins at the full 30 seconds. Quiz B used to
+  // inherit Quiz A's running countdown and open partway through it — no zero
+  // frame, no red, and still wrong.
+  expect(seconds(frames[0]?.t ?? ''), 'Quiz B opens on a full timer').toBeGreaterThan(27);
+
   const s = await surfaces(page);
   expect(s.dirty, 'no options carry Quiz A state').toEqual([]);
   expect(s.banner, 'no Quiz A explanation').toBe('');
@@ -188,6 +254,111 @@ test('G: starting a different quiz shows no 0:00 flash and no prior-quiz state',
   expect(seconds(s.timer), 'Quiz B starts on a full timer').toBeGreaterThan(20);
 
   // ...and it is actually running, not merely displaying a number.
+  const before = seconds((await surfaces(page)).timer);
+  await page.waitForTimeout(3000);
+  expect(seconds((await surfaces(page)).timer), 'Quiz B timer counts down').toBeLessThan(before);
+});
+
+// ─── M. A DIFFERENT QUIZ AFTER THE PREVIOUS ONE TIMED OUT ──────────
+
+/**
+ * The worst form of the leak, and the reason this contract is separate from G.
+ *
+ * Quiz A's question 1 expiring set `hasExpiredForRun`, `elapsedTimeSig = 30`
+ * and `expiredForQuestionIndexSig = 0`. Quiz B's question 1 is also index 0,
+ * so `restartForQuestion` returned at its guards and never started anything:
+ * the timer stayed a permanent red 0:00 — not a flash — and the heading, which
+ * reads `expiredForQuestionIndexSig === idx` as "timed out", rendered QUIZ A's
+ * correct answer and explanation over Quiz B's first question.
+ */
+test('M: a quiz started after a timeout is not born expired', async ({ page }) => {
+  test.setTimeout(180_000);
+  await installTimerWatch(page);
+
+  // Quiz A: let question 1 genuinely run out.
+  await startViaUi(page, /router/i);
+  await page.waitForTimeout(36_000);
+  const expired = await surfaces(page);
+  expect(expired.timeout.notice?.text, 'Quiz A really did time out').toContain("Time's up");
+
+  await backToSelectionInSpa(page);
+  await clearTimerFrames(page);
+  await pickQuiz(page, /typescript/i);
+  await page.waitForTimeout(2500);
+
+  const frames = await timerFrames(page);
+  console.log('LIFECYCLE M: ' + frames.length + ' frames, first=' +
+    JSON.stringify(frames[0] ?? null));
+
+  expect(frames.filter((f) => /^0:0?0$/.test(f.t)),
+    'Quiz B never paints 0:00 after Quiz A timed out').toEqual([]);
+  expect(seconds(frames[0]?.t ?? ''), 'Quiz B opens on a full timer').toBeGreaterThan(27);
+
+  const s = await surfaces(page);
+
+  // THE ANSWER LEAK: Quiz A's reveal must not appear on Quiz B's question.
+  expect(s.timeout.notice, 'Quiz B question 1 is not marked timed out').toBeNull();
+  expect(s.heading, 'no timeout notice in the heading').not.toContain("Time's up");
+  expect(s.heading, "no prior quiz's correct answer").not.toContain('Correct answer');
+  expect(s.banner, 'no Quiz A explanation').toBe('');
+  expect(s.dirty, 'no auto-revealed options').toEqual([]);
+
+  // And the countdown is genuinely running, not frozen at a full-looking value.
+  const before = seconds((await surfaces(page)).timer);
+  await page.waitForTimeout(3000);
+  expect(seconds((await surfaces(page)).timer), 'Quiz B timer counts down').toBeLessThan(before);
+});
+
+// ─── N. A DIFFERENT QUIZ AFTER FINISHING THE PREVIOUS ONE ──────────
+
+/**
+ * The completed-run variant. Finishing Quiz A leaves its last question expired
+ * on arrival and its whole signed-deadline map populated; both outlived the
+ * switch, so Quiz B's question 1 opened at a permanent red 0:00 even though
+ * the stale expiry index (Quiz A's LAST question) did not collide with 0 and
+ * the heading therefore looked fine. A heading-only assertion misses this.
+ */
+test('N: a quiz started after finishing another one gets its own clock', async ({ page }) => {
+  test.setTimeout(240_000);
+  await installTimerWatch(page);
+
+  await startViaUi(page, /router/i);
+  for (let q = 0; q < 10; q++) {
+    await page.locator(ROW).first().waitFor({ state: 'visible', timeout: 15_000 });
+    const heading = (await page.locator(HEADING).first().textContent()) ?? '';
+    const correct = correctIndicesForHeading(routerQuiz, heading);
+    for (const i of (correct.length ? correct : [0])) {
+      await page.locator(ROW).nth(i).click({ timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(900);
+    }
+    await page.waitForTimeout(400);
+    const results = page.locator('.show-results-btn').first();
+    if (await results.isVisible().catch(() => false)) {
+      await results.click();
+      await page.waitForTimeout(3500);
+      break;
+    }
+    await page.locator(NEXT_BTN).first().click({ timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(700);
+  }
+
+  await backToSelectionInSpa(page);
+  await clearTimerFrames(page);
+  await pickQuiz(page, /typescript/i);
+  await page.waitForTimeout(2500);
+
+  const frames = await timerFrames(page);
+  console.log('LIFECYCLE N: ' + frames.length + ' frames, first=' +
+    JSON.stringify(frames[0] ?? null));
+
+  expect(frames.filter((f) => /^0:0?0$/.test(f.t)),
+    'Quiz B never paints 0:00 after Quiz A was completed').toEqual([]);
+  expect(seconds(frames[0]?.t ?? ''), 'Quiz B opens on a full timer').toBeGreaterThan(27);
+
+  const s = await surfaces(page);
+  expect(s.timeout.notice, 'Quiz B question 1 is not marked timed out').toBeNull();
+  expect(s.dirty, 'no options carry Quiz A state').toEqual([]);
+
   const before = seconds((await surfaces(page)).timer);
   await page.waitForTimeout(3000);
   expect(seconds((await surfaces(page)).timer), 'Quiz B timer counts down').toBeLessThan(before);

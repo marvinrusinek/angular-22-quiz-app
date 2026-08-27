@@ -247,6 +247,10 @@ export class QuizResetService {
     // against a window that has been counting down since the first run.
     this.questionTimingService.clearTiming();
 
+    // Same reason, one layer down: the deadlines are gone, but the run flags
+    // that refuse a restart are the timer's own and only it can drop them.
+    this.timerService.beginNewRun();
+
     // Clear per-question option/question locks — otherwise a previously-
     // locked incorrect option/question (e.g. Q2 answered incorrectly before
     // restart) silently rejects clicks on the restarted quiz, breaking

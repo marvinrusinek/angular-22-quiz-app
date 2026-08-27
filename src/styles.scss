@@ -349,6 +349,47 @@ mat-card {
 }
 
 /* ─────────────────────────────────────────────
+   TIMEOUT HEADING
+
+   A timed-out question shows three separate things: that time ran out, the
+   authorized answer, and the explanation. Inline they read as one run-on
+   sentence, which is close to the "the explanation just replaced my question"
+   impression the notice exists to dispel — so each part is its own block.
+
+   Follows .correct-count above rather than introducing a visual system: the
+   same inline-block/italic/weight vocabulary and the same palette variables.
+───────────────────────────────────────────────*/
+.timeout-notice,
+.timeout-answer,
+.timeout-explanation {
+  display: block;
+  text-align: left;
+}
+
+.timeout-notice {
+  color: vars.$fire-red;
+  font-weight: 700;
+}
+
+.timeout-answer {
+  color: vars.$dark-green;
+  font-weight: 600;
+  margin-top: 0.35em;
+}
+
+.timeout-explanation {
+  font-weight: 400;
+  margin-top: 0.35em;
+}
+
+/* The "Explanation:" lead-in — a label, not part of the explanation text. */
+.timeout-label {
+  font-style: italic;
+  font-weight: 600;
+  margin-right: 0.25em;
+}
+
+/* ─────────────────────────────────────────────
    LOADER
 ───────────────────────────────────────────────*/
 .preload {
@@ -583,6 +624,22 @@ button.mat-mdc-menu-trigger {
   // Correct count
   .correct-count {
     color: #4caf50 !important;
+  }
+
+  // Timeout heading — same roles, lifted for contrast on the dark card.
+  // $fire-red and $dark-green are both too dark to read here, exactly as the
+  // correct-count override above exists for.
+  .timeout-notice {
+    color: #ff8a65 !important;
+  }
+
+  .timeout-answer {
+    color: #4caf50 !important;
+  }
+
+  .timeout-explanation,
+  .timeout-label {
+    color: var(--text-primary) !important;
   }
 
   // Feedback messages

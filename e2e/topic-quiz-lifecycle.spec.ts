@@ -55,6 +55,23 @@ async function surfaces(page: Page) {
       .map((r) => String(r.i));
     return {
       heading: (h3?.textContent ?? '').trim(),
+      // The timeout notice as STRUCTURE — each part is its own element, and
+      // each must be a block or they read as one run-on sentence.
+      timeout: (() => {
+        const q = (sel: string) => h3?.querySelector(sel) as HTMLElement | null;
+        const part = (sel: string) => {
+          const el = q(sel);
+          return el
+            ? { text: (el.textContent ?? '').trim(), display: getComputedStyle(el).display }
+            : null;
+        };
+        return {
+          notice: part('.timeout-notice'),
+          answer: part('.timeout-answer'),
+          explanation: part('.timeout-explanation'),
+          label: part('.timeout-label')
+        };
+      })(),
       banner: (fb?.textContent ?? '').trim(),
       timer: (t?.textContent ?? '').trim(),
       message: (msg?.textContent ?? '').trim(),
@@ -192,9 +209,18 @@ test('I: a question that times out in view says so, and explains why', async ({ 
   // The notice explains the state change rather than silently swapping in an
   // explanation — which is what made this look like a defect when it happened
   // out of sight.
-  expect(after.heading, 'states the reason').toMatch(/Time's up/i);
-  expect(after.heading.length, 'and still carries the explanation')
-    .toBeGreaterThan("Time's up.".length + 10);
+  // STRUCTURE, not combined text. Each part must exist as its own element and
+  // render as a block, or the notice reads as one run-on sentence — which is
+  // the "the explanation just replaced my question" impression it exists to
+  // dispel.
+  expect(after.timeout.notice, 'the timeout notice element exists').not.toBeNull();
+  expect(after.timeout.notice!.text, 'and states the reason').toMatch(/Time's up/i);
+  expect(after.timeout.notice!.display, 'rendered as its own block').toBe('block');
+
+  expect(after.timeout.explanation, 'the explanation is its own element').not.toBeNull();
+  expect(after.timeout.explanation!.display, 'also a block').toBe('block');
+  expect(after.timeout.label!.text, 'and is introduced by a label').toBe('Explanation:');
+
   expect(seconds(after.timer), 'the timer really did expire').toBe(0);
 });
 
@@ -247,4 +273,62 @@ test('J: a deadline that passes while hidden is reported on return, not caused b
   const settled = await surfaces(page);
   expect(settled.heading, 'the state is stable across resume').toBe(onReturn.heading);
   expect((settled.heading.match(/Time's up/gi) ?? []).length, 'stated once, not twice').toBe(1);
+});
+
+// ─── L. TIMEOUT UNDER PRODUCTION LATENCY ───────────────────────────
+
+/**
+ * THE AUTHORIZED REVEAL ARRIVES AFTER THE DEADLINE, AND MUST STILL WIN.
+ *
+ * A timed-out question on GitHub Pages read "Time&#39;s up. No explanation
+ * available." while the identical flow locally showed the real explanation. The
+ * placeholder was stored at the head of the source chain and shadowed the
+ * authorized reveal that landed a round trip later; locally the backend was
+ * fast enough that something overwrote it first.
+ *
+ * Localhost cannot reproduce that ordering on its own, so the reveal is held
+ * deliberately — the same technique the pending-verdict spec uses for /check.
+ */
+test('L: a delayed timeout reveal still replaces the notice with real content', async ({ page }) => {
+  // Hold every /check — which is also the expired reveal — long enough that the
+  // deadline passes first, reproducing the deployed ordering deterministically.
+  let releaseReveal: (() => void) | null = null;
+  const revealHeld = new Promise<void>((r) => { releaseReveal = r; });
+  let held = 0;
+  await page.route('**/check**', async (route) => {
+    held++;
+    await revealHeld;
+    await route.continue();
+  });
+
+  await startViaUi(page, /router/i);
+
+  // The deadline passes while the reveal is still in flight.
+  await expect(page.locator(HEADING)).toContainText(/Time.s up/i, { timeout: 90_000 });
+
+  const duringLatency = await surfaces(page);
+  console.log('LIFECYCLE L during-latency heading=' + duringLatency.heading.slice(0, 90));
+
+  // THE REGRESSION: this window is where the placeholder used to be stored and
+  // then stick permanently. Nothing may be fabricated here.
+  expect(duringLatency.heading, 'no placeholder while the reveal is pending')
+    .not.toContain('No explanation available');
+  expect(duringLatency.heading, 'the timeout is still stated').toMatch(/Time.s up/i);
+
+  // Now let the authorized reveal land.
+  releaseReveal!();
+
+  await expect
+    .poll(async () => (await surfaces(page)).heading, { timeout: 30_000 })
+    .toMatch(/because/i);   // the formatted explanation names its reasoning
+
+  const afterReveal = await surfaces(page);
+  console.log('LIFECYCLE L after-reveal heading=' + afterReveal.heading.slice(0, 110) +
+    ' (checks held: ' + held + ')');
+
+  expect(afterReveal.heading, 'the authorized explanation replaced the notice-only state')
+    .toMatch(/because/i);
+  expect(afterReveal.heading, 'and the placeholder never returns')
+    .not.toContain('No explanation available');
+  expect(afterReveal.heading, 'the reason is still stated alongside it').toMatch(/Time.s up/i);
 });

@@ -74,9 +74,29 @@ export class ExplanationFormatterService {
 
       const trimmed = String(text).trim();
 
+      // ABSENCE IS NOT CONTENT — the same rule formatExplanationText applies.
+      //
+      // This stored `'No explanation available'` whenever a question carried no
+      // explanation of its own. Since S4 an API-sourced question NEVER carries
+      // one (the explanation names the correct options, so only /check may
+      // release it), so the placeholder was written for every question before
+      // anything had been asked.
+      //
+      // It is the first source `heading-inputs` consults, ahead of the
+      // authorized explanation, and it is truthy — so it SHADOWED the real
+      // reveal when that arrived a round trip later. Locally the backend
+      // answers fast enough to overwrite it; against a deployed backend it did
+      // not, and a timed-out question read "No explanation available." forever.
+      //
+      // Storing nothing lets the chain fall through to the authorized text, and
+      // a genuinely explanation-less question still renders the fallback at the
+      // display layer — where it is a rendering choice rather than stored state
+      // masquerading as content.
+      if (!trimmed) continue;
+
       this.formattedExplanations[idx] = {
         questionIndex: idx,
-        explanation: trimmed || 'No explanation available'
+        explanation: trimmed
       };
     }
 

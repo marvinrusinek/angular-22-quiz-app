@@ -148,6 +148,13 @@ export function withTimeoutContext(
   fetHtml: string,
   correctAnswers: readonly string[] = []
 ): string {
+  // THREE DISTINCT PARTS, each its own element.
+  //
+  // Rendered inline they read as one run-on sentence — the answer running
+  // straight into the explanation — which is close to the "the explanation just
+  // replaced my question" impression this notice exists to dispel. The styling
+  // makes each part a block; the structure here is what gives it something to
+  // style.
   const parts = [`<span class="timeout-notice">Time&#39;s up.</span>`];
 
   // Named only when the reveal is authorized. No answer is better than a
@@ -161,19 +168,36 @@ export function withTimeoutContext(
     );
   }
 
-  parts.push(fetHtml);
+  // The explanation is optional. A deadline can pass before the reveal has
+  // arrived, and the notice stands on its own until it does — stating the
+  // timeout without one is honest; fabricating filler text is not.
+  const explanation = (fetHtml ?? '').trim();
+  if (explanation.length > 0) {
+    parts.push(
+      `<span class="timeout-explanation"><span class="timeout-label">Explanation:</span> ${explanation}</span>`
+    );
+  }
+
   return parts.join(' ');
 }
 
 /** The single source of truth for the heading HTML. Falls back to the question
  *  HTML whenever the FET should show but no FET text is available. */
 export function deriveHeadingHtml(i: HeadingInputs): string {
-  const showFet = shouldShowFet(i) && i.fetHtml.trim().length > 0;
-  if (!showFet) return i.questionHtml;
+  if (!shouldShowFet(i)) return i.questionHtml;
 
-  // A timeout says WHY the explanation is here. Every other route to the FET
-  // was chosen by the user — they answered — so it needs no explaining.
-  return i.isTimedOut
-    ? withTimeoutContext(i.fetHtml, i.timeoutCorrectAnswers ?? [])
-    : i.fetHtml;
+  // A TIMEOUT IS WORTH STATING EVEN WITH NOTHING TO EXPLAIN YET.
+  //
+  // The notice does not wait for the reveal. A deadline passing is itself the
+  // news, and the explanation joins it when the server authorizes one — which
+  // against a deployed backend is a round trip later, not immediately.
+  //
+  // Every other route to the FET was chosen by the user: they answered, so the
+  // explanation needs no introduction, and with no text there is nothing to
+  // show but the question.
+  if (i.isTimedOut) {
+    return withTimeoutContext(i.fetHtml, i.timeoutCorrectAnswers ?? []);
+  }
+
+  return i.fetHtml.trim().length > 0 ? i.fetHtml : i.questionHtml;
 }

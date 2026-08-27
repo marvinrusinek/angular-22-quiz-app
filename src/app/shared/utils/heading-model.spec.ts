@@ -147,8 +147,19 @@ describe('heading-model: deriveHeadingHtml', () => {
     expect(deriveHeadingHtml(i)).toBe(i.questionHtml);
   });
 
-  it('falls back to the question when the FET should show but no FET text exists', () => {
+  // SUPERSEDED CONTRACT. This asserted that a timeout with no FET text fell
+  // back to the question. It now states the timeout instead: against a deployed
+  // backend the authorized reveal arrives a round trip AFTER the deadline, so
+  // "no text yet" is the normal first frame of every timeout — and showing the
+  // question there tells the user nothing happened when it did.
+  it('states the timeout even when no explanation text exists yet', () => {
     const i = inputs({ isTimedOut: true, fetHtml: '   ' });
+    expect(deriveHeadingHtml(i)).toContain('Time&#39;s up.');
+  });
+
+  it('still falls back to the question when the FET is due for a NON-timeout reason', () => {
+    // Unchanged: an answered question with no explanation shows the question.
+    const i = inputs({ hasInteracted: true, isSingleAnswered: true, fetHtml: '   ' });
     expect(deriveHeadingHtml(i)).toBe(i.questionHtml);
   });
 
@@ -183,16 +194,37 @@ describe('heading-model: deriveHeadingHtml', () => {
 describe('heading-model: the timeout notice', () => {
   const FET = 'Option 1 is correct because TS uses structural typing.';
 
-  it('states the reason, names the answer, and keeps the explanation', () => {
+  it('emits three SEPARATE parts, each in its own element', () => {
     const html = deriveHeadingHtml(inputs({
       isTimedOut: true,
       fetHtml: FET,
       timeoutCorrectAnswers: ['Structural typing']
     }));
 
-    expect(html).toContain('Time&#39;s up.');
-    expect(html).toContain('Correct answer: Structural typing');
+    // Structure, not just combined text: rendered inline these read as one
+    // run-on sentence, which is the impression the notice exists to dispel.
+    expect(html).toContain(`<span class="timeout-notice">Time&#39;s up.</span>`);
+    expect(html).toContain(`<span class="timeout-answer">Correct answer: Structural typing</span>`);
+    expect(html).toContain(`<span class="timeout-explanation">`);
+    expect(html).toContain(`<span class="timeout-label">Explanation:</span>`);
     expect(html).toContain(FET);
+  });
+
+  it('labels the explanation so it cannot run into the answer', () => {
+    const html = deriveHeadingHtml(inputs({
+      isTimedOut: true,
+      fetHtml: FET,
+      timeoutCorrectAnswers: ['Structural typing']
+    }));
+
+    // The answer element must CLOSE before the explanation element opens.
+    const answerEnd = html.indexOf('</span>', html.indexOf('timeout-answer'));
+    const explStart = html.indexOf('timeout-explanation');
+    expect(answerEnd).toBeGreaterThan(-1);
+    expect(explStart).toBeGreaterThan(answerEnd);
+
+    // …and the explanation is introduced, not merely appended.
+    expect(html).toContain('<span class="timeout-label">Explanation:</span> ');
   });
 
   it('pluralises when the deadline reveal names several answers', () => {
@@ -205,7 +237,7 @@ describe('heading-model: the timeout notice', () => {
     expect(html).toContain('Correct answers: map, filter');
   });
 
-  it('says Time&#39;s up WITHOUT naming an answer when no reveal is authorized', () => {
+  it('omits the answer ELEMENT entirely when no reveal is authorized', () => {
     // A question can time out before the deadline reveal arrives. Naming
     // nothing is right; inventing an answer would be a fabricated disclosure.
     const html = deriveHeadingHtml(inputs({
@@ -214,8 +246,9 @@ describe('heading-model: the timeout notice', () => {
       timeoutCorrectAnswers: []
     }));
 
-    expect(html).toContain('Time&#39;s up.');
-    expect(html).not.toContain('Correct answer');
+    expect(html).toContain(`<span class="timeout-notice">`);
+    expect(html).not.toContain('timeout-answer');
+    expect(html).toContain(`<span class="timeout-explanation">`);
     expect(html).toContain(FET);
   });
 
@@ -239,11 +272,13 @@ describe('heading-model: the timeout notice', () => {
     expect(html).not.toContain('Time&#39;s up');
   });
 
-  it('shows the question when a timeout has no explanation text to give', () => {
-    // No FET text means nothing to contextualise — the heading stays put rather
-    // than rendering a bare notice over an empty explanation.
+  it('states the timeout before any explanation is authorized', () => {
+    // Revised from "show the question when there is no text". The deadline
+    // passing IS the news, and against a deployed backend the reveal lands a
+    // round trip later — so this is what a live timeout looks like at first.
     const html = deriveHeadingHtml(inputs({ isTimedOut: true, fetHtml: '' }));
-    expect(html).toBe(base.questionHtml);
+    expect(html).toContain('Time&#39;s up.');
+    expect(html).not.toContain('No explanation available');
   });
 
   it('escapes option text so tag-like answers render as written', () => {

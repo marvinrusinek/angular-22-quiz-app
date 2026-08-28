@@ -1,4 +1,4 @@
-﻿import { Service, inject, signal } from '@angular/core';
+﻿import { Service, inject, signal, Injector } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, Subject } from 'rxjs';
 import { distinctUntilChanged, map, startWith } from 'rxjs/operators';
@@ -19,6 +19,7 @@ import { OptionFeedbackStateService } from './option-feedback-state.service';
 import { OptionIdResolverService } from './option-id-resolver.service';
 import { OptionLockStateService } from './option-lock-state.service';
 import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
+import { SoundService } from '../ui/sound.service';
 import { questionTextForDisplayIndex } from '../features/verdict/authorized-correctness';
 import type { QuestionCheckResult } from '../features/verdict/question-verdict.types';
 import { QuizService } from '../data/quiz.service';
@@ -37,6 +38,7 @@ export class SelectedOptionService {
   private persistence = inject(SelectionPersistenceService);
   private quizService = inject(QuizService);
   private verdicts = inject(QuestionVerdictService);
+  private readonly injector = inject(Injector);
   private selectionCrud = inject(SelectionCrudService);
 
   // ── properties ──────────────────────────────────────────────────
@@ -237,11 +239,71 @@ export class SelectedOptionService {
             }
 
             this.applyAuthorizedMultiCompletion(questionText, texts, result);
+
+            // The cue the click deliberately did not play.
+            this.playAuthorizedSelectionSounds(quizId, questionText);
           },
           error: () => { /* last confirmed state is retained */ }
         });
     } catch (err: unknown) {
       swallow('selectedoption.service#submitToVerdictService', err);
+    }
+  }
+
+
+  /**
+   * Play the correct/incorrect cue for selections the verdict just authorized.
+   *
+   * ── The contract (S5-pre) ──────────────────────────────────────────
+   *
+   *   click            correctness unknown, visual neutral, NO sound
+   *   verdict arrives  each selected option that the server judged gets its
+   *                    cue, once
+   *
+   * The cue therefore says exactly what the paint says, at the same moment.
+   * It used to play on the click from `option.correct`, which is a claim the
+   * client is no longer entitled to make.
+   *
+   * `selectedVerdicts` only ever describes options the player actually
+   * submitted, so nothing here reveals an answer they have not earned. An
+   * option missing from the map is UNKNOWN and stays silent — it is never
+   * sounded as incorrect.
+   */
+  /**
+   * SoundService, resolved LAZILY.
+   *
+   * Injecting it as a field would construct the Howler audio stack whenever
+   * this service is constructed — in every unit spec that touches selection
+   * state, and at app start whether or not anything is ever played. Resolved
+   * on demand instead, so the audio layer is built the first time a cue is
+   * actually due.
+   */
+  private soundOrNull(): SoundService | null {
+    try {
+      return this.injector.get(SoundService, null);
+    } catch {
+      return null;
+    }
+  }
+
+  private playAuthorizedSelectionSounds(
+    quizId: string,
+    questionText: string
+  ): void {
+    try {
+      const state = this.verdicts.verdictFor(quizId, questionText);
+      // `checking` carries no judgement yet; only sound what was judged.
+      if (state.phase === 'idle' || state.phase === 'checking') return;
+
+      for (const [text, isCorrect] of state.selectedVerdicts ?? []) {
+        if (typeof isCorrect !== 'boolean') continue;   // unknown stays silent
+        this.soundOrNull()?.playAuthorizedVerdict(
+          `${quizId}::${norm(questionText)}::${norm(text)}`,
+          isCorrect
+        );
+      }
+    } catch (err: unknown) {
+      swallow('selectedoption.service#playAuthorizedSelectionSounds', err);
     }
   }
 
@@ -938,6 +1000,9 @@ export class SelectedOptionService {
   }
 
   public clearState(): void {
+    // A new run re-earns its cues: the dedupe keys are (quiz, question,
+    // option), so without this a restarted quiz would answer in silence.
+    this.soundOrNull()?.resetAuthorizedVerdictSounds?.();
     this.selectedOptionsMap.clear();
     this.rawSelectionsMap.clear();
     this._selectionHistory.clear();

@@ -153,6 +153,27 @@ beforeEach(() => {
           quizInitialState: [],
           totalQuestions: () => 1,
           getPristineCorrectTextsForQuestion: () => CORRECT_TEXTS,
+          // The DECLARED cardinality — metadata, not an answer key. Derived
+          // from the fixture's own correct-count so the single-answer test,
+          // which swaps that fixture, stays consistent without a second knob.
+          isDeclaredMultiAnswer: () =>
+            ((TestBed.inject(QuizService) as any)
+              .getPristineCorrectTextsForQuestion() as Set<string>).size > 1,
+          // TRI-STATE, straight off the verdict: a text the server judged
+          // answers true/false, anything it did not judge answers null.
+          authorizedCorrectnessForOption: (_q: string, optionText: string) => {
+            const judged = verdictState.selectedVerdicts?.get(norm(optionText));
+            return typeof judged === 'boolean' ? judged : null;
+          },
+          // The AUTHORIZED set, released only at a terminal verdict — the same
+          // contract production enforces. The pristine stub above stays
+          // deliberately populated: production no longer reads it, which is
+          // exactly what "the local answer key cannot authorize completion"
+          // now demonstrates.
+          getAuthorizedCorrectTextsForQuestion: () =>
+            verdictState.phase === 'resolved' || verdictState.phase === 'expired'
+              ? CORRECT_TEXTS
+              : new Set<string>(),
           ...answerStateStub(),
           quizReset$: of(undefined)
         }
@@ -310,7 +331,24 @@ describe('the single-answer reveal is untouched by the gate', () => {
     // One correct option, three wrong. The user picked all three wrong ones, so
     // the survivor is the answer and there is nothing left to find. The gate
     // must not reach this path — it keys off multi-answer, not off the verdict.
-    verdictState = state({ phase: 'checking' });
+    //
+    // THE PICKS ARE AUTHORIZED WRONG, not assumed wrong. This used to run on
+    // `phase: 'checking'` with nothing authorized at all, which only worked
+    // because the browser held the answer key and could decide for itself that
+    // three of four options were incorrect. It cannot, and must not, do that
+    // any more. The deduction "every other option was judged wrong, so the
+    // survivor is the answer" is still allowed — it is built from the player's
+    // OWN authorized verdicts, not from a key.
+    verdictState = state({
+      phase: 'incomplete',
+      remainingCorrectCount: 1,
+      selectedOptionTexts: [TEXTS[1], TEXTS[2], TEXTS[3]],
+      selectedVerdicts: new Map<string, boolean>([
+        [norm(TEXTS[1]), false],
+        [norm(TEXTS[2]), false],
+        [norm(TEXTS[3]), false]
+      ])
+    });
 
     const singleCorrect = new Set([norm(TEXTS[0])]);
     (TestBed.inject(QuizService) as any).getPristineCorrectTextsForQuestion = () => singleCorrect;

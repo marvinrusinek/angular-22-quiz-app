@@ -325,14 +325,15 @@ export class OptionInteractionService {
     // the index-intersection below computed, and it drives dot status, the
     // completion branch and the timer-stop argument.
     //
-    // TEMPORARY FALLBACK: the local computation still runs when no verdict was
-    // recorded (submission failed, or a caller reached phase 3 without one).
-    // Removed once the timeout paths move in STAGE 9D, which is what still
-    // needs the local read.
-    const verdictAllCorrect = this.allCorrectFromVerdict(question);
-    const correctIndicesSet = this.resolveCorrectIndicesSet(question, state, questionOptions);
-    const allCorrectFound = verdictAllCorrect
-      ?? (correctIndicesSet.size > 0 && [...correctIndicesSet].every(i => futureKeys.has(i)));
+    // THE FALLBACK IS GONE (S5-pre). The local computation that ran when no
+    // verdict was recorded resolved its correct indices from the client answer
+    // key, so "the API was unreachable" silently became "read the answers
+    // locally" — the one fallback this migration exists to remove.
+    //
+    // Unknown now resolves to NOT complete, which is what the old code also
+    // reported until the selection covered the set. It never resolves to
+    // complete on a guess.
+    const allCorrectFound = this.allCorrectFromVerdict(question) === true;
 
     // DEFERRED DOT PERSIST: single-answer persists immediately; multi-answer
     // persists 'correct' only when ALL correct are selected (a partial 'correct'
@@ -951,9 +952,13 @@ export class OptionInteractionService {
           ?? (this.quizService as any)?.questions?.[qIdx]
           ?? this.quizService.getQuestionsInDisplayOrder?.()?.[qIdx];
       }
-      const pristineCorrectTexts =
-        this.quizService.getPristineCorrectTextsForQuestion(question?.questionText);
-      return pristineCorrectTexts.has(optText);
+      // AUTHORIZED, PER-OPTION (S5-pre). Asks the verdict about the ONE option
+      // the player selected rather than loading the whole correct set from the
+      // client bank. `null` is unknown and must not read as correct.
+      return this.quizService.authorizedCorrectnessForOption(
+        question?.questionText,
+        optText
+      ) === true;
     } catch { /* ignore */ }
     return false;
   }
@@ -1084,58 +1089,6 @@ export class OptionInteractionService {
         }
       }
     }
-  }
-
-  /**
-   * Resolve the canonical set of correct-option indices for the current
-   * question via a 3-tier fallback:
-   *   1. Pristine-first: text-match against quizInitialState (immune to
-   *      stale/mutated correct flags after Restart Quiz)
-   *   2. questionOptions's own `correct` flags
-   *   3. state.optionBindings's `isCorrect` / `option.correct`
-   *
-   * Pure read — never mutates inputs. Returns an empty Set if all three
-   * sources fail.
-   */
-  private resolveCorrectIndicesSet(
-    question: QuizQuestion | null,
-    state: OptionInteractionState,
-    questionOptions: Option[]
-  ): Set<number> {
-    const correctIndicesSet = new Set<number>();
-
-    // PRISTINE-FIRST: Resolve correct indices from quizInitialState to avoid
-    // stale/mutated correct flags on questionOptions (e.g. after Restart Quiz).
-    try {
-      const qTextForLookup = question?.questionText ?? state.currentQuestion?.questionText;
-      const pristineCorrectTexts =
-        this.quizService.getPristineCorrectTextsForQuestion(qTextForLookup);
-      if (pristineCorrectTexts.size > 0) {
-        for (const [i, o] of questionOptions.entries()) {
-          if (pristineCorrectTexts.has(norm(o?.text))) {
-            correctIndicesSet.add(i);
-          }
-        }
-      }
-    } catch { /* ignore */ }
-
-    // Fallback: use questionOptions directly (may have stale flags but better than nothing)
-    if (correctIndicesSet.size === 0) {
-      for (const [i, o] of questionOptions.entries()) {
-        if (isOptionCorrect(o)) correctIndicesSet.add(i);
-      }
-    }
-
-    // Also try bindings as a source of correct info
-    if (correctIndicesSet.size === 0) {
-      for (const [i, b] of state.optionBindings.entries()) {
-        // `=== true` because isCorrect is tri-state: null is "not authorized
-        // yet", which must not be read as either answer.
-        if (b.isCorrect === true || isOptionCorrect(b.option)) correctIndicesSet.add(i);
-      }
-    }
-
-    return correctIndicesSet;
   }
 
   /**

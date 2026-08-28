@@ -62,7 +62,9 @@ export class SharedOptionClickService {
     if (!binding) return;
 
     comp.cdRef.markForCheck();
-    this.playSelectionSound(comp, binding);
+    // NO SOUND HERE (S5-pre). Correctness is unknown at click time, so there is
+    // nothing honest to play. The cue now fires when the authorized verdict
+    // arrives — see `SelectedOptionService.playAuthorizedSelectionSounds`.
 
     const now = Date.now();
     const isRapidDuplicate = comp._lastHandledIndex === index &&
@@ -156,33 +158,6 @@ export class SharedOptionClickService {
     }
 
     this.runOptionContentClick(comp, binding, index, event);
-  }
-
-  /**
-   * Play the selection sound for a clicked option, resolving correctness from
-   * pristine quizInitialState (TEXT match) rather than the possibly-mutated
-   * binding flag. Self-contained; extracted verbatim from onOptionUI.
-   */
-  private playSelectionSound(comp: any, binding: any): void {
-    let pristineCorrect = isOptionCorrect(binding.option);
-    try {
-      const optText = norm(binding.option?.text);
-      if (optText) {
-        const qText = comp.currentQuestion()?.questionText;
-        const pristineTexts = this.quizService.getPristineCorrectTextsForQuestion(qText);
-        if (pristineTexts.size > 0) {
-          pristineCorrect = pristineTexts.has(optText);
-        }
-      }
-    } catch (err: unknown) {
-      console.error('SharedOptionClickService.onOptionUI pristine-correct lookup failed:', err);
-    }
-    comp.soundService.playOnceForOption({
-      ...binding.option,
-      correct: pristineCorrect,
-      selected: true,
-      questionIndex: comp.currentQuestionIndex
-    });
   }
 
   /**
@@ -416,8 +391,11 @@ export class SharedOptionClickService {
         : (comp.currentQuestion()?.questionText
           ?? this.quizService?.questions?.[qIdx]?.questionText
           ?? comp.getQuestionAtDisplayIndex?.(qIdx)?.questionText);
+      // AUTHORIZED REVEAL ONLY (S5-pre). Empty until the verdict is terminal,
+      // so before the reveal there is no correct set to rebuild from and the
+      // existing indices are left exactly as they were.
       const pristineCorrectTexts =
-        this.quizService.getPristineCorrectTextsForQuestion(qTextForLookup);
+        this.quizService.getAuthorizedCorrectTextsForQuestion(qTextForLookup);
       if (pristineCorrectTexts.size > 0) {
         const rebuilt: number[] = [];
         const bindings: any[] = Array.isArray(comp.optionBindings()) ? comp.optionBindings() : [];

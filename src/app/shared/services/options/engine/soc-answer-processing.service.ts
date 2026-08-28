@@ -190,11 +190,13 @@ export class SocAnswerProcessingService {
               this.quizService?.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText,
               comp.currentQuestion()?.questionText
             ];
+        // AUTHORIZED, PER-OPTION (S5-pre). The candidate list stays: it exists
+        // to find the question identity under shuffle, not to find the answer.
+        // What changed is who is asked — the verdict about the clicked option,
+        // never the client answer key. `null` (unknown) is not `true`.
         for (const qText of candidates) {
           if (!qText) continue;
-          const pristineCorrectTextsSA =
-            this.quizService.getPristineCorrectTextsForQuestion(qText);
-          if (pristineCorrectTextsSA.has(clickedText)) {
+          if (this.quizService.authorizedCorrectnessForOption(qText, clickedText) === true) {
             return true;
           }
         }
@@ -686,8 +688,10 @@ export class SocAnswerProcessingService {
       const liveQ: any = this.resolveLiveQuestion(comp, qIdx, qIdx);
       const bindings: any[] = comp.optionBindings() ?? [];
       if (bindings.length) {
+        // AUTHORIZED REVEAL ONLY (S5-pre): empty until terminal, so the
+        // existing indices survive untouched before the reveal.
         const pristineCorrectTexts =
-          this.quizService.getPristineCorrectTextsForQuestion(liveQ?.questionText);
+          this.quizService.getAuthorizedCorrectTextsForQuestion(liveQ?.questionText);
         if (pristineCorrectTexts.size > 0) {
           const rebuilt: number[] = [];
           for (let i = 0; i < bindings.length; i++) {
@@ -1082,6 +1086,22 @@ export class SocAnswerProcessingService {
       if (!ctxAR) return;
       const { bindingsAR, bindingNormsAR, pristineCorrectTextsAR, isMultiModeAR } = ctxAR;
 
+      // ── COMPLETE, BUT NOT REVEALABLE ─────────────────────────────────
+      //
+      // The server said the response is finished and released no answers with
+      // it. End the FLOW — the clock stops and the player may move on — and
+      // stop there. Painting needs an authorized set; there is none, so the
+      // options keep whatever they already show rather than being greyed out
+      // against an empty one. Neutral until the reveal is authorized.
+      if (ctxAR.revealable === false) {
+        try {
+          this.timerService.stopTimer?.(undefined, { force: true, bypassAntiThrash: true });
+        } catch { /* a stopped clock must not break the flow */ }
+        this.nextButtonStateService.setNextButtonState(true);
+        this.selectionMessageService.forceNextButtonMessage(qIdx);
+        return;
+      }
+
       // ── THE TERMINAL PATH IS FOR A FINISHED QUESTION ONLY ─────────────
       //
       // "Every incorrect option has been selected" ends a SINGLE-answer
@@ -1148,7 +1168,14 @@ export class SocAnswerProcessingService {
    * condition), or null to bail out. Extracted verbatim.
    */
   private computeAutoRevealContext(comp: any, index: number, qIdx: number):
-    { bindingsAR: any[]; bindingNormsAR: string[]; pristineCorrectTextsAR: Set<string>; isMultiModeAR: boolean } | null {
+    {
+      bindingsAR: any[];
+      bindingNormsAR: string[];
+      pristineCorrectTextsAR: Set<string>;
+      isMultiModeAR: boolean;
+      /** False when the question is COMPLETE but its answers are not released. */
+      revealable: boolean;
+    } | null {
     const liveQAR: any = comp.currentQuestion()
       ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[qIdx]
       ?? this.quizService?.questions?.[qIdx];
@@ -1163,12 +1190,29 @@ export class SocAnswerProcessingService {
       (b: any) => norm(b?.option?.text)
     );
 
-    // Pristine correct text(s) from cache. Must have at least one
-    // canonical correct option to reveal.
-    const pristineCorrectTextsAR =
-      this.quizService.getPristineCorrectTextsForQuestion(liveQAR?.questionText);
-    if (pristineCorrectTextsAR.size < 1) return null;
-    const isMultiModeAR = pristineCorrectTextsAR.size > 1;
+    // AUTHORIZED REVEAL (S5-pre).
+    //
+    // Two things used to come from the client answer key here: whether this is
+    // a multi-answer question, and which options are incorrect. Neither needs
+    // the key.
+    //
+    //   multi/single   the DECLARED type — cardinality without identities
+    //   incorrect      either the authorized correct set (once terminal), or
+    //                  the options the server judged wrong among the user's
+    //                  OWN picks, which they have already earned
+    //
+    // That second route is what keeps the single-answer "all wrong options
+    // exhausted" reveal working with nothing else authorized: if every option
+    // but one has been picked and judged wrong, the survivor is the answer by
+    // deduction from the user's own verdicts — not by reading a key.
+    const authorizedCorrectAR =
+      this.quizService.getAuthorizedCorrectTextsForQuestion(liveQAR?.questionText);
+    // TRI-STATE, deliberately not collapsed: a null declared type means it has
+    // not loaded, which is neither single nor multi. Route 2 below demands a
+    // KNOWN single, so unknown declines the reveal instead of guessing.
+    const declaredMultiAR: boolean | null =
+      this.quizService.isDeclaredMultiAnswer(liveQAR?.questionText) ?? null;
+    const isMultiModeAR = declaredMultiAR === true;
 
     // Collect every selected text for this question. For single-answer,
     // selectedOptionsMap holds only the latest click (each click replaces
@@ -1195,19 +1239,82 @@ export class SocAnswerProcessingService {
       if (tx) selectedTextsAR.add(tx);
     }
 
-    // Build the set of incorrect bindings by text — option whose text is
-    // not in the pristine correct set.
-    const incorrectTextsAR = new Set<string>();
+    // ── ROUTE 1: the reveal is already authorized ────────────────────
+    //
+    // A terminal verdict released the correct set, so "incorrect" is simply
+    // everything outside it — the original rule, on authorized data.
+    if (authorizedCorrectAR.size > 0) {
+      const incorrectTextsAR = new Set<string>();
+      for (let i = 0; i < bindingsAR.length; i++) {
+        const tx = bindingNormsAR[i];
+        if (tx && !authorizedCorrectAR.has(tx)) incorrectTextsAR.add(tx);
+      }
+      if (incorrectTextsAR.size === 0) return null;
+      const allIncorrectSelected =
+        [...incorrectTextsAR].every((t) => selectedTextsAR.has(t));
+      if (!allIncorrectSelected) return null;
+
+      return {
+        bindingsAR,
+        bindingNormsAR,
+        pristineCorrectTextsAR: authorizedCorrectAR,
+        isMultiModeAR,
+        revealable: true
+      };
+    }
+
+    // ── ROUTE 2: COMPLETE, but the answers are not released ──────────
+    //
+    // The server can tell us a question is finished without telling us what
+    // the answers are: `incomplete` with `remainingCorrectCount === 0` means
+    // nothing is left to find, and it carries no correct set.
+    //
+    // Those are two different facts and they get two different gates. The
+    // FLOW may end — stop the clock, let the player move on — while the
+    // PAINTING must not, because there is no authorized set to paint and an
+    // empty one would grey out every option. `revealable: false` says exactly
+    // that, and the caller honours it.
+    if (allCorrectSelectedFromVerdict(this.resolveVerdictStateForComp(comp)) === true) {
+      return {
+        bindingsAR,
+        bindingNormsAR,
+        pristineCorrectTextsAR: new Set<string>(),
+        isMultiModeAR,
+        revealable: false
+      };
+    }
+
+    // ── ROUTE 3: nothing authorized yet — deduce, or decline ──────────
+    //
+    // Only ever valid for a SINGLE-answer question. On a multi-answer one the
+    // unpicked options are the correct ones still to find, which is the exact
+    // bug this gate exists to prevent, so an unauthorized multi never reveals.
+    if (declaredMultiAR !== false) return null;
+
+    const unpickedAR: string[] = [];
     for (let i = 0; i < bindingsAR.length; i++) {
       const tx = bindingNormsAR[i];
-      if (tx && !pristineCorrectTextsAR.has(tx)) incorrectTextsAR.add(tx);
+      if (tx && !selectedTextsAR.has(tx)) unpickedAR.push(tx);
     }
-    if (incorrectTextsAR.size === 0) return null;
-    const allIncorrectSelected =
-      [...incorrectTextsAR].every(t => selectedTextsAR.has(t));
-    if (!allIncorrectSelected) return null;
+    // Exactly one survivor, and every pick the server judged must be WRONG.
+    // `null` (unjudged) is not wrong, so an unverified pick declines the
+    // reveal rather than assuming it.
+    if (unpickedAR.length !== 1) return null;
+    for (const picked of selectedTextsAR) {
+      if (this.quizService.authorizedCorrectnessForOption(
+        liveQAR?.questionText, picked
+      ) !== false) {
+        return null;
+      }
+    }
 
-    return { bindingsAR, bindingNormsAR, pristineCorrectTextsAR, isMultiModeAR };
+    return {
+      bindingsAR,
+      bindingNormsAR,
+      pristineCorrectTextsAR: new Set<string>(unpickedAR),
+      isMultiModeAR,
+      revealable: true
+    };
   }
 
   /**

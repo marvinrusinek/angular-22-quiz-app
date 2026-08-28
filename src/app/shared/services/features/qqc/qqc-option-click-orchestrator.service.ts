@@ -130,41 +130,19 @@ export class QqcOptionClickOrchestratorService {
       selections.delete(evtIdx);
     }
 
-    // PRISTINE-FIRST: Resolve correct indices from quizInitialState to avoid
-    // stale/mutated correct flags on question.options.
-    let correctIndices: number[] = [];
-    try {
-      let pristineCorrectTexts =
-        this.quizService.getPristineCorrectTextsForQuestion(question?.questionText);
-
-      // Index-based fallback when question-text doesn't match canonical
-      // (e.g., text drift between live data and quizInitialState).
-      if (pristineCorrectTexts.size === 0 && this.quizService?.quizId) {
-        const pristineQuiz = (this.quizService?.quizInitialState ?? [])
-          .find((qz: any) => qz?.quizId === this.quizService?.quizId);
-        const pristineOpts: any[] = pristineQuiz?.questions?.[questionIndex]?.options ?? [];
-        pristineCorrectTexts = new Set(
-          pristineOpts
-            .filter((o: any) => isOptionCorrect(o))
-            .map((o: any) => norm(o?.text))
-            .filter((t: string) => !!t)
-        );
-      }
-
-      for (const [i, o] of (question.options as any[]).entries()) {
-        if (pristineCorrectTexts.has(norm(o?.text))) correctIndices.push(i);
-      }
-    } catch { /* ignore */ }
-
-    // Fallback: use question.options directly
-    if (correctIndices.length === 0) {
-      correctIndices = question.options
-        .map((o: any, i: number) => isOptionCorrect(o) ? i : -1)
-        .filter((i: number) => i !== -1);
-    }
-
-    const allCorrectSelected = correctIndices.length > 0 &&
-      correctIndices.every((ci: number) => selections.has(ci));
+    // AUTHORIZED COMPLETION (S5-pre).
+    //
+    // This used to resolve the correct indices from `quizInitialState` — with
+    // a second, even more direct answer-key read as a fallback when the
+    // question text drifted, and a third read of `option.correct` after that.
+    // All three existed to answer one question: has the player selected every
+    // correct option?
+    //
+    // The verdict already decides that, by the same SUPERSET rule, keyed by
+    // question text so there is no index to guess. Unknown stays false here —
+    // "not yet complete" — which is the same answer the old code gave before
+    // the selection covered the set, so nothing completes on a guess.
+    const allCorrectSelected = this.quizService.isMultiAnswerComplete(questionIndex);
 
     return { allCorrectSelected, selections };
   }

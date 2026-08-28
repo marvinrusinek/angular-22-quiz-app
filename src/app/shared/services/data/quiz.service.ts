@@ -982,6 +982,102 @@ export class QuizService {
    * cache miss. Backed by a single lazy-built Map over `quizInitialState`
    * so callers don't re-scan the bundle on every click.
    */
+  // ── AUTHORIZED CORRECTNESS (S5-pre) ─────────────────────────────
+  //
+  // These replace the pristine answer-key helpers below. They answer the same
+  // two questions the callers actually asked — "which options are correct?"
+  // and "was this option correct?" — but from the server-authorized verdict
+  // instead of the client bank.
+  //
+  // The security difference is the whole point:
+  //
+  //   pristine   knew the full correct set the moment the page loaded
+  //   authorized knows nothing until /check answers, and knows the COMPLETE
+  //              set only once the verdict is TERMINAL
+  //
+  // so "not yet authorized" is a real state here, and it is never spelled
+  // `false`.
+
+  /** The verdict service, resolved lazily (see `rehydrateEarnedVerdicts`). */
+  private verdictsOrNull(): QuestionVerdictService | null {
+    try {
+      return this.injector.get(QuestionVerdictService, null);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Is this question multi-answer? DECLARED, not derived from answers.
+   *
+   *   true / false  the server declared it
+   *   null          not loaded yet — unknown
+   *
+   * Callers used to answer this with `pristineCorrectTexts.size > 1`, which
+   * needed the answer key to ask a question that has nothing to do with the
+   * answers. The declared type carries the cardinality without the identities.
+   */
+  public isDeclaredMultiAnswer(
+    questionText: string | null | undefined
+  ): boolean | null {
+    if (!questionText) return null;
+    try {
+      return this.injector
+        .get(TopicQuizTypeRegistry, null)
+        ?.isMultiAnswer(questionText) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * The AUTHORIZED correct option texts for a question — empty until the
+   * verdict is terminal.
+   *
+   * Deliberately empty on `idle`, `checking` and `incomplete`: the complete
+   * correct set is exactly what the deferred-answer contract withholds until
+   * the server releases it. A caller that used to gate on
+   * `pristineCorrectTexts.size > 1` to detect "this is a multi-answer
+   * question" must NOT use this for that purpose — ask the declared type
+   * instead, which carries no answers.
+   */
+  public getAuthorizedCorrectTextsForQuestion(
+    questionText: string | null | undefined
+  ): Set<string> {
+    const key = norm(questionText);
+    if (!key || !this.quizId) return new Set<string>();
+
+    const state = this.verdictsOrNull()?.verdictFor(this.quizId, questionText ?? '');
+    if (!state) return new Set<string>();
+    if (state.phase !== 'resolved' && state.phase !== 'expired') return new Set<string>();
+
+    const texts = new Set<string>();
+    for (const text of state.correctOptionTexts ?? []) {
+      const normalized = norm(text);
+      if (normalized) texts.add(normalized);
+    }
+    return texts;
+  }
+
+  /**
+   * TRI-STATE: was this option authorized correct?
+   *
+   *   true   the server said this selected option is correct
+   *   false  the server said it is not
+   *   null   not authorized yet — UNKNOWN, and not to be read as either
+   *
+   * Only ever answers about options the user actually submitted, so it
+   * reveals nothing they have not already earned.
+   */
+  public authorizedCorrectnessForOption(
+    questionText: string | null | undefined,
+    optionText: string | null | undefined
+  ): boolean | null {
+    if (!questionText || !optionText || !this.quizId) return null;
+    return this.verdictsOrNull()
+      ?.verdictForOption(this.quizId, questionText, optionText) ?? null;
+  }
+
   public getPristineQuestionByText(
     questionText: string | null | undefined
   ): QuizQuestion | null {

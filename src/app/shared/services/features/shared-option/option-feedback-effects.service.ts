@@ -81,26 +81,28 @@ export class OptionFeedbackEffectsService {
     const selectionsMap = h.selectedOptionService.selectedOptionsMapSig();
     if (!h.optionBindings() || h.optionBindings().length === 0) return;
 
-    // Resolve pristine correct texts for the current question.
+    // AUTHORIZED COMPLETION, THEN THE AUTHORIZED SET (S5-pre).
+    //
+    // This used to read the pristine correct set twice: once to detect a
+    // multi-answer question (`size < 2`) and once to decide the response
+    // covered it. Both are now asked of authorities that carry no answer key:
+    // the declared type for the cardinality, the verdict for the completion.
+    //
+    // Order matters. The correct SET is only consulted after completion, and
+    // completion is terminal, so the authorized texts exist by the time they
+    // are read — nothing here can reveal them earlier.
     const qIdx = h.currentQuestionIndex ?? h.quizService.currentQuestionIndex ?? 0;
     const qText = (h.quizService as any)?.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText
       ?? (h.quizService as any)?.questions?.[qIdx]?.questionText;
-    const pristineCorrectTexts = h.quizService.getPristineCorrectTextsForQuestion(qText);
-    if (pristineCorrectTexts.size < 2) return;
 
-    // Find selections (across any question slot) whose texts cover every
-    // pristine correct text. Avoids dependence on currentQuestionIndex.
-    let allCorrectSelected = false;
-    for (const sels of selectionsMap.values()) {
-      const selectedTexts = new Set(
-        (sels ?? []).map((s: SelectedOption) => norm(s?.text)).filter((t: string) => !!t)
-      );
-      if ([...pristineCorrectTexts].every((t: string) => selectedTexts.has(t))) {
-        allCorrectSelected = true;
-        break;
-      }
-    }
-    if (!allCorrectSelected) return;
+    if (h.quizService.isDeclaredMultiAnswer?.(qText) !== true) return;
+    if (!h.quizService.isMultiAnswerComplete?.(qIdx)) return;
+
+    const pristineCorrectTexts: Set<string> =
+      h.quizService.getAuthorizedCorrectTextsForQuestion?.(qText) ?? new Set<string>();
+    // No authorized set means the reveal has not been released. Disabling on
+    // an empty set would grey out every option, so unknown does nothing.
+    if (pristineCorrectTexts.size === 0) return;
 
     // If auto-reveal already stamped _autoRevealedCorrect on the
     // bindings, do not overwrite — auto-reveal's highlight + disable

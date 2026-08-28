@@ -1176,19 +1176,26 @@ export class OptionItemComponent implements OnInit {
       const liveQT =
         (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[_qIdx]?.questionText
         ?? (this.quizService as any)?.questions?.[_qIdx]?.questionText;
-      const pristineCorrectTexts =
-        this.quizService.getPristineCorrectTextsForQuestion(liveQT);
-      if (pristineCorrectTexts.size < 2) return;
+
+      // AUTHORIZED COMPLETION, NOT A LOCAL ANSWER-KEY COMPARISON (S5-pre).
+      //
+      // This used to load the pristine correct set, gate on `size < 2` to
+      // detect multi-answer, and then check the selection covered it — three
+      // uses of the client answer key to decide when to grey out the options
+      // the player did not pick.
+      //
+      // The declared type answers the multi question without any answers, and
+      // completion is the verdict's own SUPERSET decision. Both `false` and
+      // `null` (unknown) leave the options alone, so nothing greys out on a
+      // guess.
+      if (this.quizService.isDeclaredMultiAnswer(liveQT) !== true) return;
+      if (!this.quizService.isMultiAnswerComplete(_qIdx)) return;
 
       const selectionsMap = this.selectedOptionService.selectedOptionsMapSig();
       const selections = selectionsMap.get(_qIdx) ?? [];
       const selectedTexts = new Set(
         selections.map((s: SelectedOption) => norm(s?.text)).filter((t: string) => !!t)
       );
-      const allPristineCorrectSelected =
-        [...pristineCorrectTexts].every(t => selectedTexts.has(t));
-
-      if (!allPristineCorrectSelected) return;
 
       const myText = norm(this.binding().option.text);
       if (!selectedTexts.has(myText)) {

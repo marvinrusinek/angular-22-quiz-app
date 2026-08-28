@@ -42,8 +42,17 @@ export interface MultiAnswerClickState {
   correctSelected: number;
   /** Number of incorrect options selected so far */
   incorrectSelected: number;
-  /** Remaining correct answers to find */
-  remaining: number;
+  /**
+   * Remaining correct answers to find, or `null` when the correct-answer
+   * set itself is not yet known.
+   *
+   * `null` is distinct from `0`: zero correct answers OUTSTANDING is a
+   * genuine completion fact; not knowing the correct set at all is not.
+   * Collapsing the two let a question resolve after a single click, before
+   * anything had authorized what "complete" meant for it — see
+   * `computeMultiAnswerClickState`.
+   */
+  remaining: number | null;
   /** 1-based correct option indices for display */
   correctIndices1Based: number[];
 }
@@ -182,7 +191,15 @@ export class OptionClickHandlerService {
       else incorrectSelected++;
     }
 
-    const remaining = Math.max(correctIndices.length - correctSelected, 0);
+    // UNKNOWN, NOT ZERO. An empty `correctIndices` here means nobody has told
+    // this call what the correct set is — the verdict hasn't authorized it yet
+    // (see the one caller that reaches this without a verdict) — not that zero
+    // answers are outstanding. `0 - 0 = 0` used to read as "complete" the
+    // instant a multi-answer question saw its first click, before the check
+    // had even reached the server.
+    const remaining = correctIndices.length === 0
+      ? null
+      : Math.max(correctIndices.length - correctSelected, 0);
     const correctIndices1Based = correctIndices.map(i => i + 1);
 
     return {
@@ -263,7 +280,7 @@ export class OptionClickHandlerService {
     disabledSet: Set<number>,
     clickedIndex: number,
     isClickedCorrect: boolean,
-    remaining: number,
+    remaining: number | null,
     bindingsCount: number,
     correctIndices: number[]
   ): void {

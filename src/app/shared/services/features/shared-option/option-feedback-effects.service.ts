@@ -5,7 +5,6 @@ import { SelectedOption } from '../../../models/SelectedOption.model';
 
 import type { SharedOptionComponent } from '../../../../components/question/answer/shared-option-component/shared-option.component';
 import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { norm } from '../../../utils/text-norm';
 
 type Host = SharedOptionComponent;
@@ -24,6 +23,15 @@ type Host = SharedOptionComponent;
 @Service()
 export class OptionFeedbackEffectsService {
   private readonly verdicts = inject(QuestionVerdictService);
+
+  // What `repaintOnVerdictArrival` last actually painted, per host. A fresh
+  // clone never itself changes `isCorrect` — that field is written elsewhere,
+  // in place, by `option-lock-policy.applyAuthorizedCorrectness` — so the only
+  // way to know whether a repaint is still owed is to remember what this
+  // effect painted last time and compare today's values against THAT, not
+  // against the clone it is about to produce (which is always identical to
+  // its source by construction).
+  private readonly lastRepainted = new WeakMap<Host, string>();
 
   registerFeedbackEffects(host: Host): void {
     const h = host as any;
@@ -51,6 +59,20 @@ export class OptionFeedbackEffectsService {
    * Fresh binding refs are what OnPush option-item children compare, and
    * `getOptionClasses` recomputes `correct-option`/`incorrect-option` from
    * `binding.isCorrect` on the resulting pass.
+   *
+   * CONVERGENCE. `verdicts.states()` changes identity on every `/check` round
+   * trip — the optimistic `checking` write as well as the terminal one — not
+   * only on a genuine reveal, so this effect used to re-fire and unconditionally
+   * clone+write EVERY current binding on each of those, whether or not
+   * anything paintable had actually changed. That re-armed every other effect
+   * reading `optionBindings` (e.g. the multi-answer auto-disable effect above)
+   * on every firing, which on a completing REVISIT click produced a
+   * synchronous run of hundreds of re-entries in tens of milliseconds and
+   * froze the tab before the score could ever repaint.
+   *
+   * The fix compares what is paintable — each option's `isCorrect` — against
+   * the fingerprint of what this effect last actually wrote, and only clones
+   * and writes when that has genuinely changed.
    */
   private repaintOnVerdictArrival(h: any): void {
     // THE DEPENDENCY. Read first and unconditionally — an early return above
@@ -62,6 +84,18 @@ export class OptionFeedbackEffectsService {
     untracked(() => {
       const bindings: OptionBindings[] = h.optionBindings?.() ?? [];
       if (!bindings.length) return;
+
+      const fingerprint = bindings
+        .map((b: OptionBindings) => {
+          const text = norm((b as any)?.option?.text ?? '');
+          const known = (b as any)?.isCorrect;
+          const tri = known === true ? '1' : known === false ? '0' : '?';
+          return `${text}:${tri}`;
+        })
+        .join('|');
+
+      if (this.lastRepainted.get(h) === fingerprint) return;   // nothing paintable changed
+      this.lastRepainted.set(h, fingerprint);
 
       h.optionBindings.set(bindings.map((b: OptionBindings) => ({ ...b })));
       h.cdRef?.markForCheck?.();
@@ -139,7 +173,24 @@ export class OptionFeedbackEffectsService {
    * authoritatively reports the CURRENT question as expired. Updates bindings
    * via cssClasses so Angular's ngClass paints correctly — no direct DOM
    * manipulation (which bypassed reactive cleanup and left .correct-option
-   * leaked on revisited questions). Body verbatim.
+   * leaked on revisited questions).
+   *
+   * CORRECTNESS SOURCE (S5-pre). This used to derive the reveal from the
+   * local bank (`isOptionCorrect` reading `option.correct`) — data that no
+   * longer exists once options come from the API, so it silently computed an
+   * EMPTY correct set. The sibling subscriber in `shared-option-init.service.ts`
+   * already documents the intended replacement: "Timeout correctness now
+   * comes from exactly one place: QuestionVerdictService.revealExpiredQuestion()
+   * -> correctOptionTexts." This effect now asks the same authority the
+   * multi-answer auto-disable effect above uses.
+   *
+   * That reveal is an async round trip (`QqcOrchTimerService` calls
+   * `revealExpiredQuestion()` off the same expiry), so the authorized set may
+   * not exist yet the instant the local clock crosses the deadline. Reading
+   * `verdicts.states()` makes verdict arrival a tracked dependency, so an
+   * empty result at first fire is not final — this effect runs again once the
+   * reveal lands. The lock (`disabled`, `timerExpiredForQuestion`) still
+   * applies immediately; only the color stamp waits.
    */
   private applyTimerExpiryStamp(h: any): void {
     // Track BOTH signals so the effect re-fires when either changes —
@@ -148,38 +199,60 @@ export class OptionFeedbackEffectsService {
     const expiredForIdx = h.timerService.expiredForQuestionIndexSig();
     const duration = h.timerService.timePerQuestion;
     const qIdx = h.currentQuestionIndex ?? h.quizService.currentQuestionIndex ?? 0;
+
+    // The authorized set may still be in flight when this first fires — this
+    // dependency is what lets the effect re-run once it lands.
+    this.verdicts.states();
+
     // Authoritative gate: only fire when the timer service explicitly
     // marks THIS question as expired. The old `elapsed >= duration`
     // check could fire on stale elapsed reads during Q→Q transitions,
     // stamping the next question's bindings as expired.
     if (expiredForIdx !== qIdx) return;
     if (!(elapsed > 0 && elapsed >= duration)) return;
-    if (h._timerExpiryHandled) return;
 
-    h._timerExpiryHandled = true;
-    h.timerExpiredForQuestion.set(true);
-
-    // Get correct answer texts from canonical question data
-    const question = h.quizService.questions?.[qIdx] ?? h.currentQuestion();
-    const displayOpts = h.optionsToDisplay?.length
-      ? h.optionsToDisplay
-      : question?.options ?? [];
-    const correctTexts = new Set<string>();
-    for (const opt of displayOpts) {
-      if (isOptionCorrect(opt)) {
-        correctTexts.add(norm(opt.text));
-      }
+    // Lock the question the instant the clock says it is over, independent of
+    // whether the authorized reveal has arrived yet.
+    if (!h._timerExpiryHandled) {
+      h._timerExpiryHandled = true;
+      h.timerExpiredForQuestion.set(true);
     }
+
+    const question = h.quizService.getQuestionsInDisplayOrder?.()?.[qIdx]
+      ?? h.quizService.questions?.[qIdx]
+      ?? h.currentQuestion();
+    const correctTexts: Set<string> =
+      h.quizService.getAuthorizedCorrectTextsForQuestion?.(question?.questionText) ?? new Set<string>();
+
+    // Not authorized yet — wait for the next verdicts.states() change rather
+    // than paint from data that no longer exists.
+    if (correctTexts.size === 0) return;
+
+    // Idempotent per answer key, not per call: verdicts.states() keeps
+    // changing for OTHER questions too, and each of those must not re-stamp
+    // this one.
+    const paintedKey = [...correctTexts].sort().join('|');
+    if (h._timerExpiryPaintedKey === paintedKey) return;
+    h._timerExpiryPaintedKey = paintedKey;
 
     // Stamp bindings via cssClasses + new ref so OnPush option-items
     // re-render. ngClass will apply correct-option/incorrect-option
     // classes through the normal Angular pipeline.
+    //
+    // `isCorrect` must land on the binding itself, not only in `cssClasses`.
+    // `option.service.ts`'s class builder (the one most render paths funnel
+    // through) derives `correct-option` from `binding.isCorrect === true`,
+    // not from this effect's own `cssClasses` object — every other writer in
+    // this file (`applyMultiAnswerAutoDisable` above) already sets it. Without
+    // it, that builder's next pass saw the untouched `isCorrect` (still
+    // unset) and repainted this option back to uncolored.
     const updated = (h.optionBindings() ?? []).map((b: OptionBindings) => {
       if (!b) return b;
       const optText = norm(b.option?.text);
       const isCorrect = correctTexts.has(optText);
       return {
         ...b,
+        isCorrect,
         cssClasses: {
           ...(b.cssClasses || {}),
           'correct-option': isCorrect,

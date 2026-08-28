@@ -1,4 +1,4 @@
-import { Service, effect } from '@angular/core';
+import { Service, effect, untracked } from '@angular/core';
 
 import { Option } from '../../../models/Option.model';
 
@@ -92,11 +92,42 @@ export class OptionUiSyncEffectsService {
    * auto-reveal bindings: the parent's optionBindings() doesn't carry
    * _autoRevealedCorrect, so a zone.js tick re-evaluating the parent template
    * would wipe the green highlight set by triggerAllIncorrectsExhaustedAutoReveal.
+   * The same is true of a timer-expiry reveal — the parent's pushed array
+   * doesn't carry _timerExpiredStamped either, so a push landing right after
+   * the timeout coloring is applied would erase it the same way. Both are
+   * terminal, authoritative reveals; neither is something a routine parent
+   * re-render is entitled to undo.
+   *
+   * CONVERGENCE. The guard used to read `host.optionBindings()` as a plain
+   * tracked call, which made this effect's own target a dependency of itself:
+   * every write elsewhere to `optionBindings` (the multi-answer auto-disable
+   * effect's disabled/isCorrect stamps, the verdict-arrival repaint) re-fired
+   * THIS effect, which then unconditionally overwrote those stamps with the
+   * stale parent-pushed array — undoing the other effect's work and making
+   * it re-fire and re-stamp, which re-fired this one again. That two-file
+   * ping-pong, not any single effect failing to converge on its own, was the
+   * remaining freeze after the verdict-arrival repaint was fixed to compare
+   * before writing.
+   *
+   * Fixing the ping-pong made this effect settle in one pass instead of many
+   * — which also meant it could now deterministically WIN the race against a
+   * timer-expiry stamp arriving moments earlier, on the one field the guard
+   * did not yet know to protect. The endless retries used to occasionally
+   * let the stamp survive by chance; converging removed that chance along
+   * with the storm, so the guard has to name what it protects explicitly.
+   *
+   * The only genuine trigger for this effect is a real parent push —
+   * `optionBindingsInput()` changing. Reading the current bindings only to
+   * check for a protected reveal must not itself keep this effect subscribed
+   * to every write anyone else makes to the same signal.
    */
   private applyOptionBindingsSync(host: Host): void {
     const v = host.optionBindingsInput();
     if (v !== undefined) {
-      if (host.optionBindings().some((b) => b?._autoRevealedCorrect)) return;
+      const hasProtectedReveal = untracked(() =>
+        host.optionBindings().some((b) => b?._autoRevealedCorrect || b?._timerExpiredStamped)
+      );
+      if (hasProtectedReveal) return;
       host.optionBindings.set(v);
     }
   }

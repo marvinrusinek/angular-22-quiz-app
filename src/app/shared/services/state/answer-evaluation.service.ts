@@ -189,48 +189,35 @@ export class AnswerEvaluationService {
   }
 
   // Resolve the authoritative option set, overriding stale live correct-flags
-  // with pristine quizInitialState (or live questions[]) when counts disagree.
+  // with the live questions[] array when counts disagree.
+  //
+  // S5b: the `quizInitialState` global-bank scan that used to run first here
+  // is gone — it cross-referenced the ENTIRE pristine bundle across every
+  // quiz, the same global-bank shape as the already-removed `resolveCorrectIndices`
+  // Source 3, and only ever runs at all when `statusFromVerdict` returns null
+  // (no quizId/questionText to key a verdict by — a caller outside a live
+  // attempt, not the "verdict unevaluated" case, which `statusFromVerdict`
+  // already answers on its own). The `quizService.questions` cross-reference
+  // stays: it reads the CURRENT quiz's own live question array, not a
+  // cross-quiz bank — the same distinction that keeps `resolveCorrectIndices`
+  // Source 2 in place.
   private resolveAuthoritativeOptions(question: QuizQuestion): Option[] {
     let questionOptions = Array.isArray(question.options) ? question.options : [];
     try {
       const qText = norm(question.questionText);
-      const pristineBundle = this.quizService?.quizInitialState ?? [];
-      let pristineQ: any = null;
-      for (const quiz of pristineBundle) {
-        for (const pq of (quiz?.questions ?? [])) {
-          if (norm(pq?.questionText) === qText) {
-            pristineQ = pq;
-            break;
-          }
-        }
-        if (pristineQ) break;
-      }
-      if (pristineQ && Array.isArray(pristineQ.options)) {
-        const pristineCorrectCount = pristineQ.options.filter((o: any) =>
+      const rawQs: any[] = this.quizService?.questions ?? [];
+      const rawQ = qText
+        ? rawQs.find(r => norm(r?.questionText) === qText)
+        : null;
+      if (rawQ && Array.isArray(rawQ.options)) {
+        const rawCorrectCount = rawQ.options.filter((o: any) =>
           isOptionCorrect(o)
         ).length;
         const currentCorrectCount = questionOptions.filter(o =>
           this.idResolver.coerceToBoolean(o.correct)
         ).length;
-        if (pristineCorrectCount !== currentCorrectCount) {
-          questionOptions = pristineQ.options;
-        }
-      }
-      if (!pristineQ) {
-        const rawQs: any[] = this.quizService?.questions ?? [];
-        const rawQ = qText
-          ? rawQs.find(r => norm(r?.questionText) === qText)
-          : null;
-        if (rawQ && Array.isArray(rawQ.options)) {
-          const rawCorrectCount = rawQ.options.filter((o: any) =>
-            isOptionCorrect(o)
-          ).length;
-          const currentCorrectCount = questionOptions.filter(o =>
-            this.idResolver.coerceToBoolean(o.correct)
-          ).length;
-          if (rawCorrectCount > currentCorrectCount) {
-            questionOptions = rawQ.options;
-          }
+        if (rawCorrectCount > currentCorrectCount) {
+          questionOptions = rawQ.options;
         }
       }
     } catch (err: unknown) { swallow('answer-evaluation.service.ts', err); /* ignore and keep original */ }

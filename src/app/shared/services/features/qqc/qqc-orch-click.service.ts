@@ -14,9 +14,9 @@ import {
   selectedVerdictFor,
   verdictStateForDisplayIndex
 } from '../verdict/authorized-correctness';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { norm } from '../../../utils/text-norm';
 import { swallow } from '../../../utils/error-logging';
+import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
 
 type Host = QuizQuestionComponent;
 
@@ -193,29 +193,21 @@ export class QqcOrchClickService {
   }
 
   /**
-   * Derive single-answer disable context: whether this is single-answer (raw
-   * flags, with a pristine >1-correct override), whether the clicked option is
-   * correct, and the set of correct option keys. Extracted verbatim.
+   * Derive single-answer disable context: whether this is single-answer.
+   *
+   * S5b: question TYPE comes from the API-declared `question.type`
+   * (`declaredIsMultiAnswer`), never from counting `.correct` flags in a bank
+   * that no longer exists. An undeclared type (should not occur once every
+   * question is API-sourced) defaults to single, the same conservative
+   * assumption the old bank-counting fallback made.
    */
   private computeSingleAnswerDisableContext(host: Host, idx: number, q: QuizQuestion | null):
     { isSingleAnswer: boolean } {
     const rawQuestion: any = host.quizService.getQuestionsInDisplayOrder?.()?.[idx]
       ?? host.quizService?.questions?.[idx]
       ?? q;
-    const rawOpts: any[] = rawQuestion?.options ?? [];
-    const rawCorrectCount = rawOpts.filter((o: any) => isOptionCorrect(o)).length;
 
-    // The correct-id set that used to be built here is gone. Locking now asks
-    // the verdict which option the user got right, so a full answer set never
-    // has to exist in the browser for this path to work.
-    //
-    // What remains is single-vs-multi detection, which is question TYPE rather
-    // than correctness. It is still counted from the bank because the local
-    // questions carry no declared type; it moves to the type registry with the
-    // rest of the type inference, not here.
-    // Pristine fallback: stale single-looking raw flags but quizInitialState
-    // shows >1 correct => actually multi-answer; skip the single-answer disable.
-    const isSingleAnswer = !this.detectPristineMulti(host, rawQuestion) && rawCorrectCount <= 1;
+    const isSingleAnswer = declaredIsMultiAnswer(rawQuestion) !== true;
     return { isSingleAnswer };
   }
 
@@ -343,24 +335,6 @@ export class QqcOrchClickService {
       ob.option.optionId === b.option.optionId ? b : ob
     ));
     b.directiveInstance?.updateHighlight();
-  }
-
-  /** Does quizInitialState show >1 correct option for this question (stale single-flag override)? Extracted verbatim. */
-  private detectPristineMulti(host: Host, rawQuestion: any): boolean {
-    try {
-      const liveQText = norm(rawQuestion?.questionText);
-      if (!liveQText) return false;
-      const bundleM = host.quizService?.quizInitialState ?? [];
-      for (const quizM of bundleM) {
-        for (const pqM of (quizM?.questions ?? [])) {
-          if (norm(pqM?.questionText) !== liveQText) continue;
-          const pristineCorrect = (pqM?.options ?? []).filter((o: any) => isOptionCorrect(o)).length;
-          if (pristineCorrect > 1) return true;
-          break;
-        }
-      }
-    } catch (err: unknown) { swallow('qqc-orch-click.service.ts pristine multi-answer detect', err); }
-    return false;
   }
 
   /**

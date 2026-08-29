@@ -116,12 +116,16 @@ export class OptionUiSyncService {
     const declared = declaredIsMultiAnswer((ctx as any).currentQuestion);
     if (declared !== null) return declared;
 
-    // REMOVE IN /questions CONTENT CUTOVER — everything below is the fallback.
-    // Canonical fallback: when binding flags are stale/missing, recover
-    // the correct count from quizInitialState (pristine source). Use the
-    // higher of the two so single-answer detection isn't weakened.
-    const canonicalCorrectCount = this.resolveCanonicalCorrectCount(_cob);
-    const effectiveCorrectCount = Math.max(correctCountInBindings, canonicalCorrectCount);
+    // Undeclared should not occur in production; this fallback stays as the
+    // conservative, locally-derived default for that theoretical case.
+    //
+    // S5d: `resolveCanonicalCorrectCount` used to recover a count from a
+    // `quizInitialState` global-bank scan (positional option-array match
+    // across every quiz) and take the higher of it and the binding count.
+    // That bank is permanently empty, so the bank term was always 0 and the
+    // max was always `correctCountInBindings` — removed rather than left
+    // scanning nothing.
+    const effectiveCorrectCount = correctCountInBindings;
 
     // Authoritative Type Resolution
     const qText = (ctx as any).currentQuestion?.questionText?.toLowerCase() || '';
@@ -381,8 +385,6 @@ export class OptionUiSyncService {
       this.selectedOptionService.removeOption(currentIndex, index as any, index);
     }
 
-    this.maybeEmitSingleAnswerFet(optionBinding, currentIndex, ctx);
-
     // Update Next Button State based on ACTUAL selection count
     const hasSelection = ctx.selectedOptionMap.size > 0;
     this.nextButtonStateService.setNextButtonState(hasSelection);
@@ -462,68 +464,14 @@ export class OptionUiSyncService {
     return fullSelections;
   }
 
-  // Single-answer only: set answered + emit FET when the clicked option is
-  // pristine-correct. Skipped in shuffled mode (SOC handles scoring/FET).
-  private maybeEmitSingleAnswerFet(
-    optionBinding: OptionBindings,
-    currentIndex: number,
-    ctx: OptionUiSyncContext
-  ): void {
-    const isShufForFET = this.quizService?.isShuffleEnabled?.()
-      && this.quizService?.shuffledQuestions?.length > 0;
-    if (ctx.type === 'single' && !isShufForFET) {
-      const clickedIsCorrect = this.resolveClickedIsCorrectPristine(optionBinding, currentIndex, ctx);
-      if (clickedIsCorrect) {
-        this.selectedOptionService.setAnswered(true, true);
-        ctx.emitExplanation(currentIndex);
-      }
-    }
-  }
-
-  // Resolve whether the clicked option is correct against pristine quizInitialState.
-  // After Restart Quiz, binding correct flags can be stale, so resolve from pristine.
-  private resolveClickedIsCorrectPristine(
-    optionBinding: OptionBindings,
-    currentIndex: number,
-    ctx: OptionUiSyncContext
-  ): boolean {
-    let clickedIsCorrect = false;
-    try {
-      const clickedText = norm(optionBinding?.option?.text);
-      const bundle = this.quizService?.quizInitialState ?? [];
-      if (clickedText && bundle.length > 0) {
-        // Use TEXT-BASED question matching — index-based lookup fails in
-        // shuffled mode because pristineQuiz.questions[displayIndex] is
-        // the WRONG question (original order).
-        const isShuf = this.quizService?.isShuffleEnabled?.()
-          && this.quizService?.shuffledQuestions?.length > 0;
-        const displayQ = isShuf
-          ? (this.quizService?.getQuestionsInDisplayOrder?.()?.[currentIndex]
-            ?? this.quizService?.shuffledQuestions?.[currentIndex])
-          : (ctx.getQuestionAtDisplayIndex?.(currentIndex)
-            ?? this.quizService?.questions?.[currentIndex]);
-        const qText = norm(displayQ?.questionText);
-        if (qText) {
-          let matched = false;
-          for (const quiz of bundle) {
-            for (const pq of (quiz?.questions ?? [])) {
-              if (norm(pq?.questionText) !== qText) continue;
-              matched = true;
-              const matchedOpt = (pq?.options ?? []).find((o: any) => norm(o?.text) === clickedText);
-              if (matchedOpt) {
-                clickedIsCorrect = isOptionCorrect(matchedOpt);
-              }
-              break;
-            }
-            if (matched) break;
-          }
-        }
-      }
-    } catch (err: unknown) {
-      console.error('OptionUiSyncService.forceSelectIntoServices pristine-correctness check failed:', err);
-    }
-    return clickedIsCorrect;
-  }
+  // S5b: single-answer correct-click FET emission is fully redundant here.
+  // `resolveClickedIsCorrectPristine` answered from pristine `quizInitialState`,
+  // which is permanently empty since S5a — this always returned `false`, so
+  // the emission below had already gone silently dead. The job it did is
+  // already covered on the very same click by `soc-answer-processing.service.ts`'s
+  // verdict-authorized `isSingleAnswerClickCorrect` -> `emitSingleAnswerFet`
+  // path, which `processSingleAnswerClick` runs immediately after
+  // `updateOptionAndUI` returns.
 
   private applySingleSelectionPainting(
     selectedIndex: number,
@@ -596,9 +544,11 @@ export class OptionUiSyncService {
     const allCorrectFound = correctIndicesSet.size > 0 && [...correctIndicesSet].every(i => futureIndices.has(i));
 
     // Determine if we are really in multi-mode for the sake of the feedback message
+    //
+    // S5d: `resolveCanonicalCorrectCount`'s `quizInitialState` global-bank
+    // scan is gone — permanently empty, so its term was always 0 here too.
     const correctCountInBindings = correctIndicesSet.size;
-    const canonicalCorrectCount = this.resolveCanonicalCorrectCount(ctx.optionBindings);
-    const effectiveCorrectCount = Math.max(correctCountInBindings, canonicalCorrectCount);
+    const effectiveCorrectCount = correctCountInBindings;
     // DECLARED TYPE WINS. This read `type === 'multiple' || … || count > 1`,
     // which lets the local answer key PROMOTE a declared single-answer question
     // to multiple whenever the bank drifts or is tampered with.
@@ -767,8 +717,14 @@ export class OptionUiSyncService {
     );
   }
 
-  // PRISTINE-FIRST: Resolve correct options from quizInitialState to avoid
-  // stale/mutated correct flags on freshOptions (e.g. after Restart Quiz).
+  // S5d: this used to be PRISTINE-FIRST — compute from `freshOptions` (the
+  // CURRENT question's own live/displayed options, not a bank), then let a
+  // `quizInitialState` global-bank scan (by question text, across every
+  // quiz) OVERRIDE it if the bank had a non-empty correct set. That bank is
+  // permanently empty, so the override never fired; `freshOptions` was
+  // always the actual result. The override is gone — the local computation
+  // stays, matching the same "local object is fine, the bank isn't"
+  // distinction drawn everywhere else in this migration.
   private resolveCorrectOptionsForScoring(
     ctx: OptionUiSyncContext,
     questionIndex: number,
@@ -776,44 +732,10 @@ export class OptionUiSyncService {
     freshOptions: any[]
   ): { correctOptions: any[]; correctTextSet: Set<string> } {
     const normalize = (s: unknown): string => norm(s);
-    let correctOptions = freshOptions.filter(o => isOptionCorrect(o));
-    let correctTextSet = new Set(
+    const correctOptions = freshOptions.filter(o => isOptionCorrect(o));
+    const correctTextSet = new Set(
       correctOptions.map(o => normalize(o.text)).filter(Boolean)
     );
-
-    try {
-      const bundle = this.quizService?.quizInitialState ?? [];
-      if (bundle.length > 0) {
-        // Use TEXT-BASED question matching — index-based lookup
-        // (pristineQuiz.questions[displayIndex]) fails in shuffled mode.
-        const isShuf = this.quizService?.isShuffleEnabled?.()
-          && this.quizService?.shuffledQuestions?.length > 0;
-        const displayQ = isShuf
-          ? (this.quizService?.getQuestionsInDisplayOrder?.()?.[questionIndex]
-            ?? this.quizService?.shuffledQuestions?.[questionIndex])
-          : question;
-        const qText = normalize(displayQ?.questionText);
-        if (qText) {
-          let matched = false;
-          for (const quiz of bundle) {
-            for (const pq of (quiz?.questions ?? [])) {
-              if (normalize(pq?.questionText) !== qText) continue;
-              matched = true;
-              const pristineCorrect = (pq?.options ?? [])
-                .filter((o: any) => isOptionCorrect(o));
-              if (pristineCorrect.length > 0) {
-                correctOptions = pristineCorrect;
-                correctTextSet = new Set(
-                  pristineCorrect.map((o: any) => normalize(o.text)).filter(Boolean)
-                );
-              }
-              break;
-            }
-            if (matched) break;
-          }
-        }
-      }
-    } catch (err: unknown) { swallow('option-ui-sync.service.ts pristine-correct match', err); }
 
     return { correctOptions, correctTextSet };
   }
@@ -902,24 +824,25 @@ export class OptionUiSyncService {
       !hasIncorrect &&
       !anyIncorrectTextSelected
     ) {
-      // NO SCORE HERE. The gate above is answer-key derived — `correctTextSet`
-      // comes from resolveCorrectOptionsForScoring walking pristine
-      // quizInitialState — and this runs on the click while /check is still in
-      // flight. Credit is applied by creditResolvedQuestion when the authorized
-      // verdict lands.
+      // NO SCORE HERE. The gate above is local-object derived — `correctTextSet`
+      // comes from resolveCorrectOptionsForScoring reading the CURRENT
+      // question's own live options (never quizInitialState, since S5d) —
+      // and this runs on the click while /check is still in flight. Credit
+      // is applied by creditResolvedQuestion when the authorized verdict
+      // lands.
       //
       // Mark this multi-answer question as fully resolved so the
       // rendering layer (option-item.isDisabled) honors b.disabled
       // for unselected incorrect options. Without this flag, the
       // policy correctly stamps b.disabled=true but the UI still
       // returns false from isDisabled() in multi-answer mode.
-      // NO COMPLETION OR PERFECT HERE. The gate above is answer-key derived —
-      // `correctTextSet` comes from resolveCorrectOptionsForScoring walking
-      // pristine quizInitialState — and this runs on the click, while /check is
-      // still in flight. Both states are established from the authorized
-      // verdict in SelectedOptionService.applyAuthorizedMultiCompletion, which
-      // also derives PERFECT from the revealed correct set versus what the user
-      // actually submitted.
+      // NO COMPLETION OR PERFECT HERE. The gate above is local-object derived
+      // — `correctTextSet` comes from resolveCorrectOptionsForScoring reading
+      // the CURRENT question's own live options, and this runs on the click,
+      // while /check is still in flight. Both states are established from the
+      // authorized verdict in SelectedOptionService.applyAuthorizedMultiCompletion,
+      // which also derives PERFECT from the revealed correct set versus what
+      // the user actually submitted.
       //
       // RESOLVED stays: "the user answered" follows from their own interaction.
       this.quizService.markQuestionResolved(questionIndex);
@@ -1006,35 +929,4 @@ export class OptionUiSyncService {
     return hasCorrectSelection;
   }
 
-  // Text-match the bindings' question against quizInitialState (pristine
-  // structuredClone of QUIZ_DATA) to recover the canonical correct count.
-  // Live binding `option.correct` flags can be stale/missing, which made
-  // multi-answer detection (correctCountInBindings > 1) wrongly classify
-  // Q2/Q4 as single-answer and lock incorrect options after just 1 correct
-  // selection. Using the immutable pristine source side-steps that.
-  private resolveCanonicalCorrectCount(bindings: OptionBindings[]): number {
-    try {
-      if (!bindings?.length) return 0;
-      const bindingTexts = bindings.map(b => norm(b?.option?.text)).filter(Boolean);
-      if (!bindingTexts.length) return 0;
-      const bundle = this.quizService?.quizInitialState ?? [];
-      for (const quiz of bundle) {
-        for (const pq of (quiz?.questions ?? [])) {
-          const opts = pq?.options ?? [];
-          if (opts.length !== bindings.length) continue;
-          const allMatch = opts.every(
-            (o: any, i: number) => norm(o?.text) === bindingTexts[i]
-          );
-          if (!allMatch) continue;
-          return opts.filter(
-            (o: any) => isOptionCorrect(o)
-          ).length;
-        }
-      }
-      return 0;
-    } catch (err: unknown) {
-      console.error('OptionUiSyncService.resolveCanonicalCorrectCount pristine lookup failed:', err);
-      return 0;
-    }
-  }
 }

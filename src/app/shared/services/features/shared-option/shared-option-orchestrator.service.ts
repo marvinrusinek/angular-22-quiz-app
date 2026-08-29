@@ -8,9 +8,7 @@ import { SelectedOption } from '../../../models/SelectedOption.model';
 import { FeedbackContext } from './shared-option-feedback.service';
 
 import type { SharedOptionComponent } from '../../../../components/question/answer/shared-option-component/shared-option.component';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
 import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
-import { norm } from '../../../utils/text-norm';
 
 type Host = SharedOptionComponent;
 
@@ -100,89 +98,27 @@ export class SharedOptionOrchestratorService {
   }
 
   // ===== Multi-mode =====
+  /**
+   * S5b: question TYPE comes from the API-declared `question.type`
+   * (`declaredIsMultiAnswer`) first. The removed fingerprint scan below used
+   * to walk `quizInitialState` — a global bank scan, the same shape as the
+   * already-removed `resolveCorrectIndices` Source 3 — to answer this from
+   * the bank; every production question is now API-sourced and always
+   * declares a type, so that global scan is dead. `detectMultiMode` stays as
+   * the direct fallback: it reads only the CURRENT question's own data (no
+   * global bank), matching the same "local data is fine, the bank isn't"
+   * line drawn everywhere else in this migration.
+   */
   runIsMultiMode(host: Host): boolean {
     const idx = host.getActiveQuestionIndex();
 
     // Always resolve the display-order question for this index
     const currentQ = host.getQuestionAtDisplayIndex(idx) ?? host.currentQuestion();
 
-    // DECLARED TYPE FIRST. The whole fingerprint dance below exists only to
-    // count correct options in the local bank, which is the answer key. When
-    // the API has typed this question there is nothing to infer, and the
-    // fingerprint's failure modes (stale currentQuestion, option-text drift)
-    // stop mattering entirely.
     const declaredMulti = declaredIsMultiAnswer(currentQ);
-    if (declaredMulti !== null) {
-      host._isMultiModeCache = declaredMulti;
-      return declaredMulti;
-    }
-
-    // REMOVE IN /questions CONTENT CUTOVER — everything below is the fallback
-    // for questions the API has not typed.
-    // PRISTINE-FIRST via OPTION-TEXT FINGERPRINT.
-    // Question-text matching can fail (currentQuestion may be null/stale at
-    // initial render). Match by the option-text fingerprint instead â€” it
-    // uniquely identifies a question across the entire QUIZ_DATA.
-    let result = false;
-    try {
-      const qs: any = host.quizService;
-
-      // Collect candidate option texts from anywhere we can find them.
-      const collectTexts = (arr: any[] | undefined | null): string[] => {
-        if (!Array.isArray(arr)) return [];
-        return arr.map((o: any) => norm(o?.text)).filter((t: string) => !!t);
-      };
-      let candidateTexts: string[] = collectTexts(host.optionBindings()?.map((b: OptionBindings) => b?.option));
-      if (!candidateTexts.length) candidateTexts = collectTexts(host.optionsToDisplay);
-      if (!candidateTexts.length) candidateTexts = collectTexts(currentQ?.options);
-
-      if (candidateTexts.length > 0) {
-        const candidateSet = new Set(candidateTexts);
-        const bundle: any[] = qs?.quizInitialState ?? [];
-        outer: for (const quiz of bundle) {
-          for (const pq of (quiz?.questions ?? [])) {
-            const pqOpts = pq?.options ?? [];
-            if (pqOpts.length !== candidateTexts.length) continue;
-            const pqTexts = pqOpts.map((o: any) => norm(o?.text));
-            // Every pristine option text must appear in candidate set.
-            if (!pqTexts.every((t: string) => candidateSet.has(t))) continue;
-            const correctCount = pqOpts.filter(
-              (o: any) => isOptionCorrect(o)
-            ).length;
-            if (correctCount > 1) result = true;
-            break outer;
-          }
-        }
-      }
-
-      // ALSO try question-text match in case option fingerprint missed.
-      if (!result) {
-        const isShuffled = qs?.isShuffleEnabled?.()
-          && Array.isArray(qs?.shuffledQuestions)
-          && qs.shuffledQuestions.length > 0;
-        const displayQ = isShuffled
-          ? (qs?.getQuestionsInDisplayOrder?.()?.[idx] ?? qs?.shuffledQuestions?.[idx])
-          : currentQ;
-        const pq = qs?.getPristineQuestionByText?.(
-          displayQ?.questionText ?? currentQ?.questionText
-        );
-        if (pq) {
-          const correctCount = (pq.options ?? []).filter(
-            (o: any) => isOptionCorrect(o)
-          ).length;
-          if (correctCount > 1) result = true;
-        }
-      }
-    } catch { /* ignore */ }
-
-    // Fall back to detectMultiMode if pristine didn't decide.
-    if (!result) {
-      result = host.clickHandler.detectMultiMode(
-        currentQ, 
-        host.type, 
-        host.config()?.type
-      );
-    }
+    const result = declaredMulti !== null
+      ? declaredMulti
+      : host.clickHandler.detectMultiMode(currentQ, host.type, host.config()?.type);
 
     // Update cache for other code that reads it
     host._isMultiModeCache = result;

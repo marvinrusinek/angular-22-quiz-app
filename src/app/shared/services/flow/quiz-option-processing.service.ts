@@ -193,30 +193,12 @@ export class QuizOptionProcessingService {
       optionsForImmediateScoring
     );
 
-    let correctCountForQuestion = correctOptionsForQuestion.length;
-
-    // PRISTINE MULTI-ANSWER GUARD: the resolved correct count can be wrong
-    // when option.correct flags are mutated or incomplete in the runtime
-    // question objects. Cross-check against the pristine quiz bundle to
-    // detect true multi-answer questions that were misclassified.
-    try {
-      const qText = norm(questionForSelection?.questionText ?? currentQuestion?.questionText);
-      if (qText) {
-        const bundle = this.quizService?.quizInitialState ?? [];
-        for (const quiz of bundle) {
-          for (const pq of (quiz?.questions ?? [])) {
-            if (norm(pq?.questionText) !== qText) continue;
-            const pristineCorrectCount = (pq?.options ?? [])
-              .filter((o: any) => isOptionCorrect(o)).length;
-            if (pristineCorrectCount > correctCountForQuestion) {
-              correctCountForQuestion = pristineCorrectCount;
-            }
-            break;
-          }
-          if (correctCountForQuestion > 1) break;
-        }
-      }
-    } catch (err: unknown) { swallow('quiz-option-processing.service.ts', err); /* ignore */ }
+    // S5b: the PRISTINE MULTI-ANSWER GUARD that used to run here cross-checked
+    // `correctCountForQuestion` against a `quizInitialState` global-bank scan
+    // (every quiz, every question, by text match) to catch a misclassified
+    // multi-answer question. That bank is permanently empty, so the guard was
+    // already a no-op; removed rather than left scanning nothing.
+    const correctCountForQuestion = correctOptionsForQuestion.length;
 
     const isSingleAnswerQuestion = correctCountForQuestion === 1;
 
@@ -405,8 +387,12 @@ export class QuizOptionProcessingService {
       )
     );
 
-    const rawAllCorrectSelected = this.resolvePristineAllCorrect(questionForSelection, idx, currentSelections, everyCorrectSelected);
-    const allCorrectSelected = everyCorrectSelected && rawAllCorrectSelected;
+    // S5b: `resolvePristineAllCorrect` used to re-validate this against a
+    // `quizInitialState` global-bank scan (both a full every-quiz text-match
+    // walk and a quizId-keyed lookup). That bank is permanently empty, so the
+    // cross-check always returned `everyCorrectSelected` unchanged — removed
+    // rather than left scanning nothing.
+    const allCorrectSelected = everyCorrectSelected;
 
     const hasIncorrectSelection = currentSelections.some((selection) =>
       !this.dotStatusService.matchesAnyCorrectOption(selection, questionForSelection, optionsForImmediateScoring)
@@ -423,44 +409,6 @@ export class QuizOptionProcessingService {
     return { allCorrectSelected, hasIncorrectSelection, hasAnyCorrectSelection, currentSelections, syncIds };
   }
 
-  /**
-   * Pristine cross-check: mutated question data can have reduced correct flags,
-   * so re-validate "all correct selected" against pristine correct texts
-   * (by question text, then by index). Extracted verbatim.
-   */
-  private resolvePristineAllCorrect(questionForSelection: QuizQuestion | null, idx: number, currentSelections: SelectedOption[], everyCorrectSelected: boolean): boolean {
-    let rawAllCorrectSelected = everyCorrectSelected;
-    try {
-      const bundle = this.quizService?.quizInitialState ?? [];
-      const quizIdVal = this.quizService?.quizId;
-      const qText = norm(questionForSelection?.questionText);
-      let pristineCorrectTexts: string[] = [];
-
-      if (qText && bundle.length > 0) {
-        for (const quiz of bundle) {
-          for (const pq of (quiz?.questions ?? [])) {
-            if (norm(pq?.questionText) !== qText) continue;
-            pristineCorrectTexts = this.pristineCorrectTextsOf(pq);
-            break;
-          }
-          if (pristineCorrectTexts.length > 0) break;
-        }
-      }
-
-      if (pristineCorrectTexts.length === 0 && quizIdVal) {
-        const pristineQuiz = bundle.find((qz: any) => qz?.quizId === quizIdVal);
-        const pristineQ = pristineQuiz?.questions?.[idx];
-        if (pristineQ) pristineCorrectTexts = this.pristineCorrectTextsOf(pristineQ);
-      }
-
-      if (pristineCorrectTexts.length > 0) {
-        const selTexts = new Set(currentSelections.map((s: any) => norm(s?.text)).filter((t: string) => !!t));
-        rawAllCorrectSelected = pristineCorrectTexts.every((t: string) => selTexts.has(t));
-      }
-    } catch (err: unknown) { swallow('quiz-option-processing.service.ts', err); /* trust canonical */ }
-    return rawAllCorrectSelected;
-  }
-
   /** Append the clicked option to currentSelections when it's selected and not already present. Extracted verbatim. */
   private addClickedOptionToSelections(option: SelectedOption, currentSelections: SelectedOption[]): void {
     const clickedIndex = Number((option as any)?.displayIndex ?? (option as any)?.index ?? -1);
@@ -474,14 +422,6 @@ export class QuizOptionProcessingService {
     if (optionIsCurrentlySelected && !alreadyIncluded && option) {
       currentSelections.push(option as SelectedOption);
     }
-  }
-
-  /** Normalized correct-option texts of a pristine question. */
-  private pristineCorrectTextsOf(pq: any): string[] {
-    return (pq?.options ?? [])
-      .filter((o: any) => isOptionCorrect(o))
-      .map((o: any) => norm(o?.text))
-      .filter((t: string) => !!t);
   }
 
   /** Immediate multi-answer dot status from the click + aggregate selection flags. Extracted verbatim. */
@@ -545,61 +485,17 @@ export class QuizOptionProcessingService {
     const authoritativeCorrectness = await this.quizService.checkIfAnsweredCorrectly(idx, false);
 
     if (authoritativeCorrectness === true) {
-      // PRISTINE GUARD: checkIfAnsweredCorrectly uses potentially-mutated
-      // question data, so it can return true prematurely for multi-answer
-      // questions (e.g. reports 1 correct when pristine has 2). Cross-check
-      // against quizInitialState to ensure ALL correct answers are selected.
-      let pristineBlocked = false;
-      if (!isSingleAnswerQuestion) {
-        try {
-          const bundle = this.quizService?.quizInitialState ?? [];
-          const q = this.quizService.questions?.[idx];
-          const qText = norm(q?.questionText);
-          let pristineCorrectTexts: string[] = [];
-
-          if (qText) {
-            for (const quiz of bundle) {
-              for (const pq of (quiz?.questions ?? [])) {
-                if (norm(pq?.questionText) !== qText) continue;
-                pristineCorrectTexts = (pq?.options ?? [])
-                  .filter((o: any) => isOptionCorrect(o))
-                  .map((o: any) => norm(o?.text))
-                  .filter((t: string) => !!t);
-                break;
-              }
-              if (pristineCorrectTexts.length > 0) break;
-            }
-          }
-
-          if (pristineCorrectTexts.length === 0 && this.quizService.quizId) {
-            const pristineQuiz = bundle.find((qz: any) => qz?.quizId === this.quizService.quizId);
-            const pristineQ = pristineQuiz?.questions?.[idx];
-            if (pristineQ) {
-              pristineCorrectTexts = (pristineQ?.options ?? [])
-                .filter((o: any) => isOptionCorrect(o))
-                .map((o: any) => norm(o?.text))
-                .filter((t: string) => !!t);
-            }
-          }
-
-          if (pristineCorrectTexts.length > 1) {
-            const selections = this.selectedOptionService.getSelectedOptionsForQuestion(idx) ?? [];
-            const selTexts = new Set(selections.map((s: any) => norm(s?.text)).filter((t: string) => !!t));
-            const allPristineSelected = pristineCorrectTexts.every(t => selTexts.has(t));
-            if (!allPristineSelected) pristineBlocked = true;
-          }
-        } catch (err: unknown) {
-          console.error('QuizOptionProcessingService.handleAuthoritativeCheck pristine guard failed:', err);
-        }
-      }
-
-      if (!pristineBlocked) {
-        // NO SCORE HERE. The `pristineBlocked` gate is an explicit answer-key
-        // cross-check; credit comes from creditResolvedQuestion. The persisted
-        // dot status stays — it records what the user did, not whether the
-        // server agreed.
-        this.quizPersistence.setPersistedDotStatus(quizId, idx, 'correct');
-      }
+      // S5b: the PRISTINE GUARD that used to run here cross-checked
+      // `authoritativeCorrectness` against a `quizInitialState` global-bank
+      // scan (every quiz, every question, by text match, plus a quizId-keyed
+      // lookup) before trusting it for a multi-answer question. That bank is
+      // permanently empty, so `pristineBlocked` always stayed `false` —
+      // removed rather than left scanning nothing.
+      //
+      // NO SCORE HERE regardless: credit comes from creditResolvedQuestion.
+      // The persisted dot status records what the user did, not whether the
+      // server agreed.
+      this.quizPersistence.setPersistedDotStatus(quizId, idx, 'correct');
     } else if (!isSingleAnswerQuestion && immediateMultiDotStatus) {
       this.quizPersistence.setPersistedDotStatus(quizId, idx, immediateMultiDotStatus);
     }

@@ -109,6 +109,16 @@ export class OptionClickHandlerService {
   /**
    * Resolves the correct option indices for a question, cross-referencing
    * multiple data sources for accuracy.
+   *
+   * S5b: reconfirmed Sources 1/2 (`question.options[].correct`, and the raw
+   * `_questions[].correct` cross-reference) are proven dead IN PRODUCTION —
+   * the API never populates either — but both read data attached to the
+   * QUESTION OBJECT PASSED IN, never a global bank, and existing coverage
+   * (`resolveCorrectIndices — no quizInitialState dependency`) deliberately
+   * protects them as legitimate: a caller that already has real correctness
+   * on the question it handed in should still get it back. Only Source 3
+   * (the earlier `quizInitialState` bank scan) was the bank dependency, and
+   * that stays removed.
    */
   resolveCorrectIndices(
     question: QuizQuestion | null,
@@ -153,12 +163,7 @@ export class OptionClickHandlerService {
     // the bundled answer-key bank — for the same text match performed above
     // against `_questions`. Removed: authorized correctness now arrives from
     // the verdict once `/check` resolves, and every downstream consumer of this
-    // function already prefers that over whatever this returns. Proven, not
-    // assumed — under a true S5a simulation (quizInitialState emptied at both
-    // real population sites) every one of 581 calls captured across the full
-    // multi-answer/revisit/restart/timer battery returned empty from Source 1
-    // and Source 2 alike, and all 20 tests passed identically to the control
-    // run where the removed Source 3 had been firing on every call.
+    // function already prefers that over whatever this returns.
     const correctIndices = fromRaw.length > 0 ? fromRaw : fromCurrentQ;
     const correctCount = correctIndices.length;
     // `correctIndices`/`correctCount` are still the answer key and stay as they
@@ -166,7 +171,9 @@ export class OptionClickHandlerService {
     const declared = declaredIsMultiAnswer(question);
     const isMultiMode = declared !== null
       ? declared
-      // REMOVE IN /questions CONTENT CUTOVER.
+      // Undeclared should not occur in production (the DTO requires+validates
+      // `type`); this fallback stays as the conservative, locally-derived
+      // default for that theoretical case.
       : (isMultiModeFromComponent || typeFromComponent === 'multiple' || correctCount > 1);
 
     return { correctIndices, correctCount, isMultiMode };
@@ -307,41 +314,14 @@ export class OptionClickHandlerService {
     // already takes elsewhere for an unauthorized state.
     if (isClickedCorrect === false) disabledSet.add(clickedIndex);
     // When all correct answers selected, disable ALL incorrect options.
-    // PRISTINE GUARD: before triggering the disable-all branch, sanity-
-    // check correctIndices.length against quizInitialState. If pristine
-    // shows more correct options than we have here, the upstream count
-    // was undercounted (stale binding flags) and remaining=0 fired
-    // prematurely. Abort to prevent locking the OTHER unselected correct
-    // option(s).
+    //
+    // S5d: the PRISTINE GUARD that used to sanity-check `correctIndices.length`
+    // against a `quizInitialState` global-bank scan (every quiz, every
+    // question, by text match) before this branch ran is gone. That bank is
+    // permanently empty, so the guard's `bundle` was always `[]` — the loop
+    // never ran and this always fell through to disable-all unconditionally.
+    // Removed rather than left scanning nothing.
     if (remaining === 0) {
-      try {
-        const isShuffled = this.quizService?.isShuffleEnabled?.() &&
-          this.quizService?.shuffledQuestions?.length > 0;
-        const liveIdx = this.quizService?.getCurrentQuestionIndex?.() ?? 0;
-        const liveQ: any = isShuffled
-          ? this.quizService?.getQuestionsInDisplayOrder?.()?.[liveIdx]
-            ?? this.quizService?.shuffledQuestions?.[liveIdx]
-          : this.quizService?.questions?.[liveIdx];
-        const liveQText = norm(liveQ?.questionText);
-        if (liveQText) {
-          const bundle = this.quizService?.quizInitialState ?? [];
-          for (const quiz of bundle) {
-            for (const pq of (quiz?.questions ?? [])) {
-              if (norm(pq?.questionText) !== liveQText) continue;
-              const pristineCorrectCount = (pq?.options ?? []).filter(
-                (o: any) => isOptionCorrect(o)
-              ).length;
-              if (pristineCorrectCount > correctIndices.length) {
-                // Pristine has more correct than passed-in correctIndices.
-                // This is the undercounted case — bail without locking.
-                return;
-              }
-              break;
-            }
-          }
-        }
-      } catch { /* fall through to original disable-all */ }
-
       for (let bi = 0; bi < bindingsCount; bi++) {
         if (!correctSet.has(bi)) disabledSet.add(bi);
       }
@@ -609,7 +589,8 @@ export class OptionClickHandlerService {
     const declared = declaredIsMultiAnswer(input);
     if (declared !== null) return declared ? 'multiple' : 'single';
 
-    // REMOVE IN /questions CONTENT CUTOVER — everything below is the fallback.
+    // Undeclared should not occur in production; this fallback stays as the
+    // conservative, locally-derived default for that theoretical case.
     if (input && Array.isArray(input.options)) {
       const correctOptionsCount = input.options.filter(o => isOptionCorrect(o)).length;
       if (correctOptionsCount > 1 || (input as any).multipleAnswer === true) {
@@ -633,7 +614,8 @@ export class OptionClickHandlerService {
     const declared = declaredIsMultiAnswer(question);
     if (declared !== null) return declared;
 
-    // REMOVE IN /questions CONTENT CUTOVER — everything below is the fallback.
+    // Undeclared should not occur in production; everything below is the
+    // conservative, locally-derived fallback for that theoretical case.
     let result = false;
 
     const qText = (question?.questionText || '').toLowerCase();

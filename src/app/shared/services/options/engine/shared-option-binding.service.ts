@@ -167,19 +167,15 @@ export class SharedOptionBindingService {
         // answer, FET must wait until ALL correct answers are selected -
         // emitting here on every binding update causes premature FET display
         // after a partial correct click.
-        // Use authoritative questions array - comp.currentQuestion.options
-        // often lack the `correct` flag, making correctCount=0.
+        //
+        // S5b: DECLARED TYPE ONLY. `questions` is a GETTER that returns
+        // shuffledQuestions while shuffle is active, so indexing it with this
+        // display index is identity-safe. The correct-option count this used
+        // to fall back to (`authQ?.options` never carries `.correct` from the
+        // API) is gone; `resolveIsMultiAnswer` still defaults to `false` when
+        // a type is somehow undeclared, same as the count-based fallback did.
         const authQ = this.quizService.questions?.[currentIdx] ?? comp.currentQuestion();
-        const correctCount = (authQ?.options ?? []).filter(
-          (o: any) => isOptionCorrect(o)
-        ).length;
-        // DECLARED TYPE FIRST. The count is a proxy for "is this multi-answer",
-        // and it stops being computable once the answer key leaves the browser.
-        // `questions` is a GETTER that returns shuffledQuestions while shuffle
-        // is active, so indexing it with this display index is identity-safe.
-        // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
-        // MODE INPUT STILL PROMOTES — declared type replaces the COUNT only.
-        const isMulti = comp.isMultiMode || resolveIsMultiAnswer(authQ, correctCount > 1);
+        const isMulti = comp.isMultiMode || resolveIsMultiAnswer(authQ, false);
         if (!isMulti) {
           comp.deferHighlightUpdate(() => comp.emitExplanation(currentIdx));
         }
@@ -944,22 +940,20 @@ export class SharedOptionBindingService {
   // Determine multi-answer from AUTHORITATIVE question data, not just
   // comp.isMultiMode which can be wrong on refresh if question data
   // hasn't fully loaded into the component yet.
+  //
+  // S5b: DECLARED TYPE FIRST. `qIndex` is a DISPLAY index and `questions` is a
+  // getter that returns shuffledQuestions while shuffle is active, so this
+  // reads the question the user is actually looking at. `authQ?.options` never
+  // carries `.correct` from the API, so the counted fallback is dead in
+  // production; it stays as the conservative, locally-derived default for the
+  // undeclared case, same as `determineQuestionType`/`resolveCorrectIndices`.
+  // MODE INPUTS still promote — `comp.isMultiMode`/`multipleAnswer` are
+  // checked first, same as before.
   private resolveBuildIsMulti(comp: any, qIndex: number): boolean {
     const authQ = this.quizService.questions?.[qIndex];
     const authCorrectCount = (authQ?.options ?? []).filter(
       (o: any) => isOptionCorrect(o)
     ).length;
-    // DECLARED TYPE FIRST — the counted guess below survives only as the
-    // fallback. `qIndex` is a DISPLAY index and `questions` is a getter that
-    // returns shuffledQuestions while shuffle is active, so this reads the
-    // question the user is actually looking at.
-    // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
-    // MODE INPUTS STILL PROMOTE. Passing them as the FALLBACK argument meant a
-    // declared type discarded them entirely, so a declared single-answer
-    // question could no longer be forced multi by isMultiMode/multipleAnswer —
-    // which flipped resolveShouldHighlight from the durable-click-set branch to
-    // the live-binding branch and changed which options paint.
-    // Declared type replaces the COUNT only; that is the Stage 10 goal.
     return comp.isMultiMode
       || this.quizService.multipleAnswer
       || resolveIsMultiAnswer(authQ, authCorrectCount > 1);

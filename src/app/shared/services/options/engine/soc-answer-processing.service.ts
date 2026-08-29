@@ -497,9 +497,11 @@ export class SocAnswerProcessingService {
   }
 
   /**
-   * Whether every pristine-correct option for the question is in the durable
-   * selection set — counted by TEXT match against quizInitialState (bypasses
-   * index mismatches between effectiveCorrectIndices and the real count). Verbatim.
+   * Whether every correct option for the question is in the durable
+   * selection set — PERFECT, from the AUTHORIZED verdict on the user's own
+   * selections (`allCorrectSelectedFromVerdict`/`selectedVerdictFor`), not a
+   * `quizInitialState` bank comparison; that fallback was removed in
+   * `0fde8ed1` (see `durable-perfect-authority.spec.ts`, which pins this).
    */
   private computeAllCorrectInDurable(comp: any, qIdx: number, displayIdx: number, durableSet: Set<number>, effectiveCorrectIndices: number[]): boolean {
     let allCorrectInDurable = effectiveCorrectIndices.length > 0 &&
@@ -678,8 +680,11 @@ export class SocAnswerProcessingService {
   }
 
   /**
-   * PRISTINE-AUTHORITATIVE recompute of the correct-option indices from
-   * quizInitialState (upstream bindings can have mutated/missing correct flags).
+   * AUTHORIZED recompute of the correct-option indices from the terminal
+   * verdict's reveal (`getAuthorizedCorrectTextsForQuestion`), never
+   * `quizInitialState` — upstream bindings can have mutated/missing correct
+   * flags, and this used to rebuild from the bank instead; now it rebuilds
+   * from the authorized reveal, which stays empty until terminal (S5-pre).
    * Returns the rebuilt indices only when they cover at least as many as we
    * had (avoid pathological text-match failures), else the input. Verbatim.
    */

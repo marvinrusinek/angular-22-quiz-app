@@ -353,11 +353,13 @@ export class SharedOptionClickService {
 
   /**
    * Resolve the effective correct-option indices for scoring: start from the
-   * cached resolveCorrectIndices result, then (when pristine quizInitialState
-   * has them) rebuild the indices by matching binding texts against the pristine
-   * correct texts — bindings can have mutated `correct` flags. Returns the
-   * effective indices/count, the shuffle flag, and the resolved single/multi
-   * mode. Extracted verbatim from runOptionContentClick.
+   * cached resolveCorrectIndices result, then (once the verdict has reached a
+   * terminal reveal) rebuild the indices by matching binding texts against
+   * the AUTHORIZED correct texts from `getAuthorizedCorrectTextsForQuestion`
+   * — not `quizInitialState`, despite the "pristine" naming below; bindings
+   * can have mutated `correct` flags. Returns the effective indices/count,
+   * the shuffle flag, and the resolved single/multi mode. Extracted verbatim
+   * from runOptionContentClick.
    */
   private resolveEffectiveCorrectIndices(comp: any, qIdx: number) {
     const liveQuestion = comp.currentQuestion() ?? comp.getQuestionAtDisplayIndex(qIdx);
@@ -371,7 +373,8 @@ export class SharedOptionClickService {
     const correctIndicesFromQ = comp._correctIndicesByQuestion.get(qIdx)!;
     const correctCountFromQ = correctIndicesFromQ.length;
 
-    // Resolve correct indices from pristine quizInitialState
+    // Resolve correct indices from the AUTHORIZED reveal (verdict-backed),
+    // never quizInitialState.
     let effectiveCorrectIndices = correctIndicesFromQ;
     const isShuffled = this.quizService?.isShuffleEnabled?.()
       && Array.isArray(this.quizService?.shuffledQuestions)

@@ -210,8 +210,10 @@ export class OptionInteractionService {
     // getActiveQuestionIndex(); resolve the active DISPLAY index from it.
     const qIdx = this.resolveActiveDisplayIndex(state);
 
-    // Thin delegate: resolve pristine correctness from quizInitialState (TEXT
-    // matching, shuffle-safe), capturing qIdx + state.
+    // Thin delegate: resolve AUTHORIZED per-option correctness (verdict-backed
+    // via `authorizedCorrectnessForOption`, TEXT matching, shuffle-safe),
+    // capturing qIdx + state. Despite the name, this has not read
+    // `quizInitialState` since S5-pre — see isPristineCorrectFor below.
     const isPristineCorrect = (o: any): boolean =>
       this.isPristineCorrectFor(o, qIdx, state);
 
@@ -919,12 +921,15 @@ export class OptionInteractionService {
   }
 
   /**
-   * PRISTINE CORRECTNESS RESOLVER: resolve whether the clicked option is
-   * truly correct from quizInitialState, not from potentially-mutated binding
-   * data. Uses question TEXT matching (not index) to handle shuffled mode
-   * correctly. Extracted verbatim from handleOptionClick's inline closure;
-   * `qIdx`/`state` are passed by the thin delegate that captures them by
-   * reference so late `qIdx` reassignments are honored at call-time.
+   * AUTHORIZED PER-OPTION CORRECTNESS RESOLVER: resolve whether the clicked
+   * option is correct via `authorizedCorrectnessForOption` (verdict-backed),
+   * not a `quizInitialState`/answer-key scan — the name and S5-pre docstring
+   * below are historical, kept for now since renaming a 2-call-site private
+   * method carries no benefit worth the diff. Uses question TEXT matching
+   * (not index) to handle shuffled mode correctly. Extracted verbatim from
+   * handleOptionClick's inline closure; `qIdx`/`state` are passed by the thin
+   * delegate that captures them by reference so late `qIdx` reassignments are
+   * honored at call-time.
    */
   private isPristineCorrectFor(
     o: any,

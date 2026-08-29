@@ -67,10 +67,17 @@ const q = (
 } as unknown as QuizQuestion);
 
 // ══════════════════════════════════════════════════════════════════════
-// option-click-handler — detectMultiMode
+// option-click-handler — determineQuestionType
 // ══════════════════════════════════════════════════════════════════════
+//
+// S5b: `detectMultiMode` (text-heuristic + count + type-input fallback) is
+// gone — its sole caller (`runIsMultiMode`'s undeclared-type branch) is also
+// gone, since every API-sourced question always declares a type. The same
+// "declared type beats the count" protection this block used to pin now
+// lives in `determineQuestionType`, which has no fallback left at all: an
+// undeclared type defaults to 'single' unconditionally.
 
-describe('detectMultiMode: declared type beats both the count AND the text heuristic', () => {
+describe('determineQuestionType: declared type is the ONLY source, never the count', () => {
   let handler: OptionClickHandlerService;
 
   beforeEach(() => {
@@ -86,36 +93,39 @@ describe('detectMultiMode: declared type beats both the count AND the text heuri
   });
 
   it('declared MULTIPLE stays multi even when the bank flags only one correct', () => {
-    expect(handler.detectMultiMode(q(QuestionType.MultipleAnswer, 1), 'single')).toBe(true);
+    expect(handler.determineQuestionType(q(QuestionType.MultipleAnswer, 1))).toBe('multiple');
   });
 
   it('declared MULTIPLE stays multi when the bank flags NOTHING correct', () => {
     // The shape the API returns once the answer key stops shipping.
-    expect(handler.detectMultiMode(q(QuestionType.MultipleAnswer, 0), 'single')).toBe(true);
+    expect(handler.determineQuestionType(q(QuestionType.MultipleAnswer, 0))).toBe('multiple');
   });
 
   it('declared SINGLE stays single even when the bank flags three correct', () => {
     // THE REGRESSION THIS PINS — the count used to promote unconditionally.
-    expect(handler.detectMultiMode(q(QuestionType.SingleAnswer, 3), 'single')).toBe(false);
+    expect(handler.determineQuestionType(q(QuestionType.SingleAnswer, 3))).toBe('single');
   });
 
   it('declared TRUEFALSE is single-selection despite a malformed answer key', () => {
-    expect(handler.detectMultiMode(q(QuestionType.TrueFalse, 3), 'single')).toBe(false);
+    expect(handler.determineQuestionType(q(QuestionType.TrueFalse, 3))).toBe('single');
   });
 
   it('declared SINGLE beats the "select all that apply" TEXT heuristic', () => {
     // The wording heuristic is a second answer-key-era proxy; a declared type
     // retires it too.
     const misleading = q(QuestionType.SingleAnswer, 1, 'Select all that apply');
-    expect(handler.detectMultiMode(misleading, 'single')).toBe(false);
+    expect(handler.determineQuestionType(misleading)).toBe('single');
   });
 
-  it('UNDECLARED keeps the legacy fallback: text heuristic, then count, then input', () => {
-    // REMOVE WITH THE /questions CONTENT CUTOVER. Unknown is not "single".
-    expect(handler.detectMultiMode(q(undefined, 1, 'Select all that apply'), 'single')).toBe(true);
-    expect(handler.detectMultiMode(q(undefined, 3), 'single')).toBe(true);
-    expect(handler.detectMultiMode(q(undefined, 1), 'single')).toBe(false);
-    expect(handler.detectMultiMode(q(undefined, 0), 'multiple')).toBe(true);
+  it('UNDECLARED keeps the counted fallback — determineQuestionType has no text heuristic', () => {
+    // Should not occur in production (the API DTO requires+validates `type`).
+    // determineQuestionType's fallback is count/multipleAnswer only — the text
+    // heuristic lives in detectMultiMode, not here — so "select all" wording
+    // with a single flagged option still reads as single.
+    expect(handler.determineQuestionType(q(undefined, 1, 'Select all that apply'))).toBe('single');
+    expect(handler.determineQuestionType(q(undefined, 3))).toBe('multiple');
+    expect(handler.determineQuestionType(q(undefined, 1))).toBe('single');
+    expect(handler.determineQuestionType(q(undefined, 0))).toBe('single');
   });
 });
 

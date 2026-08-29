@@ -85,3 +85,136 @@ describe('computeMultiAnswerClickState — correct-set-known tri-state', () => {
     expect(state.remaining).toBeNull();
   });
 });
+
+/**
+ * SOURCE 3 REMOVED (Stage 14 / S5a).
+ *
+ * `resolveCorrectIndices` used to fall back to a scan of `quizService.quizInitialState`
+ * — the bundled answer-key bank — when the passed question's own options and
+ * `quizService._questions` had no `.correct` flags. Proven redundant under a
+ * true S5a simulation: with `quizInitialState` emptied, every one of 581
+ * captured calls across the full multi-answer/revisit/restart/timer battery
+ * returned empty from every source, and all 20 tests passed identically to the
+ * control run where the removed source had been firing on every call.
+ *
+ * These tests would FAIL against the old Source-3-dependent implementation
+ * whenever `quizInitialState` holds the only copy of the correct answer for a
+ * question whose live options and `_questions` cross-reference don't carry it.
+ */
+describe('resolveCorrectIndices — no quizInitialState dependency', () => {
+  const questionText = 'What does dependency injection provide?';
+
+  function withQuizService(setup: (quizSvc: any) => void): void {
+    const quizSvc: any = (service as any).quizService;
+    setup(quizSvc);
+  }
+
+  it('resolves correct indices from the question options themselves (Source 1) without touching quizInitialState', () => {
+    withQuizService((quizSvc) => {
+      quizSvc._questions = [];
+      quizSvc.quizInitialState = [];
+    });
+
+    const question: any = {
+      questionText,
+      options: [
+        { text: 'A', correct: false },
+        { text: 'B', correct: true },
+        { text: 'C', correct: false }
+      ]
+    };
+
+    const result = service.resolveCorrectIndices(question, 0, false, 'single');
+
+    expect(result.correctIndices).toEqual([1]);
+    expect(result.correctCount).toBe(1);
+  });
+
+  it('does NOT recover correctness from quizInitialState when it is the only source that has it (proves Source 3 is gone)', () => {
+    const question: any = {
+      questionText,
+      // Live options carry no correctness — matches the /questions API shape.
+      options: [{ text: 'A' }, { text: 'B' }, { text: 'C' }]
+    };
+
+    withQuizService((quizSvc) => {
+      quizSvc._questions = [];
+      // Only quizInitialState knows the answer. The old Source 3 would have
+      // found it here; the fix must not.
+      quizSvc.quizInitialState = [{
+        quizId: 'q1',
+        milestone: '', summary: '', image: '',
+        questions: [{
+          questionText,
+          options: [{ text: 'A', correct: false }, { text: 'B', correct: true }, { text: 'C', correct: false }]
+        }]
+      }];
+    });
+
+    const result = service.resolveCorrectIndices(question, 0, false, 'single');
+
+    expect(result.correctIndices).toEqual([]);
+    expect(result.correctCount).toBe(0);
+  });
+
+  it('stays empty (unknown), not a false definite result, when no source has correctness at all — true S5a shape', () => {
+    withQuizService((quizSvc) => {
+      quizSvc._questions = [];
+      quizSvc.quizInitialState = [];
+    });
+
+    const question: any = {
+      questionText,
+      options: [{ text: 'A' }, { text: 'B' }, { text: 'C' }]
+    };
+
+    const result = service.resolveCorrectIndices(question, 0, false, 'single');
+
+    expect(result.correctIndices).toEqual([]);
+    expect(result.correctCount).toBe(0);
+  });
+
+  it('an unknown correctIndices result from resolveCorrectIndices feeds computeMultiAnswerClickState as unknown, not zero-remaining (full pipeline)', () => {
+    withQuizService((quizSvc) => {
+      quizSvc._questions = [];
+      quizSvc.quizInitialState = [];
+    });
+
+    const question: any = {
+      questionText,
+      options: [{ text: 'A' }, { text: 'B' }, { text: 'C' }]
+    };
+
+    const { correctIndices } = service.resolveCorrectIndices(question, 0, true, 'multiple');
+    const state = service.computeMultiAnswerClickState(0, new Set([0]), correctIndices);
+
+    expect(state.remaining).toBeNull();
+    expect(state.isClickedCorrect).toBeNull();
+  });
+
+  it('a genuinely known multi-answer correct set (Source 1 available) still resolves and completes normally', () => {
+    withQuizService((quizSvc) => {
+      quizSvc._questions = [];
+      quizSvc.quizInitialState = [];
+    });
+
+    const question: any = {
+      questionText,
+      options: [
+        { text: 'A', correct: true },
+        { text: 'B', correct: false },
+        { text: 'C', correct: true }
+      ]
+    };
+
+    const { correctIndices } = service.resolveCorrectIndices(question, 0, true, 'multiple');
+    expect(correctIndices).toEqual([0, 2]);
+
+    const partial = service.computeMultiAnswerClickState(0, new Set([0]), correctIndices);
+    expect(partial.remaining).toBe(1);
+
+    const complete = service.computeMultiAnswerClickState(2, new Set([0, 2]), correctIndices);
+    expect(complete.remaining).toBe(0);
+    expect(complete.isClickedCorrect).toBe(true);
+  });
+});

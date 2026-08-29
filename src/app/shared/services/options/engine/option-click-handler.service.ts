@@ -141,30 +141,25 @@ export class OptionClickHandlerService {
       }
     }
 
-    // SOURCE 3: Pristine quizInitialState — most reliable, never mutated
-    let fromPristine: number[] = [];
-    if (qText) {
-      try {
-        const bundle = this.quizService?.quizInitialState ?? [];
-        for (const quiz of bundle) {
-          for (const pq of (quiz?.questions ?? [])) {
-            if (norm(pq?.questionText) !== qText) continue;
-            const pristineCorrectTexts = new Set<string>(
-              (pq?.options ?? [])
-                .filter((o: any) => isOptionCorrect(o))
-                .map((o: any) => norm(o?.text))
-            );
-            fromPristine = questionOpts
-              .map((o: any, idx: number) => pristineCorrectTexts.has(norm(o?.text)) ? idx : -1)
-              .filter((idx: number) => idx >= 0);
-            break;
-          }
-          if (fromPristine.length > 0) break;
-        }
-      } catch { /* ignore */ }
-    }
-
-    const correctIndices = fromPristine.length > 0 ? fromPristine : (fromRaw.length > 0 ? fromRaw : fromCurrentQ);
+    // UNKNOWN, NOT ZERO. `correctIndices.length === 0` here means nobody has
+    // told this call which options are correct — never a genuine domain fact
+    // (every question has at least one correct option), so an empty array is
+    // unambiguously "not yet known", the same reading every consumer of this
+    // result already applies (see the two call sites gated on
+    // `correctIndicesArr.length > 0`, and `computeMultiAnswerClickState`'s own
+    // tri-state handling of an empty `correctIndices`).
+    //
+    // This used to fall through to a Source 3 that scanned `quizInitialState` —
+    // the bundled answer-key bank — for the same text match performed above
+    // against `_questions`. Removed: authorized correctness now arrives from
+    // the verdict once `/check` resolves, and every downstream consumer of this
+    // function already prefers that over whatever this returns. Proven, not
+    // assumed — under a true S5a simulation (quizInitialState emptied at both
+    // real population sites) every one of 581 calls captured across the full
+    // multi-answer/revisit/restart/timer battery returned empty from Source 1
+    // and Source 2 alike, and all 20 tests passed identically to the control
+    // run where the removed Source 3 had been firing on every call.
+    const correctIndices = fromRaw.length > 0 ? fromRaw : fromCurrentQ;
     const correctCount = correctIndices.length;
     // `correctIndices`/`correctCount` are still the answer key and stay as they
     // are — this migration only stops TYPE being derived from them.

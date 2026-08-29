@@ -22,6 +22,7 @@ import { ExplanationTextService } from '../explanation/explanation-text.service'
 import { FeedbackService } from './feedback.service';
 import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
 
 function opt(optionId: number, text: string, correct: boolean, selected = false): Option {
   return { optionId, text, correct, selected, value: optionId } as unknown as Option;
@@ -128,6 +129,166 @@ describe('FeedbackService.buildFeedbackMessage — multi-answer win condition', 
       multiQuestion(options), selected, false, false, 0, options, options[3]
     );
     expect(msg).toBe("You're right! The correct answers are Options 2 and 4.");
+  });
+});
+
+/**
+ * S5a: PARTIAL-PROGRESS MESSAGING RECOMPUTES FROM THE AUTHORIZED VERDICT.
+ *
+ * With `quizInitialState` permanently empty, the full correct-option set is
+ * unauthorized before completion (the server deliberately never reveals it
+ * early) — so `computeCorrectIndices` returns an empty array for a genuinely
+ * incomplete multi-answer question, same as it always has for API-sourced
+ * content. What was missing: nothing used the ONE thing `/check` DOES
+ * disclose pre-completion, `remainingCorrectCount` — a count, not the answer
+ * key — so a correct partial pick never told the player how many were left,
+ * and `FeedbackComponent`'s own verdict-reactive effect had nothing to
+ * recompute into.
+ *
+ * These tests would FAIL against the pre-fix implementation: with no pristine
+ * `.correct` flags on the options (matching real `/questions` content) and
+ * `correctIndices` therefore empty, `buildFeedbackMessage` returned `''`
+ * unconditionally rather than consulting the verdict.
+ */
+describe('FeedbackService.buildFeedbackMessage — partial-progress from authorized remainingCorrectCount', () => {
+  let service: FeedbackService;
+  let quizService: any;
+  let verdictService: { verdictFor: (quizId: string, questionText: string) => any };
+  let currentVerdict: any;
+
+  function apiOpt(text: string): Option {
+    // No `correct` flag at all — matches the /questions API shape.
+    return { text, selected: false } as unknown as Option;
+  }
+
+  function apiMultiQuestion(): QuizQuestion {
+    return {
+      questionText: 'Which are true?',
+      options: [apiOpt('Alpha'), apiOpt('Bravo'), apiOpt('Charlie')],
+      type: QuestionType.MultipleAnswer,
+      explanation: ''
+    } as unknown as QuizQuestion;
+  }
+
+  beforeEach(() => {
+    currentVerdict = null;
+    verdictService = {
+      verdictFor: (_quizId: string, _questionText: string) => currentVerdict
+    };
+
+    quizService = {
+      quizId: 'demo',
+      currentQuestionIndex: 0,
+      getCurrentQuestionIndex: () => 0,
+      questions: [apiMultiQuestion()],
+      getDisplayedQuestion: (_i: number) => undefined as QuizQuestion | undefined,
+      getPristineCorrectTextsForQuestion: (_t: string) => new Set<string>()
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        FeedbackService,
+        { provide: QuizService, useValue: quizService },
+        { provide: QuestionVerdictService, useValue: verdictService },
+        { provide: ExplanationTextService, useValue: { latestExplanationIndex: -1, getCorrectOptionIndices: () => [] } },
+        { provide: SelectedOptionService, useValue: { getSelectedOptionsForQuestion: (_i: number) => [] } }
+      ]
+    });
+    service = TestBed.inject(FeedbackService);
+  });
+
+  afterEach(() => window.history.pushState({}, '', '/'));
+
+  it('stays blank before any verdict exists — unknown is not a message, not a guess', () => {
+    currentVerdict = null;
+    const q = apiMultiQuestion();
+    const alpha = q.options![0];
+    alpha.selected = true;
+    const msg = service.buildFeedbackMessage(q, [alpha], false, false, 0, q.options);
+    expect(msg).toBe('');
+  });
+
+  it('recomputes to "Select 1 more" once the authorized incomplete verdict arrives', () => {
+    const q = apiMultiQuestion();
+    const alpha = q.options![0];
+    alpha.selected = true;
+
+    currentVerdict = {
+      phase: 'incomplete',
+      selectedOptionTexts: ['Alpha'],
+      selectedVerdicts: new Map([['Alpha', true]]),
+      remainingCorrectCount: 1,
+      correctOptionTexts: [],
+      explanation: null,
+      isResolvedCorrect: null
+    };
+
+    const msg = service.buildFeedbackMessage(q, [alpha], false, false, 0, q.options);
+    expect(msg).toBe("That's correct! Please select 1 more correct answer.");
+  });
+
+  it('reports the plural count correctly for more than one remaining', () => {
+    const q = apiMultiQuestion();
+    const alpha = q.options![0];
+    alpha.selected = true;
+
+    currentVerdict = {
+      phase: 'incomplete',
+      selectedOptionTexts: ['Alpha'],
+      selectedVerdicts: new Map([['Alpha', true]]),
+      remainingCorrectCount: 2,
+      correctOptionTexts: [],
+      explanation: null,
+      isResolvedCorrect: null
+    };
+
+    const msg = service.buildFeedbackMessage(q, [alpha], false, false, 0, q.options);
+    expect(msg).toBe("That's correct! Please select 2 more correct answers.");
+  });
+
+  it('does not claim "That\'s correct" when a wrong option was also selected', () => {
+    const q = apiMultiQuestion();
+    const alpha = q.options![0];
+    const bravo = q.options![1];
+    alpha.selected = true;
+    bravo.selected = true;
+
+    currentVerdict = {
+      phase: 'incomplete',
+      selectedOptionTexts: ['Alpha', 'Bravo'],
+      selectedVerdicts: new Map([['Alpha', true], ['Bravo', false]]),
+      remainingCorrectCount: 1,
+      correctOptionTexts: [],
+      explanation: null,
+      isResolvedCorrect: null
+    };
+
+    const msg = service.buildFeedbackMessage(q, [alpha, bravo], false, false, 0, q.options);
+    expect(msg).toBe('Not this one, try again!');
+  });
+
+  it('does not fabricate a count for a single-answer question (multi-only path)', () => {
+    const q = {
+      questionText: 'Pick one',
+      options: [apiOpt('Right'), apiOpt('Wrong')],
+      type: QuestionType.SingleAnswer,
+      explanation: ''
+    } as unknown as QuizQuestion;
+    const right = q.options![0];
+    right.selected = true;
+
+    currentVerdict = {
+      phase: 'incomplete',
+      selectedOptionTexts: ['Right'],
+      selectedVerdicts: new Map([['Right', true]]),
+      remainingCorrectCount: 1,
+      correctOptionTexts: [],
+      explanation: null,
+      isResolvedCorrect: null
+    };
+
+    const msg = service.buildFeedbackMessage(q, [right], false, false, 0, q.options);
+    expect(msg).toBe('');
   });
 });
 

@@ -14,6 +14,8 @@ import { norm } from '../../../utils/text-norm';
 import { ExplanationTextService } from '../explanation/explanation-text.service';
 import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { verdictStateForDisplayIndex } from '../verdict/authorized-correctness';
 
 @Service()
 export class FeedbackService {
@@ -96,6 +98,39 @@ export class FeedbackService {
     // recomputes when the terminal verdict lands. Deliberately NOT
     // reconstructed from `quizInitialState` or the pristine sets.
     if (correctIndices.length === 0) {
+      // COUNT-ONLY PARTIAL PROGRESS. The full correct set is unauthorized
+      // before completion (the server deliberately never reveals it early),
+      // but `/check` DOES return `remainingCorrectCount` on an `incomplete`
+      // multi-answer verdict — a number, not the answer key. When that count
+      // is authorized and the user has made a selection, "Select N more…" can
+      // be composed from it alone, without knowing WHICH options are correct.
+      //
+      // This is what makes the message recompute once the async verdict
+      // arrives: this function is re-invoked by `FeedbackComponent`'s own
+      // verdict-reactive effect (`questionVerdictService.states()`), and until
+      // now had nothing to say for a genuinely incomplete multi-answer
+      // question — it fell through to this same blank return.
+      const isMultiForPartial =
+        question.type === QuestionType.MultipleAnswer || (question as any).multipleAnswer === true;
+      if (isMultiForPartial && selected && selected.length > 0 && typeof idxForLookup === 'number' && quizSvc) {
+        const verdicts = this.injector.get(QuestionVerdictService, null);
+        const state = verdictStateForDisplayIndex(quizSvc, idxForLookup, verdicts);
+        if (
+          state?.phase === 'incomplete' &&
+          typeof state.remainingCorrectCount === 'number' &&
+          state.remainingCorrectCount > 0
+        ) {
+          // Only "That's correct!" when nothing selected so far is wrong —
+          // `selectedVerdicts` is per-submitted-option, authorized the same
+          // way `remainingCorrectCount` is.
+          const anyWrongSelected = [...state.selectedVerdicts.values()].some((v) => v === false);
+          if (anyWrongSelected) return 'Not this one, try again!';
+          const remainingText = state.remainingCorrectCount === 1
+            ? '1 more correct answer'
+            : `${state.remainingCorrectCount} more correct answers`;
+          return `That's correct! Please select ${remainingText}.`;
+        }
+      }
       return '';
     }
 

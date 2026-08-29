@@ -30,7 +30,6 @@ import { QuizStateService } from '../state/quizstate.service';
 
 import { SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID, SK_USER_ANSWERS } from '../../constants/session-keys';
 
-import { getQuizData } from '../../quiz-data-cache';
 import { isOptionCorrect } from '../../utils/is-option-correct';
 import { norm } from '../../utils/text-norm';
 import { swallow } from '../../utils/error-logging';
@@ -63,7 +62,11 @@ export class QuizService {
     this.currentQuestionIndexSubject.next(v);
   }
   activeQuiz: Quiz | null = null;
-  quizInitialState: Quiz[] = structuredClone(getQuizData());
+  // S5a: no pristine client answer bank is loaded. Correctness comes from the
+  // authorized verdict; content comes from `/questions`. Mirrors
+  // `QuizDataLoaderService.quizInitialState` (see that file for the full
+  // rationale) via the constructor sync below — never repopulated here.
+  quizInitialState: Quiz[] = [];
   quizData: Quiz[] | null = this.quizInitialState;
   data: {
     questionText: string,

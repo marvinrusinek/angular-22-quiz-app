@@ -30,7 +30,12 @@ export class QuizDataLoaderService {
   private readonly topicQuizQuestions = inject(TopicQuizQuestionsService);
 
   // ── remaining variables ─────────────────────────────────────────
-  quizInitialState: Quiz[] = structuredClone(getQuizData());
+  // S5a: no pristine client answer bank is loaded. Correctness comes from the
+  // authorized verdict; content comes from `/questions`. This stays empty —
+  // it is not a cache to repopulate from `getQuizData()` or any other
+  // client-side source. See `getCanonicalQuestions`/`getPristineQuestion` for
+  // the API-derived, answer-key-free content sources this replaced.
+  quizInitialState: Quiz[] = [];
   quizData: Quiz[] | null = structuredClone(getQuizData());
   quizResources: QuizResource[] = [];
   resources: Resource[] = [];
@@ -88,12 +93,9 @@ export class QuizDataLoaderService {
     let resolvedQuizId = quizId;
 
     if (this.quizData.length > 0) {
-      // Always clone from the cached pristine dataset — never from
-      // this.quizData which may carry mutations from prior quiz runs.
-      // `quizInitialState` is the PRISTINE ANSWER KEY and is untouched here:
-      // the pre-verdict correctness machinery still reads it, and removing it
-      // is S5's job, not this one.
-      this.quizInitialState = structuredClone(getQuizData());
+      // S5a: `quizInitialState` is no longer repopulated here. It was the
+      // pristine answer-key snapshot; correctness now comes exclusively from
+      // the authorized verdict, so there is nothing for this call to refresh.
       const selectedQuiz = quizId
         ? this.quizData.find((quiz) => quiz.quizId === quizId) : undefined;
 

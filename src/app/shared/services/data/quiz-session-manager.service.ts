@@ -10,6 +10,7 @@ import { SelectedOption } from '../../models/SelectedOption.model';
 
 import { SK_DOT_CONFIRMED, SK_DISPLAY_MODE, SK_MULTI_PERFECT, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID, SK_USER_ANSWERS } from '../../constants/session-keys';
 
+import { QuizDataLoaderService } from './quiz-data-loader.service';
 import { QuizOptionsService } from './quiz-options.service';
 import { QuizQuestionResolverService } from './quiz-question-resolver.service';
 import { QuizScoringService } from './quiz-scoring.service';
@@ -69,6 +70,7 @@ export interface QuizSessionState {
 @Service()
 export class QuizSessionManagerService {
   // ── injects ─────────────────────────────────────────────────────
+  private readonly dataLoader = inject(QuizDataLoaderService);
   private readonly optionsService = inject(QuizOptionsService);
   private readonly questionResolver = inject(QuizQuestionResolverService);
   private readonly scoringService = inject(QuizScoringService);
@@ -326,17 +328,27 @@ export class QuizSessionManagerService {
   }
 
   /**
-   * Restores the question array for the active quiz from quizInitialState
-   * and rewinds to question index 0. Used when restarting an in-progress
-   * quiz without leaving the route.
+   * Restores the question array for the active quiz and rewinds to question
+   * index 0. Used when restarting an in-progress quiz without leaving the
+   * route.
+   *
+   * Sourced from `QuizDataLoaderService`'s canonical per-quiz cache — the
+   * same `/questions` API response already fetched to show this quiz the
+   * first time, content-only (no `correct`, no explanation). It is already
+   * in memory by the time Restart is reachable (the player just finished
+   * this quiz), so no re-fetch is needed. Never `quizInitialState`: that is
+   * the bundled answer-key bank this migration exists to stop depending on.
    */
   resetQuestions(state: QuizSessionState): void {
-    const currentQuizData = state.quizInitialState.find(
-      (quiz) => quiz.quizId === state.quizId
-    );
-    if (currentQuizData) {
-      state.quizData = structuredClone([currentQuizData]);
-      state.questions = currentQuizData.questions ?? [];
+    const canonicalQuestions = this.dataLoader.getCanonicalQuestions(state.quizId);
+    if (canonicalQuestions.length > 0) {
+      const baseQuiz: Quiz =
+        (state.activeQuiz?.quizId === state.quizId ? state.activeQuiz : null) ??
+        (state.selectedQuiz?.quizId === state.quizId ? state.selectedQuiz : null) ??
+        ({ quizId: state.quizId } as Quiz);
+      const restartedQuiz: Quiz = structuredClone({ ...baseQuiz, questions: canonicalQuestions });
+      state.quizData = [restartedQuiz];
+      state.questions = restartedQuiz.questions ?? [];
     } else {
       state.quizData = null;
       state.questions = [];

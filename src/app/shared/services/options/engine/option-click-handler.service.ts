@@ -36,8 +36,17 @@ export interface CorrectIndicesResult {
 export interface MultiAnswerClickState {
   /** The clicked option's display index */
   clickedIndex: number;
-  /** Whether the clicked option is correct */
-  isClickedCorrect: boolean;
+  /**
+   * Whether the clicked option is correct, or `null` when the correct-answer
+   * set itself is not yet known.
+   *
+   * Same tri-state reasoning as `remaining` below: `correctSet.has(clickedIndex)`
+   * on an empty (unknown) `correctIndices` is unconditionally `false`, which
+   * read as a definite "wrong" the instant a genuinely correct click landed
+   * before the verdict did — producing a premature "Not this one, try again!"
+   * that then outlived the verdict because nothing recognized it as stale.
+   */
+  isClickedCorrect: boolean | null;
   /** Number of correct options selected so far */
   correctSelected: number;
   /** Number of incorrect options selected so far */
@@ -182,7 +191,10 @@ export class OptionClickHandlerService {
     correctIndices: number[]
   ): MultiAnswerClickState {
     const correctSet = new Set(correctIndices);
-    const isClickedCorrect = correctSet.has(clickedIndex);
+    // UNKNOWN, NOT WRONG. Same reasoning as `remaining` below: with no correct
+    // set to check against, `correctSet.has(clickedIndex)` is unconditionally
+    // `false` — not "this click is wrong", just "nobody has said yet".
+    const isClickedCorrect = correctIndices.length === 0 ? null : correctSet.has(clickedIndex);
 
     let correctSelected = 0;
     let incorrectSelected = 0;
@@ -220,6 +232,14 @@ export class OptionClickHandlerService {
    * Generates the feedback text for a multi-answer click.
    */
   generateMultiAnswerFeedbackText(state: MultiAnswerClickState): string {
+    // UNKNOWN IS NOT WRONG. `isClickedCorrect === null` means the verdict for
+    // this click hasn't landed yet — say nothing definitive rather than claim
+    // "Not this one, try again!" on what may well be a correct pick. Matches
+    // FeedbackService.buildFeedbackMessage's own honest-blank rule for the same
+    // moment. Getting this wrong doesn't just mislabel the click: the blank
+    // string is what lets the caller's stale-cache check recognize an empty
+    // cached value as needing regeneration once the verdict actually resolves.
+    if (state.isClickedCorrect === null) return '';
     if (state.isClickedCorrect) {
       if (state.remaining === 0) {
         const optsList = state.correctIndices1Based.length > 1
@@ -279,14 +299,18 @@ export class OptionClickHandlerService {
   updateDisabledSet(
     disabledSet: Set<number>,
     clickedIndex: number,
-    isClickedCorrect: boolean,
+    isClickedCorrect: boolean | null,
     remaining: number | null,
     bindingsCount: number,
     correctIndices: number[]
   ): void {
     const correctSet = new Set(correctIndices);
 
-    if (!isClickedCorrect) disabledSet.add(clickedIndex);
+    // `null` is UNKNOWN, not wrong — `!null` is `true` in JS, which used to
+    // disable a click nobody has judged yet. Only a CONFIRMED wrong click
+    // disables; unknown stays enabled, same permissive default this codebase
+    // already takes elsewhere for an unauthorized state.
+    if (isClickedCorrect === false) disabledSet.add(clickedIndex);
     // When all correct answers selected, disable ALL incorrect options.
     // PRISTINE GUARD: before triggering the disable-all branch, sanity-
     // check correctIndices.length against quizInitialState. If pristine

@@ -11,9 +11,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleChange, MatSlideToggleModule }
   from '@angular/material/slide-toggle';
 import { EMPTY, firstValueFrom } from 'rxjs';
-import { catchError, switchMap, tap } from 'rxjs/operators';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 
-import { Quiz } from '../../shared/models/Quiz.model';
+import { Quiz, QuizDifficulty } from '../../shared/models/Quiz.model';
 import { QuizQuestion } from '../../shared/models/QuizQuestion.model';
 
 import { QuizDataService } from '../../shared/services/data/quizdata.service';
@@ -182,12 +182,26 @@ export class IntroductionComponent implements OnInit {
     }
 
     // Hard refresh on /quiz/intro/:quizId skips QuizSelection, so the
-    // quizzes list may not have been fetched yet. ensureQuizzesLoaded()
-    // triggers the HTTP load on first run, then getQuiz() can resolve.
-    return this.quizDataService.ensureQuizzesLoaded().pipe(
-      switchMap(() => this.quizDataService.getQuiz(quizId)),
+    // metadata list may not have been fetched yet. load() triggers the HTTP
+    // fetch on first run (shared/cached), then buildQuizFromMetadata resolves.
+    return this.metadataApi.load().pipe(
+      map(() => this.buildQuizFromMetadata(quizId)),
       catchError(() => EMPTY)
     );
+  }
+
+  // Build a synthetic Quiz from API metadata alone — no client bank read.
+  // summary is intentionally blank; Introduction never displayed it.
+  private buildQuizFromMetadata(quizId: string): Quiz | null {
+    if (!this.metadataApi.questionCountByQuiz().has(quizId)) return null;
+    return {
+      quizId,
+      milestone: this.metadataApi.milestoneFor(quizId) ?? '',
+      summary: '',
+      image: this.metadataApi.imageFor(quizId) ?? '',
+      difficulty: this.metadataApi.difficultyByQuiz().get(quizId) as QuizDifficulty | undefined,
+      facts: [...this.metadataApi.factsFor(quizId)]
+    };
   }
 
   private logQuizLoaded(quiz: Quiz | null): void {
@@ -199,7 +213,7 @@ export class IntroductionComponent implements OnInit {
 
   private handleLoadedQuiz(quiz: Quiz | null): void {
     if (quiz) {
-      const questionCount = quiz.questions?.length ?? 0;
+      const questionCount = this.metadataApi.questionCountByQuiz().get(quiz.quizId) ?? 0;
 
       this.selectedQuiz.set(quiz);
       // API-FIRST: /quizzes is the authority for imagery; the bundled value is
@@ -354,7 +368,8 @@ export class IntroductionComponent implements OnInit {
     if (quizFromState?.quizId === targetQuizId) return quizFromState;
 
     try {
-      const loadedQuiz = await this.quizDataService.loadQuizById(targetQuizId);
+      await firstValueFrom(this.metadataApi.load());
+      const loadedQuiz = this.buildQuizFromMetadata(targetQuizId);
       if (loadedQuiz) {
         this.selectedQuiz.set(loadedQuiz);
       }

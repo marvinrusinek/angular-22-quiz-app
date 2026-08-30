@@ -449,17 +449,23 @@ export class QqcQlStreamService {
     const { question, options } = this.hydrateAndClone(q, index);
 
     if (this.quizService.questions?.length) {
-      const fullQuiz: Quiz = await firstValueFrom(
-        this.quizDataService.getQuiz(quizId).pipe(
-          filter((quiz): quiz is Quiz => quiz !== null),
-          take(1)
-        )
-      );
-
-      this.quizService.setCurrentQuiz({
-        ...fullQuiz,
-        questions: this.quizService.questions
-      });
+      // S6n: re-sync currentQuizSig/activeQuiz.questions with the freshly
+      // resolved question collection using the Quiz metadata ALREADY held
+      // in memory (set by whoever started this quiz — Introduction, Quiz
+      // Selection, etc.) rather than re-fetching it via the client-bank-
+      // backed QuizDataService#getQuiz()/quizzes$. That observable is only
+      // ever populated by ensureQuizzesLoaded()/loadQuizzes(); once a
+      // caller stops priming the full bank, it never emits, and this
+      // `await firstValueFrom(getQuiz(...))` hung forever on every
+      // navigation — proven live, independently of the identical hang
+      // already fixed in QclQuestionFetchService#loadQuestionFromRouteChange.
+      const fullQuiz = this.quizService.getActiveQuiz();
+      if (fullQuiz) {
+        this.quizService.setCurrentQuiz({
+          ...fullQuiz,
+          questions: this.quizService.questions
+        });
+      }
     }
 
     return { q: question, opts: options };

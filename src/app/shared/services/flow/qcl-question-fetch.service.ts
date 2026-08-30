@@ -1,6 +1,6 @@
 ﻿import { Service, inject } from '@angular/core';
 import { firstValueFrom, Observable, of } from 'rxjs';
-import { catchError, filter, map, take } from 'rxjs/operators';
+import { catchError, map, take } from 'rxjs/operators';
 
 import { SK_SAVED_QUESTION_INDEX } from '../../constants/session-keys';
 
@@ -55,21 +55,37 @@ export class QclQuestionFetchService {
       hasValidSelections: false
     };
 
-    const currentQuiz: Quiz = await firstValueFrom(
-      this.quizDataService.getQuiz(quizId).pipe(
-        filter((q): q is Quiz => !!q && Array.isArray(q.questions)),
-        take(1)
-      )
-    );
-    if (!currentQuiz) return empty;
-
+    // S6n: resolve the question collection from QuizService's own,
+    // API-sourced state (populated by QuizDataService#prepareQuizSession,
+    // itself backed by the safe question API — see quiz-session-manager
+    // .service.ts#applySessionQuestions) rather than the client-bank-backed
+    // QuizDataService#getQuiz()/quizzes$. quizzes$ is only ever populated by
+    // ensureQuizzesLoaded()/loadQuizzes() — once a caller (e.g. Introduction)
+    // stops priming the full bank, that observable never emits, and the old
+    // `await firstValueFrom(getQuiz(quizId)...)` here hung forever on EVERY
+    // route change, permanently blocking every Next-navigation's question/
+    // options load (proven live: the resolved instrumentation entry never
+    // fired for any of 3 navigations in a row).
+    //
+    // During normal in-quiz navigation the quiz doesn't change, so the
+    // already-populated in-session collection is authoritative and no fetch
+    // is needed at all. A genuine quiz switch (deep-link to a different
+    // quiz's question) is the only case requiring a fresh, safe fetch —
+    // prepareQuizSession is the same API-backed path Introduction/quiz start
+    // already use, so this introduces no new data source.
     const isSameQuiz = this.quizService.quizId === quizId
       || this.quizService.getCurrentQuizId() === quizId;
-    if (!isSameQuiz) {
-      this.quizService.setCurrentQuiz(currentQuiz);
+
+    let baseQuestions: QuizQuestion[] = isSameQuiz ? (this.quizService.questions ?? []) : [];
+    if (baseQuestions.length === 0) {
+      baseQuestions = await firstValueFrom(
+        this.quizDataService.prepareQuizSession(quizId).pipe(take(1))
+      ).catch(() => [] as QuizQuestion[]);
     }
+    if (!baseQuestions.length) return empty;
+
     this.quizQuestionLoaderService.activeQuizId = quizId;
-    const totalQ = currentQuiz.questions?.length ?? 0;
+    const totalQ = baseQuestions.length;
     this.quizQuestionLoaderService.totalQuestions = totalQ;
 
     const shuffledSnapshot = this.quizService.isShuffleEnabled()
@@ -87,7 +103,7 @@ export class QclQuestionFetchService {
       this.quizService.isShuffleEnabled() &&
       this.quizService.shuffledQuestions?.length > 0;
     const effectiveQuestions = shouldUseShuffled
-      ? this.quizService.shuffledQuestions : currentQuiz.questions;
+      ? this.quizService.shuffledQuestions : baseQuestions;
     const question = effectiveQuestions?.[index] ?? null;
     if (!question) return empty;
 

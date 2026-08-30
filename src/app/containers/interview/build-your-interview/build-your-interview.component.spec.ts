@@ -307,7 +307,6 @@ describe('BuildYourInterviewComponent', () => {
       throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
     );
     const buildSpy = jest.spyOn(builder, 'build');
-    const presetBuildSpy = jest.spyOn(builder, 'buildFromPreset');
 
     setDifficulty('beginner');
     component.toggleTopic('ts', true);
@@ -315,8 +314,11 @@ describe('BuildYourInterviewComponent', () => {
 
     await component.startInterview();
 
+    // S6g: buildFromPreset() no longer exists on the service (it was
+    // proven dead — zero production callers, superseded by the Stage 9C
+    // backend cutover), so there is structurally nothing left to fall back
+    // to; build() not being called is the remaining, still-meaningful guard.
     expect(buildSpy).not.toHaveBeenCalled();
-    expect(presetBuildSpy).not.toHaveBeenCalled();
     expect(router.navigate).not.toHaveBeenCalled();
     // Stays on the builder, with a safe retryable message and no stored session.
     expect(component.createError()).toBeTruthy();

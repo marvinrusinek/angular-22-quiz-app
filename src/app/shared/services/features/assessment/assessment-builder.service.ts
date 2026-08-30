@@ -3,19 +3,12 @@ import { Service } from '@angular/core';
 import {
   AssessmentConfig,
   AssessmentQuestionCount,
-  DURATION_SECONDS_BY_COUNT,
-  InterviewDifficulty
+  DURATION_SECONDS_BY_COUNT
 } from '../../../models/AssessmentConfig.model';
 import { GeneratedAssessment } from '../../../models/GeneratedAssessment.model';
 import { Option } from '../../../models/Option.model';
-import { Quiz, QuizDifficulty } from '../../../models/Quiz.model';
+import { Quiz } from '../../../models/Quiz.model';
 import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { InterviewPreset } from '../../../models/interview-preset.model';
-import {
-  calculateDifficultyQuota,
-  DifficultyQuota,
-  DIFFICULTY_ORDER
-} from '../../../utils/difficulty-quota';
 
 import { getQuizData } from '../../../quiz-data-cache';
 import { ArrayUtils } from '../../../utils/array-utils';
@@ -41,17 +34,6 @@ export interface EligiblePool {
 }
 
 /**
- * What a role preset can actually supply. `usable` counts only difficulties the
- * preset allows (nonzero weight), so a zero-weighted band's questions are never
- * treated as available — that is what keeps Advanced out of the Junior preset.
- */
-export interface PresetCapacity {
-  byDifficulty: DifficultyQuota;
-  usable: number;
-  required: number;
-}
-
-/**
  * Reusable, UI-agnostic engine that answers a single question:
  * "Given this configuration, which questions should the assessment include?"
  *
@@ -63,14 +45,6 @@ export interface PresetCapacity {
 @Service()
 export class AssessmentBuilderService {
   private sequence = 0;
-
-  // The topics (source quizzes) eligible for a difficulty. 'mixed' = all
-  // topics; otherwise only quizzes whose per-quiz difficulty matches.
-  eligibleTopicIds(difficulty: InterviewDifficulty): string[] {
-    return this.catalog()
-      .filter((quiz) => difficulty === 'mixed' || quiz.difficulty === difficulty)
-      .map((quiz) => quiz.quizId);
-  }
 
   // Size of the question pool for the selected topics (difficulty is already
   // encoded in which topics the caller passes). perTopic drives the preview and
@@ -84,14 +58,6 @@ export class AssessmentBuilderService {
       total += count;
     }
     return { total, perTopic };
-  }
-
-  // True when a valid, duplicate-free assessment of `questionCount` can be built
-  // from the selected topics. The Build page derives Start-button validity from
-  // this rather than persisting a boolean flag.
-  canBuild(config: AssessmentConfig): boolean {
-    const topicIds = this.dedupe(config.topicIds);
-    return topicIds.length > 0 && this.countEligible(topicIds).total >= config.questionCount;
   }
 
   /**
@@ -218,174 +184,6 @@ export class AssessmentBuilderService {
 
     // Practice is UNTIMED: no countdown is derived or displayed.
     return { ...built, id: `practice-${built.id}`, title: 'Weak Areas Practice', durationSeconds: 0 };
-  }
-
-  // ── role presets ────────────────────────────────────────────────
-
-  /**
-   * How many questions a preset can actually supply, per difficulty. Drives the
-   * Start-button state and the shortfall message WITHOUT building anything.
-   * Only the preset's own topics are ever counted.
-   */
-  presetCapacity(preset: InterviewPreset): PresetCapacity {
-    const byDifficulty = { beginner: 0, intermediate: 0, advanced: 0 } as DifficultyQuota;
-    for (const topicId of this.dedupe([...preset.topicIds])) {
-      const quiz = this.findQuiz(topicId);
-      const difficulty = quiz?.difficulty as QuizDifficulty | undefined;
-      if (!difficulty || !(difficulty in byDifficulty)) continue;
-      byDifficulty[difficulty] += quiz?.questions?.length ?? 0;
-    }
-    // Only difficulties the preset actually allows (nonzero weight) can be used,
-    // so a zero-weighted difficulty contributes nothing to usable capacity.
-    const usable = DIFFICULTY_ORDER.reduce(
-      (sum, d) => sum + (preset.difficultyDistribution[d] > 0 ? byDifficulty[d] : 0),
-      0
-    );
-    return { byDifficulty, usable, required: preset.questionCount };
-  }
-
-  /** True when the preset can supply its full requested count. */
-  canBuildPreset(preset: InterviewPreset): boolean {
-    return this.presetCapacity(preset).usable >= preset.questionCount;
-  }
-
-  /**
-   * Build a role-preset assessment. Reuses the SAME cloning, reset, balancing
-   * and shuffling as build() — this is an extension of the existing engine, not
-   * a competing generator.
-   *
-   * Difficulty here is a property of the TOPIC (quiz), not of an individual
-   * question, so a quota of "9 beginner" means nine questions drawn from the
-   * preset's beginner-difficulty topics.
-   *
-   * SHORTFALL STRATEGY, applied per difficulty in order:
-   *   1. fill from that difficulty's topics, balanced round-robin across them;
-   *   2. any shortfall is carried to the CLOSEST other difficulty that the
-   *      preset allows (nonzero weight), nearest-first by DIFFICULTY_ORDER
-   *      distance, ties resolved toward the LOWER difficulty so a shortfall
-   *      never inflates the hardest band unexpectedly;
-   *   3. a zero-weighted difficulty is never used — Junior can therefore never
-   *      receive an advanced question;
-   *   4. topics outside the preset are never used.
-   */
-  buildFromPreset(preset: InterviewPreset): GeneratedAssessment {
-    const capacity = this.presetCapacity(preset);
-    if (capacity.usable < preset.questionCount) {
-      throw new Error(
-        `AssessmentBuilder: preset "${preset.id}" needs ${preset.questionCount} questions but only ${capacity.usable} are available`
-      );
-    }
-
-    // Pools per difficulty, restricted to the preset's own topics.
-    const topicIds = this.dedupe([...preset.topicIds]);
-    const topicsByDifficulty = new Map<QuizDifficulty, string[]>();
-    const pools = new Map<string, QuizQuestion[]>();
-    for (const topicId of topicIds) {
-      const quiz = this.findQuiz(topicId);
-      const difficulty = quiz?.difficulty as QuizDifficulty | undefined;
-      if (!difficulty) continue;
-      pools.set(topicId, (quiz?.questions ?? []).map((q, i) => this.cloneQuestion(q, topicId, i)));
-      topicsByDifficulty.set(difficulty, [...(topicsByDifficulty.get(difficulty) ?? []), topicId]);
-    }
-
-    const quota = calculateDifficultyQuota(preset.questionCount, preset.difficultyDistribution);
-    const allowed = DIFFICULTY_ORDER.filter((d) => preset.difficultyDistribution[d] > 0);
-
-    // Remaining capacity per topic, decremented as we take questions so the same
-    // question can never be selected twice.
-    const remaining = new Map<string, QuizQuestion[]>(
-      [...pools.entries()].map(([id, qs]) => [id, ArrayUtils.shuffleArray([...qs])])
-    );
-
-    const picked: QuizQuestion[] = [];
-    let shortfall = 0;
-
-    for (const difficulty of DIFFICULTY_ORDER) {
-      const want = quota[difficulty];
-      if (want <= 0) continue;
-      const taken = this.takeBalanced(topicsByDifficulty.get(difficulty) ?? [], remaining, want);
-      picked.push(...taken);
-      shortfall += want - taken.length;
-    }
-
-    // Redistribute any shortfall to the closest ALLOWED difficulty with capacity.
-    if (shortfall > 0) {
-      for (const difficulty of this.redistributionOrder(quota, allowed)) {
-        if (shortfall === 0) break;
-        const taken = this.takeBalanced(topicsByDifficulty.get(difficulty) ?? [], remaining, shortfall);
-        picked.push(...taken);
-        shortfall -= taken.length;
-      }
-    }
-
-    const ordered = ArrayUtils.shuffleArray(picked);
-    const questions = ordered.map((q) => this.shuffleOptions(q));
-
-    const config: AssessmentConfig = {
-      difficulty: 'mixed',
-      topicIds,
-      questionCount: preset.questionCount as AssessmentConfig['questionCount'],
-      presetId: preset.id,
-      presetName: preset.name,
-      durationSecondsOverride: preset.durationMinutes * 60
-    };
-
-    return {
-      id: `interview-${++this.sequence}`,
-      title: preset.name,
-      questions,
-      config,
-      durationSeconds: preset.durationMinutes * 60
-    };
-  }
-
-  /**
-   * Difficulties to raid when a quota can't be met, nearest-first. Distance is
-   * measured on DIFFICULTY_ORDER; equal distances resolve toward the LOWER
-   * difficulty (documented, deterministic) so a shortfall never silently makes
-   * an interview harder than its preset advertises.
-   */
-  private redistributionOrder(
-    quota: DifficultyQuota,
-    allowed: readonly QuizDifficulty[]
-  ): QuizDifficulty[] {
-    // Anchor on the difficulty that carried the largest original quota — the
-    // preset's centre of gravity — so redistribution stays close to its intent.
-    const anchorIndex = DIFFICULTY_ORDER.indexOf(
-      [...DIFFICULTY_ORDER].sort((a, b) => quota[b] - quota[a])[0]
-    );
-    return [...allowed].sort((a, b) => {
-      const da = Math.abs(DIFFICULTY_ORDER.indexOf(a) - anchorIndex);
-      const db = Math.abs(DIFFICULTY_ORDER.indexOf(b) - anchorIndex);
-      return da - db || DIFFICULTY_ORDER.indexOf(a) - DIFFICULTY_ORDER.indexOf(b);
-    });
-  }
-
-  /**
-   * Take up to `want` questions from `topicIds`, round-robin, so one large topic
-   * cannot dominate. Consumes from `remaining` (already shuffled per topic), so
-   * a question is never selected twice.
-   */
-  private takeBalanced(
-    topicIds: readonly string[],
-    remaining: Map<string, QuizQuestion[]>,
-    want: number
-  ): QuizQuestion[] {
-    const out: QuizQuestion[] = [];
-    if (want <= 0 || topicIds.length === 0) return out;
-    let progressed = true;
-    while (out.length < want && progressed) {
-      progressed = false;
-      for (const topicId of topicIds) {
-        if (out.length >= want) break;
-        const pool = remaining.get(topicId);
-        if (pool && pool.length > 0) {
-          out.push(pool.shift() as QuizQuestion);
-          progressed = true;
-        }
-      }
-    }
-    return out;
   }
 
   // ── balancing ───────────────────────────────────────────────────

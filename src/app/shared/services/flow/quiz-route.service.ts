@@ -1,23 +1,23 @@
 import { Service, inject } from '@angular/core';
-import { ActivatedRoute, ParamMap, Router } from '@angular/router';
-import { Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
-
-import { Quiz } from '../../models/Quiz.model';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { TRAILING_INDEX_REGEX, TRAILING_INDEX_STRICT_REGEX } from '../../constants/route-patterns';
 
-import { QuizDataService } from '../data/quizdata.service';
 import { QuizService } from '../data/quiz.service';
 
 /**
- * Handles route parameter parsing and route-based quiz data resolution.
+ * Handles route parameter parsing.
  * Extracted from QuizComponent to reduce its size.
+ *
+ * S6g: the bank-backed quiz-data resolution this service used to also
+ * provide (handleRouteParams(), reading QuizDataService.getQuizzes()'s full
+ * bank-sourced Quiz array) was removed — it had zero production callers,
+ * superseded by the resolver's own already-narrowed, metadata-backed
+ * existence check (see quiz-resolver.service.ts, S6f).
  */
 @Service()
 export class QuizRouteService {
   // ── injects ─────────────────────────────────────────────────────
-  private quizDataService = inject(QuizDataService);
   private quizService = inject(QuizService);
 
   // ── public methods ──────────────────────────────────────────────
@@ -140,32 +140,4 @@ export class QuizRouteService {
     return 0;
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // HANDLE ROUTE PARAMS (quiz data resolution)
-  // ═══════════════════════════════════════════════════════════════
-
-  handleRouteParams(
-    params: ParamMap
-  ): Observable<{ quizId: string; questionIndex: number; quizData: Quiz }> {
-    const quizId = params.get('quizId');
-    const questionIndex = Number(params.get('questionIndex'));
-    if (!quizId) return throwError(() => new Error('Quiz ID is required'));
-
-    if (isNaN(questionIndex)) {
-      return throwError(() => new Error('Invalid question index'));
-    }
-
-    return this.quizDataService.getQuizzes().pipe(
-      map((quizzes: Quiz[]) => {
-        const quizData = quizzes.find((quiz) => quiz.quizId === quizId);
-        if (!quizData) {
-          throw new Error(`Quiz with ID "${quizId}" not found.`);
-        }
-        return { quizId, questionIndex, quizData };
-      }),
-      catchError(() => {
-        return throwError(() => new Error('Failed to process quiz data'));
-      })
-    );
-  }
 }

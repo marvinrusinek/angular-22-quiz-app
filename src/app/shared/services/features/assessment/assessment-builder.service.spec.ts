@@ -62,25 +62,6 @@ describe('AssessmentBuilderService', () => {
     setQuizDataCache([], []);
   });
 
-  // 1–4: difficulty filtering (topics = quizzes)
-  it('filters topics by Beginner difficulty', () => {
-    expect(service.eligibleTopicIds('beginner').sort()).toEqual(['templates', 'ts']);
-  });
-
-  it('filters topics by Intermediate difficulty', () => {
-    expect(service.eligibleTopicIds('intermediate').sort()).toEqual(['forms', 'router']);
-  });
-
-  it('filters topics by Advanced difficulty', () => {
-    expect(service.eligibleTopicIds('advanced')).toEqual(['rxjs']);
-  });
-
-  it('Mixed includes all eligible topics', () => {
-    expect(service.eligibleTopicIds('mixed').sort()).toEqual(
-      ['forms', 'router', 'rxjs', 'templates', 'ts'].sort()
-    );
-  });
-
   // 5: filters by selected topic ids
   it('only draws questions from the selected topic ids', () => {
     const result = service.build(config('mixed', ['ts', 'rxjs'], 10));
@@ -133,8 +114,6 @@ describe('AssessmentBuilderService', () => {
   // 11: rejects an insufficient pool
   it('rejects a configuration whose pool cannot satisfy the count', () => {
     expect(() => service.build(config('intermediate', ['forms'], 10))).toThrow();
-    expect(service.canBuild(config('intermediate', ['forms'], 10))).toBe(false);
-    expect(service.canBuild(config('intermediate', ['forms'], 30))).toBe(false);
   });
 
   // 12: never duplicates questions

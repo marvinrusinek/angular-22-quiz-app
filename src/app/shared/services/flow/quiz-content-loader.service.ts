@@ -448,20 +448,17 @@ export class QuizContentLoaderService {
   }
 
   initializeFetForQuizData(quizData: Quiz): void {
-    const isShuffled = this.quizService.isShuffleEnabled();
-
     this.quizService.setSelectedQuiz(quizData);
 
-    if (!isShuffled) {
-      // Pre-seeding the explanation store from the bank was a warm-up from the
-      // era when the FET body came from `question.explanation`. Since S1 the
-      // body is authorized by the verdict and written at answer time, and
-      // questions from `/questions` carry no explanation to seed with — so this
-      // reserves the slots without claiming any text for them.
-      this.explanationTextService.initializeExplanationTexts(
-        (quizData.questions ?? []).map((q: QuizQuestion) => q.explanation ?? '')
-      );
-    }
+    // S6f: the bank-derived explanation pre-seed that used to run here is
+    // gone. It was already dead weight before this — the FET body has been
+    // verdict-authorized and written at answer time since S1, and
+    // hydrateQuestionsFromSession() re-seeds explanationTexts from the real,
+    // API-sourced questions moments later in the same init sequence anyway
+    // (quiz-setup-data.service.ts#resolveQuizData -> initializeQuiz ->
+    // prepareQuizSession -> applyQuestionsFromSession). `quizData` itself no
+    // longer carries real question content to seed from — questions is
+    // always [] on the resolved object now.
   }
 
   initializeFetForShuffledQuiz(): void {

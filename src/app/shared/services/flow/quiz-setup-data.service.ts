@@ -210,7 +210,10 @@ export class QuizSetupDataService {
       .pipe(takeUntilDestroyed(host.destroyRef))
       .subscribe(async (data: any) => {
         const quizData = data['quizData'];
-        if (!quizData?.questions?.length) {
+        // S6f: existence only — quizData.questions is always [] now (the
+        // resolver no longer carries the bank's real question content), so
+        // this can no longer gate on .questions.length like it used to.
+        if (!quizData?.quizId) {
           void this.router.navigate(['/select']);
           return;
         }

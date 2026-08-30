@@ -262,7 +262,9 @@ export class QuizSetupRouteService {
       .pipe(takeUntilDestroyed(host.destroyRef))
       .subscribe((data: any) => {
         const quizData = data['quizData'];
-        if (!quizData?.questions?.length) {
+        // S6f: existence only — quizData.questions is always [] now (the
+        // resolver no longer carries the bank's real question content).
+        if (!quizData?.quizId) {
           void this.router.navigate(['/select']);
           return;
         }

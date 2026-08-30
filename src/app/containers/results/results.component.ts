@@ -50,7 +50,7 @@ import { ScoreAnalysisService } from '../../shared/services/features/results/sco
 import { ThemeService } from '../../shared/services/ui/theme.service';
 
 import { AchievementService } from '../../shared/services/achievements/achievement.service';
-import { AchievementDefinition, AchievementView } from '../../shared/models/achievement.model';
+import { AchievementCatalogEntry, AchievementDefinition, AchievementView } from '../../shared/models/achievement.model';
 
 import { AccordionComponent } from './accordion/accordion.component';
 import { AchievementUnlockedComponent } from '../../components/achievement-unlocked/achievement-unlocked.component';
@@ -133,6 +133,13 @@ export class ResultsComponent implements OnInit {
   // Every achievement + earned/locked state, for the expandable catalog section.
   readonly achievementsCatalog = signal<AchievementView[]>([]);
   private achievementsProcessed = false;
+  // S6d: the result to evaluate achievements for, once recordQuizResult() has
+  // run. Drives evaluateAchievementsEffect below, separately from
+  // achievementsProcessed — that flag guards recordQuizResult (must fire
+  // exactly once); this signal lets evaluation itself RE-RUN reactively when
+  // metadataApi's difficultyByQuiz() populates, since it can still be empty
+  // (HTTP in flight) the first time this runs.
+  private readonly pendingAchievementResult = signal<FinalResult | null>(null);
 
   // Facts (0-3) for the completed quiz; QuizFactComponent shows one at random.
   //
@@ -167,6 +174,29 @@ export class ResultsComponent implements OnInit {
       this.updateHeaderLabel(r.total);
       this.persistResultsToSession(r);
       this.finalizeCompletion(r);
+    });
+
+    // S6d: re-run achievement evaluation whenever the metadata-backed catalog
+    // (quizId + difficulty) changes, not just once when processAchievements()
+    // sets pendingAchievementResult. Confirmed by e2e/achievements.spec.ts:
+    // a single synchronous evaluate() at that point saw an EMPTY catalog
+    // (metadataApi.load()'s response had not landed yet) and silently missed
+    // the Perfect Score celebration — even though recordQuizResult() had
+    // already persisted the qualifying score. This effect fixes that: it
+    // re-fires once real data arrives, same pattern as Quiz Selection's
+    // refreshAchievementsEffect. evaluate() is idempotent, so re-running is
+    // safe; newlyEarnedAchievements is only overwritten on a NON-empty
+    // result, so a later no-op pass can never erase an earlier genuine unlock.
+    effect(() => {
+      const result = this.pendingAchievementResult();
+      if (!result) return;
+      const achievementCatalog: AchievementCatalogEntry[] = [...this.metadataApi.difficultyByQuiz()]
+        .map(([quizId, difficulty]) => ({ quizId, difficulty }));
+      const newly = this.achievementService.evaluate(achievementCatalog);
+      if (newly.length > 0) this.newlyEarnedAchievements.set(newly);
+      // Refresh the catalog so any just-earned achievement flips to "Earned".
+      this.achievementsCatalog.set(this.achievementService.catalog());
+      this.cdRef.markForCheck();
     });
   }
 
@@ -522,10 +552,10 @@ export class ResultsComponent implements OnInit {
     if (!result?.quizId) return;
     this.achievementsProcessed = true;
     this.achievementService.recordQuizResult(result.quizId, result.percentage);
-    this.newlyEarnedAchievements.set(this.achievementService.evaluate(this.quizData));
-    // Refresh the catalog so any just-earned achievement flips to "Earned".
-    this.achievementsCatalog.set(this.achievementService.catalog());
-    this.cdRef.markForCheck();
+    // Evaluation itself happens in evaluateAchievementsEffect (constructor),
+    // reactively, because metadataApi's catalog can still be empty here (HTTP
+    // in flight) — see that effect for why.
+    this.pendingAchievementResult.set(result);
   }
 
   private persistResultsToSession(result: FinalResult): void {

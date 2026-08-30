@@ -23,7 +23,7 @@ import { QuizTileStyles } from '../../shared/models/QuizTileStyles.model';
 import { QuizDataService } from '../../shared/services/data/quizdata.service';
 import { QuizService } from '../../shared/services/data/quiz.service';
 import { AchievementService } from '../../shared/services/achievements/achievement.service';
-import { AchievementId } from '../../shared/models/achievement.model';
+import { AchievementCatalogEntry, AchievementId } from '../../shared/models/achievement.model';
 import { achievementCompletionMessage } from '../../shared/utils/achievement-progress-message';
 import { CertificateEarnedBadgeComponent } from '../../components/interview/certificate-earned-badge/certificate-earned-badge.component';
 import { ProgressService } from '../../shared/services/progress/progress.service';
@@ -50,7 +50,6 @@ import { CountUpDirective } from '../../directives/count-up.directive';
 
 import { TopicQuizMetadataService } from '../../shared/services/api/topic-quiz-metadata.service';
 
-import { getQuizData } from '../../shared/quiz-data-cache';
 import { SlideLeftToRightAnimation } from '../../animations/animations';
 import { swallow } from '../../shared/utils/error-logging';
 
@@ -151,6 +150,16 @@ export class QuizSelectionComponent implements OnInit {
   // browser/tab closes, so a fresh visit starts with all quizzes.
   private readonly persistSearchEffect = effect(() => {
     writeSessionString(SK_QUIZ_SEARCH_TERM, this.searchTerm());
+  });
+
+  // S6d: re-run achievement evaluation whenever the metadata-backed catalog
+  // (quizId + difficulty) changes — not just once on init. The catalog is
+  // empty until metadataApi.load()'s response lands, so a single synchronous
+  // call at init time would evaluate against nothing; this effect re-fires
+  // once real data arrives, same as the reactive imageByQuiz() tracking below.
+  private readonly refreshAchievementsEffect = effect(() => {
+    this.metadataApi.difficultyByQuiz();   // reactive dependency
+    this.refreshAchievementsSummary();
   });
 
   // The grid renders this: filter the full list by the search term, then sort
@@ -510,14 +519,18 @@ export class QuizSelectionComponent implements OnInit {
     this.restoreSessionAccessState();
     this.selectionParams.set(this.quizService.returnQuizSelectionParams());
     this.loadQuizCatalog();
-    this.refreshAchievementsSummary();
   }
 
   // Silently evaluate achievements from existing progress (persists any newly
   // qualified, but shows no celebration here) and publish the X / N summary.
+  // S6d: the catalog comes from TopicQuizMetadataService (quizId + difficulty
+  // only), not getQuizData()'s answer-bearing bundled bank. Called reactively
+  // by refreshAchievementsEffect above, not directly from init.
   private refreshAchievementsSummary(): void {
     try {
-      this.achievementService.evaluate(getQuizData());  // silent: return value ignored
+      const catalog: AchievementCatalogEntry[] = [...this.metadataApi.difficultyByQuiz()]
+        .map(([quizId, difficulty]) => ({ quizId, difficulty }));
+      this.achievementService.evaluate(catalog);  // silent: return value ignored
       const { earned, total } = this.achievementService.summary();
       this.achievementsEarned.set(earned);
       this.achievementsTotal.set(total);

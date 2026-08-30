@@ -1,7 +1,7 @@
 import { computed, inject, Service, signal } from '@angular/core';
 
-import { Quiz } from '../../models/Quiz.model';
 import {
+  AchievementCatalogEntry,
   AchievementDefinition,
   AchievementId,
   AchievementView,
@@ -78,7 +78,7 @@ export class AchievementService {
     return this.evaluate([]);
   }
 
-  evaluate(quizzes: Quiz[]): AchievementDefinition[] {
+  evaluate(quizzes: readonly AchievementCatalogEntry[]): AchievementDefinition[] {
     const best = this.bestScoreService.getBestScores();
     const earned = this.readEarned();
     const earnedIds = new Set<AchievementId>(earned.map(e => e.id));
@@ -132,10 +132,14 @@ export class AchievementService {
   }
 
   // ── rules ──────────────────────────────────────────────────────
-  private isSatisfied(id: AchievementId, quizzes: Quiz[], best: BestScores): boolean {
-    const isCompleted = (q: Quiz): boolean => best[q.quizId] != null;   // any score counts
-    const isPerfect = (q: Quiz): boolean => best[q.quizId] === 100;
-    const inDifficulty = (d: string): Quiz[] =>
+  private isSatisfied(
+    id: AchievementId,
+    quizzes: readonly AchievementCatalogEntry[],
+    best: BestScores
+  ): boolean {
+    const isCompleted = (q: AchievementCatalogEntry): boolean => best[q.quizId] != null;   // any score counts
+    const isPerfect = (q: AchievementCatalogEntry): boolean => best[q.quizId] === 100;
+    const inDifficulty = (d: string): AchievementCatalogEntry[] =>
       quizzes.filter(q => (q.difficulty ?? '').toLowerCase() === d);
 
     switch (id) {

@@ -184,3 +184,70 @@ describe('TopicQuizMetadataService — imagery', () => {
     expect(service.factsFor('rxjs')).toEqual(['A']);
   });
 });
+
+/**
+ * Difficulty (S6d) — the field achievement evaluation reads to group quizzes,
+ * replacing getQuizData()'s answer-bearing bundled bank as that source.
+ *
+ * Unlike image/milestone, an entry is captured even when its difficulty is
+ * absent: achievement evaluation enumerates this map's KEYS as the full known-
+ * quiz set (mirroring what iterating the bundled Quiz[] array used to give it),
+ * so a quiz missing difficulty must still exist in the map, just with a null
+ * value that no `inDifficulty` filter will ever match.
+ */
+describe('TopicQuizMetadataService — difficulty', () => {
+  let http: HttpTestingController;
+  let service: TopicQuizMetadataService;
+
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: BASE },
+        TopicQuizMetadataService
+      ]
+    });
+    http = TestBed.inject(HttpTestingController);
+    service = TestBed.inject(TopicQuizMetadataService);
+  });
+
+  afterEach(() => http.verify());
+
+  it('reads difficulty from the metadata endpoint', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).flush({
+      quizzes: [
+        { quizId: 'rxjs', difficulty: 'intermediate' },
+        { quizId: 'signals', difficulty: 'beginner' }
+      ]
+    });
+    const byQuiz = service.difficultyByQuiz();
+    expect(byQuiz.get('rxjs')).toBe('intermediate');
+    expect(byQuiz.get('signals')).toBe('beginner');
+  });
+
+  it('still records the quiz (as null) when difficulty is absent — the key must exist', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).flush({ quizzes: [{ quizId: 'rxjs' }] });
+    const byQuiz = service.difficultyByQuiz();
+    expect(byQuiz.has('rxjs')).toBe(true);
+    expect(byQuiz.get('rxjs')).toBeNull();
+  });
+
+  it('a failed load leaves the difficulty map empty, never throws', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
+    expect(service.difficultyByQuiz().size).toBe(0);
+  });
+
+  it('difficulty arrives from the SAME single request as facts/imagery/milestone', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).flush({
+      quizzes: [{ quizId: 'rxjs', milestone: 'RxJS', image: 'https://cdn.test/rxjs.png', facts: ['A'], difficulty: 'advanced' }]
+    });
+    expect(service.difficultyByQuiz().get('rxjs')).toBe('advanced');
+    expect(service.milestoneFor('rxjs')).toBe('RxJS');
+  });
+});

@@ -76,6 +76,17 @@ export class TopicQuizMetadataService {
   readonly milestoneByQuiz: Signal<ReadonlyMap<string, string>> =
     this._milestoneByQuiz.asReadonly();
 
+  /**
+   * quizId → difficulty, from the same response. Set for EVERY entry (unlike
+   * image/milestone, which skip blanks) — achievement evaluation enumerates
+   * this map's keys as the full known-quiz set, so an entry must exist even
+   * when its difficulty is absent.
+   */
+  private readonly _difficultyByQuiz = signal<ReadonlyMap<string, string | null>>(new Map());
+
+  readonly difficultyByQuiz: Signal<ReadonlyMap<string, string | null>> =
+    this._difficultyByQuiz.asReadonly();
+
   /** One in-flight request shared by every caller. */
   private inFlight: Observable<readonly QuizMetadataEntryDto[]> | null = null;
 
@@ -95,6 +106,7 @@ export class TopicQuizMetadataService {
           const facts = new Map<string, readonly string[]>();
           const images = new Map<string, string>();
           const milestones = new Map<string, string>();
+          const difficulties = new Map<string, string | null>();
           for (const entry of entries) {
             if (!entry?.quizId) continue;
             facts.set(
@@ -109,10 +121,12 @@ export class TopicQuizMetadataService {
             if (typeof entry.milestone === 'string' && entry.milestone.trim().length > 0) {
               milestones.set(entry.quizId, entry.milestone.trim());
             }
+            difficulties.set(entry.quizId, entry.difficulty ?? null);
           }
           this._factsByQuiz.set(facts);
           this._imageByQuiz.set(images);
           this._milestoneByQuiz.set(milestones);
+          this._difficultyByQuiz.set(difficulties);
         }),
         catchError(() => of([] as readonly QuizMetadataEntryDto[])),
         shareReplay({ bufferSize: 1, refCount: false })

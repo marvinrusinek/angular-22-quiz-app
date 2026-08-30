@@ -2,21 +2,26 @@ import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { AchievementService } from './achievement.service';
-import { Quiz } from '../../models/Quiz.model';
+import { AchievementCatalogEntry } from '../../models/achievement.model';
 import { SK_QUIZ_ACHIEVEMENTS, SK_QUIZ_BEST_SCORES } from '../../constants/session-keys';
 import { InterviewReadiness, InterviewReadinessBand } from '../../models/interview-readiness.model';
 import { InterviewReadinessService } from '../features/interview/interview-readiness.service';
 import { InterviewHistoryService } from '../features/interview/interview-history.service';
 
-/** Minimal quiz factory — only the fields the achievement rules read. */
-function quiz(quizId: string, difficulty?: string): Quiz {
-  return { quizId, difficulty } as unknown as Quiz;
+/**
+ * Minimal quiz factory — quizId + difficulty ONLY. No cast to the full Quiz
+ * model needed: this IS the entire AchievementCatalogEntry contract, proving
+ * evaluate() needs nothing else — no questions, options, correct flags, or
+ * explanations reach it through any test in this file (S6d).
+ */
+function quiz(quizId: string, difficulty?: string): AchievementCatalogEntry {
+  return { quizId, difficulty };
 }
 
 const BEGINNER = [quiz('b1', 'beginner'), quiz('b2', 'beginner')];
 const INTERMEDIATE = [quiz('i1', 'intermediate')];
 const ADVANCED = [quiz('a1', 'advanced')];
-const ALL: Quiz[] = [...BEGINNER, ...INTERMEDIATE, ...ADVANCED];
+const ALL: AchievementCatalogEntry[] = [...BEGINNER, ...INTERMEDIATE, ...ADVANCED];
 
 // ── signal-backed interview stubs (Interview Master reuses these services) ──
 const readinessSig = signal<InterviewReadiness | null>(null);

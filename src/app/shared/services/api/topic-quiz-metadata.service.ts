@@ -87,6 +87,17 @@ export class TopicQuizMetadataService {
   readonly difficultyByQuiz: Signal<ReadonlyMap<string, string | null>> =
     this._difficultyByQuiz.asReadonly();
 
+  /**
+   * quizId → question count, from the same response. Set for EVERY entry
+   * (like difficulty) — S6h's QuizGuard reads this map to distinguish "quiz
+   * unknown to metadata" (key absent, defer to the resolver) from "quiz
+   * known but the server didn't report a count" (key present, value null).
+   */
+  private readonly _questionCountByQuiz = signal<ReadonlyMap<string, number | null>>(new Map());
+
+  readonly questionCountByQuiz: Signal<ReadonlyMap<string, number | null>> =
+    this._questionCountByQuiz.asReadonly();
+
   /** One in-flight request shared by every caller. */
   private inFlight: Observable<readonly QuizMetadataEntryDto[]> | null = null;
 
@@ -107,6 +118,7 @@ export class TopicQuizMetadataService {
           const images = new Map<string, string>();
           const milestones = new Map<string, string>();
           const difficulties = new Map<string, string | null>();
+          const questionCounts = new Map<string, number | null>();
           for (const entry of entries) {
             if (!entry?.quizId) continue;
             facts.set(
@@ -122,11 +134,18 @@ export class TopicQuizMetadataService {
               milestones.set(entry.quizId, entry.milestone.trim());
             }
             difficulties.set(entry.quizId, entry.difficulty ?? null);
+            questionCounts.set(
+              entry.quizId,
+              Number.isFinite(entry.questionCount) && (entry.questionCount as number) >= 0
+                ? (entry.questionCount as number)
+                : null
+            );
           }
           this._factsByQuiz.set(facts);
           this._imageByQuiz.set(images);
           this._milestoneByQuiz.set(milestones);
           this._difficultyByQuiz.set(difficulties);
+          this._questionCountByQuiz.set(questionCounts);
         }),
         catchError(() => of([] as readonly QuizMetadataEntryDto[])),
         shareReplay({ bufferSize: 1, refCount: false })

@@ -251,3 +251,90 @@ describe('TopicQuizMetadataService — difficulty', () => {
     expect(service.milestoneFor('rxjs')).toBe('RxJS');
   });
 });
+
+/**
+ * Question count (S6h) — the field QuizGuard reads for index validation,
+ * replacing QuizDataService.getCachedQuizById(...).questions.length (the
+ * bundled bank) as that source.
+ *
+ * Like difficulty, an entry is captured even when the count is absent —
+ * QuizGuard distinguishes "quiz unknown to metadata" (key absent) from
+ * "quiz known but no count reported" (key present, value null), and treats
+ * both as "can't validate, defer to the resolver."
+ */
+describe('TopicQuizMetadataService — question count', () => {
+  let http: HttpTestingController;
+  let service: TopicQuizMetadataService;
+
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: BASE },
+        TopicQuizMetadataService
+      ]
+    });
+    http = TestBed.inject(HttpTestingController);
+    service = TestBed.inject(TopicQuizMetadataService);
+  });
+
+  afterEach(() => http.verify());
+
+  it('reads question count from the metadata endpoint', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).flush({
+      quizzes: [
+        { quizId: 'rxjs', questionCount: 12 },
+        { quizId: 'signals', questionCount: 8 }
+      ]
+    });
+    const byQuiz = service.questionCountByQuiz();
+    expect(byQuiz.get('rxjs')).toBe(12);
+    expect(byQuiz.get('signals')).toBe(8);
+  });
+
+  it('still records the quiz (as null) when questionCount is absent — the key must exist', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).flush({ quizzes: [{ quizId: 'rxjs' }] });
+    const byQuiz = service.questionCountByQuiz();
+    expect(byQuiz.has('rxjs')).toBe(true);
+    expect(byQuiz.get('rxjs')).toBeNull();
+  });
+
+  it('treats a negative or non-finite questionCount as null rather than a bogus number', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).flush({
+      quizzes: [
+        { quizId: 'a', questionCount: -1 },
+        { quizId: 'b', questionCount: Number.NaN }
+      ]
+    });
+    const byQuiz = service.questionCountByQuiz();
+    expect(byQuiz.get('a')).toBeNull();
+    expect(byQuiz.get('b')).toBeNull();
+  });
+
+  it('a zero questionCount is preserved as 0, not coerced to null', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).flush({ quizzes: [{ quizId: 'rxjs', questionCount: 0 }] });
+    expect(service.questionCountByQuiz().get('rxjs')).toBe(0);
+  });
+
+  it('a failed load leaves the question-count map empty, never throws', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
+    expect(service.questionCountByQuiz().size).toBe(0);
+  });
+
+  it('question count arrives from the SAME single request as facts/imagery/milestone/difficulty', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).flush({
+      quizzes: [{ quizId: 'rxjs', milestone: 'RxJS', difficulty: 'advanced', questionCount: 12 }]
+    });
+    expect(service.questionCountByQuiz().get('rxjs')).toBe(12);
+    expect(service.difficultyByQuiz().get('rxjs')).toBe('advanced');
+    expect(service.milestoneFor('rxjs')).toBe('RxJS');
+  });
+});

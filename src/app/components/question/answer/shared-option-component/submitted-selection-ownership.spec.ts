@@ -42,6 +42,10 @@ function publish(bindings: Binding[], revisitSnapshot?: ReadonlySet<string>): st
   const host = {
     getActiveQuestionIndex: () => 2,
     optionBindings: () => bindings,
+    // S6k: syncUiSelectedTexts() only publishes when bindings were built for
+    // the CURRENTLY active question — matching getActiveQuestionIndex() here
+    // is what lets these tests reach the publishing logic under test.
+    optionBindingsQuestionIndex: () => 2,
     selectedOptionService: {
       getRevisitDisplayTexts: () => revisitSnapshot,
       setUiSelectedTextsForQuestion: (_i: number, texts: string[]) => { captured = [...texts]; }

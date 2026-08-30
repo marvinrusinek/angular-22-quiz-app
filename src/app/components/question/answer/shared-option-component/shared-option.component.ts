@@ -143,6 +143,19 @@ export class SharedOptionComponent
   readonly showFeedback = signal<boolean>(false);
   readonly shouldResetBackground = signal<boolean>(false);
   readonly optionBindings = signal<OptionBindings[]>([]);
+  /**
+   * S6k: the display-index `optionBindings()` was actually BUILT for, stamped
+   * by SharedOptionBindingService#generateOptionBindings(). `ngDoCheck` runs
+   * on every CD cycle, including several during a Next-triggered question
+   * transition where `optionBindings()` still holds the PREVIOUS question's
+   * content (bindings haven't been rebuilt yet) or has just been cleared to
+   * empty by the question-change cleanup — both transient, not a real user
+   * action. `syncUiSelectedTexts()` checks this against the currently active
+   * question index and skips publishing when they disagree, so transition
+   * noise never reaches SelectedOptionService.setUiSelectedTextsForQuestion()
+   * (and therefore never reaches POST /check) — see the ROOT CAUSE note there.
+   */
+  readonly optionBindingsQuestionIndex = signal<number | null>(null);
   // Render-layer view of the bindings with any "All of the above" option pinned
   // LAST. This is the single render chokepoint (the template iterates this),
   // downstream of every option setter, so the displayed order is always
@@ -288,6 +301,19 @@ export class SharedOptionComponent
     try {
       const qIdx = this.getActiveQuestionIndex();
       if (qIdx == null || qIdx < 0) return;
+
+      // ROOT CAUSE (S6k): ngDoCheck runs every CD cycle, including several
+      // during a Next-triggered transition where optionBindings() still
+      // holds the PREVIOUS question's bindings (not yet rebuilt for qIdx) or
+      // has just been cleared to empty by the question-change cleanup —
+      // neither reflects a real user action on the CURRENT question. Every
+      // such transient value used to reach
+      // SelectedOptionService.setUiSelectedTextsForQuestion() (and, because
+      // it differed from the last-published value, POST /check) before the
+      // user had made — or sometimes even seen — the new question. Skip
+      // publishing entirely until generateOptionBindings() has stamped
+      // bindings for THIS question.
+      if (this.optionBindingsQuestionIndex() !== qIdx) return;
       const texts: string[] = [];
       for (const b of this.optionBindings() ?? []) {
         const opt = b?.option;

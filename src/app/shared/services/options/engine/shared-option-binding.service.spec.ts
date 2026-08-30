@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 
 import { Option } from '../../../models/Option.model';
 import { OptionBindings } from '../../../models/OptionBindings.model';
@@ -353,6 +354,79 @@ describe('SharedOptionBindingService', () => {
         const comp = makeComp({ optionBindings: () => [{ option: { text: 'A' } }] });
         expect(resolve(comp, { displayIndex: 0 }, '')).toBe(0);
       });
+    });
+  });
+
+  // ── generateOptionBindings: question-index stamp (S6k) ───────────
+  //
+  // ROOT CAUSE this stamp fixes: SharedOptionComponent.ngDoCheck() runs on
+  // every CD cycle and unconditionally publishes optionBindings() to
+  // SelectedOptionService.setUiSelectedTextsForQuestion() — which submits any
+  // NON-IDENTICAL value straight to POST /check. During a Next-triggered
+  // transition, several CD cycles fire BEFORE generateOptionBindings() has
+  // rebuilt bindings for the new question — first with the PREVIOUS
+  // question's bindings still in place, then with them cleared to empty —
+  // and each of those transient values used to reach the backend as if it
+  // were a real user selection. This is why a healthy baseline traced 21
+  // POST /check calls for a 7-question DI quiz that structurally needs only
+  // 9: 1 clean call for Q1 (loaded directly, no transition) and 3 for every
+  // Next-reached question (stale, empty, then the real one) — a pattern that
+  // happens to self-resolve on baseline timing but does not once Introduction
+  // does one more async fetch before Start Quiz.
+  //
+  // The fix: generateOptionBindings() stamps which question index it just
+  // built bindings FOR. syncUiSelectedTexts() compares that stamp to the
+  // currently active question index and skips publishing on mismatch — so
+  // leftover Q(N-1) bindings, or bindings mid-rebuild, can never reach
+  // POST /check for Q(N).
+  describe('generateOptionBindings — question-index stamp', () => {
+    const makeGenComp = (over: any = {}): any => ({
+      hasUserClicked: () => false,
+      getActiveQuestionIndex: () => 1,
+      optionsToDisplay: [{ optionId: 1, text: 'A' }],
+      currentQuestion: () => ({ questionText: 'Q', answer: [] }),
+      resolveInteractionType: () => 'single',
+      showFeedback: () => false,
+      showFeedbackForOption: {},
+      highlightCorrectAfterIncorrect: () => false,
+      shouldResetBackground: () => false,
+      computeDisabledState: () => false,
+      optionBindings: signal<OptionBindings[]>([]),
+      optionBindingsQuestionIndex: signal<number | null>(null),
+      rehydrateUiFromState: jest.fn(),
+      cdRef: { markForCheck: jest.fn(), detectChanges: jest.fn() },
+      feedbackConfigs: {},
+      rebuildShowFeedbackMapFromBindings: jest.fn(),
+      showOptions: signal(false),
+      optionsReady: false,
+      renderReady: signal(false),
+      markRenderReady: jest.fn(),
+      ...over
+    });
+
+    it('stamps optionBindingsQuestionIndex with the question the bindings were built for', () => {
+      const comp = makeGenComp({ getActiveQuestionIndex: () => 2 });
+      service.generateOptionBindings(comp);
+      expect(comp.optionBindingsQuestionIndex()).toBe(2);
+    });
+
+    it('does NOT stamp (and does not rebuild) when hasUserClicked short-circuits with existing bindings', () => {
+      const comp = makeGenComp({
+        hasUserClicked: () => true,
+        optionBindings: signal<OptionBindings[]>([{ option: { text: 'stale' } } as OptionBindings]),
+        getActiveQuestionIndex: () => 2
+      });
+      service.generateOptionBindings(comp);
+      // The early-return means the stamp is never touched for this call —
+      // proving a leftover stamp from a PRIOR question stays mismatched
+      // (and therefore un-published) until a real rebuild happens.
+      expect(comp.optionBindingsQuestionIndex()).toBeNull();
+    });
+
+    it('a fresh rebuild for question 0 stamps 0 (not confused with the null default)', () => {
+      const comp = makeGenComp({ getActiveQuestionIndex: () => 0 });
+      service.generateOptionBindings(comp);
+      expect(comp.optionBindingsQuestionIndex()).toBe(0);
     });
   });
 });

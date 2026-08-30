@@ -192,6 +192,12 @@ export class SharedOptionBindingService {
     this.buildOptionsToDisplay(comp, currentIndex);
     this.createAndSetBindings(comp);
 
+    // S6k: stamp which question these bindings actually belong to, so
+    // syncUiSelectedTexts() (shared-option.component.ts) can tell freshly-
+    // rebuilt Q(N) bindings apart from a not-yet-rebuilt leftover from Q(N-1)
+    // and skip publishing the latter to SelectedOptionService.
+    comp.optionBindingsQuestionIndex?.set?.(currentIndex);
+
     comp.rehydrateUiFromState('generateOptionBindings');
 
     this.applyRevisitOverride(comp);

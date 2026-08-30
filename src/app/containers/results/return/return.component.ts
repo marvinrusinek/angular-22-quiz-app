@@ -21,7 +21,6 @@ import {
 } from '../../../shared/utils/session-storage';
 
 import { ExplanationTextService } from '../../../shared/services/features/explanation/explanation-text.service';
-import { QuizDataService } from '../../../shared/services/data/quizdata.service';
 import { QuizDotStatusService } from '../../../shared/services/flow/quiz-dot-status.service';
 import { QuizPersistenceService } from '../../../shared/services/state/quiz-persistence.service';
 import { QuestionTimingService } from '../../../shared/services/features/timer/question-timing.service';
@@ -44,7 +43,6 @@ export class ReturnComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
   private readonly dotStatusService = inject(QuizDotStatusService);
   private readonly explanationTextService = inject(ExplanationTextService);
-  private readonly quizDataService = inject(QuizDataService);
   private readonly quizPersistence = inject(QuizPersistenceService);
   private readonly questionTimingService = inject(QuestionTimingService);
   private readonly questionVerdictService = inject(QuestionVerdictService);
@@ -97,9 +95,12 @@ export class ReturnComponent implements OnInit {
       }
     }
 
-    if (id) {
-      this.quizDataService.updateQuizStatus(id, isCompleted ? 'completed' : 'started');
-    }
+    // S6b: the QuizDataService.updateQuizStatus() call that used to run here
+    // was a redundant in-memory mirror of the sessionStorage write above —
+    // QuizSelectionComponent already re-derives quiz.status from
+    // SK_COMPLETED_QUIZ_IDS/SK_STARTED_QUIZ_IDS itself on its own init
+    // (consumeCompletedQuizIds/consumeStartedQuizIds), so this component
+    // does not need to reach into that in-memory signal directly.
 
     this.quizService.resetAll();
     this.quizService.resetQuestions();

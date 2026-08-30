@@ -3,22 +3,18 @@ import { Service, inject } from '@angular/core';
 import { SK_COMPLETED_QUIZ_IDS, SK_CORRECT_ANSWERS_COUNT, SK_DOT_CONFIRMED, SK_DISPLAY_MODE, SK_IS_ANSWERED, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_USER_ANSWERS } from '../../constants/session-keys';
 import { readSessionJson, removeSessionKey, writeSessionJson } from '../../utils/session-storage';
 
-import { QuizStatus } from '../../models/quiz-status.enum';
-
-import { QuizDataService } from '../data/quizdata.service';
 import { QuizService } from '../data/quiz.service';
 import { SelectedOptionService } from './selectedoption.service';
 import { swallow } from '../../utils/error-logging';
 
 /**
- * Manages localStorage/sessionStorage persistence for quiz dot status,
- * progress, and continue-status.
+ * Manages localStorage/sessionStorage persistence for quiz dot status and
+ * progress.
  * Extracted from QuizComponent to reduce its size.
  */
 @Service()
 export class QuizPersistenceService {
   // ── injects ─────────────────────────────────────────────────────
-  private quizDataService = inject(QuizDataService);
   private quizService = inject(QuizService);
   private selectedOptionService = inject(SelectedOptionService);
 
@@ -216,30 +212,5 @@ export class QuizPersistenceService {
       }
       for (const key of lsKeysToRemove) localStorage.removeItem(key);
     } catch (err: unknown) { swallow('quiz-persistence.service.ts', err); }
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // CONTINUE STATUS
-  // ════════════════════════════════════════════════════��══════════
-
-  persistContinueStatusIfNeeded(quizId: string, currentQuestionIndex: number): void {
-    if (!quizId) return;
-
-    // Hard Block: never persist CONTINUE after completion
-    if (this.quizService.quizCompleted === true) return;
-
-    // Only persist if the user actually answered something
-    const hasAnsweredAny =
-      currentQuestionIndex > 0 ||
-      this.selectedOptionService.isQuestionAnswered(0) === true;
-
-    if (!hasAnsweredAny) return;
-
-    // Store the current question index for resume
-    this.quizService.currentQuestionIndex = currentQuestionIndex;
-
-    // Set CONTINUE status
-    this.quizDataService.updateQuizStatus(quizId, QuizStatus.CONTINUE);
-    this.quizService.setQuizStatus(QuizStatus.CONTINUE);
   }
 }

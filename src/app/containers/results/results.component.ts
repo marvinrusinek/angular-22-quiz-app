@@ -314,12 +314,10 @@ export class ResultsComponent implements OnInit {
       }
     }
 
-    if (quizId) {
-      this.quizDataService.updateQuizStatus(
-        quizId,
-        isCompleted ? QuizStatus.COMPLETED : QuizStatus.STARTED
-      );
-    }
+    // S6b: the QuizDataService.updateQuizStatus() call that used to run here
+    // was a redundant in-memory mirror of the sessionStorage write above —
+    // QuizSelectionComponent already re-derives quiz.status from
+    // SK_COMPLETED_QUIZ_IDS/SK_STARTED_QUIZ_IDS itself on its own init.
     this.quizService.setCompletedQuizId(isCompleted ? quizId : '');
     this.quizService.quizCompleted = isCompleted;
 

@@ -17,7 +17,6 @@ import { MatCardModule } from '@angular/material/card';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { take } from 'rxjs/operators';
 
 import { QuizStatus } from '../../shared/models/quiz-status.enum';
 
@@ -173,7 +172,17 @@ export class ResultsComponent implements OnInit {
 
   ngOnInit(): void {
     window.scrollTo(0, 0);
-    this.quizDataService.loadQuizzes().pipe(take(1)).subscribe();
+    // S6c: the QuizDataService.loadQuizzes() call that used to run here was a
+    // full, uncached re-fetch of the entire answer-bearing quiz.json — this
+    // panel only ever needed metadata, which metadataApi.load() already
+    // supplies. It was also not what let setCompletedQuiz()'s updateQuizStatus()
+    // find its target: quizzesSig is a root-singleton signal already populated
+    // by QuizSelectionComponent's own earlier load before Results is ever
+    // reached (the normal flow always passes through Quiz Selection first),
+    // and in a direct-navigation edge case this unawaited fetch could not have
+    // resolved before setCompletedQuiz() ran synchronously a few lines below
+    // regardless — so removing it changes nothing either way.
+    //
     // Facts come from the metadata endpoint. Not awaited: the panel renders
     // nothing until they arrive, and never blocks the rest of the page.
     this.metadataApi.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();

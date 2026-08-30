@@ -37,7 +37,6 @@ import {
 } from '../../shared/utils/session-storage';
 
 import { FinalResult, ScoreAnalysisItem, toDurableFinalResult } from '../../shared/models/Final-Result.model';
-import { Quiz } from '../../shared/models/Quiz.model';
 import { QuizQuestion } from '../../shared/models/QuizQuestion.model';
 
 import { QuizDataService } from '../../shared/services/data/quizdata.service';
@@ -64,7 +63,6 @@ import { SummaryReportComponent } from './summary-report/summary-report.componen
 
 import { TopicQuizMetadataService } from '../../shared/services/api/topic-quiz-metadata.service';
 
-import { getQuizData } from '../../shared/quiz-data-cache';
 import { swallow } from '../../shared/utils/error-logging';
 
 @Component({
@@ -114,9 +112,7 @@ export class ResultsComponent implements OnInit {
   private readonly metadataApi = inject(TopicQuizMetadataService);
 
   // ── remaining variables ─────────────────────────────────────────
-  readonly quizData: Quiz[] = getQuizData();
   readonly quizId = signal('');
-  readonly indexOfQuizId = signal(0);
   readonly detailedSummaryQuestions = signal<QuizQuestion[]>([]);
   readonly headerLabel = signal('');
 
@@ -218,7 +214,6 @@ export class ResultsComponent implements OnInit {
     this.metadataApi.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
     this.fetchQuizIdFromParams();
     this.setCompletedQuiz();
-    this.findQuizIndex();
 
     this.detailedSummaryQuestions.set(this.quizService.getQuestionsInDisplayOrder());
 
@@ -411,7 +406,6 @@ export class ResultsComponent implements OnInit {
     }
 
     this.quizId.set('');
-    this.indexOfQuizId.set(0);
     this.router.navigate(['/select/']);
   }
 
@@ -439,7 +433,6 @@ export class ResultsComponent implements OnInit {
       if (routeQuizId) {
         this.quizId.set(routeQuizId);
         this.setCompletedQuiz();
-        this.findQuizIndex();
         this.cdRef.markForCheck();
       }
     });
@@ -468,13 +461,6 @@ export class ResultsComponent implements OnInit {
       } catch (err: unknown) {
         swallow('results.component#markResultsReached', err);
       }
-    }
-  }
-
-  private findQuizIndex(): void {
-    const id = this.quizId();
-    if (id) {
-      this.indexOfQuizId.set(this.quizData.findIndex((elem) => elem.quizId === id));
     }
   }
 

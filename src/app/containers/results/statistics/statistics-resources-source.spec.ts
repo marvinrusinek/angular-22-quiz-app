@@ -8,8 +8,8 @@ import { signal } from '@angular/core';
 import { of } from 'rxjs';
 
 import { StatisticsComponent } from './statistics.component';
+import { TopicQuizMetadataService } from '../../../shared/services/api/topic-quiz-metadata.service';
 import { TopicQuizResourcesService } from '../../../shared/services/api/topic-quiz-resources.service';
-import { QuizDataService } from '../../../shared/services/data/quizdata.service';
 import { QuizService } from '../../../shared/services/data/quiz.service';
 import { TimerService } from '../../../shared/services/features/timer/timer.service';
 import { API_BASE_URL } from '../../../shared/tokens/api-base-url.token';
@@ -73,13 +73,10 @@ function build() {
       { provide: QuizService, useValue: quizServiceStub() },
       { provide: TimerService, useValue: timerServiceStub() },
       {
-        provide: QuizDataService,
+        provide: TopicQuizMetadataService,
         useValue: {
-          quizzesSig: signal([
-            { quizId: QUIZ_ID, milestone: 'Angular Router', summary: '', image: '' }
-          ]),
-          getCachedQuizById: () => ({ quizId: QUIZ_ID, milestone: 'Angular Router' }),
-          quizzes$: of([])
+          load: () => of([]),
+          milestoneFor: (quizId: string) => quizId === QUIZ_ID ? 'Angular Router' : quizId
         }
       }
     ]

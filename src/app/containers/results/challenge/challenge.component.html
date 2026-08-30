@@ -1,43 +1,41 @@
-@for (quiz of quizzes(); track quiz.quizId) {
-  @if (quiz.quizId === quizName) {
-    <div class="challenge">
-      <h4 i18n>Challenge your friends!</h4>
+@if (currentQuizId === quizName && quizName) {
+  <div class="challenge">
+    <h4 i18n>Challenge your friends!</h4>
 
-      <div class="social-buttons">
-        <a
-          class="btn twitter-share-button hvr-shutter-out-horizontal mdc-button mdc-button--outlined"
-          title="Twitter"
-          i18n-title
-          data-size="large"
-          target="_blank"
-          rel="noopener noreferrer"
-          href="https://twitter.com/intent/tweet?text=I%20scored%20{{
-            quizMetadata.percentage
-          }}/100%20on%20this%20awesome%20quiz%20about%20Angular%20{{
-            quiz.milestone
-          }}.%20Try%20to%20beat%20my%20score%20at%20&amp;hashtag=quiz&amp;url={{
-            codelabUrl
-          }}!"
-        >
-          <strong i18n>Tweet your score</strong>
-        </a>
+    <div class="social-buttons">
+      <a
+        class="btn twitter-share-button hvr-shutter-out-horizontal mdc-button mdc-button--outlined"
+        title="Twitter"
+        i18n-title
+        data-size="large"
+        target="_blank"
+        rel="noopener noreferrer"
+        href="https://twitter.com/intent/tweet?text=I%20scored%20{{
+          quizMetadata.percentage
+        }}/100%20on%20this%20awesome%20quiz%20about%20Angular%20{{
+          milestoneName()
+        }}.%20Try%20to%20beat%20my%20score%20at%20&amp;hashtag=quiz&amp;url={{
+          codelabUrl
+        }}!"
+      >
+        <strong i18n>Tweet your score</strong>
+      </a>
 
-        <a
-          class="btn email hvr-shutter-out-horizontal mdc-button mdc-button--outlined"
-          title="e-mail"
-          i18n-title
-          data-size="large"
-          target="_blank"
-          rel="noopener noreferrer"
-          href="mailto:?subject=Try to beat my quiz score!&amp;body=I scored {{
-            quizMetadata.percentage
-          }}% on this awesome quiz about Angular {{
-            quiz.milestone
-          }}. Try to beat my score at {{ codelabUrl }}"
-        >
-          <strong i18n>Email a friend</strong>
-        </a>
-      </div>
+      <a
+        class="btn email hvr-shutter-out-horizontal mdc-button mdc-button--outlined"
+        title="e-mail"
+        i18n-title
+        data-size="large"
+        target="_blank"
+        rel="noopener noreferrer"
+        href="mailto:?subject=Try to beat my quiz score!&amp;body=I scored {{
+          quizMetadata.percentage
+        }}% on this awesome quiz about Angular {{
+          milestoneName()
+        }}. Try to beat my score at {{ codelabUrl }}"
+      >
+        <strong i18n>Email a friend</strong>
+      </a>
     </div>
-  }
+  </div>
 }

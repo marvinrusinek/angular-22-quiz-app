@@ -8,8 +8,8 @@ import { QuizStatus } from '../../../shared/models/quiz-status.enum'
 import { QuizMetadata } from '../../../shared/models/QuizMetadata.model';
 import { Resource } from '../../../shared/models/Resource.model';
 
+import { TopicQuizMetadataService } from '../../../shared/services/api/topic-quiz-metadata.service';
 import { TopicQuizResourcesService } from '../../../shared/services/api/topic-quiz-resources.service';
-import { QuizDataService } from '../../../shared/services/data/quizdata.service';
 import { QuizService } from '../../../shared/services/data/quiz.service';
 import { TimerService } from '../../../shared/services/features/timer/timer.service';
 
@@ -26,7 +26,7 @@ import { QuizResourcesComponent } from './quiz-resources/quiz-resources.componen
 })
 export class StatisticsComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
-  private readonly quizDataService = inject(QuizDataService);
+  private readonly metadataApi = inject(TopicQuizMetadataService);
   private readonly quizService = inject(QuizService);
   private readonly timerService = inject(TimerService);
   private readonly resourcesApi = inject(TopicQuizResourcesService);
@@ -41,23 +41,16 @@ export class StatisticsComponent implements OnInit {
     input<'score' | 'resources' | 'all'>('all');
 
   // ── remaining variables ─────────────────────────────────────────
-  readonly quizzes = this.quizDataService.quizzesSig;
   readonly quizId = signal('');
 
-  // The single quiz this results view is for. Replaces the template's
-  // @for(quizzes)+@if(quizId match) guard with a direct lookup.
-  readonly selectedQuiz = computed(() =>
-    this.quizzes().find(q => q.quizId === this.quizId())
-  );
+  // S6a: metadata comes from TopicQuizMetadataService (API-backed), not
+  // QuizDataService's bundled bank. The panel no longer waits on the
+  // metadata fetch to know a quiz is selected — `quizId()` is already
+  // resolved synchronously in initComponent(), and milestoneFor() degrades
+  // to the id itself if the metadata call is still in flight or fails.
+  readonly selectedQuiz = computed(() => !!this.quizId());
 
-  readonly milestoneName = computed(() => {
-    const qId = this.quizId();
-    if (!qId) return '';
-    const cached = this.quizDataService.getCachedQuizById(qId);
-    if (cached?.milestone) return cached.milestone;
-    const found = this.quizzes().find(q => q.quizId === qId);
-    return found?.milestone ?? qId;
-  });
+  readonly milestoneName = computed(() => this.metadataApi.milestoneFor(this.quizId()));
 
   readonly quizMetadata = signal<Partial<QuizMetadata>>({});
   readonly resources = signal<Resource[]>([]);
@@ -142,6 +135,10 @@ export class StatisticsComponent implements OnInit {
     if (!this.quizId()) {
       this.quizId.set(this.quizService.quizId || localStorage.getItem('quizId') || '');
     }
+
+    // Populate milestoneFor()'s backing signal. Shared, at-most-once-per-page
+    // request — safe to call from every consumer.
+    this.metadataApi.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
 
     // Elapsed time from the LIVE timer (valid on fresh completion).
     let totalElapsedTime = this.timerService.calculateTotalElapsedTime(

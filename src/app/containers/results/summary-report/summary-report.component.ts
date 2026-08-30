@@ -1,15 +1,15 @@
 import {
-  ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect,
+  ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef, effect,
   inject, input, OnInit, signal
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import { take } from 'rxjs/operators';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { QuizMetadata } from '../../../shared/models/QuizMetadata.model';
 import { QuizScore } from '../../../shared/models/QuizScore.model';
 
-import { QuizDataService } from '../../../shared/services/data/quizdata.service';
+import { TopicQuizMetadataService } from '../../../shared/services/api/topic-quiz-metadata.service';
 import { QuizService } from '../../../shared/services/data/quiz.service';
 import { TimerService } from '../../../shared/services/features/timer/timer.service';
 
@@ -32,10 +32,11 @@ import { SummaryStatsComponent } from './summary-stats/summary-stats.component';
 })
 export class SummaryReportComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
-  private readonly quizDataService = inject(QuizDataService);
+  private readonly metadataApi = inject(TopicQuizMetadataService);
   private readonly quizService = inject(QuizService);
   private readonly timerService = inject(TimerService);
   private readonly cdRef = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   // ── inputs ──────────────────────────────────────────────────────
   // Signal input aliased to "quizId" so parent template binding stays the same.
@@ -53,7 +54,6 @@ export class SummaryReportComponent implements OnInit {
   readonly elapsedSeconds = computed(() => this.completionTimeSig() % 60);
   readonly checkedShuffle = signal(false);
   readonly highScores = signal<QuizScore[]>([]);
-  quizMilestones: Record<string, string> = {};
   readonly currentScore = signal<QuizScore | null>(null);  // current quiz attempt score
   readonly codelabUrl = 'https://www.codelab.fun';
 
@@ -80,7 +80,7 @@ export class SummaryReportComponent implements OnInit {
   }
 
   getMilestoneLabel(quizId: string): string {
-    return this.quizMilestones[quizId] ?? quizId;
+    return this.metadataApi.milestoneFor(quizId);
   }
 
   private initComponent(): void {
@@ -122,11 +122,9 @@ export class SummaryReportComponent implements OnInit {
         completionTime
       });
 
-      this.quizDataService.getQuizzes().pipe(take(1)).subscribe((quizzes) => {
-        this.quizMilestones = quizzes.reduce<Record<string, string>>((acc, quiz) => {
-          acc[quiz.quizId] = quiz.milestone;
-          return acc;
-        }, {});
+      // Populates milestoneFor()'s backing signal — shared, at-most-once-per-
+      // page request. getMilestoneLabel() reads it directly per High-Scores row.
+      this.metadataApi.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
         this.cdRef.markForCheck();
       });
 

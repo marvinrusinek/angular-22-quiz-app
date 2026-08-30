@@ -36,7 +36,6 @@ import { SelectedOption } from '../../shared/models/SelectedOption.model';
 
 import { NextButtonStateService } from '../../shared/services/state/next-button-state.service';
 import { QqcQuestionLoaderService } from '../../shared/services/features/qqc/qqc-question-loader.service';
-import { QuizDataService } from '../../shared/services/data/quizdata.service';
 import { QuizDotStatusService } from '../../shared/services/flow/quiz-dot-status.service';
 import { QuizInitializationService } from '../../shared/services/flow/quiz-initialization.service';
 import { QuizNavigationService } from '../../shared/services/flow/quiz-navigation.service';
@@ -107,7 +106,6 @@ export class QuizComponent implements OnInit, AfterViewInit {
   private readonly dialog = inject(MatDialog);
   private readonly dotStatusService = inject(QuizDotStatusService);
   private readonly nextButtonStateService = inject(NextButtonStateService);
-  private readonly quizDataService = inject(QuizDataService);
   public readonly quizInitializationService = inject(QuizInitializationService);
   private readonly quizNavigationService = inject(QuizNavigationService);
   private readonly quizPersistence = inject(QuizPersistenceService);

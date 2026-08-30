@@ -90,38 +90,6 @@ export class QuizQuestionDataService {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // FETCH QUESTION DATA (legacy path)
-  // ═══════════════════════════════════════════════════════════════
-
-  async fetchQuestionData(
-    quizId: string,
-    questionIndex: number
-  ): Promise<QuizQuestion | undefined> {
-    try {
-      const rawData = this.quizService.getQuestionData(quizId, questionIndex);
-      if (!rawData) return undefined;
-
-      const explanationObservable = this.explanationTextService.explanationsInitialized
-        ? this.explanationTextService.getFormattedExplanationTextForQuestion(questionIndex)
-        : undefined;
-
-      let explanation = '';
-      if (explanationObservable) {
-        explanation = (await firstValueFrom(explanationObservable)) ?? '';
-      }
-
-      return {
-        questionText: (rawData as any).questionText ?? '',
-        options: (rawData as any).currentOptions ?? [],
-        explanation: explanation ?? '',
-        type: this.quizDataService.questionType as QuestionType
-      } as QuizQuestion;
-    } catch (err: unknown) {
-      throw err;
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════
   // FORMAT EXPLANATIONS FOR QUESTION SET
   // ═══════════════════════════════════════════════════════════════
 

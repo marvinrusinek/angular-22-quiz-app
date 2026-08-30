@@ -643,30 +643,6 @@ export class QuizService {
     return this.questions$;
   }
 
-  getQuestionData(
-    quizId: string,
-    questionIndex: number
-  ): {
-    questionText: string;
-    currentOptions: Option[];
-  } | null {
-    const currentQuiz = (this.quizData ?? []).find(
-      (quiz) => quiz.quizId === quizId
-    );
-
-    const questions = currentQuiz?.questions ?? [];
-    if (questions.length > questionIndex) {
-      const currentQuestion = questions[questionIndex];
-
-      return {
-        questionText: currentQuestion.questionText ?? '',
-        currentOptions: currentQuestion.options
-      };
-    }
-
-    return null;
-  }
-
   public setCurrentQuestion(question: QuizQuestion): void {
     if (!question) return;
 

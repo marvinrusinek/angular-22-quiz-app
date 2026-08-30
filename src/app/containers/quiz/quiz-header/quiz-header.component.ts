@@ -9,7 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { KeyboardShortcutsDialogComponent } from '../../../components/dialogs/keyboard-shortcuts-dialog/keyboard-shortcuts-dialog.component';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 
-import { QuizDataService } from '../../../shared/services/data/quizdata.service';
+import { TopicQuizMetadataService } from '../../../shared/services/api/topic-quiz-metadata.service';
 import { QuizService } from '../../../shared/services/data/quiz.service';
 
 @Component({
@@ -29,16 +29,21 @@ import { QuizService } from '../../../shared/services/data/quiz.service';
 })
 export class CodelabQuizHeaderComponent {
   // ── injects ─────────────────────────────────────────────────────
-  private readonly quizDataService = inject(QuizDataService);
+  private readonly metadataApi = inject(TopicQuizMetadataService);
   private readonly quizService = inject(QuizService);
   private readonly dialog = inject(MatDialog);
 
   // ── remaining variables ─────────────────────────────────────────
-  readonly currentQuiz = computed(
-    () =>
-      this.quizDataService.quizzesSig().find((quiz) => quiz.quizId === this.quizService.quizId) ??
-      null
-  );
+  // S6i: metadata-only — the only field the template reads is `.milestone`,
+  // so this carries a narrow `{ milestone }` shape rather than a full Quiz.
+  // `questionCountByQuiz` is populated for EVERY known quiz (even a null
+  // count), so `.has(quizId)` is the "is this quiz known yet" gate — the
+  // same existence check the S6i-migrated Introduction page uses.
+  readonly currentQuiz = computed<{ milestone: string } | null>(() => {
+    const quizId = this.quizService.quizId;
+    if (!quizId || !this.metadataApi.questionCountByQuiz().has(quizId)) return null;
+    return { milestone: this.metadataApi.milestoneFor(quizId) };
+  });
 
   // Open the presentational keyboard-shortcuts dialog. ariaLabelledBy /
   // ariaDescribedBy point at the ids in the dialog template; width + maxWidth

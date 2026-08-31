@@ -15,12 +15,11 @@ import { QuizRoutes } from '../../shared/models/quiz-routes.enum';
 import { QuizStatus } from '../../shared/models/quiz-status.enum';
 
 import { AnimationState } from '../../shared/models/AnimationState.type';
-import { Quiz } from '../../shared/models/Quiz.model';
+import { Quiz, QuizDifficulty } from '../../shared/models/Quiz.model';
 import { AlphaDirection, DifficultyDirection } from '../../shared/models/QuizSort.type';
 import { QuizSelectionParams } from '../../shared/models/QuizSelectionParams.model';
 import { QuizTileStyles } from '../../shared/models/QuizTileStyles.model';
 
-import { QuizDataService } from '../../shared/services/data/quizdata.service';
 import { QuizService } from '../../shared/services/data/quiz.service';
 import { AchievementService } from '../../shared/services/achievements/achievement.service';
 import { AchievementCatalogEntry, AchievementId } from '../../shared/models/achievement.model';
@@ -85,7 +84,6 @@ import { swallow } from '../../shared/utils/error-logging';
 })
 export class QuizSelectionComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
-  private readonly quizDataService = inject(QuizDataService);
   private readonly quizService = inject(QuizService);
   private readonly achievementService = inject(AchievementService);
   private readonly progressService = inject(ProgressService);
@@ -117,8 +115,51 @@ export class QuizSelectionComponent implements OnInit {
   readonly achievementsEarnedIds = signal<ReadonlySet<AchievementId>>(new Set());
 
   // ── remaining variables ─────────────────────────────────────────
-  readonly quizzes = this.quizDataService.quizzesSig;
   private readonly completedQuizIds = signal<ReadonlySet<string>>(new Set());
+  // S6o: quizzes STARTED this session (not yet completed) — the same
+  // sessionStorage-authoritative state consumeStartedQuizIds() already reads,
+  // now tracked here directly instead of mirrored onto a bank-loaded Quiz[]
+  // via QuizDataService#updateQuizStatus.
+  private readonly startedQuizIds = signal<ReadonlySet<string>>(new Set());
+
+  // S6o: per-quiz status, entirely from sessionStorage-backed state (completed
+  // wins over started). Never derived from a client-bank Quiz object's
+  // .status field — that mutable mirror no longer exists once this screen
+  // stops loading the full bank.
+  private readonly statusByQuizId = computed<ReadonlyMap<string, QuizStatus>>(() => {
+    const map = new Map<string, QuizStatus>();
+    for (const id of this.startedQuizIds()) map.set(id, QuizStatus.STARTED);
+    for (const id of this.completedQuizIds()) map.set(id, QuizStatus.COMPLETED);
+    return map;
+  });
+
+  // S6o: the catalog itself, built entirely from TopicQuizMetadataService
+  // (API-backed, no answer-bearing questions/options) plus the sessionStorage
+  // status projection above. Replaces the previous QuizDataService.quizzesSig
+  // (populated by loadQuizzes(), a full client-bank fetch). difficultyByQuiz()
+  // is used as the canonical "every known quiz" id set: unlike milestone/image,
+  // it is set for EVERY entry the metadata response returns (see its own doc
+  // comment) — the same reasoning achievement evaluation already relies on.
+  readonly quizzes = computed<Quiz[]>(() => {
+    const difficulties = this.metadataApi.difficultyByQuiz();
+    const milestones = this.metadataApi.milestoneByQuiz();
+    const summaries = this.metadataApi.summaryByQuiz();
+    const images = this.metadataApi.imageByQuiz();
+    const facts = this.metadataApi.factsByQuiz();
+    const counts = this.metadataApi.questionCountByQuiz();
+    const statuses = this.statusByQuizId();
+
+    return [...difficulties.keys()].map((quizId): Quiz => ({
+      quizId,
+      milestone: milestones.get(quizId) ?? quizId,
+      summary: summaries.get(quizId) ?? '',
+      image: images.get(quizId) ?? '',
+      difficulty: (difficulties.get(quizId) ?? undefined) as QuizDifficulty | undefined,
+      facts: [...(facts.get(quizId) ?? [])],
+      questionCount: counts.get(quizId) ?? undefined,
+      status: statuses.get(quizId)
+    }));
+  });
 
   // ── difficulty ranking (used by the 'difficulty' sort) ──────────
   // beginner→intermediate→advanced; missing/unknown difficulties sink last.
@@ -179,7 +220,7 @@ export class QuizSelectionComponent implements OnInit {
   readonly quizStats = computed(() => {
     const list = this.quizzes() ?? [];
     const quizCount = list.length;
-    const questionCount = list.reduce((sum, quiz) => sum + (quiz.questions?.length ?? 0), 0);
+    const questionCount = list.reduce((sum, quiz) => sum + (quiz.questionCount ?? quiz.questions?.length ?? 0), 0);
 
     const counts = new Map<string, number>();
     for (const quiz of list) {
@@ -333,8 +374,10 @@ export class QuizSelectionComponent implements OnInit {
 
       // this.quizService.quizId = quizId;
       this.quizService.setQuizId(quizId);
-      const currentQuiz = this.quizDataService.getCachedQuizById(quizId);
-      const isCompleted = currentQuiz?.status === QuizStatus.COMPLETED
+      // S6o: status comes from the sessionStorage-authoritative projection
+      // (statusByQuizId), never a client-bank Quiz object's .status field.
+      const existingStatus = this.statusByQuizId().get(quizId);
+      const isCompleted = existingStatus === QuizStatus.COMPLETED
         || this.completedQuizIds().has(quizId);
       this.quizService.quizCompleted = isCompleted;
 
@@ -347,8 +390,8 @@ export class QuizSelectionComponent implements OnInit {
       }
 
       // Set status to STARTED if not already CONTINUE or COMPLETED
-      if (!currentQuiz?.status || currentQuiz.status === QuizStatus.STARTED) {
-        this.quizDataService.updateQuizStatus(quizId, QuizStatus.STARTED);
+      if (!existingStatus || existingStatus === QuizStatus.STARTED) {
+        this.startedQuizIds.update(s => new Set(s).add(quizId));
         this.quizService.setQuizStatus(QuizStatus.STARTED);
       }
 
@@ -578,7 +621,6 @@ export class QuizSelectionComponent implements OnInit {
 
     for (const id of completedIds) {
       this.completedQuizIds.update(s => new Set(s).add(id));
-      this.quizDataService.updateQuizStatus(id, QuizStatus.COMPLETED);
     }
 
     if (completedIds.length > 0) {
@@ -594,7 +636,7 @@ export class QuizSelectionComponent implements OnInit {
     const startedIds = readSessionJson<string[]>(SK_STARTED_QUIZ_IDS, []);
 
     for (const id of startedIds) {
-      this.quizDataService.updateQuizStatus(id, QuizStatus.STARTED);
+      this.startedQuizIds.update(s => new Set(s).add(id));
     }
 
     return startedIds;
@@ -624,11 +666,13 @@ export class QuizSelectionComponent implements OnInit {
     } catch (err: unknown) { swallow('quiz-selection.component.ts', err); /* ignore storage failures */ }
   }
 
-  // Load quizzes once – replaces constructor side-effect
+  // S6o: load the metadata catalog once — replaces the previous bank-backed
+  // loadQuizzes(). metadataApi.load() is a single in-flight request shared by
+  // every caller (see its own doc comment), so this doesn't duplicate the
+  // fire-and-forget load() call already made in ngOnInit() for tile imagery.
   private loadQuizCatalog(): void {
-    this.quizDataService.loadQuizzes().subscribe((quizzes) => {
-      this.totalQuizCountSig.set(quizzes?.length ?? 0);
+    this.metadataApi.load().subscribe((entries) => {
+      this.totalQuizCountSig.set(entries?.length ?? 0);
     });
-
   }
 }

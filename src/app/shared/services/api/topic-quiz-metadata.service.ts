@@ -42,6 +42,7 @@ import { API_BASE_URL } from '../../tokens/api-base-url.token';
 interface QuizMetadataEntryDto {
   readonly quizId: string;
   readonly milestone?: string;
+  readonly summary?: string;
   readonly image?: string;
   readonly difficulty?: string | null;
   readonly facts?: readonly string[];
@@ -75,6 +76,12 @@ export class TopicQuizMetadataService {
 
   readonly milestoneByQuiz: Signal<ReadonlyMap<string, string>> =
     this._milestoneByQuiz.asReadonly();
+
+  /** quizId → tile summary/description, from the same response. */
+  private readonly _summaryByQuiz = signal<ReadonlyMap<string, string>>(new Map());
+
+  readonly summaryByQuiz: Signal<ReadonlyMap<string, string>> =
+    this._summaryByQuiz.asReadonly();
 
   /**
    * quizId → difficulty, from the same response. Set for EVERY entry (unlike
@@ -117,6 +124,7 @@ export class TopicQuizMetadataService {
           const facts = new Map<string, readonly string[]>();
           const images = new Map<string, string>();
           const milestones = new Map<string, string>();
+          const summaries = new Map<string, string>();
           const difficulties = new Map<string, string | null>();
           const questionCounts = new Map<string, number | null>();
           for (const entry of entries) {
@@ -133,6 +141,9 @@ export class TopicQuizMetadataService {
             if (typeof entry.milestone === 'string' && entry.milestone.trim().length > 0) {
               milestones.set(entry.quizId, entry.milestone.trim());
             }
+            if (typeof entry.summary === 'string' && entry.summary.trim().length > 0) {
+              summaries.set(entry.quizId, entry.summary.trim());
+            }
             difficulties.set(entry.quizId, entry.difficulty ?? null);
             questionCounts.set(
               entry.quizId,
@@ -144,6 +155,7 @@ export class TopicQuizMetadataService {
           this._factsByQuiz.set(facts);
           this._imageByQuiz.set(images);
           this._milestoneByQuiz.set(milestones);
+          this._summaryByQuiz.set(summaries);
           this._difficultyByQuiz.set(difficulties);
           this._questionCountByQuiz.set(questionCounts);
         }),
@@ -196,5 +208,11 @@ export class TopicQuizMetadataService {
   milestoneFor(quizId: string | null | undefined): string {
     if (!quizId) return '';
     return this._milestoneByQuiz().get(quizId) ?? quizId;
+  }
+
+  /** The tile summary/description for one quiz, or '' when not yet loaded. */
+  summaryFor(quizId: string | null | undefined): string {
+    if (!quizId) return '';
+    return this._summaryByQuiz().get(quizId) ?? '';
   }
 }

@@ -67,8 +67,11 @@ export class ProgressService {
     // rounded 0–100 percentages, so 100 is exactly a perfect attempt.
     const perfectScores = bestScores.filter((v) => v === 100).length;
     // Total questions across completed quizzes (best attempt each, counted once).
+    // Prefer the metadata-sourced questionCount (Quiz Selection's catalog
+    // projection carries no `questions` array); fall back to `.questions.length`
+    // for any caller still passing an answer-bearing Quiz.
     const questionsCompleted = completed.reduce(
-      (sum, quiz) => sum + (quiz.questions?.length ?? 0),
+      (sum, quiz) => sum + (quiz.questionCount ?? quiz.questions?.length ?? 0),
       0
     );
 

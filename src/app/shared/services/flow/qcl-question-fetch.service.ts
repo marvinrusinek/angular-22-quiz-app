@@ -454,9 +454,15 @@ export class QclQuestionFetchService {
       const questions = await this.quizService.fetchQuizQuestions(quizId);
       if (!questions || questions.length === 0) return null;
 
-      const quiz = await firstValueFrom(
-        this.quizDataService.getQuiz(quizId).pipe(take(1))
-      );
+      // S6o: same fix as loadQuestionFromRouteChange (S6n) — the Quiz metadata
+      // this call previously re-fetched via the client-bank-backed getQuiz()/
+      // quizzes$ is already in memory, set by whoever started the quiz
+      // (Introduction, Quiz Selection). getQuiz() never emits once nothing
+      // primes the full bank, so this used to hang forever on every quiz load
+      // (confirmed live: S6n's E2E suite exercises this exact path with an
+      // empty bank on every run and it never completed, yet nothing depended
+      // on its result — an orphaned, harmless-but-wasteful hung promise).
+      const quiz = this.quizService.getActiveQuiz();
       if (!quiz) return null;
 
       return { quiz, questions };

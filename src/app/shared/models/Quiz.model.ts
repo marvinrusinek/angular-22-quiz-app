@@ -12,4 +12,8 @@ export interface Quiz {
   questions?: QuizQuestion[];
   shuffleOptions?: boolean;
   status?: string;
+  // Metadata-only question count, for a catalog projection that has no
+  // `questions` array (e.g. Quiz Selection, built from TopicQuizMetadataService).
+  // Consumers that count questions should prefer this over `questions?.length`.
+  questionCount?: number;
 }

@@ -39,7 +39,6 @@ import {
 import { FinalResult, ScoreAnalysisItem, toDurableFinalResult } from '../../shared/models/Final-Result.model';
 import { QuizQuestion } from '../../shared/models/QuizQuestion.model';
 
-import { QuizDataService } from '../../shared/services/data/quizdata.service';
 import { QuizDotStatusService } from '../../shared/services/flow/quiz-dot-status.service';
 import { QuizService } from '../../shared/services/data/quiz.service';
 import { QuizStateService } from '../../shared/services/state/quizstate.service';
@@ -96,7 +95,6 @@ import { swallow } from '../../shared/utils/error-logging';
 export class ResultsComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
   private readonly dotStatusService = inject(QuizDotStatusService);
-  private readonly quizDataService = inject(QuizDataService);
   private readonly quizService = inject(QuizService);
   private readonly quizStateService = inject(QuizStateService);
   private readonly selectedOptionService = inject(SelectedOptionService);
@@ -445,8 +443,23 @@ export class ResultsComponent implements OnInit {
       this.quizService.setQuizId(id); // ensure service has correct ID for high scores
       this.quizService.setQuizStatus(QuizStatus.COMPLETED);
 
-      // Update the quiz object's status so QuizSelectionComponent can show the icon
-      this.quizDataService.updateQuizStatus(id, QuizStatus.COMPLETED);
+      // S6o: persist completion to sessionStorage — the authoritative status
+      // source Quiz Selection's catalog projection reads (consumeCompletedQuizIds
+      // via SK_COMPLETED_QUIZ_IDS). This replaces the previous
+      // QuizDataService.updateQuizStatus() call, which only mutated the
+      // in-memory, bank-loaded quizzesSig array (no persistence of its own) —
+      // that worked only while quizzesSig stayed alive as a root singleton
+      // across the Quiz → Results → Selection navigation, and was silently lost
+      // on a hard refresh before the user ever clicked "Select a different quiz"
+      // (selectQuiz(), the only other site that wrote this key). Mirrors the
+      // exact write selectQuiz()/return.component.ts already perform.
+      try {
+        const existing = readSessionJson<string[]>(SK_COMPLETED_QUIZ_IDS, []);
+        if (!existing.includes(id)) {
+          existing.push(id);
+          writeSessionJson(SK_COMPLETED_QUIZ_IDS, existing);
+        }
+      } catch (err: unknown) { swallow('results.component.ts#setCompletedQuiz', err); }
 
       // Reaching Results IS the proof that this attempt finished the last
       // question. Recording it here (not only on the way out of the quiz)

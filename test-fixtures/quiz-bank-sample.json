@@ -1,0 +1,209 @@
+{
+  "quizzes": [
+    {
+      "quizId": "typescript",
+      "milestone": "TypeScript",
+      "summary": "TypeScript makes it easier to read and debug JavaScript code.",
+      "image": "https://raw.githubusercontent.com/marvinrusinek/codelab-angular-10-quiz-app/quiz/codelab-master/apps/playground/src/assets/images/ts.png",
+      "difficulty": "beginner",
+      "facts": [
+        "TypeScript compiles down to plain JavaScript, so the types are erased at build time and the output runs anywhere JavaScript runs.",
+        "Type inference means TypeScript often knows a variable's type from its initial value, so you don't have to annotate everything.",
+        "Strict mode catches whole classes of bugs at compile time, such as using a value that might be null or undefined."
+      ],
+      "questions": [
+        {
+          "questionText": "Which of the following does TypeScript use to specify types?",
+          "options": [
+            {
+              "text": ":",
+              "correct": true
+            },
+            {
+              "text": ";"
+            },
+            {
+              "text": "!"
+            },
+            {
+              "text": "&"
+            }
+          ],
+          "explanation": "TS uses a colon (:) to separate the property name from the property type"
+        },
+        {
+          "questionText": "Which of the following is NOT a built-in TypeScript type?",
+          "options": [
+            {
+              "text": "number"
+            },
+            {
+              "text": "string"
+            },
+            {
+              "text": "boolean"
+            },
+            {
+              "text": "integer",
+              "correct": true
+            }
+          ],
+          "explanation": "TypeScript has no separate integer type — whole numbers are represented by number. string and boolean are also built-in primitive types, so integer is the odd one out."
+        },
+        {
+          "questionText": "How can we specify properties and methods for an object in TypeScript?",
+          "options": [
+            {
+              "text": "Use classes."
+            },
+            {
+              "text": "Use interfaces.",
+              "correct": true
+            },
+            {
+              "text": "Use enums."
+            },
+            {
+              "text": "Use async/await."
+            }
+          ],
+          "explanation": "interfaces are typically used to list the properties and methods for an object"
+        },
+        {
+          "questionText": "How else can Array<number> be written in TypeScript?",
+          "options": [
+            {
+              "text": "@number"
+            },
+            {
+              "text": "number[]",
+              "correct": true
+            },
+            {
+              "text": "number!"
+            },
+            {
+              "text": "number?"
+            }
+          ],
+          "explanation": "number[] is another way of writing Array<number> in TypeScript"
+        },
+        {
+          "questionText": "In which of these does a class take parameters?",
+          "options": [
+            {
+              "text": "constructor",
+              "correct": true
+            },
+            {
+              "text": "destructor"
+            },
+            {
+              "text": "import"
+            },
+            {
+              "text": "subscribe"
+            }
+          ],
+          "explanation": "a constructor is used by a class to take in parameters"
+        },
+        {
+          "questionText": "Which is NOT an access modifier?",
+          "options": [
+            {
+              "text": "private"
+            },
+            {
+              "text": "protected"
+            },
+            {
+              "text": "public"
+            },
+            {
+              "text": "async",
+              "correct": true
+            }
+          ],
+          "explanation": "async is not used as an access modifier type in TypeScript"
+        },
+        {
+          "questionText": "Which keyword allows us to share information between files in TypeScript?",
+          "options": [
+            {
+              "text": "import"
+            },
+            {
+              "text": "export",
+              "correct": true
+            },
+            {
+              "text": "async"
+            },
+            {
+              "text": "constructor"
+            }
+          ],
+          "explanation": "the export keyword allows for the information to be transmitted between files"
+        },
+        {
+          "questionText": "Which is an array method to generate a new array based on a condition?",
+          "options": [
+            {
+              "text": "filter",
+              "correct": true
+            },
+            {
+              "text": "map"
+            },
+            {
+              "text": "async"
+            },
+            {
+              "text": "enum"
+            }
+          ],
+          "explanation": "filter is a method used to conditionally create a new array"
+        },
+        {
+          "questionText": "How is a property accessible within a class?",
+          "options": [
+            {
+              "text": "Using this.propertyName",
+              "correct": true
+            },
+            {
+              "text": "Accessors"
+            },
+            {
+              "text": "Destructuring"
+            },
+            {
+              "text": "Arrow function"
+            }
+          ],
+          "explanation": "this.propertyName is the way to access a specific property within a class"
+        },
+        {
+          "questionText": "How do you declare a variable that can hold either a string or a number?",
+          "options": [
+            {
+              "text": "let value: string | number;",
+              "correct": true
+            },
+            {
+              "text": "let value: string & number;"
+            },
+            {
+              "text": "let value: string, number;"
+            },
+            {
+              "text": "let value: any[];"
+            }
+          ],
+          "explanation": "a union type, string | number, lets a value be one of several types — here a string or a number. The & is an intersection (requiring both at once, impossible for these primitives), the comma form is invalid, and any[] is an array of any rather than a string-or-number value."
+        }
+      ]
+    }
+  ],
+  "resources": []
+}

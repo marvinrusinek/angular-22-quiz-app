@@ -427,7 +427,13 @@ export class QuizService {
     this.quizId = result.resolvedQuizId;
     this.questions = result.questions;
     this.totalQuestions.set(result.totalQuestions);
-    this.quizData = this.dataLoader.quizData;
+    // S6p: dataLoader.quizData (the client-bank clone) is gone. this.quizData
+    // is actively, correctly maintained by the API-backed
+    // QuizSessionManagerService#updateQuizDataForSession (see
+    // applySessionQuestions), which upserts it with real session content
+    // every time questions load — this seed was always empty-content anyway
+    // (dataLoader.initializeData() never populated real questions from the
+    // bank; see its own note), so dropping it changes nothing observable.
     this.quizInitialState = this.dataLoader.quizInitialState;
 
     // Fetch this quiz's DECLARED question types alongside the local content.

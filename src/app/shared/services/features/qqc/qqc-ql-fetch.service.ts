@@ -5,7 +5,6 @@ import { take } from 'rxjs/operators';
 import { Option } from '../../../models/Option.model';
 import { QuizQuestion } from '../../../models/QuizQuestion.model';
 
-import { QuizDataService } from '../../data/quizdata.service';
 import { QuizService } from '../../data/quiz.service';
 
 import { delay } from '../../../utils/delay';
@@ -17,7 +16,6 @@ import { delay } from '../../../utils/delay';
 @Service()
 export class QqcQlFetchService {
   // ── injects ─────────────────────────────────────────────────────
-  private readonly quizDataService = inject(QuizDataService);
   private readonly quizService = inject(QuizService);
 
   // ── remaining variables ─────────────────────────────────────────
@@ -123,10 +121,15 @@ export class QqcQlFetchService {
     questionsArray: QuizQuestion[];
     quizId: string;
   }): { shouldRedirect: boolean; trueTotal: number } {
+    // S6p: the client-bank-backed getCachedQuizById(...)?.questions?.length
+    // third source was removed. serviceTotal (QuizService.totalQuestions, set
+    // by the API-backed applySessionQuestions/setActiveQuiz/setCurrentQuiz)
+    // and localTotal (the array actually driving this render) are both
+    // already API-sourced and authoritative; the bank read never won the max
+    // in practice and would silently degrade to 0 once the bank is removed.
     const serviceTotal = this.quizService.totalQuestions() || 0;
     const localTotal = params.questionsArray.length || 0;
-    const authoritativeCount = this.quizDataService.getCachedQuizById(params.quizId)?.questions?.length || 0;
-    const trueTotal = Math.max(serviceTotal, localTotal, authoritativeCount);
+    const trueTotal = Math.max(serviceTotal, localTotal);
 
     return {
       shouldRedirect: params.currentQuestionIndex >= trueTotal && trueTotal > 0,

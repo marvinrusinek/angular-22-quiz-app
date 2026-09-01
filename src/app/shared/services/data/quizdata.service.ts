@@ -1,6 +1,5 @@
 ﻿import { inject, Service, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, Observable, of, throwError } from 'rxjs';
 import {
   catchError,
@@ -9,11 +8,7 @@ import {
   map,
   switchMap,
   take,
-  tap,
 } from 'rxjs/operators';
-
-import { SK_COMPLETED_QUIZ_IDS, SK_STARTED_QUIZ_IDS } from '../../constants/session-keys';
-import { readSessionJson } from '../../utils/session-storage';
 
 import { QuestionType } from '../../models/question-type.enum';
 import { resolveIsMultiAnswer } from '../../utils/question-type-authority';
@@ -36,18 +31,13 @@ export class QuizDataService {
   // ── injects ─────────────────────────────────────────────────────
   private readonly quizService = inject(QuizService);
   private readonly quizShuffleService = inject(QuizShuffleService);
-  private readonly http = inject(HttpClient);
   private readonly topicQuizQuestions = inject(TopicQuizQuestionsService);
   private readonly topicQuizTypeRegistry = inject(TopicQuizTypeRegistry);
 
   // ── remaining variables ─────────────────────────────────────────
-  private quizUrl = 'assets/data/quiz.json'; // single source of truth: { quizzes, resources }
   question: QuizQuestion | null = null;
   questionType: string | null = null;
 
-  readonly quizzesSig = signal<Quiz[]>([]);
-  quizzes$ = toObservable(this.quizzesSig);
-  private quizzes: Quiz[] = [];
   private readonly baseQuizQuestionCache = new Map<string, QuizQuestion[]>();
   private readonly quizQuestionCache = new Map<string, QuizQuestion[]>();
 
@@ -66,117 +56,14 @@ export class QuizDataService {
     this.baseQuizQuestionCache.delete(quizId);
   }
 
-  getQuizzes(): Observable<Quiz[]> {
-    return this.quizzes$.pipe(
-      filter((quizzes) => quizzes.length > 0), // ensure data is loaded
-      take(1) // ensure it emits only once
-    );
-  }
-
-  loadQuizzes(): Observable<Quiz[]> {
-    return this.http.get<{ quizzes: Quiz[] }>(this.quizUrl).pipe(
-      map((res) => res?.quizzes ?? []),
-      tap((quizzes) => {
-        // Preserve existing statuses from previously loaded quizzes
-        const existingStatuses = new Map<string, string>();
-        for (const quiz of this.quizzesSig()) {
-          if (quiz.status) existingStatuses.set(quiz.quizId, quiz.status);
-        }
-        // Also restore quiz statuses from sessionStorage
-        const completedIds = readSessionJson<string[]>(SK_COMPLETED_QUIZ_IDS, []);
-        for (const id of completedIds) {
-          if (!existingStatuses.has(id)) existingStatuses.set(id, 'completed');
-        }
-        const startedIds = readSessionJson<string[]>(SK_STARTED_QUIZ_IDS, []);
-        for (const id of startedIds) {
-          if (!existingStatuses.has(id)) existingStatuses.set(id, 'started');
-        }
-
-        // Merge statuses into new data
-        const mergedQuizzes = Array.isArray(quizzes)
-          ? quizzes.map((q) => ({
-              ...q,
-              status: existingStatuses.get(q.quizId) || q.status
-            }))
-          : [];
-
-        this.quizzes = mergedQuizzes;
-        this.quizzesSig.set(mergedQuizzes);
-      }),
-      catchError(() => {
-        return throwError(() => new Error('Error fetching quiz data'));
-      })
-    );
-  }
-
-  // Ensure quiz metadata is available before performing operations that rely on it.
-  // If quizzes have already been loaded, returns the cached list; otherwise triggers a load.
-  ensureQuizzesLoaded(): Observable<Quiz[]> {
-    const cached = this.quizzesSig();
-    if (Array.isArray(cached) && cached.length > 0) return of(cached);
-
-    return this.loadQuizzes();
-  }
-
-  // Returns a synchronously cached quiz instance, if available.
-  // Falls back to `null` when the quizzes list has not been populated yet
-  // or when the requested quiz cannot be found.
-  getCachedQuizById(quizId: string): Quiz | null {
-    if (!quizId) return null;
-
-    // Prefer the signal cache (always up-to-date)
-    const quizzes = this.quizzesSig();
-
-    // Fallback to your original this.quizzes array if ever needed
-    const source = Array.isArray(quizzes) && quizzes.length > 0 ? quizzes : this.quizzes;
-
-    if (!Array.isArray(source) || source.length === 0) return null;
-
-    return source.find((q) => q.quizId === quizId) ?? null;
-  }
-
-  //  Update the status of a quiz (e.g., to 'completed') and persist it.
-  // This updates both the local array and the signal so subscribers see the change.
-  updateQuizStatus(quizId: string, status: string): void {
-    if (!quizId) return;
-
-    // Update in the local array
-    const quizIndex = this.quizzes.findIndex((q) => q.quizId === quizId);
-    if (quizIndex >= 0) {
-      this.quizzes[quizIndex] = { ...this.quizzes[quizIndex], status };
-    }
-
-    // Update in the signal
-    const currentQuizzes = this.quizzesSig();
-    const updatedQuizzes = currentQuizzes.map((q) => (q.quizId === quizId ? { ...q, status } : q));
-    this.quizzesSig.set(updatedQuizzes);
-  }
-
-  async loadQuizById(quizId: string): Promise<Quiz | null> {
-    try {
-      const quiz = await firstValueFrom(
-        this.getQuiz(quizId).pipe(
-          filter((q): q is Quiz => q !== null),
-          take(1)
-        )
-      );
-
-      if (!quiz.questions?.length) return null;
-
-      return quiz;
-    } catch {
-      return null;
-    }
-  }
-
-  isValidQuiz(quizId: string): Observable<boolean> {
-    return this.getQuizzes().pipe(
-      map((quizzes: Quiz[]) => quizzes.some((quiz) => quiz.quizId === quizId)),
-      catchError(() => {
-        return of(false); // return `false` to indicate an invalid quiz
-      })
-    );
-  }
+  // S6p: loadQuizzes()/ensureQuizzesLoaded()/getQuizzes()/getCachedQuizById()/
+  // updateQuizStatus()/loadQuizById()/isValidQuiz() — the entire client-bank
+  // catalog cluster (quizzesSig/quizzes$, the `assets/data/quiz.json` fetch,
+  // and everything reading that signal) — removed. Each had zero remaining
+  // production callers (Quiz Selection/Introduction/Results/QuizGuard/Header
+  // all migrated to TopicQuizMetadataService across S6h–S6o; quiz-route
+  // .service.ts's own S6g note documents the same for its last caller). See
+  // the Stage 14 S6p final report for the full per-consumer trace.
 
   getCurrentQuizId(): string | null {
     const currentQuiz = this.currentQuizSig();
@@ -191,47 +78,12 @@ export class QuizDataService {
     return this.selectedQuizSig();
   }
 
-  setSelectedQuizById(quizId: string): Observable<void> {
-    return this.getQuizzes().pipe(
-      map((quizzes: Quiz[]) => {
-        this.quizzes = quizzes;
-        const selectedQuiz = quizzes.find((quiz) => quiz.quizId === quizId);
-
-        if (!selectedQuiz) {
-          throw new Error(`Quiz with ID "${quizId}" not found.`);
-        }
-
-        this.setSelectedQuiz(selectedQuiz);
-      }),
-      catchError(() => {
-        return throwError(() => new Error('Error retrieving quizzes'));
-      })
-    );
-  }
-
   setCurrentQuiz(quiz: Quiz): void {
     this.currentQuizSig.set(quiz);
   }
 
   getCurrentQuizSnapshot(): Quiz | null {
     return this.currentQuizSig();
-  }
-
-  getQuiz(quizId: string): Observable<Quiz | null> {
-    return this.quizzes$.pipe(
-      filter((quizzes) => Array.isArray(quizzes) && quizzes.length > 0),
-      map((quizzes) => {
-        const quiz = quizzes.find((q) => q.quizId === quizId);
-        if (!quiz) {
-          throw new Error(`[QuizDataService] Quiz with ID ${quizId} not found.`);
-        }
-        return quiz;
-      }),
-      take(1),
-      catchError(() => {
-        return of(null);
-      })
-    );
   }
 
   updateContentAvailableState(isAvailable: boolean): void {
@@ -677,54 +529,13 @@ export class QuizDataService {
     }
   }
 
-  getOptions(quizId: string, questionIndex: number): Observable<Option[]> {
-    return this.getQuiz(quizId).pipe(
-      map((quiz) => {
-        const cachedQuestions = this.quizQuestionCache.get(quizId);
-        if (cachedQuestions) {
-          if (questionIndex < 0 || questionIndex >= cachedQuestions.length) {
-            return [];
-          }
-          return cachedQuestions[questionIndex].options ?? [];
-        }
-
-        // Only call extractOptions if quiz is valid
-        if (quiz) {
-          return this.extractOptions(quiz, questionIndex);
-        } else {
-          return [];
-        }
-      }),
-      distinctUntilChanged(),
-      catchError(() => {
-        return throwError(() => new Error('Failed to fetch question options.'));
-      })
-    );
-  }
-
-  private extractOptions(quiz: Quiz, questionIndex: number): Option[] {
-    if (!quiz?.questions || quiz.questions.length <= questionIndex) return [];
-
-    return quiz.questions[questionIndex].options || [];
-  }
-
-  getAllExplanationTextsForQuiz(quizId: string): Observable<string[]> {
-    return this.getQuiz(quizId).pipe(
-      filter((quiz): quiz is Quiz => quiz !== null),
-      switchMap((quiz: Quiz) => {
-        const sourceQuestions = this.quizQuestionCache.get(quizId) ?? quiz.questions ?? [];
-
-        const explanationTexts = sourceQuestions.map((q) =>
-          typeof q.explanation === 'string' ? q.explanation : ''
-        );
-
-        return of(explanationTexts);
-      }),
-      catchError(() => {
-        return of([]);
-      })
-    );
-  }
+  // S6p: getOptions()/extractOptions()/getAllExplanationTextsForQuiz() —
+  // removed. All three were client-bank-backed (via the now-removed getQuiz())
+  // and had zero production callers: getOptions() was called from nowhere;
+  // getAllExplanationTextsForQuiz()'s only caller,
+  // CqcOrchestratorService#runFetchQuestionsAndExplanationTexts, is itself
+  // called only by CodelabQuizContentComponent#fetchQuestionsAndExplanationTexts,
+  // which has zero callers of its own.
 
   async asyncOperationToSetQuestion(quizId: string, currentQuestionIndex: number): Promise<void> {
     try {
@@ -792,11 +603,14 @@ export class QuizDataService {
   ): void {
     if (!Array.isArray(questions) || questions.length === 0) return;
 
+    // S6p: the getCachedQuizById(quizId) fallback that used to sit here was
+    // removed along with the client-bank catalog it read from
+    // (quizzesSig) — it could only ever contribute a value when the bank
+    // was loaded, which no production path does anymore.
     const baseQuiz =
       sourceQuiz ??
       this.selectedQuizSig() ??
-      this.quizService.selectedQuiz ??
-      this.getCachedQuizById(quizId);
+      this.quizService.selectedQuiz;
 
     if (!baseQuiz) return;
 

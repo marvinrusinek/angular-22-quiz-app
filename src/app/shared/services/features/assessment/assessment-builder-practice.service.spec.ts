@@ -4,7 +4,9 @@ import { AssessmentBuilderService } from './assessment-builder.service';
 import { setQuizDataCache, getQuizData } from '../../../quiz-data-cache';
 import { ArrayUtils } from '../../../utils/array-utils';
 import { Quiz } from '../../../models/Quiz.model';
-import quizData from '../../../../../assets/data/quiz.json';
+// S6p (Angular Stage 14): src/assets/data/quiz.json was deleted — see
+// shared/testing/quiz-catalog-fixture.json (test-only, never bundled).
+import quizData from '../../../testing/quiz-catalog-fixture.json';
 
 const REAL_CATALOG = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as Quiz[];
 

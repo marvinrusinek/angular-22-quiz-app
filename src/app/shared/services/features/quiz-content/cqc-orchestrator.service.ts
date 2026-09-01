@@ -234,68 +234,41 @@ export class CqcOrchestratorService {
     return this.questionNav.runLoadQuestion(host, quizId, zeroBasedIndex);
   }
 
-  async runInitializeQuestionData(host: Host): Promise<void> {
-    try {
-      const params: ParamMap = await firstValueFrom(
-        host.activatedRoute.paramMap.pipe(take(1))
-      );
-
-      const data: [QuizQuestion[], string[]] = await firstValueFrom(
-        host.fetchQuestionsAndExplanationTexts(params).pipe(
-          takeUntilDestroyed(host.destroyRef)
-        )
-      );
-
-      const [questions, explanationTexts] = data;
-      if (!questions || questions.length === 0) return;  // no questions found
-
-      host.explanationTexts = explanationTexts;
-
-      host.quizService.questions = questions;
-      if (host.quizService.questions$ instanceof BehaviorSubject || 
-        host.quizService.questions$ instanceof Subject
-      ) {
-        (host.quizService.questions$ as unknown as Subject<QuizQuestion[]>).next(questions);
-      }
-
-      for (const [index] of questions.entries()) {
-        const explanation = host.explanationTexts[index] ?? 'No explanation available';
-        host.explanationTextService.setExplanationTextForQuestionIndex(index, explanation);
-      }
-
-      host.explanationTextService.explanationsInitialized = true;
-
-      host.initializeCurrentQuestionIndex();
-    } catch (err: unknown) {
-      swallow('cqc-orchestrator.service.ts initialization', err);
-    }
+  // S6p: this used to forkJoin() the API-safe getQuestionsForQuiz() with the
+  // client-bank-backed getAllExplanationTextsForQuiz() (now removed), then
+  // pre-seed EVERY question's real explanation text at component init via
+  // setExplanationTextForQuestionIndex() — unconditionally, before any answer
+  // was given. That is a premature-explanation-exposure path the established
+  // architecture (S6k: explanations are authorized per-question by /check,
+  // never in bulk) does not permit.
+  //
+  // It was already provably inert in production: getAllExplanationTextsForQuiz()
+  // depended on getQuiz(), whose quizzes$ filter never passes once nothing
+  // populates the client-bank catalog (proven true since S6o's Quiz Selection
+  // migration) — so this forkJoin has been hanging forever, silently, ever
+  // since. Nothing downstream ever observed it complete: initializeComponent()
+  // awaits this before calling initializeCombinedQuestionData(), which
+  // therefore never ran either, and the full Topic Quiz E2E suite (DI 4/4,
+  // navigation, multi-answer, shuffle, revisit, restart, cold-load) already
+  // passes with this exact behavior. Real question/heading/option content
+  // comes entirely through the separate, already-established API-backed
+  // pipeline (QuizNavigationService/QuizSetupRouteService, S6n) and
+  // QuizService#applySessionQuestions.
+  //
+  // Kept as an explicit, documented no-op rather than restoring the bank
+  // dependency to make it resolve "the old way". Resolving it at all
+  // (instead of hanging) does newly let initializeComponent()'s subsequent
+  // initializeCombinedQuestionData() call run, where the previous permanent
+  // hang always prevented that — verified safe via the full Topic Quiz E2E
+  // ladder (see the S6p final report) rather than assumed.
+  async runInitializeQuestionData(_host: Host): Promise<void> {
+    return;
   }
 
-  runFetchQuestionsAndExplanationTexts(host: Host, params: ParamMap): Observable<[QuizQuestion[], string[]]> {
-    host.setQuizId(params.get('quizId') ?? '');
-    const qid = host.quizId();
-    if (!qid) {
-      return of([[], []] as [QuizQuestion[], string[]]);  // no quizId provided
-    }
-
-    return forkJoin([
-      host.quizDataService.getQuestionsForQuiz(qid).pipe(
-        catchError((_error: Error) => {
-          return of([] as QuizQuestion[]);
-        })
-      ),
-      host.quizDataService.getAllExplanationTextsForQuiz(qid).pipe(
-        catchError((_error: Error) => {
-          return of([] as string[]);
-        })
-      )
-    ]).pipe(
-      map((results: any) => {
-        const [questions, explanationTexts] = results;
-        return [questions as QuizQuestion[], explanationTexts as string[]];
-      })
-    );
-  }
+  // S6p: runFetchQuestionsAndExplanationTexts() — removed. Its only caller,
+  // CodelabQuizContentComponent#fetchQuestionsAndExplanationTexts, had zero
+  // callers of its own (fully dead), and it depended on the now-removed
+  // client-bank-backed QuizDataService#getAllExplanationTextsForQuiz().
 
   runUpdateCorrectAnswersDisplay(host: Host, question: QuizQuestion | null): Observable<void> {
     if (!question) return of(void 0);

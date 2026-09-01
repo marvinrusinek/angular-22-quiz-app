@@ -8,7 +8,9 @@ import {
 } from './interview-preset.model';
 import { isValidDistribution } from '../utils/difficulty-quota';
 import { getQuizData } from '../quiz-data-cache';
-import quizData from '../../../assets/data/quiz.json';
+// S6p (Angular Stage 14): src/assets/data/quiz.json was deleted — see
+// shared/testing/quiz-catalog-fixture.json (test-only, never bundled).
+import quizData from '../testing/quiz-catalog-fixture.json';
 
 // The real catalog, read the same way the app reads it.
 const catalog = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as {

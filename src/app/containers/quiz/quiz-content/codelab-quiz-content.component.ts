@@ -369,9 +369,9 @@ export class CodelabQuizContentComponent implements OnInit {
     this.initializeCombinedQuestionData();
   }
 
-  fetchQuestionsAndExplanationTexts(params: ParamMap): Observable<[QuizQuestion[], string[]]> {
-    return this.orchestrator.runFetchQuestionsAndExplanationTexts(this, params);
-  }
+  // S6p: fetchQuestionsAndExplanationTexts() removed — zero callers anywhere,
+  // and it depended on the now-removed client-bank-backed
+  // CqcOrchestratorService#runFetchQuestionsAndExplanationTexts.
 
   initializeCurrentQuestionIndex(): void {
     const idx = this.currentQuestionIndexValue ?? 0;

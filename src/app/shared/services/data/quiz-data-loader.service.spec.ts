@@ -69,12 +69,10 @@ describe('QuizDataLoaderService — quizInitialState stays empty (S5a permanent 
     expect(service.quizInitialState).toEqual([]);
   });
 
-  it('does not affect quizData, which still legitimately reflects the quiz-data cache for catalog purposes', () => {
-    service.initializeData('seeded-quiz');
-
-    // quizInitialState (the answer-key snapshot) and quizData (catalog/content
-    // listing) are separate fields — this cutover only empties the former.
-    expect(service.quizData?.length).toBe(1);
-    expect(service.quizInitialState).toEqual([]);
-  });
+  // S6p: the `quizData` field this block used to also assert on (a bank-clone
+  // "catalog/content listing" kept deliberately separate from
+  // quizInitialState) has been removed entirely — a full inventory found zero
+  // production readers of it (initializeData() never used its content beyond
+  // .length, and its only two consumers, getCurrentQuiz()/findQuizByQuizId(),
+  // had zero callers anywhere). See Stage 14 S6p for the full trace.
 });

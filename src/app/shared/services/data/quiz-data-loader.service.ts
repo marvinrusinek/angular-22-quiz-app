@@ -15,7 +15,6 @@ import { SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID } from '../../cons
 import { QuizShuffleService } from '../flow/quiz-shuffle.service';
 
 import { TopicQuizQuestionsService } from '../api/topic-quiz-questions.service';
-import { getQuizData, getQuizResources } from '../../quiz-data-cache';
 import { questionsFromApiViews } from '../../utils/topic-quiz-content';
 import { isOptionCorrect } from '../../utils/is-option-correct';
 import { ArrayUtils } from '../../utils/array-utils';
@@ -32,12 +31,10 @@ export class QuizDataLoaderService {
   // ── remaining variables ─────────────────────────────────────────
   // S5a: no pristine client answer bank is loaded. Correctness comes from the
   // authorized verdict; content comes from `/questions`. This stays empty —
-  // it is not a cache to repopulate from `getQuizData()` or any other
-  // client-side source. See `getCanonicalQuestions`/`getPristineQuestion` for
-  // the API-derived, answer-key-free content sources this replaced.
+  // it is not a cache to repopulate from a client-side source. See
+  // `getCanonicalQuestions`/`getPristineQuestion` for the API-derived,
+  // answer-key-free content sources this replaced.
   quizInitialState: Quiz[] = [];
-  quizData: Quiz[] | null = structuredClone(getQuizData());
-  quizResources: QuizResource[] = [];
   resources: Resource[] = [];
 
   readonly currentQuizSig = signal<Quiz | null>(null);
@@ -46,7 +43,6 @@ export class QuizDataLoaderService {
   private canonicalQuestionsByQuiz = new Map<string, QuizQuestion[]>();
   private canonicalQuestionIndexByText = new Map<string, Map<string, number>>();
 
-  private quizUrl = 'assets/data/quiz.json';  // single source of truth: { quizzes, resources }
   private fetchPromise: Promise<QuizQuestion[]> | null = null;
 
   private readonly shuffleEnabledSig = signal<boolean>(
@@ -77,96 +73,31 @@ export class QuizDataLoaderService {
     catch { return null; }
   })();
 
+  // S6p: no client-bank read. Questions come exclusively from the
+  // authoritative /questions API response (see the removed "NO
+  // CONSTRUCTOR-TIME QUESTION SEED" note this method used to carry) —
+  // this already returned empty questions/totalQuestions and
+  // resolvedQuizId === quizId unconditionally, regardless of what a bank
+  // lookup found, so removing that lookup changes no observable behavior.
   initializeData(
     quizId: string
   ): { questions: QuizQuestion[]; totalQuestions: number; resolvedQuizId: string } {
-    const cachedQuizData = getQuizData();
-    if (!cachedQuizData || !Array.isArray(cachedQuizData)) {
-      this.quizData = [];
-    } else {
-      // Deep-clone so gameplay mutations never propagate back to the cache
-      this.quizData = structuredClone(cachedQuizData);
-    }
-
-    let questions: QuizQuestion[] = [];
-    let totalQuestions = 0;
-    let resolvedQuizId = quizId;
-
-    if (this.quizData.length > 0) {
-      // S5a: `quizInitialState` is no longer repopulated here. It was the
-      // pristine answer-key snapshot; correctness now comes exclusively from
-      // the authorized verdict, so there is nothing for this call to refresh.
-      const selectedQuiz = quizId
-        ? this.quizData.find((quiz) => quiz.quizId === quizId) : undefined;
-
-      if (!selectedQuiz && quizId) {
-        console.warn(`[QuizDataLoader] Quiz id=${quizId} not found`);
-      }
-
-      resolvedQuizId = selectedQuiz?.quizId ?? quizId;
-
-      // ── NO CONSTRUCTOR-TIME QUESTION SEED ─────────────────────────
-      //
-      // This used to fall back to `this.quizData[0]` and hand back ITS
-      // questions. QuizService calls initializeData() from its CONSTRUCTOR,
-      // where `quizId` is still empty — so the fallback seeded every session
-      // with the FIRST quiz in the bank (TypeScript), regardless of the route.
-      //
-      // That was invisible while content loaded synchronously: the real quiz's
-      // questions overwrote the stale set before anything read it. Once content
-      // came from `/questions` the stale set survived long enough to be used,
-      // and `activateQuestionTiming` posted TypeScript's Q1 to
-      // `/quizzes/change-detection/questions/start`. The server correctly
-      // rejected it (400), so no question receipt was issued, the timer never
-      // started, expiry never fired, and the timeout FET never appeared.
-      //
-      // Questions now come from ONE place — the authoritative `/questions`
-      // response — and an unidentified quiz simply has none yet.
-      questions = [];
-      totalQuestions = 0;
-    } else {
-      questions = [];
-    }
-
-    const cachedResources = getQuizResources();
-    this.quizResources = Array.isArray(cachedResources) ? cachedResources : [];
-
-    if (questions.length > 0) {
-      const firstQuestion = questions[0];
-      if (!this.isValidQuestionStructure(firstQuestion)) {
-        console.warn('[QuizDataLoader] Invalid question structure detected', firstQuestion);
-      }
-    }
-
-    return { questions, totalQuestions, resolvedQuizId };
+    return { questions: [], totalQuestions: 0, resolvedQuizId: quizId };
   }
 
-  loadResourcesForQuiz(quizId: string): void {
-    const quizResource = this.quizResources.find(r => r.quizId === quizId);
-    this.resources = quizResource?.resources ?? [];
+  // S6p: resources now come from the API-backed TopicQuizResourcesService
+  // (statistics.component.ts#resourcesApi), not this client-bank-backed
+  // lookup — quizResources/resources here are unread by any production
+  // consumer. Left as a no-op rather than deleted outright so callers that
+  // still invoke it (quiz.service.ts#setActiveQuiz) don't need a matching
+  // edit in this pass; see the Stage 14 final-report inventory for full
+  // disposition.
+  loadResourcesForQuiz(_quizId: string): void {
+    this.resources = [];
   }
 
   setCurrentQuizSubject(quiz: Quiz | null): void {
     this.currentQuizSig.set(quiz);
-  }
-
-  getCurrentQuiz(quizId: string, activeQuiz: Quiz | null): Observable<Quiz | null> {
-    if (activeQuiz) return of(activeQuiz);
-
-    const quiz = Array.isArray(this.quizData)
-      ? this.quizData.find((q) => q.quizId === quizId) : null;
-    if (!quiz) {
-      console.warn(`[QuizDataLoader] Quiz id=${quizId} not found in quizData`);
-    }
-
-    return of(quiz ?? null);
-  }
-
-  findQuizByQuizId(quizId: string): Observable<Quiz | undefined> {
-    const foundQuiz = this.quizData?.find((quiz) => quiz.quizId === quizId) ?? null;
-    if (foundQuiz && this.isQuiz(foundQuiz)) return of(foundQuiz as Quiz);
-
-    return of(undefined);
   }
 
   async ensureQuizIdExists(quizId: string): Promise<{ exists: boolean; resolvedId: string }> {
@@ -545,7 +476,4 @@ export class QuizDataLoaderService {
     );
   }
 
-  private isQuiz(item: any): item is Quiz {
-    return typeof item === 'object' && 'quizId' in item;
-  }
 }

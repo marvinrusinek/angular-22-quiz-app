@@ -3,24 +3,29 @@ import { readFileSync } from 'fs';
 import { validateQuizData } from './quiz-data-validation';
 
 /**
- * Coverage for the bootstrap-time quiz data guard.
+ * Coverage for the (now unreachable in production — see below) quiz data
+ * guard.
  *
  * The most important test here is the FIRST one: the validator must be a pure
- * no-op on the real shipped dataset. If it ever drops or rewrites live content
- * that is a user-visible regression, not a security win — so the real file is
+ * no-op on a well-formed dataset. If it ever drops or rewrites live content
+ * that is a user-visible regression, not a security win — so the fixture is
  * asserted to survive byte-for-byte, by object identity.
  *
- * Follows the house conventions of quiz-data-integrity.spec.ts: read the real
- * JSON from disk with a relative path, declare loose local types for malformed
- * fixtures, and accumulate failures into a string[] so every violation is
- * reported at once rather than dying on the first.
+ * S6p (Angular Stage 14): src/assets/data/quiz.json — the file this block
+ * used to read from disk — is deleted; the client no longer fetches, caches,
+ * or bundles any answer-bearing bank, and main.ts no longer calls
+ * validateQuizData() at all (there is nothing left to validate at bootstrap).
+ * This describe block now reads the explicit, test-only fixture at
+ * shared/testing/quiz-catalog-fixture.json (identical real content, sampled
+ * from the authoritative backend copy) instead, preserving the same coverage
+ * of validateQuizData()'s behavior against realistic, well-formed data.
  */
 describe('validateQuizData', () => {
-  describe('against the real assets/data/quiz.json', () => {
+  describe('against a realistic well-formed dataset', () => {
     let raw: any;
 
     beforeAll(() => {
-      const text = readFileSync('src/assets/data/quiz.json', 'utf8');
+      const text = readFileSync('src/app/shared/testing/quiz-catalog-fixture.json', 'utf8');
       expect(() => JSON.parse(text)).not.toThrow();
       raw = JSON.parse(text);
     });

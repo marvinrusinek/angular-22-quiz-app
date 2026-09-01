@@ -4,9 +4,16 @@ import * as path from 'path';
 
 /** Shared helpers for the e2e specs: quiz data lookup + common selectors. */
 
-// Single source of truth: assets/data/quiz.json holds { quizzes, resources }.
+// S6p (Angular Stage 14): src/assets/data/quiz.json — the Angular client
+// asset this used to read — is deleted; the app no longer fetches, caches,
+// or bundles any answer-bearing bank. These E2E specs run against the real
+// backend (see playwright.config.ts's webServer), whose throwaway database
+// is seeded from backend/data/quiz.json on every run (see the "[import]
+// wrote N quizzes..." webServer startup log) — that file is the actual
+// ground truth for what the running app will serve, and is not deleted by
+// Stage 14 (backend seed data is a separate concern from the client asset).
 export const quizData = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), 'src/assets/data/quiz.json'), 'utf8')
+  fs.readFileSync(path.join(process.cwd(), 'backend/data/quiz.json'), 'utf8')
 ).quizzes;
 
 export const tsQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'typescript');

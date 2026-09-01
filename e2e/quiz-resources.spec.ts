@@ -4,13 +4,16 @@ import { HEADING, NEXT_BTN, RESULTS_BTN, correctIndicesForHeading, diQuiz } from
 /**
  * The Results-page "Brush up your knowledge" panel, end to end.
  *
- * These links used to come from the `resources` block of
- * `assets/data/quiz.json`. They now come from
- * `GET /api/quizzes/:quizId/resources`, served from PostgreSQL — which is what
- * lets that asset be deleted later.
+ * These links used to come from the `resources` block of the Angular client
+ * asset `assets/data/quiz.json`. They now come from
+ * `GET /api/quizzes/:quizId/resources`, served from PostgreSQL — which is
+ * what let that asset actually be deleted (Angular Stage 14, S6p).
  *
  * Run against the e2e database, which is seeded by the SAME import script the
- * developer database uses, so the links here are the real ones.
+ * developer database uses from backend/data/quiz.json — the actual ground
+ * truth for what the running app serves — so the links here are the real
+ * ones (not deleted; backend seed data is a separate concern from the
+ * client asset).
  *
  * `dependency-injection` is used because it is one of the eight quizzes that
  * actually has resources and it already has helpers in this suite.
@@ -21,7 +24,7 @@ const QUIZ = 'dependency-injection';
 /** Resources the seeded bank holds for this quiz, in source order. */
 const EXPECTED: readonly { title: string; url: string }[] =
   (JSON.parse(
-    require('node:fs').readFileSync('src/assets/data/quiz.json', 'utf8')
+    require('node:fs').readFileSync('backend/data/quiz.json', 'utf8')
   ).resources ?? [])
     .find((entry: { quizId: string }) => entry.quizId === QUIZ)
     ?.resources ?? [];
@@ -62,11 +65,13 @@ test('the Results resources panel is served by the API, not the local asset', as
 
   // From here on, watch the RESOURCES window specifically.
   //
-  // Counting local-asset fetches for the whole run would prove nothing about
-  // this panel: the app still fetches `assets/data/quiz.json` many times per
-  // run (three separate loaders, re-entered on navigation — S4 collapses them).
-  // What S3 has to prove is narrower and is the thing that would break on
-  // deletion: rendering THIS panel reads the API and does not read the asset.
+  // S6p: the app no longer fetches `assets/data/quiz.json` at ALL — the
+  // bootstrap fetch was removed and the asset itself deleted — so
+  // localAssetCalls staying empty for the whole run is no longer even a
+  // narrow claim about this one panel. The reset below is kept anyway so
+  // this assertion still reads as "rendering THIS panel reads the API and
+  // does not read the (now nonexistent) asset" on its own, without relying
+  // on a fact about the rest of the run.
   resourceCalls.length = 0;
   localAssetCalls.length = 0;
 

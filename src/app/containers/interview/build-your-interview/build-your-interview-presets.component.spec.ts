@@ -15,7 +15,13 @@ import { QuizStartSpinnerService } from '../../../shared/services/ui/quiz-start-
 import { setQuizDataCache } from '../../../shared/quiz-data-cache';
 import { Quiz } from '../../../shared/models/Quiz.model';
 import { findInterviewPreset } from '../../../shared/models/interview-preset.model';
-import quizData from '../../../../assets/data/quiz.json';
+// S6p (Angular Stage 14): src/assets/data/quiz.json was deleted — the
+// production client no longer bundles/fetches any answer-bearing bank. This
+// explicit, test-only fixture (identical content, sampled from the
+// authoritative backend copy) replaces it; it lives under shared/testing/,
+// is imported only from specs, and is never reachable from main.ts's build
+// graph, so it does not get bundled into the production artifact.
+import quizData from '../../../shared/testing/quiz-catalog-fixture.json';
 
 const REAL_CATALOG = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as Quiz[];
 

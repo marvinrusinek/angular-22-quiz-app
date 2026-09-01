@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -10,7 +9,14 @@ import { makeOptionId, makeQuestionId } from '../src/quiz/quiz.ids';
 const BACKEND_ROOT = resolve(__dirname, '..');
 const REPO_ROOT = resolve(BACKEND_ROOT, '..');
 const BACKEND_DATA = resolve(BACKEND_ROOT, 'data/quiz.json');
-const ANGULAR_DATA = resolve(REPO_ROOT, 'src/assets/data/quiz.json');
+// S6p (Angular Stage 14): src/assets/data/quiz.json — the transitional
+// Angular client asset this constant used to point at — is deleted; the
+// client no longer fetches, caches, or bundles any answer-bearing bank. An
+// explicit, backend-repo test fixture (one real quiz, sampled from the
+// authoritative backend copy) replaces it for the "outside root" tests below,
+// which test the allowOutsideRoot escape hatch itself and never depended on
+// this being specifically the Angular asset.
+const OUTSIDE_ROOT_FIXTURE = resolve(REPO_ROOT, 'test-fixtures/quiz-bank-sample.json');
 
 function realRepo() {
   return createQuizRepository({ dataPath: './data/quiz.json' });
@@ -43,29 +49,16 @@ describe('loading the real private bank', () => {
   });
 });
 
-describe('the backend copy is the authority; the Angular asset is transitional', () => {
+describe('the backend copy is the authority', () => {
   /**
-   * These two files USED to be asserted byte-identical.
-   *
-   * That assumption belonged to the start of the migration, when the asset was
-   * the live source and the backend copy merely shadowed it: any divergence
-   * meant the API and the app would disagree about the same quiz. It stopped
-   * being true once the API became authoritative. Content and correctness now
-   * come from PostgreSQL (seeded from the BACKEND copy) — `/questions`,
-   * `/check`, `/quizzes`, `/resources` — while the Angular asset survives only
-   * for the shrinking set of things not yet migrated.
-   *
-   * The two have in fact diverged: the backend copy is larger and was updated
-   * more recently. Under the old assertion that reads as a failure. It is not
-   * one — it is the migration working. Re-synchronising the files would be
-   * actively wrong, because it would re-couple an authoritative source to a
-   * transitional one that is scheduled for deletion.
-   *
-   * What still matters is asserted instead: the backend copy must be a valid,
-   * loadable bank, and it must be a SUPERSET of what the app can still show, so
-   * nothing the asset offers is missing from the authority. The asset is
-   * allowed to be stale; it is not allowed to contain quizzes the API cannot
-   * serve.
+   * This block used to also compare the backend copy against the Angular
+   * client asset (src/assets/data/quiz.json) — byte-identity at first, then a
+   * looser "the asset may be stale but must not be missing from the
+   * authority" check once the API became authoritative. Angular Stage 14
+   * (S6p) deleted that asset entirely: the client no longer fetches, caches,
+   * bundles, or depends on any answer-bearing bank, so there is nothing left
+   * to compare against. What remains is what always mattered on the backend
+   * side alone: the backend copy itself must be a valid, loadable bank.
    */
   const parse = (path: string) => JSON.parse(readFileSync(path, 'utf8')) as {
     quizzes?: { quizId?: string }[];
@@ -75,26 +68,6 @@ describe('the backend copy is the authority; the Angular asset is transitional',
     const backend = parse(BACKEND_DATA);
     expect(Array.isArray(backend.quizzes)).toBe(true);
     expect(backend.quizzes!.length).toBeGreaterThan(0);
-  });
-
-  it('every quiz the Angular asset still carries EXISTS in the authoritative copy', () => {
-    const backendIds = new Set((parse(BACKEND_DATA).quizzes ?? []).map((q) => q.quizId));
-    const angularIds = (parse(ANGULAR_DATA).quizzes ?? []).map((q) => q.quizId);
-
-    const missing = angularIds.filter((id) => !backendIds.has(id));
-    expect(missing).toEqual([]);
-  });
-
-  it('the asset is ALLOWED to be stale — divergence is not a failure', () => {
-    // Deliberately asserts nothing about equality. Pinned as documentation so a
-    // future reader does not "fix" the drift by re-copying the file.
-    const backend = readFileSync(BACKEND_DATA);
-    const angular = readFileSync(ANGULAR_DATA);
-    const sha = (buf: Buffer) => createHash('sha256').update(buf).digest('hex');
-
-    // Both must be readable and non-empty; whether they match is not a contract.
-    expect(sha(backend)).toMatch(/^[0-9a-f]{64}$/);
-    expect(sha(angular)).toMatch(/^[0-9a-f]{64}$/);
   });
 });
 
@@ -135,10 +108,10 @@ describe('file-path safety', () => {
 
   it('permits an explicit out-of-root fixture only when opted in (tests)', () => {
     const repo = createQuizRepository({
-      dataPath: ANGULAR_DATA,
+      dataPath: OUTSIDE_ROOT_FIXTURE,
       allowOutsideRoot: true
     });
-    expect(repo.stats.questionCount).toBe(185);
+    expect(repo.stats.questionCount).toBe(10);
   });
 });
 

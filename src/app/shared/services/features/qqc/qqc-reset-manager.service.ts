@@ -11,6 +11,7 @@ import { swallow } from '../../../utils/error-logging';
 
 import { ExplanationTextService } from '../explanation/explanation-text.service';
 import { NextButtonStateService } from '../../state/next-button-state.service';
+import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
 import { QuizService } from '../../data/quiz.service';
 import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
@@ -45,6 +46,7 @@ export class QqcResetManagerService {
   // ── injects ─────────────────────────────────────────────────────
   private readonly explanationTextService = inject(ExplanationTextService);
   private readonly nextButtonStateService = inject(NextButtonStateService);
+  private readonly dotStatusService = inject(QuizDotStatusService);
   private readonly quizService = inject(QuizService);
   private readonly quizStateService = inject(QuizStateService);
   private readonly selectedOptionService = inject(SelectedOptionService);
@@ -165,6 +167,15 @@ export class QqcResetManagerService {
     this.quizStateService.setDisplayState({ mode: 'question', answered: false });
     this.quizStateService.setAnswered(false);
     this.quizStateService.setAnswerSelected(false);
+    // A question that already timed out (but was never genuinely selected) is
+    // NOT a fresh, never-visited question — it durably records
+    // `timedOutFetForced` the moment it first expires. Pushing the "start the
+    // quiz" / "please click an option" baseline here overwrote the correct
+    // nav-derived "Please select an option to continue..." message with a
+    // first-visit framing on every revisit (Previous, or returning to the tab).
+    // Let selectionMessageSig's own nav-derived computation own the message for
+    // an already-timed-out question instead.
+    if (this.dotStatusService.timedOutFetForced.has(i0)) return;
     // Reset the selection message so the stale "Next button" / "Show Results"
     // message from a prior answered question doesn't persist on an unanswered one.
     const msg = i0 === 0

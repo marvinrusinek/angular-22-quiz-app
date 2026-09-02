@@ -158,25 +158,26 @@ describe('the formatter does not store absence as content', () => {
   });
 });
 
-describe('a timed-out question renders the AUTHORIZED explanation, not a placeholder', () => {
-  it('shows only the timeout notice before the reveal arrives', () => {
+describe('a timed-out question renders the AUTHORIZED explanation through the ordinary FET path — no expiry-specific wrapper', () => {
+  it('shows the question, not any notice, before the reveal arrives', () => {
     // Nothing stored, nothing authorized: the honest state for "not yet".
     const html = headingFor({ verdictPhase: 'idle' });
 
     expect(html).not.toContain('No explanation available');
     expect(html).not.toContain('Correct answer');
+    expect(html).not.toContain('Time&#39;s up');
   });
 
-  it('shows the authorized explanation and answer once the reveal lands', () => {
+  it('shows the authorized explanation ALONE once the reveal lands — identical to a normal FET', () => {
     const html = headingFor({
       verdictPhase: 'expired',
       verdictExplanation: AUTHORIZED,
       correctOptionTexts: ['The Router']
     });
 
-    expect(html).toContain('Time&#39;s up.');
-    expect(html).toContain('Correct answer: The Router');
-    expect(html).toContain(AUTHORIZED);
+    expect(html).toBe(AUTHORIZED);
+    expect(html).not.toContain('Time&#39;s up');
+    expect(html).not.toContain('Correct answer');
     expect(html).not.toContain('No explanation available');
   });
 
@@ -209,18 +210,18 @@ describe('a timed-out question renders the AUTHORIZED explanation, not a placeho
     expect(html).toContain(real);
   });
 
-  it('NEGATIVE CASE: reveal arrives carrying no explanation at all', () => {
-    // The contract completed and there is genuinely nothing to say. The notice
-    // and the authorized answer still render; nothing is fabricated to fill the
-    // gap, and the heading is still coherent.
+  it('NEGATIVE CASE: reveal arrives carrying no explanation at all falls back to the question', () => {
+    // The contract completed and there is genuinely nothing to say. With no
+    // expiry-specific wrapper to hold a bare notice, this is the same "FET due
+    // but no text yet" case as any other reveal — the question shows, nothing
+    // is fabricated to fill the gap.
     const html = headingFor({
       verdictPhase: 'expired',
       verdictExplanation: '',
       correctOptionTexts: ['The Router']
     });
 
-    expect(html).toContain('Time&#39;s up.');
-    expect(html).toContain('Correct answer: The Router');
+    expect(html).toBe(QUESTION);
     expect(html).not.toContain('undefined');
     expect(html).not.toContain('null');
   });

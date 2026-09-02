@@ -1,7 +1,6 @@
 import {
   deriveHeadingHtml,
   shouldShowFet,
-  withTimeoutContext,
   HeadingInputs
 } from './heading-model';
 
@@ -147,14 +146,23 @@ describe('heading-model: deriveHeadingHtml', () => {
     expect(deriveHeadingHtml(i)).toBe(i.questionHtml);
   });
 
-  // SUPERSEDED CONTRACT. This asserted that a timeout with no FET text fell
-  // back to the question. It now states the timeout instead: against a deployed
-  // backend the authorized reveal arrives a round trip AFTER the deadline, so
-  // "no text yet" is the normal first frame of every timeout — and showing the
-  // question there tells the user nothing happened when it did.
-  it('states the timeout even when no explanation text exists yet', () => {
+  // A genuine timeout with no explanation text YET (the deadline reveal is a
+  // round trip behind the deadline itself) falls back to the question, same
+  // as any other FET-due-but-textless case — there is no expiry-specific
+  // wrapper to state the timeout instead.
+  it('falls back to the question when a timeout has no explanation text yet', () => {
     const i = inputs({ isTimedOut: true, fetHtml: '   ' });
-    expect(deriveHeadingHtml(i)).toContain('Time&#39;s up.');
+    expect(deriveHeadingHtml(i)).toBe(i.questionHtml);
+  });
+
+  it('a genuine timeout with explanation text renders through the ordinary FET path — no special wrapper', () => {
+    const FET = 'Option 1 is correct because change detection keeps the view in sync.';
+    const html = deriveHeadingHtml(inputs({ isTimedOut: true, fetHtml: FET }));
+    expect(html).toBe(FET);
+    expect(html).not.toContain('Time&#39;s up');
+    expect(html).not.toContain('timeout-notice');
+    expect(html).not.toContain('timeout-answer');
+    expect(html).not.toContain('timeout-explanation');
   });
 
   it('still falls back to the question when the FET is due for a NON-timeout reason', () => {
@@ -170,127 +178,111 @@ describe('heading-model: deriveHeadingHtml', () => {
 });
 
 /**
- * A TIMEOUT SAYS WHY THE EXPLANATION IS THERE.
+ * NO EXPIRY-SPECIFIC PRESENTATION.
  *
- * ── The report this pins ──────────────────────────────────────────
- *
- * A quiz was left minimised for several minutes. The question deadline passed
- * while the window was hidden, and on returning the user found explanation text
- * where their question had been — reading as though the app had spontaneously
- * given away the answer.
- *
- * The reveal itself was correct: the deadline genuinely expired, and a timed-out
- * question is entitled to show its explanation. What was missing was any
- * statement of WHY, which is what made it look like a defect.
- *
- * ── Provenance, not just authorization ────────────────────────────
- *
- * These also pin where the named answer may come from. `fetHtml` is a fallback
- * chain whose first entry is the ordinary formatted explanation, so "the FET"
- * and "the explanation" are the same text in this codebase. The correct ANSWER
- * is different: it may only be named from the deadline reveal the server
- * authorized, never reconstructed locally.
+ * A prior iteration wrapped a genuine timeout in a "Time's up. / Correct
+ * answer(s): ... / Explanation: ..." block. That block has been removed
+ * entirely: a genuine timer expiry now enters the exact same rendering path
+ * as any other earned reveal — `shouldShowFet` still decides a timeout earns
+ * one, but `deriveHeadingHtml` no longer branches on `isTimedOut` when
+ * building the CONTENT, only when deciding whether to show it at all.
  */
-describe('heading-model: the timeout notice', () => {
+describe('heading-model: genuine timeout uses the ordinary FET presentation, not a special one', () => {
   const FET = 'Option 1 is correct because TS uses structural typing.';
 
-  it('emits three SEPARATE parts, each in its own element', () => {
-    const html = deriveHeadingHtml(inputs({
-      isTimedOut: true,
-      fetHtml: FET,
-      timeoutCorrectAnswers: ['Structural typing']
-    }));
-
-    // Structure, not just combined text: rendered inline these read as one
-    // run-on sentence, which is the impression the notice exists to dispel.
-    expect(html).toContain(`<span class="timeout-notice">Time&#39;s up.</span>`);
-    expect(html).toContain(`<span class="timeout-answer">Correct answer: Structural typing</span>`);
-    expect(html).toContain(`<span class="timeout-explanation">`);
-    expect(html).toContain(`<span class="timeout-label">Explanation:</span>`);
-    expect(html).toContain(FET);
+  it('a timeout with explanation text renders IDENTICALLY to a normal answered reveal', () => {
+    const timedOutHtml = deriveHeadingHtml(inputs({ isTimedOut: true, fetHtml: FET }));
+    const answeredHtml = deriveHeadingHtml(inputs({ hasInteracted: true, isSingleAnswered: true, fetHtml: FET }));
+    expect(timedOutHtml).toBe(FET);
+    expect(timedOutHtml).toBe(answeredHtml);
   });
 
-  it('labels the explanation so it cannot run into the answer', () => {
-    const html = deriveHeadingHtml(inputs({
-      isTimedOut: true,
-      fetHtml: FET,
-      timeoutCorrectAnswers: ['Structural typing']
-    }));
-
-    // The answer element must CLOSE before the explanation element opens.
-    const answerEnd = html.indexOf('</span>', html.indexOf('timeout-answer'));
-    const explStart = html.indexOf('timeout-explanation');
-    expect(answerEnd).toBeGreaterThan(-1);
-    expect(explStart).toBeGreaterThan(answerEnd);
-
-    // …and the explanation is introduced, not merely appended.
-    expect(html).toContain('<span class="timeout-label">Explanation:</span> ');
-  });
-
-  it('pluralises when the deadline reveal names several answers', () => {
-    const html = deriveHeadingHtml(inputs({
-      isTimedOut: true,
-      fetHtml: FET,
-      timeoutCorrectAnswers: ['map', 'filter']
-    }));
-
-    expect(html).toContain('Correct answers: map, filter');
-  });
-
-  it('omits the answer ELEMENT entirely when no reveal is authorized', () => {
-    // A question can time out before the deadline reveal arrives. Naming
-    // nothing is right; inventing an answer would be a fabricated disclosure.
-    const html = deriveHeadingHtml(inputs({
-      isTimedOut: true,
-      fetHtml: FET,
-      timeoutCorrectAnswers: []
-    }));
-
-    expect(html).toContain(`<span class="timeout-notice">`);
-    expect(html).not.toContain('timeout-answer');
-    expect(html).toContain(`<span class="timeout-explanation">`);
-    expect(html).toContain(FET);
-  });
-
-  it('adds NO notice when the question was answered rather than timed out', () => {
-    // The user chose to see this explanation by answering. Only a timeout needs
-    // explaining, so the ordinary FET render must be untouched.
-    const html = deriveHeadingHtml(inputs({
-      hasInteracted: true,
-      isSingleAnswered: true,
-      fetHtml: FET
-    }));
-
-    expect(html).toBe(FET);
+  it('contains none of the removed expiry-presentation markers', () => {
+    const html = deriveHeadingHtml(inputs({ isTimedOut: true, fetHtml: FET }));
     expect(html).not.toContain('Time&#39;s up');
+    expect(html).not.toContain('timeout-notice');
+    expect(html).not.toContain('timeout-answer');
+    expect(html).not.toContain('timeout-explanation');
+    expect(html).not.toContain('timeout-label');
+    expect(html).not.toContain('Correct answer');
   });
 
-  it('shows the QUESTION, not a notice, when nothing may be revealed yet', () => {
-    // Unresolved and untouched: no explanation may appear at all.
+  it('shows the QUESTION, not any notice, when nothing may be revealed yet', () => {
     const html = deriveHeadingHtml(inputs({ hasInteracted: true, fetHtml: FET }));
     expect(html).toBe(base.questionHtml);
-    expect(html).not.toContain('Time&#39;s up');
+  });
+});
+
+/**
+ * REFRESH AFTER FET REVEAL MUST NOT LOSE THE FET — BUT ONLY WHEN IT WAS
+ * ACTUALLY EARNED.
+ *
+ * A page reload zeroes every LIVE signal (`isTimedOut`, `hasInteracted`,
+ * `interactedThisVisit`) — none of them survive a reload by design. Before
+ * this fix, `shouldShowFet` only ever earned a no-interaction reveal through
+ * `isTimedOut`, so a reload landed on the question text even though the
+ * verdict had already been correctly rehydrated from
+ * `earned-verdict-storage.ts`. `verdictEarnedReveal` carries that durable
+ * fact through the reload; `isNavigatingToPrevious` still gates it so a
+ * genuine in-session revisit is unaffected.
+ *
+ * These tests exercise `shouldShowFet` directly with `verdictEarnedReveal`
+ * already computed — they pin the CONTRACT (a true value always wins, ahead
+ * of `hasInteracted`, behind the revisit guard). The COMPUTATION of the value
+ * itself — correctly false for a resolved-but-wrong pick or an incomplete
+ * multi-answer selection, true only once earned — is a separate concern and
+ * is pinned at the `heading-inputs.ts` level in
+ * `heading-inputs-fet-eligibility.spec.ts`, which is where the "wrong answer
+ * revealed the FET" regression actually lived.
+ */
+describe('heading-model: verdictEarnedReveal restores the FET across a reload', () => {
+  it('cold reload, no live interaction, but a rehydrated earned verdict → FET restores', () => {
+    expect(shouldShowFet(inputs({ verdictEarnedReveal: true }))).toBe(true);
   });
 
-  it('states the timeout before any explanation is authorized', () => {
-    // Revised from "show the question when there is no text". The deadline
-    // passing IS the news, and against a deployed backend the reveal lands a
-    // round trip later — so this is what a live timeout looks like at first.
-    const html = deriveHeadingHtml(inputs({ isTimedOut: true, fetHtml: '' }));
-    expect(html).toContain('Time&#39;s up.');
-    expect(html).not.toContain('No explanation available');
+  it('cold reload with no earned verdict (never earned) → question text, not FET', () => {
+    expect(shouldShowFet(inputs({ verdictEarnedReveal: false }))).toBe(false);
+    expect(shouldShowFet(inputs({}))).toBe(false); // field absent (undefined) behaves as false
   });
 
-  it('escapes option text so tag-like answers render as written', () => {
-    // Quiz options legitimately contain things like "<div>". Sanitizing protects
-    // the document; escaping is what renders the answer faithfully.
-    const html = withTimeoutContext('expl', ['<div> element']);
-    expect(html).toContain('&lt;div&gt; element');
-    expect(html).not.toContain('<div> element');
+  it('a same-session Previous-revisit still suppresses the FET even when the verdict is earned', () => {
+    // The revisit guard runs BEFORE the verdictEarnedReveal branch is ever
+    // reached — this is the regression this fix must never reintroduce: a
+    // rehydrated earned verdict must not leak the FET into a plain revisit.
+    expect(shouldShowFet(inputs({
+      isNavigatingToPrevious: true, interactedThisVisit: false, verdictEarnedReveal: true,
+    }))).toBe(false);
   });
 
-  it('ignores blank entries rather than naming an empty answer', () => {
-    const html = withTimeoutContext('expl', ['', '   ']);
-    expect(html).not.toContain('Correct answer');
+  it('deriveHeadingHtml renders the restored FET text on a cold reload', () => {
+    const FET = 'Option 1 is correct because change detection keeps the view in sync.';
+    const html = deriveHeadingHtml(inputs({ verdictEarnedReveal: true, fetHtml: FET }));
+    expect(html).toBe(FET);
+  });
+
+  it('cold reload with an earned verdict but no FET text yet falls back to the question', () => {
+    const html = deriveHeadingHtml(inputs({ verdictEarnedReveal: true, fetHtml: '   ' }));
+    expect(html).toBe(base.questionHtml);
+  });
+
+  // `_hasUserInteracted` (quizstate.service.ts) IS persisted across a reload,
+  // unlike the live selection map `isSingleAnswered`/`isMultiAnswerComplete`
+  // are computed from. A correctly-answered (not timed-out) question reloads
+  // with `hasInteracted: true` (stale-true from storage) but the completion
+  // signals false (nothing currently selected) — the earned verdict must
+  // still win, or a normal answered question loses its FET on refresh too.
+  it('reload with stale hasInteracted=true but an earned verdict → FET still restores', () => {
+    expect(shouldShowFet(inputs({
+      hasInteracted: true, isSingleAnswered: false, verdictEarnedReveal: true,
+    }))).toBe(true);
+    expect(shouldShowFet(inputs({
+      isMultiAnswer: true, hasInteracted: true, isMultiAnswerComplete: false, verdictEarnedReveal: true,
+    }))).toBe(true);
+  });
+
+  it('reload with stale hasInteracted=true and NO earned verdict → still no FET', () => {
+    expect(shouldShowFet(inputs({
+      hasInteracted: true, isSingleAnswered: false, verdictEarnedReveal: false,
+    }))).toBe(false);
   });
 });

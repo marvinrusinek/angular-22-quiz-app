@@ -202,6 +202,18 @@ export class QqcOrchTimerService {
 
     if (host.handledOnExpiry.has(i0)) return;
     host.handledOnExpiry.add(i0);
+
+    // A REVISIT to a question whose deadline had already passed replays this
+    // same fast-path (index-timer subscription clears handledOnExpiry on every
+    // question change, then elapsedTime$ immediately reports the full duration
+    // again) — but it is not a fresh reveal, it is a revisit to one the user
+    // already earned. Re-running the reveal pipeline here re-pushed
+    // "Please click the Next button..." over the natural nav-derived message
+    // (Answered ✓ / Please select an option) on every Previous/return to an
+    // already-expired question. Next stays enabled either way (set above,
+    // unconditionally) — only the reveal pipeline is skipped on arrival.
+    if (this.timerService.expiredOnArrivalSig() === i0) return;
+
     host.onQuestionTimedOut(i0);
     // Q2+ time out via this fast-path, which (unlike the normal timer expiry)
     // never recorded the expired index — so the single-source heading's

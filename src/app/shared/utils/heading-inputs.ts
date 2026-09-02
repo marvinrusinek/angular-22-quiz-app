@@ -109,18 +109,30 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
       ? (verdict.explanation ?? '')
       : '';
 
-  // THE CORRECT ANSWER NAMED IN A TIMEOUT NOTICE.
+  // A TERMINAL PHASE IS NOT THE SAME THING AS AN EARNED REVEAL.
   //
-  // Only from the deadline reveal — `expired` is the phase the server sets when
-  // it discloses the answers because time ran out. A question that timed out but
-  // whose reveal has not arrived yields an empty list, and the notice then says
-  // "Time's up." without naming anything, which is the honest render.
+  // `checkAnswer` (backend) resolves a single/trueFalse question on its FIRST
+  // valid submission, right or wrong — `phase: 'resolved'` with
+  // `isResolvedCorrect: false` is a normal, expected state for a wrong pick,
+  // and the game rule is that a wrong single-answer pick must NOT end the
+  // question: the player keeps trying. `verdictComplete`
+  // (`allCorrectSelectedFromVerdict`, above) already answers the real
+  // question for both single- and multi-answer alike — "resolved" only
+  // counts when `isResolvedCorrect === true`, and "incomplete" only counts
+  // when nothing correct remains outstanding — so it, not the raw phase, is
+  // the earned-or-not signal. `expired` is ORed in separately because that
+  // function does not cover it: a genuine timeout always earns the reveal,
+  // whatever was or was not selected.
   //
-  // Deliberately NOT `resolved`: that reveal was earned by answering, and the
-  // heading already shows its explanation through the ordinary FET path.
-  const timeoutCorrectAnswers = verdict && verdict.phase === 'expired'
-    ? [...(verdict.correctOptionTexts ?? [])]
-    : [];
+  // Survives a reload for the same reason `verdictComplete` does: the verdict
+  // is restored from `earned-verdict-storage.ts` before this ever runs, so a
+  // fresh page load reads the SAME earned/not-earned fact a live check would
+  // have produced, without depending on `isTimedOut` (live-only, reset on
+  // every reload) or `hasInteracted` (persisted, so it can be stale-true for
+  // a question answered before the reload even though the live selection
+  // data `isSingleAnswered`/`isMultiAnswerComplete` need is not).
+  const verdictEarnedReveal =
+    !!verdict && (verdict.phase === 'expired' || verdictComplete === true);
 
   // Single-answer "answered correctly", from the user's OWN verdicted pick.
   //
@@ -185,7 +197,6 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
   return {
     questionHtml,
     fetHtml: _fetHtml,
-    timeoutCorrectAnswers,
     isMultiAnswer,
     // Completion decides when a multi-answer question earns its explanation.
     // The verdict answers it from the user's own selections plus the count of
@@ -221,5 +232,6 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
     isNavigatingToPrevious: d.quizNavigationService.isNavigatingToPreviousSig?.() === true,
     interactedThisVisit: d.quizStateService.wasInteractedThisVisit?.(idx) === true,
     deferFeedback: d.feedbackPolicyService?.feedbackMode?.() === 'deferred',
+    verdictEarnedReveal,
   };
 }

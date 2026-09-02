@@ -327,6 +327,15 @@ export class QqcOrchLifecycleService {
       timerExpired$: host.timerService.expired$,
       onExpired: () => {
         const idx = host.normalizeIndex(host.currentQuestionIndex() ?? 0);
+        // A REVISIT to a question whose deadline had already passed
+        // (expireImmediately()) fires this same expired$ event, but it is not a
+        // fresh reveal — that happened on the visit that earned it. host.timedOut
+        // is reset to false on every question transition (resetUIForNewQuestion),
+        // so its own guard cannot tell a revisit apart from a first expiry; only
+        // expiredOnArrivalSig can. Re-running the full reveal pipeline here forced
+        // "Please click the Next button..." back over the natural nav-derived
+        // message on every Previous/return to an expired question.
+        if (host.timerService.expiredOnArrivalSig() === idx) return;
         host.onQuestionTimedOut(idx);
       }
     });

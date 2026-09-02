@@ -27,3 +27,34 @@ for (const q of [1, 2, 3]) {
     await expect(page.locator(HEADING)).toContainText(FET_RE, { timeout: 90_000 });
   });
 }
+
+test('genuine expiry locks every option — no click response, no fabricated selected/incorrect painting', async ({ page }) => {
+  test.setTimeout(60_000);
+  await navTo(page, 1);
+  await expect(page.locator(HEADING)).toContainText(FET_RE, { timeout: 60_000 });
+
+  const rows = page.locator('.option-row');
+  const classes = await rows.evaluateAll((els) => els.map((el) => el.className));
+
+  for (const cls of classes) {
+    // Every option is locked, right down to the Material control itself —
+    // not merely visually styled while still clickable underneath.
+    expect(cls).toMatch(/\blocked-option\b/);
+    expect(cls).toMatch(/mat-mdc-(radio|checkbox)-disabled/);
+    // The user selected nothing this visit: no option may be painted as
+    // though it were their pick, and no unselected option may be painted
+    // incorrect — only the authorized correct option may reveal itself.
+    expect(cls).not.toMatch(/\bselected\b/);
+    expect(cls).not.toMatch(/\bincorrect-option\b/);
+  }
+
+  // Exactly the authorized correct option reveals green; nothing else does.
+  const correctCount = classes.filter((c) => /\bcorrect-option\b/.test(c)).length;
+  expect(correctCount).toBe(1);
+
+  // Clicking a locked option after expiry must do nothing.
+  const before = await page.locator(HEADING).innerText();
+  await rows.nth(1).click({ force: true }).catch(() => {});
+  await page.waitForTimeout(500);
+  await expect(page.locator(HEADING)).toHaveText(before);
+});

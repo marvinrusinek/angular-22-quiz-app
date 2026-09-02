@@ -55,23 +55,6 @@ async function surfaces(page: Page) {
       .map((r) => String(r.i));
     return {
       heading: (h3?.textContent ?? '').trim(),
-      // The timeout notice as STRUCTURE — each part is its own element, and
-      // each must be a block or they read as one run-on sentence.
-      timeout: (() => {
-        const q = (sel: string) => h3?.querySelector(sel) as HTMLElement | null;
-        const part = (sel: string) => {
-          const el = q(sel);
-          return el
-            ? { text: (el.textContent ?? '').trim(), display: getComputedStyle(el).display }
-            : null;
-        };
-        return {
-          notice: part('.timeout-notice'),
-          answer: part('.timeout-answer'),
-          explanation: part('.timeout-explanation'),
-          label: part('.timeout-label')
-        };
-      })(),
       banner: (fb?.textContent ?? '').trim(),
       timer: (t?.textContent ?? '').trim(),
       message: (msg?.textContent ?? '').trim(),
@@ -279,7 +262,9 @@ test('M: a quiz started after a timeout is not born expired', async ({ page }) =
   await startViaUi(page, /router/i);
   await page.waitForTimeout(36_000);
   const expired = await surfaces(page);
-  expect(expired.timeout.notice?.text, 'Quiz A really did time out').toContain("Time's up");
+  // No expiry-specific wrapper any more: a genuine timeout reveals through the
+  // ordinary FET (composed explanation prose), same as any other reveal.
+  expect(expired.heading, 'Quiz A really did time out').toMatch(/correct because/i);
 
   await backToSelectionInSpa(page);
   await clearTimerFrames(page);
@@ -297,8 +282,7 @@ test('M: a quiz started after a timeout is not born expired', async ({ page }) =
   const s = await surfaces(page);
 
   // THE ANSWER LEAK: Quiz A's reveal must not appear on Quiz B's question.
-  expect(s.timeout.notice, 'Quiz B question 1 is not marked timed out').toBeNull();
-  expect(s.heading, 'no timeout notice in the heading').not.toContain("Time's up");
+  expect(s.heading, 'Quiz B question 1 is not showing a leaked reveal').not.toMatch(/correct because/i);
   expect(s.heading, "no prior quiz's correct answer").not.toContain('Correct answer');
   expect(s.banner, 'no Quiz A explanation').toBe('');
   expect(s.dirty, 'no auto-revealed options').toEqual([]);
@@ -356,7 +340,7 @@ test('N: a quiz started after finishing another one gets its own clock', async (
   expect(seconds(frames[0]?.t ?? ''), 'Quiz B opens on a full timer').toBeGreaterThan(27);
 
   const s = await surfaces(page);
-  expect(s.timeout.notice, 'Quiz B question 1 is not marked timed out').toBeNull();
+  expect(s.heading, 'Quiz B question 1 is not showing a leaked reveal').not.toMatch(/correct because/i);
   expect(s.dirty, 'no options carry Quiz A state').toEqual([]);
 
   const before = seconds((await surfaces(page)).timer);
@@ -366,31 +350,22 @@ test('N: a quiz started after finishing another one gets its own clock', async (
 
 // ─── I. TIMEOUT WHILE THE QUESTION IS VISIBLE ──────────────────────
 
-test('I: a question that times out in view says so, and explains why', async ({ page }) => {
+test('I: a question that times out in view reveals through the ORDINARY FET — no expiry-specific presentation', async ({ page }) => {
   await startViaUi(page, /router/i);
   const before = await surfaces(page);
-  expect(before.heading, 'starts on the question').not.toContain("Time's up");
+  expect(before.heading, 'starts on the question').not.toMatch(/correct because/i);
 
-  // Let the real 30s deadline pass, untouched.
-  await expect(page.locator(HEADING)).toContainText(/Time's up/i, { timeout: 90_000 });
+  // Let the real 30s deadline pass, untouched. No wrapper announces it — the
+  // heading simply becomes the same composed explanation any other reveal
+  // uses, once the authorized reveal lands.
+  await expect(page.locator(HEADING)).toContainText(/correct because/i, { timeout: 90_000 });
 
   const after = await surfaces(page);
   console.log('LIFECYCLE I heading: ' + after.heading.slice(0, 110));
 
-  // The notice explains the state change rather than silently swapping in an
-  // explanation — which is what made this look like a defect when it happened
-  // out of sight.
-  // STRUCTURE, not combined text. Each part must exist as its own element and
-  // render as a block, or the notice reads as one run-on sentence — which is
-  // the "the explanation just replaced my question" impression it exists to
-  // dispel.
-  expect(after.timeout.notice, 'the timeout notice element exists').not.toBeNull();
-  expect(after.timeout.notice!.text, 'and states the reason').toMatch(/Time's up/i);
-  expect(after.timeout.notice!.display, 'rendered as its own block').toBe('block');
-
-  expect(after.timeout.explanation, 'the explanation is its own element').not.toBeNull();
-  expect(after.timeout.explanation!.display, 'also a block').toBe('block');
-  expect(after.timeout.label!.text, 'and is introduced by a label').toBe('Explanation:');
+  // NO expiry-specific markers of any kind.
+  expect(after.heading, 'no "Time\'s up" wrapper').not.toContain("Time's up");
+  expect(after.heading, 'no separate "Correct answer:" line').not.toContain('Correct answer');
 
   expect(seconds(after.timer), 'the timer really did expire').toBe(0);
 });
@@ -406,11 +381,11 @@ test('I: a question that times out in view says so, and explains why', async ({ 
  * this test does not claim otherwise. What it does establish is that returning
  * from a frozen state neither creates the timeout state nor corrupts it.
  */
-test('J: a deadline that passes while hidden is reported on return, not caused by it', async ({ page }) => {
+test('J: a deadline that passes while hidden is revealed on return, not caused by it', async ({ page }) => {
   await startViaUi(page, /router/i);
 
   const beforeHide = await surfaces(page);
-  expect(beforeHide.heading, 'question is showing before we leave').not.toMatch(/Time's up/i);
+  expect(beforeHide.heading, 'question is showing before we leave').not.toMatch(/correct because/i);
 
   const cdp = await page.context().newCDPSession(page);
   await page.evaluate(() => {
@@ -434,16 +409,18 @@ test('J: a deadline that passes while hidden is reported on return, not caused b
   console.log('LIFECYCLE J on return: timer="' + onReturn.timer + '" heading=' +
     onReturn.heading.slice(0, 90));
 
-  // The timeout is REPORTED, with its reason — not an unexplained explanation.
+  // The timeout is REVEALED through the ordinary FET — no expiry-specific
+  // wrapper, just the same composed explanation any other reveal uses.
   expect(seconds(onReturn.timer), 'the deadline passed while away').toBe(0);
-  expect(onReturn.heading, 'the timeout state explains itself').toMatch(/Time's up/i);
+  expect(onReturn.heading, 'the reveal happened').toMatch(/correct because/i);
+  expect(onReturn.heading, 'no expiry-specific wrapper').not.toContain("Time's up");
 
   // Resuming must not duplicate or corrupt it: same heading a few seconds later,
   // and no other question's content has bled in.
   await page.waitForTimeout(4000);
   const settled = await surfaces(page);
   expect(settled.heading, 'the state is stable across resume').toBe(onReturn.heading);
-  expect((settled.heading.match(/Time's up/gi) ?? []).length, 'stated once, not twice').toBe(1);
+  expect((settled.heading.match(/correct because/gi) ?? []).length, 'stated once, not twice').toBe(1);
 });
 
 // ─── L. TIMEOUT UNDER PRODUCTION LATENCY ───────────────────────────
@@ -460,7 +437,7 @@ test('J: a deadline that passes while hidden is reported on return, not caused b
  * Localhost cannot reproduce that ordering on its own, so the reveal is held
  * deliberately — the same technique the pending-verdict spec uses for /check.
  */
-test('L: a delayed timeout reveal still replaces the notice with real content', async ({ page }) => {
+test('L: a delayed timeout reveal still replaces the question with real content — no placeholder ever', async ({ page }) => {
   // Hold every /check — which is also the expired reveal — long enough that the
   // deadline passes first, reproducing the deployed ordering deterministically.
   let releaseReveal: (() => void) | null = null;
@@ -474,17 +451,22 @@ test('L: a delayed timeout reveal still replaces the notice with real content', 
 
   await startViaUi(page, /router/i);
 
-  // The deadline passes while the reveal is still in flight.
-  await expect(page.locator(HEADING)).toContainText(/Time.s up/i, { timeout: 90_000 });
+  // The deadline passes (timer hits 0:00) while the reveal is still in flight.
+  // With no expiry-specific wrapper, the heading has nothing to say until the
+  // reveal lands — it stays on the question, exactly like any other pending
+  // FET-due-but-textless case.
+  await expect(page.locator(TIMER)).toHaveText(/^0:0?0$/, { timeout: 90_000 });
 
   const duringLatency = await surfaces(page);
   console.log('LIFECYCLE L during-latency heading=' + duringLatency.heading.slice(0, 90));
 
-  // THE REGRESSION: this window is where the placeholder used to be stored and
-  // then stick permanently. Nothing may be fabricated here.
+  // THE REGRESSION: this window is where a placeholder used to be stored and
+  // then stick permanently. Nothing may be fabricated here — the heading
+  // stays on the question rather than showing invented text.
   expect(duringLatency.heading, 'no placeholder while the reveal is pending')
     .not.toContain('No explanation available');
-  expect(duringLatency.heading, 'the timeout is still stated').toMatch(/Time.s up/i);
+  expect(duringLatency.heading, 'still the question — nothing fabricated yet')
+    .not.toMatch(/because/i);
 
   // Now let the authorized reveal land.
   releaseReveal!();
@@ -497,9 +479,9 @@ test('L: a delayed timeout reveal still replaces the notice with real content', 
   console.log('LIFECYCLE L after-reveal heading=' + afterReveal.heading.slice(0, 110) +
     ' (checks held: ' + held + ')');
 
-  expect(afterReveal.heading, 'the authorized explanation replaced the notice-only state')
+  expect(afterReveal.heading, 'the authorized explanation replaced the question')
     .toMatch(/because/i);
   expect(afterReveal.heading, 'and the placeholder never returns')
     .not.toContain('No explanation available');
-  expect(afterReveal.heading, 'the reason is still stated alongside it').toMatch(/Time.s up/i);
+  expect(afterReveal.heading, 'no expiry-specific wrapper').not.toContain("Time's up");
 });

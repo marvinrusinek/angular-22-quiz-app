@@ -229,7 +229,11 @@ export class QuizSetupService {
       if (!isHidden) {
         const idx = host.currentQuestionIndex();
         const isAnswered = this.selectedOptionService.isQuestionAnswered(idx);
-        if (!isAnswered) this.selectionMessageService.forceBaseline(idx);
+        // A question that already timed out is not "fresh" — forcing the
+        // baseline here overwrote the correct "Please select an option..."
+        // nav-derived message with a first-visit framing on tab return.
+        const alreadyTimedOut = this.dotStatusService.timedOutFetForced.has(idx);
+        if (!isAnswered && !alreadyTimedOut) this.selectionMessageService.forceBaseline(idx);
         const question = this.quizService.questions?.[idx]
           ?? host.questionsArray()?.[idx] ?? null;
         if (question) {

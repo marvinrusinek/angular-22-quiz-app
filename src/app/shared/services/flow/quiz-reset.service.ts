@@ -7,6 +7,7 @@ import { NextButtonStateService } from '../state/next-button-state.service';
 import { OptionLockStateService } from '../state/option-lock-state.service';
 import { QqcQuestionLoaderService } from '../features/qqc/qqc-question-loader.service';
 import { QuestionTimingService } from '../features/timer/question-timing.service';
+import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
 import { QuizDotStatusService } from './quiz-dot-status.service';
 import { QuizPersistenceService } from '../state/quiz-persistence.service';
 import { QuizService } from '../data/quiz.service';
@@ -31,6 +32,7 @@ export class QuizResetService {
   private nextButtonStateService = inject(NextButtonStateService);
   private optionLockState = inject(OptionLockStateService);
   private questionTimingService = inject(QuestionTimingService);
+  private questionVerdictService = inject(QuestionVerdictService);
   private quizPersistence = inject(QuizPersistenceService);
   private quizQuestionLoaderService = inject(QqcQuestionLoaderService);
   private quizService = inject(QuizService);
@@ -250,6 +252,19 @@ export class QuizResetService {
     // Same reason, one layer down: the deadlines are gone, but the run flags
     // that refuse a restart are the timer's own and only it can drop them.
     this.timerService.beginNewRun();
+
+    // THE COMPLETED RUN'S VERDICTS ARE NOT THIS RUN'S VERDICTS.
+    //
+    // Verdicts key on quizId + question TEXT, which a restart reuses
+    // verbatim, so nothing here expires on its own. Both the in-memory store
+    // and its sessionStorage mirror (earned-verdict-storage.ts) must be
+    // dropped — leaving the mirror survives this reset and restores the old
+    // run's terminal verdict (and therefore its FET) on the very next reload
+    // of question 1, even though the restarted run never answered it.
+    this.questionVerdictService.clearAll();
+    if (quizId) {
+      this.questionVerdictService.clearEarnedVerdicts(quizId);
+    }
 
     // Clear per-question option/question locks — otherwise a previously-
     // locked incorrect option/question (e.g. Q2 answered incorrectly before

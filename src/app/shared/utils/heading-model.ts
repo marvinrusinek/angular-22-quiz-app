@@ -55,15 +55,25 @@ export interface HeadingInputs {
    *  unaffected — undefined behaves exactly as before. */
   deferFeedback?: boolean;
 
-  /** The AUTHORIZED correct option texts, for the timeout notice only.
+  /** The verdict has EARNED the reveal — expired (genuine timeout, whatever
+   *  was or wasn't selected), or resolved WITH the completion condition met
+   *  (single/trueFalse: the pick was correct; multi-answer: nothing correct
+   *  remains outstanding). NOT the same thing as "the verdict is terminal": a
+   *  wrong single-answer pick is also `phase: 'resolved'` (the shipped rule
+   *  is that any valid submission resolves, right or wrong), and that must
+   *  NOT earn the reveal — the player keeps trying. Computed once, upstream,
+   *  from the same authority (`allCorrectSelectedFromVerdict`) the
+   *  multi-answer completion check already uses, so this model does not
+   *  re-decide correctness itself.
    *
-   *  Populated from the verdict once the deadline reveal has arrived
-   *  (`phase === expired`), and empty otherwise — so a question whose reveal
-   *  has not been authorized shows the notice without naming an answer rather
-   *  than inventing one. Never sourced from the bundled bank.
-   *
-   *  Optional so existing callers are unaffected. */
-  timeoutCorrectAnswers?: readonly string[];
+   *  Survives a reload the same way the verdict itself does (restored from
+   *  `earned-verdict-storage.ts`), which is the whole reason this field
+   *  exists: `isTimedOut` is a LIVE timer signal only (reset on every
+   *  reload), and `hasInteracted` is persisted but the live selection data
+   *  `isSingleAnswered`/`isMultiAnswerComplete` need is not — neither can be
+   *  trusted alone to restore an earned reveal after a reload. Optional so
+   *  existing callers are unaffected — undefined behaves as `false`. */
+  verdictEarnedReveal?: boolean;
 }
 
 /**
@@ -105,6 +115,27 @@ export function shouldShowFet(i: HeadingInputs): boolean {
   if (i.isTimedOut) {
     return true;
   }
+  if (i.verdictEarnedReveal === true) {
+    // The verdict has ALREADY earned the reveal (see the field doc) — live
+    // this session or restored after a reload. The revisit guard above
+    // already filters out an in-SPA Previous/return, so reaching this point
+    // means the reveal is only now being (re)displayed, not re-shown.
+    //
+    // Checked ahead of `hasInteracted` deliberately: `hasInteracted` is
+    // ITSELF persisted across a reload (quizstate.service.ts), so it can be
+    // stale-true for a question answered before the reload even though the
+    // LIVE selection data that `isSingleAnswered`/`isMultiAnswerComplete`
+    // depend on (`selectedOptionService.selectedOptionsMap`) is not — that
+    // combination used to fall through to the interaction branches below and
+    // read the earned answer as unresolved. The verdict is the one source
+    // that is durable and authoritative for both cases alike.
+    //
+    // Deliberately NOT a shortcut around the interaction branches below —
+    // `verdictEarnedReveal` is false for a resolved-but-wrong single pick and
+    // for an incomplete/partial multi-answer selection (see heading-inputs.ts),
+    // so those still fall through and correctly return false.
+    return true;
+  }
   if (!i.hasInteracted) {
     return false;
   }
@@ -114,90 +145,17 @@ export function shouldShowFet(i: HeadingInputs): boolean {
   return i.isSingleAnswered;
 }
 
-/**
- * Option text is PLAIN TEXT and goes into an HTML heading, so it is escaped.
- *
- * The heading is sanitized before it reaches innerHTML, but sanitizing protects
- * the document — it does not stop an option that legitimately reads "<div>"
- * from being swallowed as markup. Quiz content genuinely contains tag-like
- * text, so escaping here is about rendering it faithfully.
- */
-function escapeText(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, `&quot;`)
-    .replace(/'/g, '&#39;');
-}
-
-/**
- * The heading for a question whose time ran out.
- *
- * WHY THE NOTICE EXISTS. A timeout replaced the question text with the
- * explanation and said nothing about why. That is confusing when it happens
- * under the user's nose, and actively misleading when it happens while the
- * browser is minimised: they come back to find an explanation sitting where
- * their question used to be, with no indication that a deadline passed. It
- * reads as the app spontaneously giving away the answer.
- *
- * The explanation itself is unchanged — this only states the reason for it, and
- * names the correct answer when the deadline reveal has authorized one.
- */
-export function withTimeoutContext(
-  fetHtml: string,
-  correctAnswers: readonly string[] = []
-): string {
-  // THREE DISTINCT PARTS, each its own element.
-  //
-  // Rendered inline they read as one run-on sentence — the answer running
-  // straight into the explanation — which is close to the "the explanation just
-  // replaced my question" impression this notice exists to dispel. The styling
-  // makes each part a block; the structure here is what gives it something to
-  // style.
-  const parts = [`<span class="timeout-notice">Time&#39;s up.</span>`];
-
-  // Named only when the reveal is authorized. No answer is better than a
-  // guessed one, and the bank is deliberately unreachable from here.
-  const named = correctAnswers.filter((t) => (t ?? '').trim().length > 0);
-  if (named.length > 0) {
-    const label = named.length > 1 ? 'Correct answers' : 'Correct answer';
-    const list = named.map((t) => escapeText(t.trim())).join(', ');
-    parts.push(
-      `<span class="timeout-answer">${label}: ${list}</span>`
-    );
-  }
-
-  // The explanation is optional. A deadline can pass before the reveal has
-  // arrived, and the notice stands on its own until it does — stating the
-  // timeout without one is honest; fabricating filler text is not.
-  const explanation = (fetHtml ?? '').trim();
-  if (explanation.length > 0) {
-    parts.push(
-      `<span class="timeout-explanation"><span class="timeout-label">Explanation:</span> ${explanation}</span>`
-    );
-  }
-
-  return parts.join(' ');
-}
-
 /** The single source of truth for the heading HTML. Falls back to the question
- *  HTML whenever the FET should show but no FET text is available. */
+ *  HTML whenever the FET should show but no FET text is available.
+ *
+ *  Genuine timer expiry is NOT special-cased: `shouldShowFet` already decides
+ *  a timeout earns the reveal (see its `isTimedOut` branch), and once earned
+ *  it renders through the exact same path as any other reveal — the composed
+ *  explanation prose, with no "Time's up" / "Correct answer" / "Explanation:"
+ *  wrapper. The explanation text itself already names the correct option(s)
+ *  ("Option 1 is correct because..."), so nothing is lost by not repeating it
+ *  in a separate line. */
 export function deriveHeadingHtml(i: HeadingInputs): string {
   if (!shouldShowFet(i)) return i.questionHtml;
-
-  // A TIMEOUT IS WORTH STATING EVEN WITH NOTHING TO EXPLAIN YET.
-  //
-  // The notice does not wait for the reveal. A deadline passing is itself the
-  // news, and the explanation joins it when the server authorizes one — which
-  // against a deployed backend is a round trip later, not immediately.
-  //
-  // Every other route to the FET was chosen by the user: they answered, so the
-  // explanation needs no introduction, and with no text there is nothing to
-  // show but the question.
-  if (i.isTimedOut) {
-    return withTimeoutContext(i.fetHtml, i.timeoutCorrectAnswers ?? []);
-  }
-
   return i.fetHtml.trim().length > 0 ? i.fetHtml : i.questionHtml;
 }

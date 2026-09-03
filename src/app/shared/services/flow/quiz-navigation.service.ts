@@ -323,13 +323,37 @@ export class QuizNavigationService {
   }
 
   private applyDestinationAnsweredState(index: number): void {
-    // Correctly-answered destination on revisit: freeze the timer at the
-    // recorded seconds-remaining. Gate ONLY on the durable dot-status — a
-    // selection-based check falsely fires for unanswered questions holding
-    // stale selections, flashing them to a bogus 0:00.
-    if (this.selectedOptionService.clickConfirmedDotStatus?.get?.(index) === 'correct') {
-      this.timerService.freezeAtRecordedTime(index);
-    }
+    // ALWAYS defer to `restartForQuestion` — it is the single source of
+    // truth for freeze-vs-restart-vs-fresh-start, deciding from its own
+    // durable state (a genuine recorded correct-completion time, or the
+    // question's signed deadline) rather than from a caller-side guess.
+    //
+    // This used to branch here on `clickConfirmedDotStatus === 'correct'`,
+    // which records whether the OPTION THE USER JUST CLICKED was correct —
+    // not whether the question is finished. For a multi-answer question,
+    // picking one of several required correct options set that to 'correct'
+    // even though the question remained incomplete; if it then expired
+    // before the rest were picked, this branch froze it, and
+    // `freezeAtRecordedTime` only paints a value when a genuine completion
+    // was recorded — which never happened here — so the display simply kept
+    // whatever the PREVIOUS question's still-running countdown happened to
+    // show, reading as "the timer restarted" on a revisit to an expired
+    // question. `restartForQuestion` now makes the same freeze decision
+    // itself, from `hasRecordedCorrectCompletion` (a genuine stop-time, only
+    // ever recorded once a question is actually, fully finished correctly),
+    // and otherwise re-derives real state from the signed deadline
+    // (`_deadlineByQuestion`, replayed verbatim by `TopicQuizAttemptService`
+    // on every re-activation, never re-issued) via `startTimerUntil` ->
+    // `expireImmediately()` for a genuinely expired destination, or starts a
+    // real countdown for a genuinely fresh one.
+    //
+    // `performNavigation` already called `stopTimer`/`resetTimer` for the
+    // SOURCE question before this runs, but `resetTimer()` carries its own
+    // anti-thrash guard (`sinceStart < timePerQuestion * 1000`) that silently
+    // no-ops while the source's timer had only just started, so neither of
+    // those calls can be trusted to have cleared the display for the
+    // DESTINATION — this call is what actually does.
+    this.timerService.restartForQuestion(index);
 
     // INDEX-MODEL REWRITE (Phase 2): deterministically re-derive the answered
     // state for the destination from the DURABLE per-display-index answered

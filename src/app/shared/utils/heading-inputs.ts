@@ -224,8 +224,11 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
     // coming back to the browser tab. That is not a reveal to perform, it is a
     // reveal that already happened, and treating it as live put the explanation
     // in the heading where the question text belongs.
-    isTimedOut: d.timerService.expiredForQuestionIndexSig?.() === idx
-      && d.timerService.expiredOnArrivalSig?.() !== idx,
+    isTimedOut: (() => {
+      const efi = d.timerService.expiredForQuestionIndexSig?.();
+      const eoa = d.timerService.expiredOnArrivalSig?.();
+      return efi === idx && eoa !== idx;
+    })(),
     hasInteracted: d.quizStateService.hasUserInteracted?.(idx) === true,
     optionsReady: typeof document !== 'undefined'
       && document.querySelectorAll('.option-row').length > 0,

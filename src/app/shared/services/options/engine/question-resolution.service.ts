@@ -158,8 +158,19 @@ export class QuestionResolutionService {
   }
 
   // Signal 2: multi-answer perfect flag
+  //
+  // MUST be "every correct option selected and nothing wrong", not merely
+  // "the user submitted something for this question". `isQuestionResolved`
+  // (the flag this used to read) is the latter — RESOLVED fires for a single
+  // wrong pick, and for multi-answer it is only ever set on true completion,
+  // but it answers "did this question resolve", not "was it a PERFECT
+  // multi-answer completion". `isMultiAnswerPerfect` is the authority that
+  // actually encodes that: written exclusively by
+  // SelectedOptionService.applyAuthorizedMultiCompletion when the backend
+  // verdict lands `status: 'resolved'` for THIS question with nothing wrong
+  // submitted, so it cannot be true from a partial 1-of-N pick.
   private resolveMultiPerfect(qIdx: number): boolean {
-    let multiPerfect = this.quizService.isQuestionResolved(qIdx);
+    let multiPerfect = this.quizService.isMultiAnswerPerfect(qIdx);
     if (!multiPerfect) {
       multiPerfect = readSessionString(SK_MULTI_PERFECT + qIdx) === 'true';
     }

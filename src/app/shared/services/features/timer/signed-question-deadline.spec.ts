@@ -8,6 +8,7 @@ import { join } from 'path';
 
 import { API_BASE_URL } from '../../../tokens/api-base-url.token';
 import { QuestionTimingService } from './question-timing.service';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { TimerService } from './timer.service';
 import { TopicQuizAttemptService } from '../verdict/topic-quiz-attempt.service';
@@ -55,6 +56,7 @@ let timerService: TimerService;
 let timing: QuestionTimingService;
 let selectedOptionService: SelectedOptionService;
 let quizService: QuizService;
+let verdicts: QuestionVerdictService;
 
 /** Controllable wall clock — the deadline is expressed in these milliseconds. */
 let clock = 1_000_000;
@@ -79,6 +81,14 @@ beforeEach(() => {
   timing = TestBed.inject(QuestionTimingService);
   selectedOptionService = TestBed.inject(SelectedOptionService);
   quizService = TestBed.inject(QuizService);
+  verdicts = TestBed.inject(QuestionVerdictService);
+
+  // Minimal question data so `TimerService#hasRecordedCorrectCompletion`
+  // (index -> questionText -> verdict) can resolve — this file otherwise
+  // drives TimerService/QuestionTimingService in isolation, with no real
+  // quiz session loaded.
+  quizService.quizId = QUIZ;
+  (quizService as any).questions = [{ questionText: Q1 }, { questionText: Q2 }];
 });
 
 afterEach(() => {
@@ -108,6 +118,25 @@ function grantSecondDeadline(questionText: string, receipt = 'q2-receipt'): void
   start.flush({
     quizId: QUIZ, questionText, durationSeconds: 30,
     startedAt: 1, expiresAt: 30_001, questionReceipt: receipt
+  });
+}
+
+/**
+ * Stamp a GENUINE, terminal "resolved correct" verdict directly — the same
+ * authority `TimerService#hasRecordedCorrectCompletion` reads (via
+ * `allCorrectSelectedFromVerdict`). Bypasses `write`'s private visibility the
+ * same way the rest of this file drives TimerService's own public surface
+ * directly rather than exercising the full click -> /check round trip.
+ */
+function markResolvedCorrect(quizId: string, questionText: string): void {
+  (verdicts as any).write(quizId, questionText, {
+    phase: 'resolved',
+    selectedOptionTexts: [],
+    selectedVerdicts: new Map<string, boolean>(),
+    remainingCorrectCount: 0,
+    correctOptionTexts: [],
+    explanation: null,
+    isResolvedCorrect: true
   });
 }
 
@@ -204,12 +233,31 @@ describe('coming back to a question does not buy more time', () => {
   });
 
   it('does not restart a correctly-answered question, and asks the server nothing', () => {
-    selectedOptionService.clickConfirmedDotStatus.set(0, 'correct');
+    // A GENUINE, terminal verdict — the only thing
+    // `hasRecordedCorrectCompletion` trusts (see its own doc comment).
+    markResolvedCorrect(QUIZ, Q1);
 
     timing.activateQuestionTiming(QUIZ, Q1, 0);
 
     // No attempt, no start: http.verify() would fail if either were issued.
     expect(timerService.isTimerRunning).toBe(false);
+  });
+
+  it('does NOT freeze a question whose dot merely reads "correct" from the last click — only a genuine verdict completion counts', () => {
+    // THE REGRESSION THIS PINS: a multi-answer question with only ONE (of
+    // several required) correct options picked before it expired. The dot
+    // status reads 'correct' — `clickConfirmedDotStatus` records whether the
+    // option the user JUST CLICKED was correct, not whether the question is
+    // finished — but no terminal "resolved correct" verdict was ever
+    // recorded, because the question was never actually completed. This
+    // must NOT freeze; it must go through the ordinary deadline-aware path
+    // and ask the server for a real window.
+    selectedOptionService.clickConfirmedDotStatus.set(0, 'correct');
+
+    timing.activateQuestionTiming(QUIZ, Q1, 0);
+    grantDeadline(Q1);
+
+    expect(timerService.isTimerRunning).toBe(true);
   });
 
   it('treats a question returned to after its deadline as already expired', () => {
@@ -222,6 +270,33 @@ describe('coming back to a question does not buy more time', () => {
     advance(31_000);
     timing.activateQuestionTiming(QUIZ, Q1, 0);
 
+    expect(timerService.isTimerRunning).toBe(false);
+    expect(timerService.elapsedTimeSig()).toBe(timerService.timePerQuestion);
+  });
+
+  it('a PARTIAL multi-answer pick that expired resolves to durably expired on revisit, not a fresh countdown', () => {
+    // THE ROUND-3 REGRESSION, at the layer `restartForQuestion` (called
+    // directly by quiz-navigation.service.ts / quiz-setup-route.service.ts
+    // on every Next/Previous) actually runs at. The user picked ONE of
+    // several required correct options on Q1 before it expired — the dot
+    // status reads 'correct' for that single click, but the question was
+    // never completed, so no terminal "resolved correct" verdict exists.
+    timing.activateQuestionTiming(QUIZ, Q1, 0);
+    grantDeadline(Q1);
+    selectedOptionService.clickConfirmedDotStatus.set(0, 'correct'); // the one correct pick
+
+    // The deadline passes with the question still incomplete.
+    advance(31_000);
+
+    // Leave for Q2 (a normal navigation elsewhere resets/starts Q2's own
+    // timer) and come back — the exact Next -> Previous round trip.
+    timing.activateQuestionTiming(QUIZ, Q2, 1);
+    grantSecondDeadline(Q2);
+
+    timerService.restartForQuestion(0);
+
+    // Durably expired — 0:00, not a fresh ~30s countdown, and not merely
+    // "left however it was" (frozen at nothing, still showing Q2's countdown).
     expect(timerService.isTimerRunning).toBe(false);
     expect(timerService.elapsedTimeSig()).toBe(timerService.timePerQuestion);
   });

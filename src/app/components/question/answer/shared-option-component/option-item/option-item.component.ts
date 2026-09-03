@@ -604,6 +604,15 @@ export class OptionItemComponent implements OnInit {
     if (this.isTimerStamped()) { return true; }
 
     const _qIdx = this.quizService.currentQuestionIndex ?? this.currentQuestionIndex();
+
+    // A genuinely expired question stays LOCKED for the rest of the session,
+    // live or revisited — the reveal (colors) is momentary, but "the clock
+    // already closed this question" is not. Without this, a plain Next ->
+    // Previous round trip back to an expired-but-unanswered question left it
+    // fully interactive again: clicking submitted a fresh, late pick against
+    // a question that had already timed out.
+    if (this.timerState.hasQuestionEverExpired(_qIdx)) { return true; }
+
     const _type = this.resolveEffectiveDisabledType(_qIdx);
 
     if (_type === 'multiple') {

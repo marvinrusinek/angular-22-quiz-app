@@ -235,12 +235,34 @@ export class QuizSetupRouteService {
       // setTimeout cascade that stamped question text into <h3> is no longer
       // needed (the computed renders the question from state).
 
-      if (!result.hasValidSelections) {
-        this.timerService.restartForQuestion(index);
-      } else {
-        // Answered question on revisit: freeze at the recorded time taken.
-        this.timerService.freezeAtRecordedTime(index);
-      }
+      // ALWAYS defer to `restartForQuestion` — it is the single source of
+      // truth for freeze-vs-restart-vs-fresh-start.
+      //
+      // This used to branch on `hasValidSelections` — whether the question
+      // has ANY recorded selection at all — which conflated "the user picked
+      // something" with "the question is durably resolved". A multi-answer
+      // question with one correct option picked before it timed out has a
+      // real selection, so `hasValidSelections` was true and this took a
+      // freeze-style branch with nothing to freeze at — the display simply
+      // kept whatever the PREVIOUS question's still-running countdown
+      // happened to show, reading as "the timer restarted". A later revision
+      // fixed the condition but still asked `clickConfirmedDotStatus ===
+      // 'correct'` directly, which has the exact same flaw one level down:
+      // that map records whether the option the user JUST CLICKED was
+      // correct, not whether the question is finished — the same
+      // multi-answer partial pick sets it 'correct' too.
+      //
+      // `restartForQuestion` now makes this decision itself, from
+      // `hasRecordedCorrectCompletion` (a genuine stop-time, only ever
+      // recorded once a question is actually, fully finished correctly) —
+      // freezing there, and otherwise re-deriving real state from the signed
+      // deadline cached in `_deadlineByQuestion` (`TopicQuizAttemptService
+      // .activation` replays the ORIGINAL deadline on every re-activation,
+      // never issuing a new one): a genuinely expired question — answered,
+      // partially answered, or untouched — always resolves back to 0:00
+      // through `startTimerUntil` -> `expireImmediately()`, and a genuinely
+      // fresh one starts its own real countdown.
+      this.timerService.restartForQuestion(index);
       localStorage.setItem(SK_SAVED_QUESTION_INDEX, index.toString());
     } catch (err: unknown) {
       console.error('QuizSetupRouteService.subscribeToRouteParams param map change handling failed:', err);

@@ -596,10 +596,14 @@ export class QqcQlStreamService {
     this.explanationTextService.setShouldDisplayExplanation(false);
 
     let explanationText = '';
-    // Durable "answered correctly" signal (the same map that colors the dot
-    // green) — survives navigation's selection-clearing, unlike isAnswered.
-    const answeredCorrectly =
-      this.selectedOptionService.clickConfirmedDotStatus?.get?.(idx) === 'correct';
+    // Durable "answered correctly" signal. Deliberately
+    // `hasRecordedCorrectCompletion` (a genuine recorded stop-time), not
+    // `clickConfirmedDotStatus` — that map records whether the option the
+    // user JUST CLICKED was correct, not whether the question is finished,
+    // which wrongly reads 'correct' for a multi-answer question with only
+    // SOME of its required correct options picked. See
+    // TimerService#hasRecordedCorrectCompletion.
+    const answeredCorrectly = this.timerService.hasRecordedCorrectCompletion(idx);
 
     // Only the answered branches touch the timer here. An unanswered question's
     // countdown belongs to QuestionTimingService, which may already have

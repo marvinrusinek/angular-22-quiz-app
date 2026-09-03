@@ -611,6 +611,42 @@ export class TimerService implements OnDestroy {
   private _runningForQuestion: number | null = null;
   private _lastStartedAtMs = 0;
 
+  /**
+   * Was this question GENUINELY, definitively completed correctly?
+   *
+   * The authority is the VERDICT — `allCorrectSelectedFromVerdict`, the same
+   * terminal-completion check `heading-inputs.ts` (`verdictEarnedReveal`) and
+   * `option-lock-policy.service.ts` already use — not any local bookkeeping.
+   * Two earlier, local candidates were tried and both leak:
+   *
+   *   `clickConfirmedDotStatus` records whether the option the user JUST
+   *   CLICKED was correct, not whether the question is finished; a
+   *   multi-answer question with only SOME of its required correct options
+   *   picked reads 'correct' from that map too.
+   *
+   *   `elapsedTimes[idx] > 0` looked more promising (populated only in
+   *   `attemptStopTimerForQuestion`'s genuine-completion stop callback) but
+   *   `QuizNavigationService#advanceToNextQuestion` ALSO writes it — for ANY
+   *   departing question with a positive elapsed reading, which a question
+   *   that just expired has too (`expireImmediately` sets the elapsed to the
+   *   full duration). That silently marked an expired-and-never-answered
+   *   question as "correctly completed" the moment the user clicked Next.
+   *
+   * The verdict has neither problem: the server marks a question 'expired'
+   * on a genuine timeout regardless of what was clicked, and 'resolved' with
+   * `isResolvedCorrect` only once the question is actually, fully answered
+   * right — nothing local can accidentally set either.
+   */
+  public hasRecordedCorrectCompletion(questionIndex: number): boolean {
+    const questionText = this.quizService?.getQuestionsInDisplayOrder?.()?.[questionIndex]?.questionText
+      ?? this.quizService?.questions?.[questionIndex]?.questionText;
+    const quizId = this.quizService?.quizId;
+    if (!quizId || !questionText) return false;
+
+    const verdict = this.verdicts.verdictFor(quizId, questionText);
+    return allCorrectSelectedFromVerdict(verdict) === true;
+  }
+
   public restartForQuestion(questionIndex: number): void {
     // BEFORE the guards below. Every one of them reads run state that a quiz
     // switch leaves stale, so checking identity afterwards never runs at all.
@@ -629,10 +665,9 @@ export class TimerService implements OnDestroy {
     }
 
     // Correctly-answered questions don't re-run their timer — freeze at the
-    // recorded seconds-remaining instead. Gate ONLY on the durable dot-status
-    // (a selection-based check falsely fires for unanswered questions that
-    // hold stale selections, freezing them at a bogus value).
-    if (this.selectedOptionService?.clickConfirmedDotStatus?.get?.(questionIndex) === 'correct') {
+    // recorded seconds-remaining instead. See `hasRecordedCorrectCompletion`'s
+    // own doc comment for why this is NOT `clickConfirmedDotStatus`.
+    if (this.hasRecordedCorrectCompletion(questionIndex)) {
       this.freezeAtRecordedTime(questionIndex);
       return;
     }
@@ -643,6 +678,23 @@ export class TimerService implements OnDestroy {
     // expiredForQuestionIndexSig === the displayed index). Mirrors the
     // answered-correct freeze/return guard above.
     if (this.expiredForQuestionIndexSig() === questionIndex) {
+      // PROMOTE LIVE TO ARRIVAL. A genuine LIVE expiry (the countdown
+      // reaching 0 while this question was on screen) sets ONLY
+      // `expiredForQuestionIndexSig` — `expiredOnArrivalSig` deliberately
+      // stays unset so the heading/option-lock consumers read this as the
+      // live reveal moment. `restartForQuestion` is never called except in
+      // response to a genuine navigation/activation event, so being asked to
+      // restart a question that is ALREADY marked expired unambiguously
+      // means the user has LEFT and RETURNED — this is now a revisit, not a
+      // continuation of the same live moment. Without promoting the marker
+      // here, that distinction was never made: `expiredOnArrivalSig` stayed
+      // unset forever, every consumer kept reading the live-reveal branch on
+      // every later revisit too, and the heading showed the FET (and the
+      // option-lock service the timeout's coloring) as if the question had
+      // JUST expired, indefinitely.
+      if (this.expiredOnArrivalSig() !== questionIndex) {
+        this.expiredOnArrivalSig.set(questionIndex);
+      }
       return;
     }
 

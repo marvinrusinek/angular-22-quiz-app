@@ -1,6 +1,5 @@
 import { Service, inject } from '@angular/core';
 
-import { SelectedOptionService } from '../../state/selectedoption.service';
 import { TimerService } from './timer.service';
 import { TopicQuizAttemptService } from '../verdict/topic-quiz-attempt.service';
 
@@ -36,7 +35,6 @@ import { TopicQuizAttemptService } from '../verdict/topic-quiz-attempt.service';
 @Service()
 export class QuestionTimingService {
   private readonly attempts = inject(TopicQuizAttemptService);
-  private readonly selectedOptionService = inject(SelectedOptionService);
   private readonly timerService = inject(TimerService);
 
   /**
@@ -89,9 +87,12 @@ export class QuestionTimingService {
     this.timerService.clearAuthorizedDeadlines();
   }
 
+  // Deliberately `hasRecordedCorrectCompletion`, not `clickConfirmedDotStatus`
+  // — the dot map records whether the option the user JUST CLICKED was
+  // correct, not whether the question is finished, which is the wrong
+  // question for a multi-answer question with one (of several required)
+  // correct options picked. See TimerService#hasRecordedCorrectCompletion.
   private isAnsweredCorrectly(questionIndex: number): boolean {
-    return (
-      this.selectedOptionService?.clickConfirmedDotStatus?.get?.(questionIndex) === 'correct'
-    );
+    return this.timerService.hasRecordedCorrectCompletion(questionIndex);
   }
 }

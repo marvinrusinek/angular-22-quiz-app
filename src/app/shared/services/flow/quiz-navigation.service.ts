@@ -13,6 +13,7 @@ import { ExplanationTextService } from '../features/explanation/explanation-text
 import { NextButtonStateService } from '../state/next-button-state.service';
 import { OptionLockStateService } from '../state/option-lock-state.service';
 import { QqcQuestionLoaderService } from '../features/qqc/qqc-question-loader.service';
+import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
 import { QuizDataService } from '../data/quizdata.service';
 import { QuizQuestionManagerService } from '../flow/quizquestionmgr.service';
 import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
@@ -36,6 +37,7 @@ export class QuizNavigationService {
   private quizQuestionLoaderService = inject(QqcQuestionLoaderService);
   private quizQuestionManagerService = inject(QuizQuestionManagerService);
   private topicQuizTypeRegistry = inject(TopicQuizTypeRegistry);
+  private questionVerdictService = inject(QuestionVerdictService);
   private quizService = inject(QuizService);
   private quizStateService = inject(QuizStateService);
   private router = inject(Router);
@@ -485,6 +487,20 @@ export class QuizNavigationService {
 
       this.quizId = effectiveQuizId;
 
+      // A fresh quiz-entry (QuizSelection → Intro → Start Quiz) is a NEW
+      // PRESENTATION state, not a live completion event — exactly like
+      // arriving via Next/Previous/a dot. Reusing the same "this is an
+      // arrival, not a live answer" flags `navigateToQuestion` already sets
+      // for that case means the heading's existing revisit guard
+      // (`shouldShowFet`'s `isNavigatingToPrevious && !interactedThisVisit`
+      // branch) also covers quiz re-entry, with no separate FET special-case
+      // needed: a durably-earned verdict stays earned (and still renders
+      // question text correctly, historical picks and all, exactly like any
+      // other revisit) without forcing its reveal back open the instant the
+      // question is merely landed on again.
+      this.isNavigatingToPreviousSig.set(true);
+      this.quizStateService.clearInteractedThisVisit(index);
+
       // Fresh start guard: entering Q1 from intro/start should never reuse stale
       // same-tab score or selection state.
       if (index === 0) {
@@ -495,6 +511,41 @@ export class QuizNavigationService {
         this.quizService.answers = [];
         this.selectedOptionService.resetSelectionState();
         this.selectedOptionService.clearAllSelectionsForQuiz(effectiveQuizId);
+
+        // A DURABLY-COMPLETE QUESTION MUST NOT SURVIVE INTO A FRESH ATTEMPT.
+        //
+        // THE REGRESSION: selecting only 1 of 3 correct options on a
+        // multi-answer question painted all 3 green immediately. Root cause —
+        // this guard already resets score/selections for "entering Q1 fresh",
+        // but never cleared the PARALLEL per-question completion authorities:
+        // `_questionResolved` / `_multiAnswerCompletion` / `_multiAnswerPerfect`
+        // (QuizService) and the durable verdict store (QuestionVerdictService,
+        // which also backs `authorizedCorrectTexts`'s revealed-correct-set).
+        // Completing a question once, then merely leaving to QuizSelection and
+        // re-entering the SAME quiz (no explicit Restart), left both fully
+        // populated from the EARLIER attempt. `getRevisitOptionClasses` reads
+        // them unconditionally, so the first click of the NEW attempt read as
+        // "already fully resolved" and painted the old reveal onto it.
+        //
+        // This is NOT a reopening of the earlier `resolveMultiPerfect` fix —
+        // that fix stays intact (it still reads `isMultiAnswerPerfect`, never
+        // the broader `isQuestionResolved`) and still correctly refuses to
+        // treat a merely-RESOLVED question as PERFECT. This is a different gap
+        // in the same family: `isMultiAnswerPerfect` was genuinely, correctly
+        // true — just for an attempt that already ended, one this fresh start
+        // never accounted for.
+        //
+        // Mirrors exactly what `QuizResetService`'s explicit-Restart path
+        // already does (`clearAllAnswerState`, `questionVerdictService.clearAll`
+        // + `clearEarnedVerdicts`) — this guard already intends "entering Q1
+        // fresh" to mean a clean attempt, so completion/reveal state follows
+        // the same rule its score/selection state already does. Scoped to the
+        // "Start the Quiz!" button only (`resetUIAndNavigate`'s one caller) —
+        // a genuine browser refresh mid-quiz never reaches this method, so the
+        // refresh-restores-FET contract is untouched.
+        this.quizService.clearAllAnswerState();
+        this.questionVerdictService.clearAll();
+        this.questionVerdictService.clearEarnedVerdicts(effectiveQuizId);
 
         try {
           localStorage.setItem(SK_SAVED_QUESTION_INDEX, '0');

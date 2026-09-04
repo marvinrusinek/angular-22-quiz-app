@@ -44,7 +44,6 @@ const NEXT_BTN_MSG = 'Please click the Next button to continue.';
  * correct answer" there asserts the pick was WRONG, which is a claim no
  * authority has made — and it was latched, so it survived navigation.
  */
-const CHECKING_MSG = 'Checking…';
 export const SHOW_RESULTS_MSG = 'Please click the Show Results button.';
 
 interface OptionSnapshot {
@@ -509,9 +508,20 @@ export class SelectionMessageService {
 
       // A pick exists but nothing has judged it. Claim NOTHING, and write
       // neither lock — a lock here is what made the wrong state permanent.
+      //
+      // TOPIC QUIZ MUST NEVER SHOW REQUEST-STATUS TEXT. This used to return
+      // `CHECKING_MSG` ("Checking…") here, which is exactly the /check
+      // request's mechanics leaking onto the screen — and on a slow backend
+      // it stayed up long enough to read. The contract is: click → PRESERVE
+      // the neutral state already showing → verdict → the real transition.
+      // `_lastMessageByIndex` still holds the pre-click message at this point
+      // (the caller pushes THIS return value only after computing it), so
+      // falling back to it (or the fresh-question prompt, if none exists yet)
+      // keeps the screen exactly as the user already saw it while /check is
+      // in flight, with nothing invented about a request in progress.
       if (phase !== "resolved" && phase !== "expired") {
         this.recomputeWhenVerdictArrives({ index, total, qType, opts });
-        return CHECKING_MSG;
+        return this._lastMessageByIndex.get(index) ?? (index === 0 ? START_MSG : CONTINUE_MSG);
       }
 
       const answeredCorrectly = selectedTexts.some(
@@ -590,13 +600,15 @@ export class SelectionMessageService {
       // correct, so `totalCorrect - selectedCorrect` is 0 by ignorance, not by
       // completion.
       //
-      // Unknown then renders "Checking…" and writes no completion, exactly as
-      // the single-answer branch already does, and the message is recomputed
-      // when the verdict lands via the same one-shot arrival subscription.
+      // TOPIC QUIZ MUST NEVER SHOW REQUEST-STATUS TEXT (see the identical
+      // reasoning on the single-answer branch above). Unknown writes no
+      // completion, exactly as before, and the message is recomputed when the
+      // verdict lands via the same one-shot arrival subscription — it just no
+      // longer announces "Checking…" while it waits.
       const remainingFromVerdict = this.remainingCorrectFromVerdict(index);
       if (remainingFromVerdict === null && totalCorrect === 0) {
         this.recomputeWhenVerdictArrives({ index, total, qType, opts });
-        return CHECKING_MSG;
+        return this._lastMessageByIndex.get(index) ?? SELECT_ALL_THAT_APPLY_MSG;
       }
       const remaining = remainingFromVerdict ?? (totalCorrect - selectedCorrect);
 

@@ -4,6 +4,7 @@ import { Observable, of } from 'rxjs';
 import { catchError, map, shareReplay, tap } from 'rxjs/operators';
 
 import { API_BASE_URL } from '../../tokens/api-base-url.token';
+import { QUIZ_CATALOG_METADATA } from '../../data/quiz-catalog-metadata';
 
 /**
  * PUBLIC quiz metadata from `GET /api/quizzes`.
@@ -46,7 +47,7 @@ interface QuizMetadataEntryDto {
   readonly image?: string;
   readonly difficulty?: string | null;
   readonly facts?: readonly string[];
-  readonly questionCount?: number;
+  readonly questionCount?: number | null;
 }
 
 interface QuizMetadataListBody {
@@ -109,9 +110,29 @@ export class TopicQuizMetadataService {
   private inFlight: Observable<readonly QuizMetadataEntryDto[]> | null = null;
 
   /**
+   * Seed every signal from the bundled, SAFE metadata-only catalog
+   * (`QUIZ_CATALOG_METADATA` — see its own doc comment) so Topic Quiz tiles
+   * paint on the very first change-detection pass, instead of staying empty
+   * for however long a cold backend takes to answer `GET /api/quizzes`
+   * (measured ~12s cold vs ~0.2-0.4s warm on the Render free tier).
+   *
+   * This is a first-paint placeholder only: `load()`'s `tap` below OVERWRITES
+   * every one of these maps wholesale the moment the real response lands, so
+   * nothing bundled is ever consulted again after that point, and a quiz
+   * absent from `load()`'s response (e.g. one truly removed server-side)
+   * cannot survive the overwrite. No question, option, correctness, or
+   * explanation data exists in the bundled catalog to leak in the first
+   * place — see QUIZ_CATALOG_METADATA's own doc comment.
+   */
+  constructor() {
+    this.applyEntries(QUIZ_CATALOG_METADATA);
+  }
+
+  /**
    * Load the metadata list, at most once per page life.
    *
-   * Never rejects: a failure leaves the map empty and callers render nothing.
+   * Never rejects: a failure leaves the bundled-seeded (or, after a prior
+   * successful load, authoritative) maps in place — never blanks them.
    */
   load(): Observable<readonly QuizMetadataEntryDto[]> {
     if (this.inFlight) return this.inFlight;
@@ -120,50 +141,54 @@ export class TopicQuizMetadataService {
       .get<QuizMetadataListBody>(`${this.apiBaseUrl}/quizzes`)
       .pipe(
         map((body) => body?.quizzes ?? []),
-        tap((entries) => {
-          const facts = new Map<string, readonly string[]>();
-          const images = new Map<string, string>();
-          const milestones = new Map<string, string>();
-          const summaries = new Map<string, string>();
-          const difficulties = new Map<string, string | null>();
-          const questionCounts = new Map<string, number | null>();
-          for (const entry of entries) {
-            if (!entry?.quizId) continue;
-            facts.set(
-              entry.quizId,
-              Array.isArray(entry.facts)
-                ? entry.facts.filter((f): f is string => typeof f === 'string' && f.trim().length > 0)
-                : []
-            );
-            if (typeof entry.image === 'string' && entry.image.trim().length > 0) {
-              images.set(entry.quizId, entry.image.trim());
-            }
-            if (typeof entry.milestone === 'string' && entry.milestone.trim().length > 0) {
-              milestones.set(entry.quizId, entry.milestone.trim());
-            }
-            if (typeof entry.summary === 'string' && entry.summary.trim().length > 0) {
-              summaries.set(entry.quizId, entry.summary.trim());
-            }
-            difficulties.set(entry.quizId, entry.difficulty ?? null);
-            questionCounts.set(
-              entry.quizId,
-              Number.isFinite(entry.questionCount) && (entry.questionCount as number) >= 0
-                ? (entry.questionCount as number)
-                : null
-            );
-          }
-          this._factsByQuiz.set(facts);
-          this._imageByQuiz.set(images);
-          this._milestoneByQuiz.set(milestones);
-          this._summaryByQuiz.set(summaries);
-          this._difficultyByQuiz.set(difficulties);
-          this._questionCountByQuiz.set(questionCounts);
-        }),
+        tap((entries) => this.applyEntries(entries)),
         catchError(() => of([] as readonly QuizMetadataEntryDto[])),
         shareReplay({ bufferSize: 1, refCount: false })
       );
 
     return this.inFlight;
+  }
+
+  /** Populate every per-field signal from a metadata entry list — shared by
+   *  the bundled first-paint seed and the authoritative `load()` response. */
+  private applyEntries(entries: readonly QuizMetadataEntryDto[]): void {
+    const facts = new Map<string, readonly string[]>();
+    const images = new Map<string, string>();
+    const milestones = new Map<string, string>();
+    const summaries = new Map<string, string>();
+    const difficulties = new Map<string, string | null>();
+    const questionCounts = new Map<string, number | null>();
+    for (const entry of entries) {
+      if (!entry?.quizId) continue;
+      facts.set(
+        entry.quizId,
+        Array.isArray(entry.facts)
+          ? entry.facts.filter((f): f is string => typeof f === 'string' && f.trim().length > 0)
+          : []
+      );
+      if (typeof entry.image === 'string' && entry.image.trim().length > 0) {
+        images.set(entry.quizId, entry.image.trim());
+      }
+      if (typeof entry.milestone === 'string' && entry.milestone.trim().length > 0) {
+        milestones.set(entry.quizId, entry.milestone.trim());
+      }
+      if (typeof entry.summary === 'string' && entry.summary.trim().length > 0) {
+        summaries.set(entry.quizId, entry.summary.trim());
+      }
+      difficulties.set(entry.quizId, entry.difficulty ?? null);
+      questionCounts.set(
+        entry.quizId,
+        Number.isFinite(entry.questionCount) && (entry.questionCount as number) >= 0
+          ? (entry.questionCount as number)
+          : null
+      );
+    }
+    this._factsByQuiz.set(facts);
+    this._imageByQuiz.set(images);
+    this._milestoneByQuiz.set(milestones);
+    this._summaryByQuiz.set(summaries);
+    this._difficultyByQuiz.set(difficulties);
+    this._questionCountByQuiz.set(questionCounts);
   }
 
   /**

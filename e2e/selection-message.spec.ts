@@ -73,26 +73,32 @@ test.describe('single-answer selection message', () => {
     await expect(page.locator(MSG)).toHaveText(NEXT_MSG, { timeout: 15_000 });
   });
 
-  test('a correct click shows Checking… while the verdict is in flight', async ({ page }) => {
+  // TOPIC QUIZ MUST NEVER SHOW REQUEST-STATUS TEXT ("Checking…" included —
+  // see selection-message.service.ts). A correct click while the verdict is
+  // in flight preserves whatever neutral message was already showing and
+  // transitions directly to the real message once the verdict lands.
+  test('a correct click preserves the neutral message (never "Checking…") while the verdict is in flight', async ({ page }) => {
     await gotoQuestion(page, 'typescript', 1);
     const release = await gateCheck(page);
 
     await page.locator('.option-row').nth(0).click();
 
     // The verdict cannot have arrived — its response is still held.
-    await expect(page.locator(MSG)).toHaveText(CHECKING, { timeout: 15_000 });
+    await expect(page.locator(MSG)).not.toHaveText(CHECKING);
+    await expect(page.locator(MSG)).not.toHaveText(WRONG_MSG);
 
     release();
 
     await expect(page.locator(MSG)).toHaveText(NEXT_MSG, { timeout: 15_000 });
   });
 
-  test('NO wrong-answer instruction appears while the verdict is pending', async ({ page }) => {
+  test('NO wrong-answer instruction (or "Checking…") appears while the verdict is pending', async ({ page }) => {
     await gotoQuestion(page, 'typescript', 1);
     const release = await gateCheck(page);
 
     await page.locator('.option-row').nth(0).click();
-    await expect(page.locator(MSG)).toHaveText(CHECKING, { timeout: 15_000 });
+    await page.waitForTimeout(500);
+    await expect(page.locator(MSG)).not.toHaveText(CHECKING);
 
     // The exact regression: a correct pick classified as wrong because the
     // check had not come back yet. Pending must never read as incorrect.
@@ -110,13 +116,14 @@ test.describe('single-answer selection message', () => {
     await expect(page.locator(MSG)).toHaveText(WRONG_MSG, { timeout: 15_000 });
   });
 
-  test('a wrong click also passes through Checking…', async ({ page }) => {
+  test('a wrong click also never shows "Checking…" while pending', async ({ page }) => {
     await gotoQuestion(page, 'typescript', 1);
     const release = await gateCheck(page);
 
     await page.locator('.option-row').nth(1).click();
+    await page.waitForTimeout(500);
 
-    await expect(page.locator(MSG)).toHaveText(CHECKING, { timeout: 15_000 });
+    await expect(page.locator(MSG)).not.toHaveText(CHECKING);
 
     release();
 

@@ -351,8 +351,6 @@ describe('SelectionMessageService', () => {
    * both, plus the latch that made the wrong message survive navigation.
    */
   describe('single-answer selection message — authorized, and never latched early', () => {
-    const CHECKING = 'Checking…';
-
     /** An API-sourced option: text and selection state, and NO correct flag. */
     function apiOpts(selectedText: string) {
       return [
@@ -361,16 +359,22 @@ describe('SelectionMessageService', () => {
       ] as any[];
     }
 
-    it('CHECKING: a pick with no verdict says "Checking", not "wrong"', () => {
+    // TOPIC QUIZ MUST NEVER SHOW REQUEST-STATUS TEXT: a pick with no verdict
+    // yet used to say "Checking…" — the /check request's own mechanics,
+    // leaking onto the screen. It must instead preserve whatever neutral
+    // message was already showing (the fresh-question prompt here, since
+    // nothing was pushed for this index yet), and never claim "wrong".
+    it('PENDING: a pick with no verdict preserves the neutral prompt, not "Checking" or "wrong"', () => {
       verdictState = { ...IDLE_VERDICT_STATE, phase: 'checking' } as QuestionVerdictState;
       const msg = service.computeFinalMessage({
         index: 0, total: 6, qType: QuestionType.SingleAnswer, opts: apiOpts('A')
       });
-      expect(msg).toBe(CHECKING);
+      expect(msg).toBe(START_MSG);
+      expect(msg).not.toContain('Checking');
       expect(msg).not.toContain('select the correct answer');
     });
 
-    it('CHECKING writes NEITHER lock — this is what made the bad message stick', () => {
+    it('PENDING writes NEITHER lock — this is what made the bad message stick', () => {
       verdictState = { ...IDLE_VERDICT_STATE, phase: 'checking' } as QuestionVerdictState;
       service.computeFinalMessage({
         index: 2, total: 6, qType: QuestionType.SingleAnswer, opts: apiOpts('A')

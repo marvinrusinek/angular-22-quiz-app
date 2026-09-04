@@ -131,3 +131,103 @@ test.describe('multi-answer incremental highlighting (3-correct question)', () =
     }
   });
 });
+
+/**
+ * ROUND 2 OF THE SAME REGRESSION: fully complete a 3-correct question once,
+ * leave to QuizSelection (no explicit Restart), re-enter the SAME quiz, and
+ * pick only ONE correct option this time — the OLD completion painted the
+ * full set green on the very first click of the NEW attempt.
+ *
+ * ── Root cause ──────────────────────────────────────────────────────
+ *
+ * The Round 1 fix (`isMultiAnswerPerfect`, above) stayed correct and intact.
+ * This was a DIFFERENT gap in the same family: `resetUIAndNavigate`'s "fresh
+ * start guard" (entering Q1 from Intro's "Start the Quiz!") already resets
+ * score and selections unconditionally on every entry, but never cleared the
+ * PARALLEL per-question completion authorities —
+ * `_questionResolved` / `_multiAnswerCompletion` / `_multiAnswerPerfect`
+ * (QuizService) and the durable verdict store (QuestionVerdictService, which
+ * also backs `authorizedCorrectTexts`'s revealed-correct-set). A question
+ * completed in an EARLIER visit this tab session survived, fully intact,
+ * into a brand new attempt — `getRevisitOptionClasses` (unconditional) then
+ * read the leftover `isMultiAnswerPerfect === true` / revealed-set-populated
+ * state and painted it onto the new attempt's very first click.
+ *
+ * ── Why the existing coverage didn't catch this ──────────────────────
+ *
+ * Every prior multi-answer highlighting test opened the question via a fresh
+ * Playwright browser context (`page.goto` cold, or a single continuous
+ * session) — none of them modeled "this exact question was already fully
+ * completed earlier in the SAME tab session, then the user left and came
+ * back." That sequence is exactly what real manual use (and this test) now
+ * exercises.
+ *
+ * Fixed by clearing `clearAllAnswerState()` + `questionVerdictService
+ * .clearAll()` + `.clearEarnedVerdicts(quizId)` in the SAME fresh-start guard
+ * that already clears score/selections — re-entry is, and always was
+ * (per that guard's pre-existing score/selection reset), a genuinely fresh
+ * attempt, not a revisit of the earlier one.
+ */
+test.describe('multi-answer highlighting survives a completed-then-re-entered quiz', () => {
+  test('completing a 3-correct question once, then re-entering the SAME quiz, does not leak the old completion onto a fresh partial pick', async ({ page }) => {
+    await page.goto('/select');
+    await page.locator('.quiz-tile:not(.interview-tile)').first().waitFor({ state: 'visible', timeout: 30_000 });
+
+    const enterDiQuiz = async () => {
+      await page.locator('.quiz-tile:not(.interview-tile)', { hasText: 'Dependency Injection' }).first()
+        .click({ timeout: 15_000 });
+      await page.locator('.start-btn').click({ timeout: 15_000 });
+      await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
+    };
+    const answerToUnlockNext = async () => {
+      const rows = page.locator('.option-row');
+      const n = await rows.count();
+      for (let i = 0; i < n; i++) {
+        await rows.nth(i).click({ timeout: 15_000 }).catch(() => {});
+        await page.waitForTimeout(700);
+        if (await page.locator(NEXT_BTN).isEnabled().catch(() => false)) return;
+      }
+    };
+    const goToQ3 = async () => {
+      await answerToUnlockNext();
+      await page.locator(NEXT_BTN).click({ timeout: 15_000 });
+      await page.waitForTimeout(800);
+      await answerToUnlockNext();
+      await page.locator(NEXT_BTN).click({ timeout: 15_000 });
+      await page.waitForTimeout(800);
+    };
+
+    await enterDiQuiz();
+    await goToQ3();
+
+    const heading = (await page.locator(HEADING).first().textContent()) ?? '';
+    const correct = correctIndicesForHeading(diQuiz, heading);
+    expect(correct.length).toBe(3);
+
+    // Fully complete Q3 this first time.
+    for (const i of correct) {
+      await page.locator('.option-row').nth(i).click({ timeout: 15_000 });
+      await page.waitForTimeout(600);
+    }
+    await page.waitForTimeout(500);
+
+    // Leave via the header link (NOT an explicit Restart).
+    await page.locator('a[matTooltip="Back to Codelab Quiz Selection"]').click({ timeout: 15_000 });
+    await page.locator('.quiz-tile:not(.interview-tile)').first().waitFor({ state: 'visible', timeout: 30_000 });
+
+    // Re-enter the SAME quiz — a genuinely fresh attempt.
+    await enterDiQuiz();
+    await goToQ3();
+
+    // THE REGRESSION: selecting only ONE correct option here used to paint
+    // all three green immediately.
+    await page.locator('.option-row').nth(correct[0]).click({ timeout: 15_000 });
+    await page.waitForTimeout(1500);
+
+    expect(await classesOf(page, correct[0])).toContain('correct-option');
+    for (const i of [correct[1], correct[2]]) {
+      expect(await classesOf(page, i), `option ${i} must stay neutral — it was never picked in THIS attempt`)
+        .not.toContain('correct-option');
+    }
+  });
+});

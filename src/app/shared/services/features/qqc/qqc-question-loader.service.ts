@@ -7,10 +7,12 @@ import { SharedOptionConfig } from '../../../models/SharedOptionConfig.model';
 
 import { ExplanationTextService } from '../explanation/explanation-text.service';
 import { NextButtonStateService } from '../../state/next-button-state.service';
+import { QuestionVerdictService } from '../verdict/question-verdict.service';
 import { QqcQlFetchService } from './qqc-ql-fetch.service';
 import { QqcQlOptionBuildService } from './qqc-ql-option-build.service';
 import { QqcQlStreamService } from './qqc-ql-stream.service';
 import { QuizService } from '../../data/quiz.service';
+import { allCorrectSelectedFromVerdict, questionTextForDisplayIndex } from '../verdict/authorized-correctness';
 import { QuizStateService } from '../../state/quizstate.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { SelectionMessageService } from '../selection-message/selection-message.service';
@@ -26,6 +28,7 @@ export class QqcQuestionLoaderService {
   private readonly explanationTextService = inject(ExplanationTextService);
   private readonly fetch = inject(QqcQlFetchService);
   private readonly nextButtonStateService = inject(NextButtonStateService);
+  private readonly questionVerdictService = inject(QuestionVerdictService);
   private readonly optionBuild = inject(QqcQlOptionBuildService);
   private readonly qql = inject(QqcQlStreamService);
   private readonly quizService = inject(QuizService);
@@ -445,7 +448,28 @@ export class QqcQuestionLoaderService {
     if (!params.shouldKeepExplanationVisible) {
       this.selectedOptionService.clearSelectionsForQuestion(params.currentQuestionIndex);
       this.selectedOptionService.setAnswered(false);
-      this.nextButtonStateService.reset();
+
+      // A DURABLY-COMPLETE QUESTION MUST NOT STRAND NEXT DISABLED.
+      //
+      // `shouldKeepExplanationVisible` decides a PRESENTATION choice (should
+      // the FET stay showing) — false here on a revisit/re-entry is correct
+      // (see heading-inputs.ts's own revisit guard). But Next-button
+      // enablement is a COMPLETION fact, not a presentation one, and
+      // `reset()` used to run unconditionally in this branch, disabling Next
+      // for a question that IS genuinely finished — this branch runs on
+      // every navigation-triggered reset, restart included, where the local
+      // selection mirror this used to lean on has just been (correctly)
+      // wiped. Checking the durable verdict directly answers the real
+      // question instead: is THIS question actually complete?
+      const verdict = this.questionVerdictService.verdictFor(
+        this.quizService.quizId ?? '',
+        questionTextForDisplayIndex(this.quizService, params.currentQuestionIndex) ?? ''
+      );
+      if (allCorrectSelectedFromVerdict(verdict) === true) {
+        this.nextButtonStateService.setNextButtonState(true);
+      } else {
+        this.nextButtonStateService.reset();
+      }
     } else {
       this.selectedOptionService.setAnswered(true, true);
       this.nextButtonStateService.setNextButtonState(true);

@@ -6,14 +6,26 @@ import { API_BASE_URL } from '../../tokens/api-base-url.token';
 import { TopicQuizMetadataService } from './topic-quiz-metadata.service';
 
 /**
- * Facts come from `GET /quizzes` and from nowhere else.
+ * Facts come from `GET /quizzes` and from nowhere else — with ONE bundled
+ * exception, added to fix the "Topic Quiz tiles take 10-15s to appear on a
+ * cold backend" regression: `QUIZ_CATALOG_METADATA`, a safe, metadata-only,
+ * no-question/no-answer snapshot that seeds every signal on construction so
+ * tiles paint before `GET /quizzes` ever answers (see the constant's own doc
+ * comment for the security boundary). `load()`'s response still overwrites
+ * it wholesale the moment it lands.
  *
- * The point of these is the NEGATIVE half: a failed or empty response must
- * leave the Results panel with nothing to show, never send anyone to the local
- * bank. That is the dependency the metadata cutover removes.
+ * The point of the "failed load" tests below is still the NEGATIVE half —
+ * proving nothing is fabricated for a quiz the bundled catalog doesn't know
+ * about either — but a KNOWN quiz id now correctly keeps showing the bundled
+ * placeholder after a failure (never blanks to nothing), which is the whole
+ * point of seeding it in the first place. `'rxjs'` is a real bundled entry,
+ * so the failure tests use a quiz id absent from the catalog to prove the
+ * genuinely-unknown case.
  */
 
 const BASE = 'http://api.test/api';
+/** Not in QUIZ_CATALOG_METADATA — proves the truly-unknown case, not just an offline one. */
+const UNKNOWN_QUIZ_ID = 'not-a-real-quiz-xyz';
 
 describe('TopicQuizMetadataService', () => {
   let http: HttpTestingController;
@@ -72,7 +84,7 @@ describe('TopicQuizMetadataService', () => {
     expect(service.factsFor('rxjs')).toEqual(['A', 'B']);
   });
 
-  it('FAILS SOFT: a network error yields no facts and does NOT throw', () => {
+  it('FAILS SOFT: a network error yields no facts for an unknown quiz and does NOT throw', () => {
     let errored = false;
     let completed = false;
     service.load().subscribe({
@@ -83,7 +95,13 @@ describe('TopicQuizMetadataService', () => {
 
     expect(errored).toBe(false);
     expect(completed).toBe(true);
-    expect(service.factsFor('rxjs')).toEqual([]);
+    expect(service.factsFor(UNKNOWN_QUIZ_ID)).toEqual([]);
+  });
+
+  it('FAILS SOFT, BUT NOT BLANK: a network error keeps the bundled catalog\'s facts for a KNOWN quiz', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('network error'));
+    expect(service.factsFor('rxjs').length).toBeGreaterThan(0);
   });
 
   it('a malformed body is tolerated as "no facts"', () => {
@@ -169,10 +187,16 @@ describe('TopicQuizMetadataService — imagery', () => {
     expect(service.imageFor('c')).toBe('https://cdn.test/c.png');
   });
 
-  it('a failed load leaves imagery empty — consumers fall back, never crash', () => {
+  it('a failed load leaves an UNKNOWN quiz\'s imagery empty — consumers fall back, never crash', () => {
     service.load().subscribe();
     http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
-    expect(service.imageFor('rxjs')).toBe('');
+    expect(service.imageFor(UNKNOWN_QUIZ_ID)).toBe('');
+  });
+
+  it('a failed load keeps a KNOWN quiz\'s bundled-catalog imagery, never blanks it', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
+    expect(service.imageFor('rxjs')).not.toBe('');
   });
 
   it('facts and imagery arrive from the SAME single request', () => {
@@ -236,10 +260,16 @@ describe('TopicQuizMetadataService — difficulty', () => {
     expect(byQuiz.get('rxjs')).toBeNull();
   });
 
-  it('a failed load leaves the difficulty map empty, never throws', () => {
+  it('a failed load leaves an UNKNOWN quiz absent from the difficulty map, never throws', () => {
     service.load().subscribe();
     http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
-    expect(service.difficultyByQuiz().size).toBe(0);
+    expect(service.difficultyByQuiz().has(UNKNOWN_QUIZ_ID)).toBe(false);
+  });
+
+  it('a failed load keeps the bundled catalog\'s difficulty map, never blanks it', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
+    expect(service.difficultyByQuiz().size).toBeGreaterThan(0);
   });
 
   it('difficulty arrives from the SAME single request as facts/imagery/milestone', () => {
@@ -322,10 +352,16 @@ describe('TopicQuizMetadataService — question count', () => {
     expect(service.questionCountByQuiz().get('rxjs')).toBe(0);
   });
 
-  it('a failed load leaves the question-count map empty, never throws', () => {
+  it('a failed load leaves an UNKNOWN quiz absent from the question-count map, never throws', () => {
     service.load().subscribe();
     http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
-    expect(service.questionCountByQuiz().size).toBe(0);
+    expect(service.questionCountByQuiz().has(UNKNOWN_QUIZ_ID)).toBe(false);
+  });
+
+  it('a failed load keeps the bundled catalog\'s question-count map, never blanks it', () => {
+    service.load().subscribe();
+    http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
+    expect(service.questionCountByQuiz().size).toBeGreaterThan(0);
   });
 
   it('question count arrives from the SAME single request as facts/imagery/milestone/difficulty', () => {

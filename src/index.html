@@ -74,6 +74,24 @@
       }
     </style>
 
+    <!-- Same cold-start race as Material Icons above, on the two remote
+         @font-face files declared in styles.scss (scoreboard + congratulations
+         text). Preload only — the @font-face rules stay in styles.scss as the
+         single declaration; this just starts the fetch at document-load time
+         instead of only once the scoreboard/congratulations UI first renders. -->
+    <link rel="preload" href="https://raw.githubusercontent.com/marvinrusinek/angular-9-quiz-app/master/src/assets/fonts/DjbUpOnTheScoreboard.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="https://raw.githubusercontent.com/marvinrusinek/angular-9-quiz-app/master/src/assets/fonts/LucidaUnicodeCalligraphy.ttf" as="font" type="font/ttf" crossorigin>
+
+    <!-- Same rationale for the quiz sound cues (sound.service.ts): the browser
+         starts fetching these at document-load time, well before SoundService
+         is ever constructed, so by the time the first answer needs a cue the
+         bytes are already in the HTTP cache. `as="fetch"` (not "audio") because
+         Howler decodes these via XHR/fetch into a Web Audio buffer rather than
+         an <audio> element — that is also the destination CSP checks against
+         connect-src, which already allows this host. -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/gh/marvinrusinek/angular-22-quiz-app@main/src/assets/sounds/correct.mp3" as="fetch" crossorigin>
+    <link rel="preload" href="https://cdn.jsdelivr.net/gh/marvinrusinek/angular-22-quiz-app@main/src/assets/sounds/incorrect.mp3" as="fetch" crossorigin>
+
     <link rel="manifest" href="manifest.webmanifest">
   </head>
   <body>

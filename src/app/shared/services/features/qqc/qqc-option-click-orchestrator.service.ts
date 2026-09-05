@@ -206,11 +206,15 @@ export class QqcOptionClickOrchestratorService {
       for (const [i, opt] of canonicalOpts.entries()) {
         opt.selected = i === evtIdx;
       }
-      if (evtOpt?.correct && canonicalOpts[evtIdx]) {
-        canonicalOpts[evtIdx].selected = true;
-        this.selectionMessageService._singleAnswerCorrectLock.add(questionIndex);
-        this.selectionMessageService._singleAnswerIncorrectLock.delete(questionIndex);
-      }
+      // Stage 10 (Chokepoint #1 audit): a branch keyed on `evtOpt?.correct` used
+      // to also set `_singleAnswerCorrectLock` here. Under the API adapter,
+      // options never carry `.correct` (Stage 14 removed it from the wire
+      // contract — see quiz.service.ts's `option.correct === undefined ? {} :
+      // ...` passthrough), so `evtOpt?.correct` is always falsy and this never
+      // ran. The real, verdict-authoritative lock is already applied by
+      // selection-message.service.ts's own `phase === 'resolved'` branch once
+      // the answer is actually checked — removing the dead click-time guess
+      // changes nothing observable.
     } else if (canonicalOpts[evtIdx]) {
       canonicalOpts[evtIdx].selected = checked ?? true;
     }
@@ -219,9 +223,10 @@ export class QqcOptionClickOrchestratorService {
   }
 
   /**
-   * Applies lock logic for the clicked option.
-   * For multi-answer: only locks incorrect options.
-   * For single-answer: locks clicked option; if correct, locks all.
+   * Applies lock logic for the clicked option: locks the clicked option
+   * itself so it cannot be re-toggled. Locking every OTHER option once the
+   * question resolves correct is verdict-authoritative and handled by
+   * option-lock-policy.service.ts#applyForceDisableAll, not here.
    */
   applyOptionLocks(params: {
     questionIndex: number;
@@ -246,19 +251,16 @@ export class QqcOptionClickOrchestratorService {
           this.selectedOptionService.lockOption(questionIndex, clickedIdNum);
         }
       }
-      // Single-answer: when the correct option is clicked, lock ALL options so
-      // incorrect ones display dark gray and disabled. Detect single-answer by
-      // either question.type OR by correct-count <= 1 (resilient to missing type).
-      const isSingleAnswer = question.type === QuestionType.SingleAnswer || !isMultiAnswer;
-      if (isSingleAnswer && evtOpt?.correct) {
-        const idSource = (optionsToDisplay?.length ? optionsToDisplay : question?.options) ?? [];
-        const allIdsNum = idSource
-          .map((o, i) => {
-            const id = Number(o?.optionId);
-            return Number.isFinite(id) && id !== -1 ? id : i;
-          });
-        this.selectedOptionService.lockMany(questionIndex, allIdsNum as number[]);
-      }
+      // Stage 10 (Chokepoint #1 audit): a branch previously locked ALL options
+      // here when `evtOpt?.correct` was true, for single-answer questions.
+      // `evtOpt?.correct` is always falsy under the API adapter (see
+      // buildCanonicalOptions' matching comment above), so this never ran in
+      // production. The real, verdict-authoritative "lock every option once
+      // resolved correct" is already applied by
+      // option-lock-policy.service.ts#applyForceDisableAll once the answer is
+      // actually checked — removing the dead click-time guess changes nothing
+      // observable.
+      void optionsToDisplay;
     } catch (err: unknown) {
       console.error('QqcOptionClickOrchestratorService.applyOptionLocks lock logic failed:', err);
     }

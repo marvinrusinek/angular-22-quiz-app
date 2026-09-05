@@ -77,12 +77,14 @@ test.describe('Interview Mode — Next gating', () => {
   });
 
   test('3. a multi-select question enables Next after ONE selection (count never exposed)', async ({ page }) => {
-    // Advanced quizzes carry the multi-answer questions; 30 questions makes
-    // encountering one reliable.
-    await configureAndStart(page, 'Advanced', '30');
+    // Advanced quizzes carry the multi-answer questions. The synthetic E2E bank's
+    // entire Advanced pool is 20 questions (fixture-gizmos + fixture-thingamajigs),
+    // so requesting all 20 guarantees every Advanced question — including its two
+    // multi-answer ones — is included, rather than sampling toward one.
+    await configureAndStart(page, 'Advanced', '20');
 
     let found = false;
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 20; i++) {
       const isMulti = await page.locator('.io-input[type="checkbox"]').count() > 0;
 
       if (isMulti) {

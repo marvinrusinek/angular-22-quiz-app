@@ -46,7 +46,7 @@ async function roundTrip(page: Page): Promise<void> {
 }
 
 async function openDiMulti(page: Page): Promise<number[]> {
-  await page.goto('/quiz/question/dependency-injection/3');
+  await page.goto('/quiz/question/fixture-gadgets/3');
   await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
   const heading = (await page.locator(HEADING).first().textContent()) ?? '';
   const correct = correctIndicesForHeading(diQuiz, heading);
@@ -56,7 +56,7 @@ async function openDiMulti(page: Page): Promise<number[]> {
 
 test.describe('revisit reports completion, not attempts', () => {
   test('single-answer answered CORRECTLY reports Answered', async ({ page }) => {
-    await page.goto('/quiz/question/typescript/1');
+    await page.goto('/quiz/question/fixture-widgets/1');
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
 
     await page.locator('.option-row').nth(0).click();   // ':' is correct
@@ -69,7 +69,7 @@ test.describe('revisit reports completion, not attempts', () => {
   });
 
   test('single-answer answered WRONGLY does NOT report Answered', async ({ page }) => {
-    await page.goto('/quiz/question/typescript/1');
+    await page.goto('/quiz/question/fixture-widgets/1');
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
 
     await page.locator('.option-row').nth(1).click();   // ';' is wrong

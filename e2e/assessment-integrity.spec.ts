@@ -104,7 +104,7 @@ test.describe('Assessment Integrity Mode', () => {
   });
 
   test('Topic Quizzes receive NO integrity restrictions', async ({ page }) => {
-    await page.goto('/quiz/intro/typescript');
+    await page.goto('/quiz/intro/fixture-widgets');
     await page.locator('button:has-text("Start the Quiz")').click();
     await expect(page.locator('mat-radio-button, .option').first()).toBeVisible();
 

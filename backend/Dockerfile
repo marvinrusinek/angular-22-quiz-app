@@ -36,17 +36,16 @@ RUN npm ci --omit=dev
 FROM node:22-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
-# The app resolves its quiz bank relative to the working directory
-# (process.cwd()), so this must stay /app.
 WORKDIR /app
 
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./package.json
 
-# The private quiz bank. Baked into the image rather than mounted: it is code,
-# not user data, and it must never live under a static route.
-COPY data/quiz.json ./data/quiz.json
+# The quiz bank is PostgreSQL-only at runtime (Stage 15) — there is no
+# `data/quiz.json` in this image. Importing a bank into the database is an
+# explicit, manually-run operator action (scripts/import-quiz-bank.ts),
+# never something this container does for itself.
 
 # DATABASE_URL is supplied by the environment and is REQUIRED in production —
 # the config refuses to start without it. It is deliberately NOT defaulted here:

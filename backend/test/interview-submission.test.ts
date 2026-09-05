@@ -10,7 +10,7 @@ import { seededRandomSource } from '../src/interview/assessment.random';
 import { computeTimeUsedSeconds, isSelectionCorrect, scoreInterview } from '../src/interview/result.scoring';
 import { assertResultInvariants, FrozenResultError, parseFrozenResult } from '../src/interview/result.types';
 import type { SessionQuestionSnapshot } from '../src/interview/session.types';
-import { realRepository } from './helpers/fixtures';
+import { presetTopicsRepository } from './helpers/fixtures';
 import { memoryDb } from './helpers/db';
 
 let clock = 1_700_000_000_000;
@@ -20,14 +20,14 @@ let app: Express;
 
 function buildApp(repo: SessionRepository): Express {
   const service = new InterviewSessionService({
-    quizRepository: realRepository(),
+    quizRepository: presetTopicsRepository(),
     sessionRepository: repo,
     now: () => clock,
     random: seededRandomSource(31337)
   });
   return createApp(
     loadConfig({ NODE_ENV: 'test', ALLOWED_ORIGINS: 'http://localhost:4200' } as NodeJS.ProcessEnv),
-    { quizRepository: realRepository(), sessionRepository: repo, interviewSessionService: service }
+    { quizRepository: presetTopicsRepository(), sessionRepository: repo, interviewSessionService: service }
   );
 }
 
@@ -48,7 +48,7 @@ interface QuestionDto {
 }
 interface Created { id: string; token: string; questions: QuestionDto[] }
 
-const CUSTOM = { mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs', 'signals'], questionCount: 10 };
+const CUSTOM = { mode: 'custom', difficulty: 'mixed', topicIds: ['typescript', 'templates'], questionCount: 10 };
 
 async function createSession(body: unknown = CUSTOM): Promise<Created> {
   const res = await request(app).post('/api/interview-sessions').send(body as object);

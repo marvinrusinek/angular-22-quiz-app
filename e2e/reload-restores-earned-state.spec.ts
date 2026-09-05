@@ -48,7 +48,7 @@ async function classesOf(page: Page) {
 }
 
 async function openDiMulti(page: Page): Promise<number[]> {
-  await page.goto('/quiz/question/dependency-injection/3');
+  await page.goto('/quiz/question/fixture-gadgets/3');
   await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
   const heading = (await page.locator(HEADING).first().textContent()) ?? '';
   const correct = correctIndicesForHeading(diQuiz, heading);
@@ -58,7 +58,7 @@ async function openDiMulti(page: Page): Promise<number[]> {
 
 test.describe('earned state survives a reload', () => {
   test('a CORRECT single answer stays green', async ({ page }) => {
-    await page.goto('/quiz/question/typescript/1');
+    await page.goto('/quiz/question/fixture-widgets/1');
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
 
     await page.locator('.option-row').nth(0).click();   // ':' is correct
@@ -76,7 +76,7 @@ test.describe('earned state survives a reload', () => {
    * inventing a restore the app has never performed.
    */
   test('a WRONG single answer reveals nothing new after a reload', async ({ page }) => {
-    await page.goto('/quiz/question/typescript/1');
+    await page.goto('/quiz/question/fixture-widgets/1');
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
 
     await page.locator('.option-row').nth(1).click();   // ';' is wrong
@@ -139,7 +139,7 @@ test.describe('earned state survives a reload', () => {
    */
   test('a reload does not surface an explanation the user has not earned', async ({ page }) => {
     // Q2 is never answered in this test.
-    await page.goto('/quiz/question/typescript/2');
+    await page.goto('/quiz/question/fixture-widgets/2');
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
 
     await reload(page);
@@ -150,7 +150,7 @@ test.describe('earned state survives a reload', () => {
 
 test.describe('a reload grants nothing that was not earned', () => {
   test('an UNANSWERED question shows no correctness after a reload', async ({ page }) => {
-    await page.goto('/quiz/question/typescript/1');
+    await page.goto('/quiz/question/fixture-widgets/1');
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
 
     await reload(page);
@@ -162,7 +162,7 @@ test.describe('a reload grants nothing that was not earned', () => {
   });
 
   test('nothing is stored for a question the user never answered', async ({ page }) => {
-    await page.goto('/quiz/question/typescript/1');
+    await page.goto('/quiz/question/fixture-widgets/1');
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
     await page.locator('.option-row').nth(0).click();
     await page.waitForTimeout(2000);
@@ -182,14 +182,14 @@ test.describe('a reload grants nothing that was not earned', () => {
   });
 
   test('a payload from ANOTHER quiz is ignored', async ({ page }) => {
-    await page.goto('/quiz/question/typescript/1');
+    await page.goto('/quiz/question/fixture-widgets/1');
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
 
     // Forge an entry that claims every option of THIS quiz's Q1 is correct, but
     // stores it under a different quiz's identity. Cross-quiz consumption would
     // paint the answer for free.
     await page.evaluate(() => {
-      sessionStorage.setItem('earnedVerdicts:v1:typescript', JSON.stringify({
+      sessionStorage.setItem('earnedVerdicts:v1:fixture-widgets', JSON.stringify({
         v: 1,
         quizId: 'some-other-quiz',
         entries: [{
@@ -211,11 +211,11 @@ test.describe('a reload grants nothing that was not earned', () => {
   });
 
   test('a MALFORMED payload is discarded rather than breaking the quiz', async ({ page }) => {
-    await page.goto('/quiz/question/typescript/1');
+    await page.goto('/quiz/question/fixture-widgets/1');
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
 
     await page.evaluate(() => {
-      sessionStorage.setItem('earnedVerdicts:v1:typescript', '{ this is not json');
+      sessionStorage.setItem('earnedVerdicts:v1:fixture-widgets', '{ this is not json');
     });
 
     await reload(page);

@@ -1,206 +1,102 @@
 {
   "quizzes": [
     {
-      "quizId": "typescript",
-      "milestone": "TypeScript",
-      "summary": "TypeScript makes it easier to read and debug JavaScript code.",
-      "image": "https://raw.githubusercontent.com/marvinrusinek/codelab-angular-10-quiz-app/quiz/codelab-master/apps/playground/src/assets/images/ts.png",
+      "quizId": "fixture-outside-root",
+      "milestone": "Fixture Outside Root",
+      "summary": "Synthetic quiz used only to prove the allowOutsideRoot escape hatch. Not real quiz content.",
+      "image": "",
       "difficulty": "beginner",
       "facts": [
-        "TypeScript compiles down to plain JavaScript, so the types are erased at build time and the output runs anywhere JavaScript runs.",
-        "Type inference means TypeScript often knows a variable's type from its initial value, so you don't have to annotate everything.",
-        "Strict mode catches whole classes of bugs at compile time, such as using a value that might be null or undefined."
+        "This fixture exists purely to test file-path handling."
       ],
       "questions": [
         {
-          "questionText": "Which of the following does TypeScript use to specify types?",
+          "questionText": "Which fixture option is correct?",
           "options": [
-            {
-              "text": ":",
-              "correct": true
-            },
-            {
-              "text": ";"
-            },
-            {
-              "text": "!"
-            },
-            {
-              "text": "&"
-            }
+            { "text": "alpha", "correct": true },
+            { "text": "beta" },
+            { "text": "gamma" }
           ],
-          "explanation": "TS uses a colon (:) to separate the property name from the property type"
+          "explanation": "Fixture explanation: alpha is the correct option."
         },
         {
-          "questionText": "Which of the following is NOT a built-in TypeScript type?",
+          "questionText": "Select all fixture colors.",
           "options": [
-            {
-              "text": "number"
-            },
-            {
-              "text": "string"
-            },
-            {
-              "text": "boolean"
-            },
-            {
-              "text": "integer",
-              "correct": true
-            }
+            { "text": "red", "correct": true },
+            { "text": "blue", "correct": true },
+            { "text": "square" }
           ],
-          "explanation": "TypeScript has no separate integer type — whole numbers are represented by number. string and boolean are also built-in primitive types, so integer is the odd one out."
+          "explanation": "Fixture explanation: red and blue are fixture colors."
         },
         {
-          "questionText": "How can we specify properties and methods for an object in TypeScript?",
+          "questionText": "This fixture question is a true/false example.",
           "options": [
-            {
-              "text": "Use classes."
-            },
-            {
-              "text": "Use interfaces.",
-              "correct": true
-            },
-            {
-              "text": "Use enums."
-            },
-            {
-              "text": "Use async/await."
-            }
+            { "text": "true", "correct": true },
+            { "text": "false" }
           ],
-          "explanation": "interfaces are typically used to list the properties and methods for an object"
+          "explanation": "Fixture explanation: this statement is true by construction."
         },
         {
-          "questionText": "How else can Array<number> be written in TypeScript?",
+          "questionText": "Which fixture size is largest?",
           "options": [
-            {
-              "text": "@number"
-            },
-            {
-              "text": "number[]",
-              "correct": true
-            },
-            {
-              "text": "number!"
-            },
-            {
-              "text": "number?"
-            }
+            { "text": "small" },
+            { "text": "medium" },
+            { "text": "large", "correct": true }
           ],
-          "explanation": "number[] is another way of writing Array<number> in TypeScript"
+          "explanation": "Fixture explanation: large is the largest fixture size."
         },
         {
-          "questionText": "In which of these does a class take parameters?",
+          "questionText": "Which fixture material is valid?",
           "options": [
-            {
-              "text": "constructor",
-              "correct": true
-            },
-            {
-              "text": "destructor"
-            },
-            {
-              "text": "import"
-            },
-            {
-              "text": "subscribe"
-            }
+            { "text": "wood" },
+            { "text": "stone" },
+            { "text": "all of the above", "correct": true }
           ],
-          "explanation": "a constructor is used by a class to take in parameters"
+          "explanation": "Fixture explanation: every listed material is valid."
         },
         {
-          "questionText": "Which is NOT an access modifier?",
+          "questionText": "Select all fixture numbers under ten.",
           "options": [
-            {
-              "text": "private"
-            },
-            {
-              "text": "protected"
-            },
-            {
-              "text": "public"
-            },
-            {
-              "text": "async",
-              "correct": true
-            }
+            { "text": "3", "correct": true },
+            { "text": "7", "correct": true },
+            { "text": "12" }
           ],
-          "explanation": "async is not used as an access modifier type in TypeScript"
+          "explanation": "Fixture explanation: 3 and 7 are under ten."
         },
         {
-          "questionText": "Which keyword allows us to share information between files in TypeScript?",
+          "questionText": "Which fixture shape has four sides?",
           "options": [
-            {
-              "text": "import"
-            },
-            {
-              "text": "export",
-              "correct": true
-            },
-            {
-              "text": "async"
-            },
-            {
-              "text": "constructor"
-            }
+            { "text": "triangle" },
+            { "text": "square", "correct": true },
+            { "text": "circle" }
           ],
-          "explanation": "the export keyword allows for the information to be transmitted between files"
+          "explanation": "Fixture explanation: a square has four sides."
         },
         {
-          "questionText": "Which is an array method to generate a new array based on a condition?",
+          "questionText": "This fixture question is a false example.",
           "options": [
-            {
-              "text": "filter",
-              "correct": true
-            },
-            {
-              "text": "map"
-            },
-            {
-              "text": "async"
-            },
-            {
-              "text": "enum"
-            }
+            { "text": "true" },
+            { "text": "false", "correct": true }
           ],
-          "explanation": "filter is a method used to conditionally create a new array"
+          "explanation": "Fixture explanation: this statement is false by construction."
         },
         {
-          "questionText": "How is a property accessible within a class?",
+          "questionText": "Which fixture letter comes first?",
           "options": [
-            {
-              "text": "Using this.propertyName",
-              "correct": true
-            },
-            {
-              "text": "Accessors"
-            },
-            {
-              "text": "Destructuring"
-            },
-            {
-              "text": "Arrow function"
-            }
+            { "text": "a", "correct": true },
+            { "text": "b" },
+            { "text": "c" }
           ],
-          "explanation": "this.propertyName is the way to access a specific property within a class"
+          "explanation": "Fixture explanation: a comes first alphabetically."
         },
         {
-          "questionText": "How do you declare a variable that can hold either a string or a number?",
+          "questionText": "Which fixture tier is the highest?",
           "options": [
-            {
-              "text": "let value: string | number;",
-              "correct": true
-            },
-            {
-              "text": "let value: string & number;"
-            },
-            {
-              "text": "let value: string, number;"
-            },
-            {
-              "text": "let value: any[];"
-            }
+            { "text": "bronze" },
+            { "text": "silver" },
+            { "text": "gold", "correct": true }
           ],
-          "explanation": "a union type, string | number, lets a value be one of several types — here a string or a number. The & is an intersection (requiring both at once, impossible for these primitives), the comma form is invalid, and any[] is an array of any rather than a string-or-number value."
+          "explanation": "Fixture explanation: gold is the highest tier."
         }
       ]
     }

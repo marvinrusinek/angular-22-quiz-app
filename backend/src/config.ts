@@ -15,8 +15,6 @@ export interface AppConfig {
   readonly port: number;
   /** Exact origins allowed to call the API. Never a wildcard in production. */
   readonly allowedOrigins: readonly string[];
-  /** Private quiz bank. MUST NOT live under any statically served directory. */
-  readonly quizDataPath: string;
   /**
    * Postgres connection string for assessment sessions.
    *
@@ -185,7 +183,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     isProduction,
     port: parsePort(env['PORT']),
     allowedOrigins: parseAllowedOrigins(env['ALLOWED_ORIGINS'], isProduction),
-    quizDataPath: (env['QUIZ_DATA_PATH'] ?? './data/quiz.json').trim(),
     databaseUrl: parseDatabaseUrl(env['DATABASE_URL'], isProduction),
     topicQuizReceiptSecret: parseReceiptSecret(env['TOPIC_QUIZ_RECEIPT_SECRET'], isProduction)
   };

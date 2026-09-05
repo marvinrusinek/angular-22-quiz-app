@@ -4,14 +4,14 @@ import express from 'express';
 import { createApp } from '../src/app';
 import { loadConfig } from '../src/config';
 import { createResponseGuard, setResponsePolicy } from '../src/api/response-guard';
-import { fixtureDependencies, realRepository } from './helpers/fixtures';
+import { fixtureDependencies, syntheticBankRepository } from './helpers/fixtures';
 
-function app(useReal = false) {
+function app(useLarge = false) {
   const config = loadConfig({
     NODE_ENV: 'test',
     ALLOWED_ORIGINS: 'http://localhost:4200'
   } as NodeJS.ProcessEnv);
-  return createApp(config, useReal ? { quizRepository: realRepository() } : fixtureDependencies());
+  return createApp(config, useLarge ? { quizRepository: syntheticBankRepository() } : fixtureDependencies());
 }
 
 /** Recursively collect every property NAME in a parsed body. */
@@ -95,9 +95,9 @@ describe('GET /api/quizzes — raw response security', () => {
     expect(res.body.quizzes[0].summary).toContain('explanation');
   });
 
-  it('the real bank yields 20 quizzes and still no question data', async () => {
+  it('the large synthetic bank yields 7 quizzes and still no question data', async () => {
     const res = await request(app(true)).get('/api/quizzes');
-    expect(res.body.quizzes).toHaveLength(20);
+    expect(res.body.quizzes).toHaveLength(7);
     expect(res.text).not.toContain('questionText');
   });
 });

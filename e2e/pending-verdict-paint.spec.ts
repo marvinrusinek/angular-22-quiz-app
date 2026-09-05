@@ -70,7 +70,7 @@ async function paintDuringPending(page: Page, idx: number): Promise<string[]> {
 }
 
 async function open(page: Page): Promise<number> {
-  await page.goto('/quiz/question/typescript/1');
+  await page.goto('/quiz/question/fixture-widgets/1');
   await page.locator(ROW).first().waitFor({ state: 'visible', timeout: 30_000 });
   const heading = (await page.locator(HEADING).first().textContent()) ?? '';
   return correctIndexForHeading(heading);

@@ -15,7 +15,7 @@ import { NEXT_BTN, PREV_BTN, HEADING, diQuiz, correctRowsForHeading } from './he
  */
 
 test('revisit — remembered pick is read-only, unselected options stay clickable', async ({ page }) => {
-  await page.goto('/quiz/question/dependency-injection/1');
+  await page.goto('/quiz/question/fixture-gadgets/1');
   const rows = page.locator('.option-row');
   await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 

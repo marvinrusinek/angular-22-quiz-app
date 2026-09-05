@@ -13,8 +13,8 @@ test.describe('smoke', () => {
     await expect(page).toHaveURL(/\/quiz/);
   });
 
-  test('can reach the first question of the typescript quiz', async ({ page }) => {
-    await page.goto('/quiz/question/typescript/1');
+  test('can reach the first question of the fixture-widgets quiz', async ({ page }) => {
+    await page.goto('/quiz/question/fixture-widgets/1');
     // The question container should mount and show option rows.
     await expect(page.locator('.option-row').first()).toBeVisible({ timeout: 20_000 });
   });

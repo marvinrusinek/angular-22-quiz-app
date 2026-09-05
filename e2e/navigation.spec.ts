@@ -15,7 +15,7 @@ import {
 
 test.describe('deeper navigation — highlight persistence', () => {
   test('single-answer highlight persists on revisit (Q5 -> Q6 -> Q5)', async ({ page }) => {
-    await page.goto('/quiz/question/typescript/5');
+    await page.goto('/quiz/question/fixture-widgets/5');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -33,9 +33,9 @@ test.describe('deeper navigation — highlight persistence', () => {
   });
 
   test('multi-answer selections persist and Next stays enabled on revisit', async ({ page }) => {
-    // Resolve the forms multi-answer question from the data (was hardcoded Q4).
+    // Resolve the fixture-gizmos multi-answer question from the data (was hardcoded Q4).
     const multi = findMultiAnswerQuestion(formsQuiz);
-    await page.goto(`/quiz/question/forms/${multi.index}`);
+    await page.goto(`/quiz/question/fixture-gizmos/${multi.index}`);
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -59,7 +59,7 @@ test.describe('deeper navigation — highlight persistence', () => {
   });
 
   test('answering every question renders options each step and reaches results', async ({ page }) => {
-    await page.goto('/quiz/question/typescript/1');
+    await page.goto('/quiz/question/fixture-widgets/1');
     const total = tsQuiz.questions.length;
 
     for (let i = 0; i < total; i++) {

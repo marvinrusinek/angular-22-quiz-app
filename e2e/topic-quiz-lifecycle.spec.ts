@@ -40,7 +40,7 @@ const FEEDBACK = 'codelab-quiz-feedback';
 const TILE = '.quiz-tile';
 const ANSWERED = 'Answered ✓ Click Next to continue...';
 
-const routerQuiz = (quizData as any[]).find((q) => (q.quizId || q.id) === 'router');
+const routerQuiz = (quizData as any[]).find((q) => (q.quizId || q.id) === 'fixture-thingamajigs');
 
 /** Everything a stale-state bug could surface through, in one snapshot. */
 async function surfaces(page: Page) {
@@ -153,7 +153,7 @@ const seconds = (raw: string): number => {
 // ─── A. A FRESH QUIZ STARTS CLEAN ──────────────────────────────────
 
 test('A: a freshly started quiz has no state of any kind on question 1', async ({ page }) => {
-  await startViaUi(page, /router/i);
+  await startViaUi(page, /fixture thingamajigs/i);
   const s = await surfaces(page);
 
   expect(s.dirty, 'no option carries selection or verdict styling').toEqual([]);
@@ -168,7 +168,7 @@ test('A: a freshly started quiz has no state of any kind on question 1', async (
 // ─── E. A NEW QUESTION STARTS CLEAN ────────────────────────────────
 
 test('E: advancing to an unanswered question leaves the previous one behind', async ({ page }) => {
-  await startViaUi(page, /router/i);
+  await startViaUi(page, /fixture thingamajigs/i);
 
   const heading1 = (await page.locator(HEADING).first().textContent()) ?? '';
   const correct = correctIndicesForHeading(routerQuiz, heading1);
@@ -205,7 +205,7 @@ test('G: starting a different quiz shows no 0:00 flash and no prior-quiz state',
   await installTimerWatch(page);
 
   // Quiz A: answer something so there is real state that could leak.
-  await startViaUi(page, /typescript/i);
+  await startViaUi(page, /fixture widgets/i);
   const hA = (await page.locator(HEADING).first().textContent()) ?? '';
   await page.locator(ROW).nth(correctIndexForHeading(hA)).click();
   await page.waitForTimeout(2500);
@@ -213,7 +213,7 @@ test('G: starting a different quiz shows no 0:00 flash and no prior-quiz state',
   // Leave through the normal UI — no reload — then start Quiz B.
   await backToSelectionInSpa(page);
   await clearTimerFrames(page);
-  await pickQuiz(page, /dependency injection/i);
+  await pickQuiz(page, /fixture gadgets/i);
   await page.waitForTimeout(1500);
 
   const frames = await timerFrames(page);
@@ -259,7 +259,7 @@ test('M: a quiz started after a timeout is not born expired', async ({ page }) =
   await installTimerWatch(page);
 
   // Quiz A: let question 1 genuinely run out.
-  await startViaUi(page, /router/i);
+  await startViaUi(page, /fixture thingamajigs/i);
   await page.waitForTimeout(36_000);
   const expired = await surfaces(page);
   // No expiry-specific wrapper any more: a genuine timeout reveals through the
@@ -268,7 +268,7 @@ test('M: a quiz started after a timeout is not born expired', async ({ page }) =
 
   await backToSelectionInSpa(page);
   await clearTimerFrames(page);
-  await pickQuiz(page, /typescript/i);
+  await pickQuiz(page, /fixture widgets/i);
   await page.waitForTimeout(2500);
 
   const frames = await timerFrames(page);
@@ -306,8 +306,8 @@ test('N: a quiz started after finishing another one gets its own clock', async (
   test.setTimeout(240_000);
   await installTimerWatch(page);
 
-  await startViaUi(page, /router/i);
-  for (let q = 0; q < 10; q++) {
+  await startViaUi(page, /fixture thingamajigs/i);
+  for (let q = 0; q < routerQuiz.questions.length; q++) {
     await page.locator(ROW).first().waitFor({ state: 'visible', timeout: 15_000 });
     const heading = (await page.locator(HEADING).first().textContent()) ?? '';
     const correct = correctIndicesForHeading(routerQuiz, heading);
@@ -328,7 +328,7 @@ test('N: a quiz started after finishing another one gets its own clock', async (
 
   await backToSelectionInSpa(page);
   await clearTimerFrames(page);
-  await pickQuiz(page, /typescript/i);
+  await pickQuiz(page, /fixture widgets/i);
   await page.waitForTimeout(2500);
 
   const frames = await timerFrames(page);
@@ -351,7 +351,7 @@ test('N: a quiz started after finishing another one gets its own clock', async (
 // ─── I. TIMEOUT WHILE THE QUESTION IS VISIBLE ──────────────────────
 
 test('I: a question that times out in view reveals through the ORDINARY FET — no expiry-specific presentation', async ({ page }) => {
-  await startViaUi(page, /router/i);
+  await startViaUi(page, /fixture thingamajigs/i);
   const before = await surfaces(page);
   expect(before.heading, 'starts on the question').not.toMatch(/correct because/i);
 
@@ -382,7 +382,7 @@ test('I: a question that times out in view reveals through the ORDINARY FET — 
  * from a frozen state neither creates the timeout state nor corrupts it.
  */
 test('J: a deadline that passes while hidden is revealed on return, not caused by it', async ({ page }) => {
-  await startViaUi(page, /router/i);
+  await startViaUi(page, /fixture thingamajigs/i);
 
   const beforeHide = await surfaces(page);
   expect(beforeHide.heading, 'question is showing before we leave').not.toMatch(/correct because/i);
@@ -449,7 +449,7 @@ test('L: a delayed timeout reveal still replaces the question with real content 
     await route.continue();
   });
 
-  await startViaUi(page, /router/i);
+  await startViaUi(page, /fixture thingamajigs/i);
 
   // The deadline passes (timer hits 0:00) while the reveal is still in flight.
   // With no expiry-specific wrapper, the heading has nothing to say until the

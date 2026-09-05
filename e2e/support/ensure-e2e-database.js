@@ -93,7 +93,14 @@ function seedQuizBank() {
       [
         '--require', 'ts-node/register',
         'scripts/import-quiz-bank.ts',
-        '--file', './data/quiz.json',
+        // Stage 15: E2E seeds from the SAME deterministic synthetic bank the
+        // backend's own tests use (test/helpers/synthetic-quiz-bank.json) —
+        // never the real private bank, and never a file that must exist in
+        // the repo for E2E to run. See that file's own doc comment for the
+        // structural shapes (single/multiple/trueFalse, an exactly-3-correct
+        // multi-answer question, "All of the above", facts, an option-id
+        // collision) each E2E spec relies on.
+        '--file', './test/helpers/synthetic-quiz-bank.json',
         '--database-url', databaseUrl
       ],
       { cwd: process.cwd(), stdio: 'inherit' }

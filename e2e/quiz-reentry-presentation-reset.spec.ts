@@ -82,12 +82,12 @@ async function enterQuizFromSelection(page: Page, tileNameSubstring: string): Pr
 test.describe('Quiz re-entry starts a genuinely fresh attempt (presentation AND completion state reset)', () => {
   test('CASE A: a genuine browser refresh WHILE viewing an earned FET restores the FET', async ({ page }) => {
     await page.goto('/select');
-    await enterQuizFromSelection(page, 'TypeScript');
+    await enterQuizFromSelection(page, 'Fixture Widgets');
     await answerFirstQuestionCorrectly(page);
     await page.waitForTimeout(500);
 
     const headingBeforeRefresh = await page.locator(HEADING).first().innerHTML();
-    expect(headingBeforeRefresh).not.toBe('Which of the following does TypeScript use to specify types?');
+    expect(headingBeforeRefresh).not.toBe('Which widget size is the smallest?');
 
     await page.reload();
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30000 });
@@ -99,7 +99,7 @@ test.describe('Quiz re-entry starts a genuinely fresh attempt (presentation AND 
 
   test('CASE B: leaving to QuizSelection and re-entering the SAME quiz shows Q1 question text, not the stale FET', async ({ page }) => {
     await page.goto('/select');
-    await enterQuizFromSelection(page, 'TypeScript');
+    await enterQuizFromSelection(page, 'Fixture Widgets');
     await answerFirstQuestionCorrectly(page);
     await page.waitForTimeout(500);
 
@@ -107,12 +107,12 @@ test.describe('Quiz re-entry starts a genuinely fresh attempt (presentation AND 
     await page.locator('a[matTooltip="Back to Codelab Quiz Selection"]').click({ timeout: 15000 });
     await page.locator('.quiz-tile:not(.interview-tile)').first().waitFor({ state: 'visible', timeout: 30000 });
 
-    await enterQuizFromSelection(page, 'TypeScript');
+    await enterQuizFromSelection(page, 'Fixture Widgets');
     await page.waitForTimeout(500);
 
     const headingOnReentry = await page.locator(HEADING).first().textContent();
     expect(headingOnReentry, 'Q1 must show QUESTION TEXT on re-entry, not the earlier FET')
-      .toBe('Which of the following does TypeScript use to specify types?');
+      .toBe('Which widget size is the smallest?');
 
     // RE-ENTRY IS A GENUINELY FRESH ATTEMPT, NOT A REVISIT.
     //
@@ -135,14 +135,14 @@ test.describe('Quiz re-entry starts a genuinely fresh attempt (presentation AND 
 
   test('a fresh, never-answered question after re-entry shows the normal unanswered prompt, not a leaked "Answered"', async ({ page }) => {
     await page.goto('/select');
-    await enterQuizFromSelection(page, 'TypeScript');
+    await enterQuizFromSelection(page, 'Fixture Widgets');
     await answerFirstQuestionCorrectly(page);
     await page.waitForTimeout(500);
 
     await page.locator('a[matTooltip="Back to Codelab Quiz Selection"]').click({ timeout: 15000 });
     await page.locator('.quiz-tile:not(.interview-tile)').first().waitFor({ state: 'visible', timeout: 30000 });
 
-    await enterQuizFromSelection(page, 'TypeScript');
+    await enterQuizFromSelection(page, 'Fixture Widgets');
     await page.waitForTimeout(500);
 
     // Re-entry is a fresh attempt (see CASE B above) -- Q1 must be re-answered

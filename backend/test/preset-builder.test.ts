@@ -15,7 +15,7 @@ import { seededRandomSource } from '../src/interview/assessment.random';
 import { isAllOfTheAbove } from '../src/interview/all-of-the-above';
 import { AssessmentBuildError } from '../src/interview/assessment.types';
 import { createQuizRepository } from '../src/quiz/quiz.repository';
-import { realRepository } from './helpers/fixtures';
+import { presetTopicsRepository } from './helpers/fixtures';
 
 /**
  * PARITY REFERENCE
@@ -24,7 +24,7 @@ import { realRepository } from './helpers/fixtures';
  *   AssessmentBuilderService.buildFromPreset / presetCapacity / redistributionOrder
  */
 
-const repo = () => realRepository();
+const repo = () => presetTopicsRepository();
 const seeded = () => seededRandomSource(6060);
 const preset = (id: string): InterviewPreset => findInterviewPreset(id)!;
 
@@ -356,12 +356,12 @@ describe('shortfall redistribution', () => {
 describe('source immutability', () => {
   it('leaves the repository untouched across builds', () => {
     const repository = repo();
-    const before = repository.getQuizById('rxjs')!.questions.map((q) => q.questionId);
+    const before = repository.getQuizById('typescript')!.questions.map((q) => q.questionId);
 
     buildPresetAssessment(preset('senior'), repository, seededRandomSource(1));
     buildPresetAssessment(preset('senior'), repository, seededRandomSource(2));
 
-    expect(repository.getQuizById('rxjs')!.questions.map((q) => q.questionId)).toEqual(before);
+    expect(repository.getQuizById('typescript')!.questions.map((q) => q.questionId)).toEqual(before);
   });
 
   it('same seed still reproduces after an earlier build', () => {

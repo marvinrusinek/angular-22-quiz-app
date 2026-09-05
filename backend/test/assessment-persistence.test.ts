@@ -5,7 +5,7 @@ import {
 import { seededRandomSource } from '../src/interview/assessment.random';
 import type { CreateSessionInput } from '../src/interview/session.types';
 import type { GeneratedInterviewSnapshot } from '../src/interview/assessment.types';
-import { realRepository } from './helpers/fixtures';
+import { syntheticBankRepository } from './helpers/fixtures';
 import { memoryDb, reopen, type TestDb } from './helpers/db';
 
 /**
@@ -57,9 +57,9 @@ function toCreateInput(
 }
 
 function build(seed = 99): GeneratedInterviewSnapshot {
-  const repository = realRepository();
+  const repository = syntheticBankRepository();
   const config = validateBuildRequest(
-    { difficulty: 'mixed', topicIds: ['rxjs', 'signals', 'router'], questionCount: 20 },
+    { difficulty: 'mixed', topicIds: ['fixture-widgets', 'fixture-gadgets', 'fixture-gizmos'], questionCount: 20 },
     repository
   );
   return buildInterviewAssessment(config, repository, seededRandomSource(seed));
@@ -115,7 +115,7 @@ describe('builder output persists faithfully', () => {
 
     expect(stored.durationSeconds).toBe(1800);
     expect(stored.config.questionCount).toBe(20);
-    expect(stored.config.topicIds).toEqual(['rxjs', 'signals', 'router']);
+    expect(stored.config.topicIds).toEqual(['fixture-widgets', 'fixture-gadgets', 'fixture-gizmos']);
     expect(stored.config.difficulty).toBe('mixed');
   });
 

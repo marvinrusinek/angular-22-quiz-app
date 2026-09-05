@@ -66,9 +66,9 @@ async function gateCheck(page: Page): Promise<() => void> {
 
 test.describe('single-answer selection message', () => {
   test('a correct click ends on the Next-button instruction', async ({ page }) => {
-    await gotoQuestion(page, 'typescript', 1);
+    await gotoQuestion(page, 'fixture-widgets', 1);
 
-    await page.locator('.option-row').nth(0).click();  // ':' is correct
+    await page.locator('.option-row').nth(0).click();  // fixture-widgets Q1 option 0 ('small') is correct
 
     await expect(page.locator(MSG)).toHaveText(NEXT_MSG, { timeout: 15_000 });
   });
@@ -78,7 +78,7 @@ test.describe('single-answer selection message', () => {
   // in flight preserves whatever neutral message was already showing and
   // transitions directly to the real message once the verdict lands.
   test('a correct click preserves the neutral message (never "Checking…") while the verdict is in flight', async ({ page }) => {
-    await gotoQuestion(page, 'typescript', 1);
+    await gotoQuestion(page, 'fixture-widgets', 1);
     const release = await gateCheck(page);
 
     await page.locator('.option-row').nth(0).click();
@@ -93,7 +93,7 @@ test.describe('single-answer selection message', () => {
   });
 
   test('NO wrong-answer instruction (or "Checking…") appears while the verdict is pending', async ({ page }) => {
-    await gotoQuestion(page, 'typescript', 1);
+    await gotoQuestion(page, 'fixture-widgets', 1);
     const release = await gateCheck(page);
 
     await page.locator('.option-row').nth(0).click();
@@ -109,15 +109,15 @@ test.describe('single-answer selection message', () => {
   });
 
   test('a wrong click ends on the select-correct instruction', async ({ page }) => {
-    await gotoQuestion(page, 'typescript', 1);
+    await gotoQuestion(page, 'fixture-widgets', 1);
 
-    await page.locator('.option-row').nth(1).click();  // ';' is wrong
+    await page.locator('.option-row').nth(1).click();  // fixture-widgets Q1 option 1 ('medium') is wrong
 
     await expect(page.locator(MSG)).toHaveText(WRONG_MSG, { timeout: 15_000 });
   });
 
   test('a wrong click also never shows "Checking…" while pending', async ({ page }) => {
-    await gotoQuestion(page, 'typescript', 1);
+    await gotoQuestion(page, 'fixture-widgets', 1);
     const release = await gateCheck(page);
 
     await page.locator('.option-row').nth(1).click();
@@ -133,7 +133,7 @@ test.describe('single-answer selection message', () => {
 
 test.describe('selection message survives revisit', () => {
   test('Next then Previous shows the answered message, never the wrong-answer one', async ({ page }) => {
-    await gotoQuestion(page, 'typescript', 1);
+    await gotoQuestion(page, 'fixture-widgets', 1);
 
     await page.locator('.option-row').nth(0).click();
     await expect(page.locator(MSG)).toHaveText(NEXT_MSG, { timeout: 15_000 });
@@ -151,7 +151,7 @@ test.describe('selection message survives revisit', () => {
   });
 
   test('a second revisit still never shows the wrong-answer instruction', async ({ page }) => {
-    await gotoQuestion(page, 'typescript', 1);
+    await gotoQuestion(page, 'fixture-widgets', 1);
 
     await page.locator('.option-row').nth(0).click();
     await expect(page.locator(MSG)).toHaveText(NEXT_MSG, { timeout: 15_000 });
@@ -166,7 +166,7 @@ test.describe('selection message survives revisit', () => {
   });
 
   test('an unanswered question asks for a selection, not a correction', async ({ page }) => {
-    await gotoQuestion(page, 'typescript', 1);
+    await gotoQuestion(page, 'fixture-widgets', 1);
 
     await page.locator('.option-row').nth(0).click();
     await expect(page.locator(MSG)).toHaveText(NEXT_MSG, { timeout: 15_000 });

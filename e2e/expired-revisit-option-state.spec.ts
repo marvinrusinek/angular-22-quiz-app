@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { quizData, HEADING, NEXT_BTN, PREV_BTN } from './helpers';
 
-const cdQuiz = (quizData as any[]).find((q) => (q.quizId || q.id) === 'change-detection');
+const cdQuiz = (quizData as any[]).find((q) => (q.quizId || q.id) === 'fixture-doohickeys');
 
 /**
  * Stage 14 regression repair — expired-question revisit must show the USER'S
@@ -49,7 +49,7 @@ test.describe.configure({ timeout: 300_000 });
 const ROW = '.option-row';
 
 async function letQ1Expire(page: any) {
-  await page.goto('quiz/question/change-detection/1');
+  await page.goto('quiz/question/fixture-doohickeys/1');
   const rows = page.locator(ROW);
   await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
   await expect(page.locator(HEADING)).toContainText(/correct because/i, { timeout: 60_000 });
@@ -97,7 +97,7 @@ test('CASE A: unanswered timeout -> Next -> Previous: no manufactured reveal, st
 });
 
 test('CASE B: partial selection before timeout -> Next -> Previous: restores exactly the pre-timeout pick, stays locked', async ({ page }) => {
-  await page.goto('quiz/question/dependency-injection/1');
+  await page.goto('quiz/question/fixture-gadgets/1');
   const rows = page.locator(ROW);
   await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -162,7 +162,7 @@ test('CASE B: partial selection before timeout -> Next -> Previous: restores exa
 
 test('CASE C: normal completed question -> Next -> Previous: established revisit behavior unaffected', async ({ page }) => {
   const rows = await (async () => {
-    await page.goto('quiz/question/change-detection/1');
+    await page.goto('quiz/question/fixture-doohickeys/1');
     const r = page.locator(ROW);
     await r.first().waitFor({ state: 'visible', timeout: 20_000 });
     return r;

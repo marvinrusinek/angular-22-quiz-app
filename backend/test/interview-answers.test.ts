@@ -7,7 +7,7 @@ import { type DatabaseHandle } from '../src/db/database';
 import { createSessionRepository, type SessionRepository } from '../src/interview/session.repository';
 import { InterviewSessionService } from '../src/interview/session.service';
 import { seededRandomSource } from '../src/interview/assessment.random';
-import { realRepository } from './helpers/fixtures';
+import { presetTopicsRepository } from './helpers/fixtures';
 import { memoryDb } from './helpers/db';
 
 let clock = 1_700_000_000_000;
@@ -17,14 +17,14 @@ let app: Express;
 
 function buildApp(repo: SessionRepository): Express {
   const service = new InterviewSessionService({
-    quizRepository: realRepository(),
+    quizRepository: presetTopicsRepository(),
     sessionRepository: repo,
     now: () => clock,
     random: seededRandomSource(777)
   });
   return createApp(
     loadConfig({ NODE_ENV: 'test', ALLOWED_ORIGINS: 'http://localhost:4200' } as NodeJS.ProcessEnv),
-    { quizRepository: realRepository(), sessionRepository: repo, interviewSessionService: service }
+    { quizRepository: presetTopicsRepository(), sessionRepository: repo, interviewSessionService: service }
   );
 }
 
@@ -269,7 +269,7 @@ describe('question ownership', () => {
   it("REJECTS a valid bank question that is not in THIS session", async () => {
     const session = await createSession();
     const inSession = new Set(session.questions.map((q) => q.questionId));
-    const outsider = realRepository()
+    const outsider = presetTopicsRepository()
       .getEligibleQuestions()
       .find((q) => !inSession.has(q.questionId))!;
 
@@ -388,7 +388,7 @@ describe('authentication', () => {
 
 describe('expiry boundary', () => {
   async function sessionAt(msBeforeExpiry: number) {
-    const session = await createSession({ mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs', 'signals'], questionCount: 10 });
+    const session = await createSession({ mode: 'custom', difficulty: 'mixed', topicIds: ['typescript', 'templates'], questionCount: 10 });
     clock = clock + 900_000 - msBeforeExpiry;   // 900s duration
     return session;
   }
@@ -416,7 +416,7 @@ describe('expiry boundary', () => {
   });
 
   it('an expired replacement leaves the PRIOR answer untouched', async () => {
-    const session = await createSession({ mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs', 'signals'], questionCount: 10 });
+    const session = await createSession({ mode: 'custom', difficulty: 'mixed', topicIds: ['typescript', 'templates'], questionCount: 10 });
     const question = session.questions[0]!;
     const original = question.options[0]!.optionId;
     await save(session, question.questionId, [original]);
@@ -436,7 +436,7 @@ describe('expiry boundary', () => {
   });
 
   it('resume after expiry reveals neither questions nor answers', async () => {
-    const session = await createSession({ mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs', 'signals'], questionCount: 10 });
+    const session = await createSession({ mode: 'custom', difficulty: 'mixed', topicIds: ['typescript', 'templates'], questionCount: 10 });
     await save(session, session.questions[0]!.questionId, [session.questions[0]!.options[0]!.optionId]);
     clock += 900_001;
 
@@ -601,14 +601,14 @@ describe('restart and frozen-bank independence', () => {
     // Rebuild the app with a DIFFERENT (tiny) quiz repository — as if the bank
     // had been edited and redeployed. The session must be unaffected.
     const service = new InterviewSessionService({
-      quizRepository: realRepository(),
+      quizRepository: presetTopicsRepository(),
       sessionRepository: sessions,
       now: () => clock,
       random: seededRandomSource(1)
     });
     app = createApp(
       loadConfig({ NODE_ENV: 'test', ALLOWED_ORIGINS: 'http://localhost:4200' } as NodeJS.ProcessEnv),
-      { quizRepository: realRepository(), sessionRepository: sessions, interviewSessionService: service }
+      { quizRepository: presetTopicsRepository(), sessionRepository: sessions, interviewSessionService: service }
     );
 
     const res = await save(session, question.questionId, [optionId]);

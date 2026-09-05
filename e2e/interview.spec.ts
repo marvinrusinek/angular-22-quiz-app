@@ -385,9 +385,9 @@ test.describe('Interview Mode', () => {
 
 test.describe('topic quiz is unchanged by Interview Mode', () => {
   test('a normal quiz still uses question dots + the Scoreboard-style timer', async ({ page }) => {
-    await page.goto('/quiz/intro/typescript');
+    await page.goto('/quiz/intro/fixture-widgets');
     await page.locator('.start-btn, button:has-text("Start")').first().click();
-    await page.waitForURL('**/quiz/question/typescript/1');
+    await page.waitForURL('**/quiz/question/fixture-widgets/1');
 
     // topic-quiz UI intact
     await expect(page.locator('.paging-dots .dot').first()).toBeVisible();

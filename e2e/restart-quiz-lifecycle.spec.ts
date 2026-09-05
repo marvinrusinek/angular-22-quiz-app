@@ -35,7 +35,7 @@ import { HEADING, quizData, correctIndicesForHeading } from './helpers';
  * goes through the UI: tile, intro, the questions, Show Results, and the actual
  * Restart Quiz button.
  *
- * Uses `router` (7 questions, no multi-answer) so completing the quiz fits a
+ * Uses `fixture-thingamajigs` (12 questions, no multi-answer) so completing the quiz fits a
  * test budget: a partial multi-answer keeps Next locked.
  */
 
@@ -50,7 +50,7 @@ const RESULTS_BTN = '.show-results-btn';
 const TILE = '.quiz-tile';
 const ANSWERED = 'Answered ✓ Click Next to continue...';
 
-const routerQuiz = (quizData as any[]).find((q) => (q.quizId || q.id) === 'router');
+const routerQuiz = (quizData as any[]).find((q) => (q.quizId || q.id) === 'fixture-thingamajigs');
 
 /** "0:29" -> 29 */
 async function timerSeconds(page: Page): Promise<number> {
@@ -70,7 +70,7 @@ async function dirtyRows(page: Page): Promise<string[]> {
 async function startRouterViaUi(page: Page): Promise<void> {
   await page.goto('/quiz');
   await page.locator(TILE).first().waitFor({ state: 'visible', timeout: 30_000 });
-  const tile = page.locator(TILE).filter({ hasText: /router/i }).first();
+  const tile = page.locator(TILE).filter({ hasText: /fixture thingamajigs/i }).first();
   await tile.scrollIntoViewIfNeeded();
   await tile.click();
   await page.waitForTimeout(1200);
@@ -81,7 +81,7 @@ async function startRouterViaUi(page: Page): Promise<void> {
 
 /** Answer every question correctly and land on Results. */
 async function completeRouter(page: Page): Promise<void> {
-  for (let q = 0; q < 8; q++) {
+  for (let q = 0; q < routerQuiz.questions.length; q++) {
     await page.locator(ROW).first().waitFor({ state: 'visible', timeout: 8000 });
     const heading = (await page.locator(HEADING).first().textContent()) ?? '';
     const correct = correctIndicesForHeading(routerQuiz, heading);

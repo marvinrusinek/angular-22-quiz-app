@@ -1,44 +1,47 @@
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { createQuizRepository, describeBank } from '../src/quiz/quiz.repository';
 import { QuizDataFileError } from '../src/quiz/quiz.loader';
 import { QuizDataError } from '../src/quiz/quiz.validation';
 import { makeOptionId, makeQuestionId } from '../src/quiz/quiz.ids';
+import { syntheticBankRepository } from './helpers/fixtures';
 
 const BACKEND_ROOT = resolve(__dirname, '..');
 const REPO_ROOT = resolve(BACKEND_ROOT, '..');
-const BACKEND_DATA = resolve(BACKEND_ROOT, 'data/quiz.json');
 // S6p (Angular Stage 14): src/assets/data/quiz.json — the transitional
 // Angular client asset this constant used to point at — is deleted; the
 // client no longer fetches, caches, or bundles any answer-bearing bank. An
-// explicit, backend-repo test fixture (one real quiz, sampled from the
-// authoritative backend copy) replaces it for the "outside root" tests below,
-// which test the allowOutsideRoot escape hatch itself and never depended on
-// this being specifically the Angular asset.
+// explicit, synthetic test fixture (not real quiz content) replaces it for
+// the "outside root" tests below, which test the allowOutsideRoot escape
+// hatch itself and never depended on this being specifically the Angular
+// asset — or on any real content at all.
 const OUTSIDE_ROOT_FIXTURE = resolve(REPO_ROOT, 'test-fixtures/quiz-bank-sample.json');
 
+// Stage 15: repository-BEHAVIOR coverage (ids, types, filtering, immutability,
+// collisions) runs against the purpose-built synthetic bank in
+// test/helpers/synthetic-quiz-bank.json, not the real private data file — a
+// fresh clone with no private bank can run this whole suite.
 function realRepo() {
-  return createQuizRepository({ dataPath: './data/quiz.json' });
+  return syntheticBankRepository();
 }
 
-describe('loading the real private bank', () => {
+describe('loading the synthetic bank', () => {
   it('loads and validates successfully', () => {
     const repo = realRepo();
-    expect(repo.stats.quizCount).toBe(20);
-    expect(repo.stats.questionCount).toBe(185);
-    expect(repo.stats.optionCount).toBe(710);
+    expect(repo.stats.quizCount).toBe(7);
+    expect(repo.stats.questionCount).toBe(66);
+    expect(repo.stats.optionCount).toBe(195);
   });
 
   it('summarizes with COUNTS ONLY — no content in the startup log line', () => {
     const line = describeBank(realRepo().stats);
-    expect(line).toBe('Loaded 20 quizzes, 185 questions, 710 options');
+    expect(line).toBe('Loaded 7 quizzes, 66 questions, 195 options');
     expect(line).not.toMatch(/correct|explanation|option text|[?]/);
   });
 
   it('exposes metadata without questions, options, answers or explanations', () => {
     const metadata = realRepo().getQuizMetadata();
-    expect(metadata).toHaveLength(20);
+    expect(metadata).toHaveLength(7);
     const serialized = JSON.stringify(metadata);
     for (const banned of ['isCorrect', 'correct', 'explanation', 'options', 'questions']) {
       expect(serialized).not.toContain(banned);
@@ -46,28 +49,6 @@ describe('loading the real private bank', () => {
     expect(Object.keys(metadata[0]!).sort()).toEqual([
       'difficulty', 'facts', 'image', 'milestone', 'questionCount', 'quizId', 'summary'
     ]);
-  });
-});
-
-describe('the backend copy is the authority', () => {
-  /**
-   * This block used to also compare the backend copy against the Angular
-   * client asset (src/assets/data/quiz.json) — byte-identity at first, then a
-   * looser "the asset may be stale but must not be missing from the
-   * authority" check once the API became authoritative. Angular Stage 14
-   * (S6p) deleted that asset entirely: the client no longer fetches, caches,
-   * bundles, or depends on any answer-bearing bank, so there is nothing left
-   * to compare against. What remains is what always mattered on the backend
-   * side alone: the backend copy itself must be a valid, loadable bank.
-   */
-  const parse = (path: string) => JSON.parse(readFileSync(path, 'utf8')) as {
-    quizzes?: { quizId?: string }[];
-  };
-
-  it('the backend copy loads as a valid bank', () => {
-    const backend = parse(BACKEND_DATA);
-    expect(Array.isArray(backend.quizzes)).toBe(true);
-    expect(backend.quizzes!.length).toBeGreaterThan(0);
   });
 });
 
@@ -128,7 +109,7 @@ describe('stable ids', () => {
         seen.add(question.questionId);
       });
     }
-    expect(seen.size).toBe(185);
+    expect(seen.size).toBe(66);
   });
 
   it('option ids match the Angular formula exactly', () => {
@@ -147,8 +128,8 @@ describe('stable ids', () => {
 
   it('ids come from SOURCE ORDER, so they are position-derived and stable', () => {
     const repo = realRepo();
-    const first = repo.getQuizById('rxjs')?.questions[0];
-    expect(first?.questionId).toBe('rxjs:q:0');
+    const first = repo.getQuizById('fixture-widgets')?.questions[0];
+    expect(first?.questionId).toBe('fixture-widgets:q:0');
     expect(first?.options[0]?.optionId).toBe(101);
   });
 });
@@ -164,7 +145,8 @@ describe('option-id collisions are real and safely scoped', () => {
         }
       }
     }
-    // Question index 3 exists in many quizzes, so 401 is far from unique.
+    // Both fixture-widgets and fixture-gadgets have a question at source
+    // index 3, so 401 legitimately exists in more than one question.
     expect(holders.length).toBeGreaterThan(1);
   });
 
@@ -198,23 +180,23 @@ describe('option-id collisions are real and safely scoped', () => {
     expect(repo.getQuizById('nope')).toBeUndefined();
     expect(repo.getQuestionById('nope:q:0')).toBeUndefined();
     expect(repo.getOptionForQuestion('nope:q:0', 101)).toBeUndefined();
-    expect(repo.getOptionForQuestion('rxjs:q:0', 999999)).toBeUndefined();
+    expect(repo.getOptionForQuestion('fixture-widgets:q:0', 999999)).toBeUndefined();
   });
 });
 
 describe('question types match current Angular behaviour', () => {
-  it('classifies the real bank as 149 single-select and 36 multiple', () => {
+  it('classifies the synthetic bank as 45 single-select, 14 multiple, 7 trueFalse', () => {
     const repo = realRepo();
     const all = repo.getEligibleQuestions();
     const multiple = all.filter((q) => q.type === 'multiple');
     const trueFalse = all.filter((q) => q.type === 'trueFalse');
     const single = all.filter((q) => q.type === 'single');
 
-    expect(multiple).toHaveLength(36);
-    expect(trueFalse).toHaveLength(15);
+    expect(multiple).toHaveLength(14);
+    expect(trueFalse).toHaveLength(7);
     // single + trueFalse are both single-select, matching Angular's
     // `numCorrectAnswers > 1 ? MultipleAnswer : SingleAnswer`.
-    expect(single.length + trueFalse.length).toBe(149);
+    expect(single.length + trueFalse.length).toBe(52);
   });
 
   it('every multiple question really has >1 correct option, and others exactly 1', () => {
@@ -225,7 +207,7 @@ describe('question types match current Angular behaviour', () => {
     }
   });
 
-  it('PARITY: representative real questions of each kind', () => {
+  it('PARITY: representative synthetic questions of each kind', () => {
     const repo = realRepo();
     const all = repo.getEligibleQuestions();
 
@@ -251,23 +233,23 @@ describe('question types match current Angular behaviour', () => {
 describe('eligibility filtering', () => {
   it('filters by topic', () => {
     const repo = realRepo();
-    const questions = repo.getEligibleQuestions({ topicIds: ['rxjs'] });
+    const questions = repo.getEligibleQuestions({ topicIds: ['fixture-widgets'] });
     expect(questions.length).toBeGreaterThan(0);
-    expect(questions.every((q) => q.sourceQuizId === 'rxjs')).toBe(true);
+    expect(questions.every((q) => q.sourceQuizId === 'fixture-widgets')).toBe(true);
   });
 
   it('treats missing/empty topics and "mixed" as no filter', () => {
     const repo = realRepo();
-    expect(repo.getEligibleQuestions()).toHaveLength(185);
-    expect(repo.getEligibleQuestions({ topicIds: [] })).toHaveLength(185);
-    expect(repo.getEligibleQuestions({ difficulty: 'mixed' })).toHaveLength(185);
+    expect(repo.getEligibleQuestions()).toHaveLength(66);
+    expect(repo.getEligibleQuestions({ topicIds: [] })).toHaveLength(66);
+    expect(repo.getEligibleQuestions({ difficulty: 'mixed' })).toHaveLength(66);
   });
 
   it('filters by difficulty', () => {
     const repo = realRepo();
     const beginner = repo.getEligibleQuestions({ difficulty: 'beginner' });
     expect(beginner.length).toBeGreaterThan(0);
-    expect(beginner.length).toBeLessThan(185);
+    expect(beginner.length).toBeLessThan(66);
   });
 
   it('returns nothing for an unknown topic', () => {
@@ -278,7 +260,7 @@ describe('eligibility filtering', () => {
 describe('immutability', () => {
   it('mutating a returned question does NOT change a later lookup', () => {
     const repo = realRepo();
-    const before = repo.getQuestionById('rxjs:q:0')!;
+    const before = repo.getQuestionById('fixture-widgets:q:0')!;
     const originalText = before.questionText;
 
     try {
@@ -287,29 +269,29 @@ describe('immutability', () => {
       // Frozen objects throw in strict mode — equally acceptable.
     }
 
-    expect(repo.getQuestionById('rxjs:q:0')!.questionText).toBe(originalText);
+    expect(repo.getQuestionById('fixture-widgets:q:0')!.questionText).toBe(originalText);
   });
 
   it('mutating a returned OPTION does not change the master bank', () => {
     const repo = realRepo();
-    const option = repo.getOptionForQuestion('rxjs:q:0', 101)!;
+    const option = repo.getOptionForQuestion('fixture-widgets:q:0', 101)!;
     const originalCorrect = option.isCorrect;
 
     try {
       (option as { isCorrect: boolean }).isCorrect = !originalCorrect;
     } catch { /* frozen */ }
 
-    expect(repo.getOptionForQuestion('rxjs:q:0', 101)!.isCorrect).toBe(originalCorrect);
+    expect(repo.getOptionForQuestion('fixture-widgets:q:0', 101)!.isCorrect).toBe(originalCorrect);
   });
 
   it('the returned collections cannot be spliced', () => {
     const repo = realRepo();
-    const questions = repo.getEligibleQuestions({ topicIds: ['rxjs'] });
+    const questions = repo.getEligibleQuestions({ topicIds: ['fixture-widgets'] });
     const count = questions.length;
     try {
       (questions as unknown as PrivateQuestionArray).push({} as never);
     } catch { /* frozen */ }
-    expect(repo.getEligibleQuestions({ topicIds: ['rxjs'] })).toHaveLength(count);
+    expect(repo.getEligibleQuestions({ topicIds: ['fixture-widgets'] })).toHaveLength(count);
   });
 
   it('metadata is frozen too', () => {
@@ -356,7 +338,7 @@ describe('test isolation', () => {
         }]
       }] }
     });
-    expect(a.stats.quizCount).toBe(20);
+    expect(a.stats.quizCount).toBe(7);
     expect(b.stats.quizCount).toBe(1);
   });
 });
@@ -364,14 +346,19 @@ describe('test isolation', () => {
 describe('run-mode parity (dev vs built)', () => {
   /**
    * Regression: rootDir was once derived from `__dirname`, which is
-   * `src/quiz` under ts-node but `dist/src/quiz` after `npm run build`. The
-   * built server then resolved `./data/quiz.json` inside `dist/` and refused
-   * to start. Anchoring to the process working directory makes both modes
-   * agree, so this must keep passing from wherever the suite is launched.
+   * `src/quiz` under ts-node but `dist/src/quiz` after `npm run build`. A
+   * relative `dataPath` resolved against THAT would land inside `dist/` after
+   * a build and refuse to start. Anchoring to the process working directory
+   * makes both modes agree, so this must keep passing from wherever the
+   * suite is launched. Stage 15 removed the real bank the original version
+   * of this test pointed at (`./data/quiz.json`) — the synthetic fixture
+   * proves the identical path-resolution property without needing that file.
    */
-  it('resolves the default relative path against the working directory', () => {
+  it('resolves a relative path against the working directory, not __dirname', () => {
     expect(process.cwd()).toBe(BACKEND_ROOT);
-    expect(() => createQuizRepository({ dataPath: './data/quiz.json' })).not.toThrow();
+    expect(() =>
+      createQuizRepository({ dataPath: './test/helpers/synthetic-quiz-bank.json' })
+    ).not.toThrow();
   });
 
   it('an explicit rootDir still governs containment', () => {

@@ -4,14 +4,15 @@ import { test, expect, Page } from '@playwright/test';
  * Focused reproduction for a manually-observed regression: an Interview
  * answer the user definitely clicked showed as "Unanswered" in Review.
  *
- * Uses a single-topic (TypeScript, 10 questions) custom session so ALL 10
- * TypeScript questions — including the reported failing one ("How do you
- * declare a variable that can hold either a string or a number?") — are
- * guaranteed to appear every run, at a random position.
+ * Uses a single-topic (Fixture Widgets, 10 questions) custom session so ALL
+ * 10 questions — including the target question below — are guaranteed to
+ * appear every run, at a random position. Which specific question is the
+ * target is not load-bearing to the regression (it reproduces on any answer,
+ * not a question-specific one); any single-topic question works.
  */
 
 const RESULTS_URL = /\/interview\/results\/[^/?#]+/;
-const TARGET_QUESTION_TEXT = 'How do you declare a variable that can hold either a string or a number?';
+const TARGET_QUESTION_TEXT = 'Which widget size is the smallest?';
 
 async function configureTypeScriptOnly(page: Page) {
   await page.goto('/interview');
@@ -19,7 +20,7 @@ async function configureTypeScriptOnly(page: Page) {
   const boxes = page.locator('.topic-check input[type="checkbox"]');
   await expect(boxes.first()).toBeVisible();
   await page.locator('.topics-toolbar button:has-text("Clear All")').click();
-  await page.locator('.topic-check:has-text("TypeScript")').locator('input[type="checkbox"]').check();
+  await page.locator('.topic-check:has-text("Fixture Widgets")').locator('input[type="checkbox"]').check();
   await page.locator('.chip--button:has-text("10")').first().click();
   await page.locator('.start-interview-btn').click();
   await page.waitForURL(/\/interview\/session\/[^/?#]+/);
@@ -185,7 +186,7 @@ test.describe('Interview answer-persistence regression repro', () => {
     }
   });
 
-  test('mixed topic + question-type transitions: TypeScript + Dependency Injection (has a multi-answer question)', async ({ page }) => {
+  test('mixed topic + question-type transitions: Fixture Widgets + Fixture Gadgets (has a multi-answer question)', async ({ page }) => {
     test.setTimeout(300_000);
 
     for (let run = 1; run <= 6; run++) {
@@ -194,9 +195,9 @@ test.describe('Interview answer-persistence regression repro', () => {
       const boxes = page.locator('.topic-check input[type="checkbox"]');
       await expect(boxes.first()).toBeVisible();
       await page.locator('.topics-toolbar button:has-text("Clear All")').click();
-      await page.locator('.topic-check:has-text("TypeScript")').locator('input[type="checkbox"]').check();
+      await page.locator('.topic-check:has-text("Fixture Widgets")').locator('input[type="checkbox"]').check();
       await page
-        .locator('.topic-check:has-text("Dependency Injection")')
+        .locator('.topic-check:has-text("Fixture Gadgets")')
         .locator('input[type="checkbox"]')
         .check();
       await page.locator('.chip--button:has-text("10")').first().click();

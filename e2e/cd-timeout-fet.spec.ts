@@ -7,7 +7,7 @@ import { HEADING, NEXT_BTN } from './helpers';
 const FET_RE = /correct because/i;
 
 async function navTo(page: any, target: number) {
-  await page.goto('/quiz/question/change-detection/1');
+  await page.goto('/quiz/question/fixture-doohickeys/1');
   const rows = page.locator('.option-row');
   await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
   for (let i = 1; i < target; i++) {

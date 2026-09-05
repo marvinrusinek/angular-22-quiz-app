@@ -29,7 +29,9 @@ services:
     name: interview-api
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
-    # The Dockerfile copies data/quiz.json relative to the backend directory.
+    # The quiz bank is PostgreSQL-only (Stage 15) — the Dockerfile copies no
+    # quiz data file. dockerContext is still the backend directory so the
+    # build only sees backend sources, not the whole repo.
     dockerContext: ./backend
     plan: free
     # Matches the Neon project's region (AWS us-west-2). Keep these two

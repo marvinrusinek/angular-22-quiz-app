@@ -15,7 +15,7 @@ import {
  */
 
 async function startQuiz(page: Page, shuffle: boolean) {
-  await page.goto('/quiz/intro/typescript');
+  await page.goto('/quiz/intro/fixture-widgets');
   if (shuffle) {
     const toggle = page.locator('mat-slide-toggle button[role="switch"]');
     await toggle.click();
@@ -44,10 +44,19 @@ async function playThroughShuffle(page: Page, wrongAt: Set<number>) {
     const heading = (await page.locator(HEADING).textContent()) ?? '';
     const correct = await correctRowsForHeading(rows, tsQuiz, heading);
     const optCount = await rows.count();
-    const wrongIdx = [...Array(optCount).keys()].find((i) => !correct.includes(i)) ?? 0;
-    const clickIdx = wrongAt.has(pos) ? wrongIdx : correct[0];
-    await rows.nth(clickIdx).click();
-    await page.waitForTimeout(400); // let the click settle (relaxed)
+
+    if (wrongAt.has(pos)) {
+      const wrongIdx = [...Array(optCount).keys()].find((i) => !correct.includes(i)) ?? 0;
+      await rows.nth(wrongIdx).click();
+      await page.waitForTimeout(400); // let the click settle (relaxed)
+    } else {
+      // Click every correct option (multi-answer aware — fixture-widgets has
+      // one multi-answer question among otherwise single-answer ones).
+      for (const idx of correct) {
+        await rows.nth(idx).click();
+        await page.waitForTimeout(250);
+      }
+    }
 
     if (pos < total - 1) {
       await page.locator(NEXT_BTN).click(); // auto-waits for enabled

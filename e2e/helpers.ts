@@ -6,19 +6,29 @@ import * as path from 'path';
 
 // S6p (Angular Stage 14): src/assets/data/quiz.json — the Angular client
 // asset this used to read — is deleted; the app no longer fetches, caches,
-// or bundles any answer-bearing bank. These E2E specs run against the real
-// backend (see playwright.config.ts's webServer), whose throwaway database
-// is seeded from backend/data/quiz.json on every run (see the "[import]
-// wrote N quizzes..." webServer startup log) — that file is the actual
-// ground truth for what the running app will serve, and is not deleted by
-// Stage 14 (backend seed data is a separate concern from the client asset).
+// or bundles any answer-bearing bank.
+//
+// Stage 15: the REAL backend bank (backend/data/quiz.json) is also gone. E2E
+// runs against the real backend (see playwright.config.ts's webServer), whose
+// throwaway database is seeded from a deterministic SYNTHETIC bank —
+// backend/test/helpers/synthetic-quiz-bank.json — by
+// e2e/support/ensure-e2e-database.js on every run (see the "[import] wrote N
+// quizzes..." webServer startup log). That synthetic file is therefore the
+// actual ground truth for what the running app will serve during E2E; it is
+// never real quiz content, and it is the SAME fixture the backend's own unit
+// tests use, so a schema change only needs to stay correct in one place.
 export const quizData = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), 'backend/data/quiz.json'), 'utf8')
+  fs.readFileSync(path.join(process.cwd(), 'backend/test/helpers/synthetic-quiz-bank.json'), 'utf8')
 ).quizzes;
 
-export const tsQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'typescript');
-export const formsQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'forms');
-export const diQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'dependency-injection');
+// Synthetic-bank equivalents of the old real-quiz fixtures — same STRUCTURAL
+// role (single-answer-heavy / multi-answer-heavy / has-a-multi-answer-question
+// / timeout-test quiz), never real content. See synthetic-quiz-bank.json's own
+// doc comment for exactly which question in each carries which shape (e.g.
+// fixture-gadgets' 3rd question has EXACTLY three correct options).
+export const tsQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-widgets');
+export const formsQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-gizmos');
+export const diQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-gadgets');
 
 export const HEADING = 'codelab-quiz-content h3';
 export const FEEDBACK = 'codelab-quiz-feedback';
@@ -76,14 +86,14 @@ export function findMultiAnswerQuestion(quiz: any): { index: number; correctCoun
   return { index: -1, correctCount: 0 };
 }
 
-// ─── typescript-quiz convenience wrappers (kept for existing specs) ─────────
+// ─── fixture-widgets (single-answer quiz) convenience wrappers ──────────────
 
-/** Resolve the typescript-quiz question whose text the heading begins with. */
+/** Resolve the fixture-widgets question whose text the heading begins with. */
 export function findTsQuestion(headingText: string): any {
   return findQuestionIn(tsQuiz, headingText);
 }
 
-/** The single correct option index for the typescript question shown in the heading. */
+/** The single correct option index for the fixture-widgets question shown in the heading. */
 export function correctIndexForHeading(headingText: string): number {
   const q = findTsQuestion(headingText);
   return q ? correctIndices(q)[0] ?? -1 : -1;

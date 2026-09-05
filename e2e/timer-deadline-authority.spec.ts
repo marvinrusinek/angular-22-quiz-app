@@ -62,7 +62,7 @@ test.describe('timer — signed deadline is the timing authority', () => {
       if (req.url().includes('/questions/start')) startRequests.push(req);
     });
 
-    await page.goto('/quiz/intro/typescript');
+    await page.goto('/quiz/intro/fixture-widgets');
     await page.locator('.start-btn').click();
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
 

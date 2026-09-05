@@ -7,9 +7,9 @@ import { HEADING, NEXT_BTN, PREV_BTN } from './helpers';
  *
  * ── The regression this pins ──────────────────────────────────────
  *
- * Answering correctly composes a FET that names the option:
+ * Answering correctly composes a FET that names the option, e.g.:
  *
- *     "Option 1 is correct because TS uses a colon (:) to ..."
+ *     "Option 1 is correct because small is the smallest widget size."
  *
  * Switching away from the browser and back replaced it with the RAW
  * authorized explanation — the same sentence without the composed prefix.
@@ -110,7 +110,7 @@ async function leaveAndReturn(page: Page): Promise<void> {
 
 test.describe('composed FET survives a real tab switch', () => {
   test('leaving the tab and returning keeps the composed FET', async ({ page }) => {
-    await gotoQuestion(page, 'typescript', 1);
+    await gotoQuestion(page, 'fixture-widgets', 1);
 
     await page.locator('.option-row').nth(0).click();
     await expect(page.locator(HEADING)).toContainText(/is correct because/i, { timeout: 15_000 });
@@ -132,7 +132,7 @@ test.describe('composed FET survives a real tab switch', () => {
   });
 
   test('the selection message also survives the tab switch', async ({ page }) => {
-    await gotoQuestion(page, 'typescript', 1);
+    await gotoQuestion(page, 'fixture-widgets', 1);
 
     await page.locator('.option-row').nth(0).click();
     await expect(page.locator(MSG)).toHaveText(NEXT_MSG, { timeout: 15_000 });
@@ -153,7 +153,7 @@ test.describe('revisit navigation does not leak explanations', () => {
    * RIGHT question's text and never to another question's explanation.
    */
   test('Next then Previous returns to this question, with no foreign FET', async ({ page }) => {
-    await gotoQuestion(page, 'typescript', 1);
+    await gotoQuestion(page, 'fixture-widgets', 1);
 
     const questionText = (await page.locator(HEADING).textContent())?.trim() ?? '';
 
@@ -174,7 +174,7 @@ test.describe('revisit navigation does not leak explanations', () => {
   });
 
   test('an unanswered next question shows no explanation at all', async ({ page }) => {
-    await gotoQuestion(page, 'typescript', 1);
+    await gotoQuestion(page, 'fixture-widgets', 1);
 
     await page.locator('.option-row').nth(0).click();
     await expect(page.locator(HEADING)).toContainText(/is correct because/i, { timeout: 15_000 });

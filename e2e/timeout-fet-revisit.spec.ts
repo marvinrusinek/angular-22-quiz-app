@@ -35,10 +35,10 @@ import * as path from 'path';
  */
 
 const quizData = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), 'backend/data/quiz.json'), 'utf8')
+  fs.readFileSync(path.join(process.cwd(), 'backend/test/helpers/synthetic-quiz-bank.json'), 'utf8')
 ).quizzes;
-const cdQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'change-detection');
-const diQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'dependency-injection');
+const cdQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-doohickeys');
+const diQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-gadgets');
 
 const HEADING = 'codelab-quiz-content h3';
 const MSG = '.instructions-message';
@@ -48,7 +48,7 @@ const PREV_BTN = '.nav-btn[aria-label="Previous Question"]';
 test.describe('Timer-expiry FET formatting + Previous-revisit selection message', () => {
   test('single-answer: genuine expiry renders through the ORDINARY FET presentation — no expiry-specific wrapper', async ({ page }) => {
     test.setTimeout(60_000);
-    await page.goto('/quiz/question/change-detection/1');
+    await page.goto('/quiz/question/fixture-doohickeys/1');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -66,7 +66,7 @@ test.describe('Timer-expiry FET formatting + Previous-revisit selection message'
 
   test('multi-answer: genuine expiry renders through the ORDINARY FET presentation, naming every correct option in prose', async ({ page }) => {
     test.setTimeout(240_000);
-    await page.goto('/quiz/question/dependency-injection/1');
+    await page.goto('/quiz/question/fixture-gadgets/1');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -99,7 +99,7 @@ test.describe('Timer-expiry FET formatting + Previous-revisit selection message'
 
   test('revisit to an expired-but-unanswered question: correct nav-derived message, not a stale override', async ({ page }) => {
     test.setTimeout(90_000);
-    await page.goto('/quiz/question/change-detection/1');
+    await page.goto('/quiz/question/fixture-doohickeys/1');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -126,7 +126,7 @@ test.describe('Timer-expiry FET formatting + Previous-revisit selection message'
 
   test('revisit to a CORRECTLY answered question still shows Answered ✓ (no regression from the fix)', async ({ page }) => {
     test.setTimeout(60_000);
-    await page.goto('/quiz/question/change-detection/1');
+    await page.goto('/quiz/question/fixture-doohickeys/1');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -149,7 +149,7 @@ test.describe('Timer-expiry FET formatting + Previous-revisit selection message'
 
   test('revisit to a COMPLETED multi-answer question shows Answered ✓', async ({ page }) => {
     test.setTimeout(90_000);
-    await page.goto('/quiz/question/dependency-injection/1');
+    await page.goto('/quiz/question/fixture-gadgets/1');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 

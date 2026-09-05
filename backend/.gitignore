@@ -14,9 +14,10 @@ coverage/
 # outside this repository and is loaded into PostgreSQL by
 # scripts/import-quiz-bank.ts.
 #
-# `data/quiz.json` is NOT ignored yet: Angular Topic Quizzes still depend on
-# the public asset, so the file is removed at the dedicated removal stage
-# rather than being hidden from git while it is still tracked and shipping.
+# Stage 15 removed `data/quiz.json` from the repository entirely — it is no
+# longer tracked, and PostgreSQL is the only runtime source. Ignored here too
+# (defense in depth) so a re-added copy is never accidentally staged again.
+data/quiz.json
 private/
 *.private.json
 quiz-bank.real.json

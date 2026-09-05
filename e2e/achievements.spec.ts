@@ -15,7 +15,7 @@ const UNLOCKED = '.achievement-unlocked';
 test('perfect quiz unlocks an achievement on results, and it does not re-appear after refresh', async ({ page }) => {
   // Playwright gives each test a fresh browser context (empty localStorage), so
   // no achievement is earned yet at the start of this run.
-  await page.goto('/quiz/question/dependency-injection/1');
+  await page.goto('/quiz/question/fixture-gadgets/1');
   const total = diQuiz.questions.length;
 
   // Answer every question with ALL its correct options (multi-answer aware) → 100%.

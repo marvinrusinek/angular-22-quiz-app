@@ -5,11 +5,11 @@ import {
 } from './helpers';
 
 /**
- * Dependency-injection quiz coverage — the most COMPLEX quiz in the app: it
- * has multi-answer questions (Q2, Q4), which the typescript quiz lacks
- * entirely. Multi-answer exercises the hardest paths (the FET gate, the
- * "all correct found" logic, partial-correct handling), so this closes the
- * biggest gap in the playthrough net.
+ * fixture-gadgets quiz coverage — the most COMPLEX synthetic quiz in the
+ * suite: it has multiple multi-answer questions (Q2, Q3, Q4), which the
+ * fixture-widgets quiz lacks entirely. Multi-answer exercises the hardest
+ * paths (the FET gate, the "all correct found" logic, partial-correct
+ * handling), so this closes the biggest gap in the playthrough net.
  *
  * Question order is randomized in shuffle; option order is not. The correct
  * option(s) are resolved by matching the displayed heading to the quiz data
@@ -17,7 +17,7 @@ import {
  */
 
 async function startDi(page: Page, shuffle: boolean) {
-  await page.goto('/quiz/intro/dependency-injection');
+  await page.goto('/quiz/intro/fixture-gadgets');
   if (shuffle) {
     const toggle = page.locator('mat-slide-toggle button[role="switch"]');
     await toggle.click();
@@ -121,7 +121,7 @@ async function readScore(page: Page): Promise<{ correct: number; total: number; 
   return { correct, total, pct };
 }
 
-test.describe('dependency-injection — multi-answer correctness (control, non-shuffle)', () => {
+test.describe('fixture-gadgets — multi-answer correctness (control, non-shuffle)', () => {
   test('all-correct scores 100% (clicking every correct option per question)', async ({ page }) => {
     await startDi(page, false);
     await playThroughDi(page, new Set());
@@ -163,7 +163,7 @@ test.describe('dependency-injection — multi-answer correctness (control, non-s
   });
 });
 
-test.describe('dependency-injection — multi-answer correctness (shuffle)', () => {
+test.describe('fixture-gadgets — multi-answer correctness (shuffle)', () => {
   test('all-correct in shuffle scores 100%', async ({ page }) => {
     await startDi(page, true);
     await playThroughDi(page, new Set());

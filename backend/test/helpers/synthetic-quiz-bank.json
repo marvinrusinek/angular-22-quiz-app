@@ -1,0 +1,1159 @@
+{
+  "quizzes": [
+    {
+      "quizId": "fixture-widgets",
+      "milestone": "Fixture Widgets",
+      "summary": "Synthetic quiz used only by automated tests. Not real quiz content.",
+      "image": "",
+      "difficulty": "beginner",
+      "facts": [
+        "This is fixture trivia used only by automated tests.",
+        "It contains no real quiz content.",
+        "Every widget fact here is deliberately fabricated."
+      ],
+      "questions": [
+        {
+          "questionText": "Which widget size is the smallest?",
+          "explanation": "Fixture explanation: small is the smallest widget size.",
+          "options": [
+            {
+              "text": "small",
+              "correct": true
+            },
+            {
+              "text": "medium"
+            },
+            {
+              "text": "large"
+            }
+          ]
+        },
+        {
+          "questionText": "Which widget finish is glossy?",
+          "explanation": "Fixture explanation: sheen is the glossy widget finish.",
+          "options": [
+            {
+              "text": "matte"
+            },
+            {
+              "text": "sheen",
+              "correct": true
+            },
+            {
+              "text": "rough"
+            }
+          ]
+        },
+        {
+          "questionText": "Which widget weight class is lightest?",
+          "explanation": "Fixture explanation: feather is the lightest widget weight class.",
+          "options": [
+            {
+              "text": "feather",
+              "correct": true
+            },
+            {
+              "text": "standard"
+            },
+            {
+              "text": "heavy"
+            }
+          ]
+        },
+        {
+          "questionText": "Which widget shape has four equal sides?",
+          "explanation": "Fixture explanation: a square has four equal sides.",
+          "options": [
+            {
+              "text": "square",
+              "correct": true
+            },
+            {
+              "text": "triangle"
+            },
+            {
+              "text": "circle"
+            }
+          ]
+        },
+        {
+          "questionText": "Which widget grade denotes premium quality?",
+          "explanation": "Fixture explanation: grade A denotes premium widget quality.",
+          "options": [
+            {
+              "text": "grade C"
+            },
+            {
+              "text": "grade A",
+              "correct": true
+            },
+            {
+              "text": "grade F"
+            }
+          ]
+        },
+        {
+          "questionText": "Which widget batch number ships first?",
+          "explanation": "Fixture explanation: batch 1 ships first.",
+          "options": [
+            {
+              "text": "batch 3"
+            },
+            {
+              "text": "batch 1",
+              "correct": true
+            },
+            {
+              "text": "batch 9"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are widget colors?",
+          "explanation": "Fixture explanation: red and blue are widget colors.",
+          "options": [
+            {
+              "text": "red",
+              "correct": true
+            },
+            {
+              "text": "blue",
+              "correct": true
+            },
+            {
+              "text": "invisible"
+            },
+            {
+              "text": "loud"
+            }
+          ]
+        },
+        {
+          "questionText": "A widget can have zero parts.",
+          "explanation": "Fixture explanation: every widget has at least one part.",
+          "options": [
+            {
+              "text": "true"
+            },
+            {
+              "text": "false",
+              "correct": true
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these is a widget material?",
+          "explanation": "Fixture explanation: widgets can be made of any of these materials.",
+          "options": [
+            {
+              "text": "plastic"
+            },
+            {
+              "text": "metal"
+            },
+            {
+              "text": "glass"
+            },
+            {
+              "text": "all of the above",
+              "correct": true
+            }
+          ]
+        },
+        {
+          "questionText": "Which widget label marks a return?",
+          "explanation": "Fixture explanation: label X marks a returned widget.",
+          "options": [
+            {
+              "text": "label X",
+              "correct": true
+            },
+            {
+              "text": "label Y"
+            },
+            {
+              "text": "label Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "fixture-gadgets",
+      "milestone": "Fixture Gadgets",
+      "summary": "Second synthetic quiz used only by automated tests. Not real quiz content.",
+      "image": "",
+      "difficulty": "intermediate",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Which gadget mode uses the least power?",
+          "explanation": "Fixture explanation: sleep mode uses the least power.",
+          "options": [
+            {
+              "text": "sleep",
+              "correct": true
+            },
+            {
+              "text": "turbo"
+            },
+            {
+              "text": "boost"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are gadget connectors?",
+          "explanation": "Fixture explanation: usb-a and usb-c are real gadget connectors.",
+          "options": [
+            {
+              "text": "usb-a",
+              "correct": true
+            },
+            {
+              "text": "usb-c",
+              "correct": true
+            },
+            {
+              "text": "usb-z"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are gadget accessories?",
+          "explanation": "Fixture explanation: carry case, spare battery and screen film are gadget accessories.",
+          "options": [
+            {
+              "text": "carry case",
+              "correct": true
+            },
+            {
+              "text": "spare battery",
+              "correct": true
+            },
+            {
+              "text": "screen film",
+              "correct": true
+            },
+            {
+              "text": "anvil"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are gadget firmware channels?",
+          "explanation": "Fixture explanation: stable and beta are real firmware channels.",
+          "options": [
+            {
+              "text": "stable",
+              "correct": true
+            },
+            {
+              "text": "beta",
+              "correct": true
+            },
+            {
+              "text": "void"
+            }
+          ]
+        },
+        {
+          "questionText": "A gadget requires a network connection to power on.",
+          "explanation": "Fixture explanation: gadgets power on without a network connection.",
+          "options": [
+            {
+              "text": "true"
+            },
+            {
+              "text": "false",
+              "correct": true
+            }
+          ]
+        },
+        {
+          "questionText": "Which gadget housing is the most durable?",
+          "explanation": "Fixture explanation: reinforced housing is the most durable.",
+          "options": [
+            {
+              "text": "foam"
+            },
+            {
+              "text": "reinforced",
+              "correct": true
+            },
+            {
+              "text": "paper"
+            }
+          ]
+        },
+        {
+          "questionText": "Which gadget port charges fastest?",
+          "explanation": "Fixture explanation: port B charges fastest.",
+          "options": [
+            {
+              "text": "port A"
+            },
+            {
+              "text": "port B",
+              "correct": true
+            },
+            {
+              "text": "port C"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these gadget statuses mean it is ready?",
+          "explanation": "Fixture explanation: only \"ready\" means the gadget is ready.",
+          "options": [
+            {
+              "text": "ready",
+              "correct": true
+            },
+            {
+              "text": "booting"
+            },
+            {
+              "text": "error"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "fixture-gizmos",
+      "milestone": "Fixture Gizmos",
+      "summary": "Third synthetic quiz used only by automated tests. Not real quiz content.",
+      "image": "",
+      "difficulty": "advanced",
+      "facts": [
+        "Gizmo fixture trivia — not real content."
+      ],
+      "questions": [
+        {
+          "questionText": "Which gizmo tier is entry level?",
+          "explanation": "Fixture explanation: tier 1 is entry level.",
+          "options": [
+            {
+              "text": "tier 1",
+              "correct": true
+            },
+            {
+              "text": "tier 5"
+            },
+            {
+              "text": "tier 9"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are gizmo sensors?",
+          "explanation": "Fixture explanation: thermal and optical are real gizmo sensors.",
+          "options": [
+            {
+              "text": "thermal",
+              "correct": true
+            },
+            {
+              "text": "optical",
+              "correct": true
+            },
+            {
+              "text": "placebo"
+            }
+          ]
+        },
+        {
+          "questionText": "A gizmo can operate without any casing.",
+          "explanation": "Fixture explanation: an uncased gizmo can still operate, just unprotected.",
+          "options": [
+            {
+              "text": "true",
+              "correct": true
+            },
+            {
+              "text": "false"
+            }
+          ]
+        },
+        {
+          "questionText": "Which gizmo dial setting is fastest?",
+          "explanation": "Fixture explanation: dial 3 is the fastest gizmo setting.",
+          "options": [
+            {
+              "text": "dial 1"
+            },
+            {
+              "text": "dial 2"
+            },
+            {
+              "text": "dial 3",
+              "correct": true
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these extend gizmo battery life?",
+          "explanation": "Fixture explanation: low-power mode and dimming the display extend battery life.",
+          "options": [
+            {
+              "text": "low-power mode",
+              "correct": true
+            },
+            {
+              "text": "dim display",
+              "correct": true
+            },
+            {
+              "text": "full brightness"
+            }
+          ]
+        },
+        {
+          "questionText": "Which gizmo material resists corrosion?",
+          "explanation": "Fixture explanation: coated alloy resists corrosion.",
+          "options": [
+            {
+              "text": "plain steel"
+            },
+            {
+              "text": "coated alloy",
+              "correct": true
+            },
+            {
+              "text": "cardboard"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these can house a gizmo core?",
+          "explanation": "Fixture explanation: any of these can house a gizmo core.",
+          "options": [
+            {
+              "text": "shell casing"
+            },
+            {
+              "text": "mounting frame"
+            },
+            {
+              "text": "any bracket"
+            },
+            {
+              "text": "all of the above",
+              "correct": true
+            }
+          ]
+        },
+        {
+          "questionText": "Which gizmo revision is newest?",
+          "explanation": "Fixture explanation: rev C is the newest gizmo revision.",
+          "options": [
+            {
+              "text": "rev A"
+            },
+            {
+              "text": "rev B"
+            },
+            {
+              "text": "rev C",
+              "correct": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "fixture-doohickeys",
+      "milestone": "Fixture Doohickeys",
+      "summary": "Fourth synthetic quiz used only by automated tests. Not real quiz content.",
+      "image": "",
+      "difficulty": "beginner",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Which doohickey trigger is manual?",
+          "explanation": "Fixture explanation: the lever is the manual doohickey trigger.",
+          "options": [
+            {
+              "text": "lever",
+              "correct": true
+            },
+            {
+              "text": "sensor"
+            },
+            {
+              "text": "timer"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are doohickey attachments?",
+          "explanation": "Fixture explanation: clip and hook are real doohickey attachments.",
+          "options": [
+            {
+              "text": "clip",
+              "correct": true
+            },
+            {
+              "text": "hook",
+              "correct": true
+            },
+            {
+              "text": "ghost"
+            }
+          ]
+        },
+        {
+          "questionText": "A doohickey resets itself automatically.",
+          "explanation": "Fixture explanation: a doohickey must be reset manually.",
+          "options": [
+            {
+              "text": "true"
+            },
+            {
+              "text": "false",
+              "correct": true
+            }
+          ]
+        },
+        {
+          "questionText": "Which doohickey size fits a pocket?",
+          "explanation": "Fixture explanation: mini doohickeys fit a pocket.",
+          "options": [
+            {
+              "text": "mini",
+              "correct": true
+            },
+            {
+              "text": "jumbo"
+            },
+            {
+              "text": "crate"
+            }
+          ]
+        },
+        {
+          "questionText": "Which doohickey coating is waterproof?",
+          "explanation": "Fixture explanation: seal coat is the waterproof doohickey coating.",
+          "options": [
+            {
+              "text": "dry coat"
+            },
+            {
+              "text": "seal coat",
+              "correct": true
+            },
+            {
+              "text": "dust coat"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are doohickey power sources?",
+          "explanation": "Fixture explanation: battery and crank are real doohickey power sources.",
+          "options": [
+            {
+              "text": "battery",
+              "correct": true
+            },
+            {
+              "text": "crank",
+              "correct": true
+            },
+            {
+              "text": "wishful thinking"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "fixture-contraptions",
+      "milestone": "Fixture Contraptions",
+      "summary": "Fifth synthetic quiz used only by automated tests. Not real quiz content.",
+      "image": "",
+      "difficulty": "intermediate",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Which contraption lever activates part 1?",
+          "explanation": "Fixture explanation: lever 1 activates part 1.",
+          "options": [
+            {
+              "text": "lever 1",
+              "correct": true
+            },
+            {
+              "text": "lever X"
+            },
+            {
+              "text": "lever Y"
+            }
+          ]
+        },
+        {
+          "questionText": "Which contraption lever activates part 2?",
+          "explanation": "Fixture explanation: lever 2 activates part 2.",
+          "options": [
+            {
+              "text": "lever 2",
+              "correct": true
+            },
+            {
+              "text": "lever X"
+            },
+            {
+              "text": "lever Y"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are contraption gears (set 3)?",
+          "explanation": "Fixture explanation: gear A and gear B belong to contraption set 3.",
+          "options": [
+            {
+              "text": "gear A",
+              "correct": true
+            },
+            {
+              "text": "gear B",
+              "correct": true
+            },
+            {
+              "text": "gear C"
+            }
+          ]
+        },
+        {
+          "questionText": "Which contraption lever activates part 4?",
+          "explanation": "Fixture explanation: lever 4 activates part 4.",
+          "options": [
+            {
+              "text": "lever 4",
+              "correct": true
+            },
+            {
+              "text": "lever X"
+            },
+            {
+              "text": "lever Y"
+            }
+          ]
+        },
+        {
+          "questionText": "Which contraption lever activates part 5?",
+          "explanation": "Fixture explanation: lever 5 activates part 5.",
+          "options": [
+            {
+              "text": "lever 5",
+              "correct": true
+            },
+            {
+              "text": "lever X"
+            },
+            {
+              "text": "lever Y"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are contraption gears (set 6)?",
+          "explanation": "Fixture explanation: gear A and gear B belong to contraption set 6.",
+          "options": [
+            {
+              "text": "gear A",
+              "correct": true
+            },
+            {
+              "text": "gear B",
+              "correct": true
+            },
+            {
+              "text": "gear C"
+            }
+          ]
+        },
+        {
+          "questionText": "Which contraption lever activates part 7?",
+          "explanation": "Fixture explanation: lever 7 activates part 7.",
+          "options": [
+            {
+              "text": "lever 7",
+              "correct": true
+            },
+            {
+              "text": "lever X"
+            },
+            {
+              "text": "lever Y"
+            }
+          ]
+        },
+        {
+          "questionText": "Which contraption lever activates part 8?",
+          "explanation": "Fixture explanation: lever 8 activates part 8.",
+          "options": [
+            {
+              "text": "lever 8",
+              "correct": true
+            },
+            {
+              "text": "lever X"
+            },
+            {
+              "text": "lever Y"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are contraption gears (set 9)?",
+          "explanation": "Fixture explanation: gear A and gear B belong to contraption set 9.",
+          "options": [
+            {
+              "text": "gear A",
+              "correct": true
+            },
+            {
+              "text": "gear B",
+              "correct": true
+            },
+            {
+              "text": "gear C"
+            }
+          ]
+        },
+        {
+          "questionText": "Which contraption lever activates part 10?",
+          "explanation": "Fixture explanation: lever 10 activates part 10.",
+          "options": [
+            {
+              "text": "lever 10",
+              "correct": true
+            },
+            {
+              "text": "lever X"
+            },
+            {
+              "text": "lever Y"
+            }
+          ]
+        },
+        {
+          "questionText": "Which contraption lever activates part 11?",
+          "explanation": "Fixture explanation: lever 11 activates part 11.",
+          "options": [
+            {
+              "text": "lever 11",
+              "correct": true
+            },
+            {
+              "text": "lever X"
+            },
+            {
+              "text": "lever Y"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are contraption gears (set 12)?",
+          "explanation": "Fixture explanation: gear A and gear B belong to contraption set 12.",
+          "options": [
+            {
+              "text": "gear A",
+              "correct": true
+            },
+            {
+              "text": "gear B",
+              "correct": true
+            },
+            {
+              "text": "gear C"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "fixture-thingamajigs",
+      "milestone": "Fixture Thingamajigs",
+      "summary": "Sixth synthetic quiz used only by automated tests. Not real quiz content.",
+      "image": "",
+      "difficulty": "advanced",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Which thingamajig setting controls unit 1's speed?",
+          "explanation": "Fixture explanation: speed dial 1 controls unit 1's speed.",
+          "options": [
+            {
+              "text": "speed dial 1",
+              "correct": true
+            },
+            {
+              "text": "idle switch"
+            },
+            {
+              "text": "mute switch"
+            }
+          ]
+        },
+        {
+          "questionText": "Which thingamajig setting controls unit 2's speed?",
+          "explanation": "Fixture explanation: speed dial 2 controls unit 2's speed.",
+          "options": [
+            {
+              "text": "speed dial 2",
+              "correct": true
+            },
+            {
+              "text": "idle switch"
+            },
+            {
+              "text": "mute switch"
+            }
+          ]
+        },
+        {
+          "questionText": "Which thingamajig setting controls unit 3's speed?",
+          "explanation": "Fixture explanation: speed dial 3 controls unit 3's speed.",
+          "options": [
+            {
+              "text": "speed dial 3",
+              "correct": true
+            },
+            {
+              "text": "idle switch"
+            },
+            {
+              "text": "mute switch"
+            }
+          ]
+        },
+        {
+          "questionText": "A thingamajig unit 4 requires calibration before first use.",
+          "explanation": "Fixture explanation: thingamajig unit 4 does require calibration.",
+          "options": [
+            {
+              "text": "true",
+              "correct": true
+            },
+            {
+              "text": "false"
+            }
+          ]
+        },
+        {
+          "questionText": "Which thingamajig setting controls unit 5's speed?",
+          "explanation": "Fixture explanation: speed dial 5 controls unit 5's speed.",
+          "options": [
+            {
+              "text": "speed dial 5",
+              "correct": true
+            },
+            {
+              "text": "idle switch"
+            },
+            {
+              "text": "mute switch"
+            }
+          ]
+        },
+        {
+          "questionText": "Which thingamajig setting controls unit 6's speed?",
+          "explanation": "Fixture explanation: speed dial 6 controls unit 6's speed.",
+          "options": [
+            {
+              "text": "speed dial 6",
+              "correct": true
+            },
+            {
+              "text": "idle switch"
+            },
+            {
+              "text": "mute switch"
+            }
+          ]
+        },
+        {
+          "questionText": "Which thingamajig setting controls unit 7's speed?",
+          "explanation": "Fixture explanation: speed dial 7 controls unit 7's speed.",
+          "options": [
+            {
+              "text": "speed dial 7",
+              "correct": true
+            },
+            {
+              "text": "idle switch"
+            },
+            {
+              "text": "mute switch"
+            }
+          ]
+        },
+        {
+          "questionText": "A thingamajig unit 8 requires calibration before first use.",
+          "explanation": "Fixture explanation: thingamajig unit 8 does require calibration.",
+          "options": [
+            {
+              "text": "true",
+              "correct": true
+            },
+            {
+              "text": "false"
+            }
+          ]
+        },
+        {
+          "questionText": "Which thingamajig setting controls unit 9's speed?",
+          "explanation": "Fixture explanation: speed dial 9 controls unit 9's speed.",
+          "options": [
+            {
+              "text": "speed dial 9",
+              "correct": true
+            },
+            {
+              "text": "idle switch"
+            },
+            {
+              "text": "mute switch"
+            }
+          ]
+        },
+        {
+          "questionText": "Which thingamajig setting controls unit 10's speed?",
+          "explanation": "Fixture explanation: speed dial 10 controls unit 10's speed.",
+          "options": [
+            {
+              "text": "speed dial 10",
+              "correct": true
+            },
+            {
+              "text": "idle switch"
+            },
+            {
+              "text": "mute switch"
+            }
+          ]
+        },
+        {
+          "questionText": "Which thingamajig setting controls unit 11's speed?",
+          "explanation": "Fixture explanation: speed dial 11 controls unit 11's speed.",
+          "options": [
+            {
+              "text": "speed dial 11",
+              "correct": true
+            },
+            {
+              "text": "idle switch"
+            },
+            {
+              "text": "mute switch"
+            }
+          ]
+        },
+        {
+          "questionText": "A thingamajig unit 12 requires calibration before first use.",
+          "explanation": "Fixture explanation: thingamajig unit 12 does require calibration.",
+          "options": [
+            {
+              "text": "true",
+              "correct": true
+            },
+            {
+              "text": "false"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "fixture-whatsits",
+      "milestone": "Fixture Whatsits",
+      "summary": "Seventh synthetic quiz used only by automated tests. Not real quiz content.",
+      "image": "",
+      "difficulty": "beginner",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Which whatsit code unlocks feature 1?",
+          "explanation": "Fixture explanation: code-1 unlocks whatsit feature 1.",
+          "options": [
+            {
+              "text": "code-1",
+              "correct": true
+            },
+            {
+              "text": "code-000"
+            },
+            {
+              "text": "code-999"
+            }
+          ]
+        },
+        {
+          "questionText": "Which whatsit code unlocks feature 2?",
+          "explanation": "Fixture explanation: code-2 unlocks whatsit feature 2.",
+          "options": [
+            {
+              "text": "code-2",
+              "correct": true
+            },
+            {
+              "text": "code-000"
+            },
+            {
+              "text": "code-999"
+            }
+          ]
+        },
+        {
+          "questionText": "Which whatsit code unlocks feature 3?",
+          "explanation": "Fixture explanation: code-3 unlocks whatsit feature 3.",
+          "options": [
+            {
+              "text": "code-3",
+              "correct": true
+            },
+            {
+              "text": "code-000"
+            },
+            {
+              "text": "code-999"
+            }
+          ]
+        },
+        {
+          "questionText": "Which whatsit code unlocks feature 4?",
+          "explanation": "Fixture explanation: code-4 unlocks whatsit feature 4.",
+          "options": [
+            {
+              "text": "code-4",
+              "correct": true
+            },
+            {
+              "text": "code-000"
+            },
+            {
+              "text": "code-999"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are whatsit finishes (batch 5)?",
+          "explanation": "Fixture explanation: polished and brushed are real whatsit finishes for batch 5.",
+          "options": [
+            {
+              "text": "polished",
+              "correct": true
+            },
+            {
+              "text": "brushed",
+              "correct": true
+            },
+            {
+              "text": "cracked"
+            }
+          ]
+        },
+        {
+          "questionText": "Which whatsit code unlocks feature 6?",
+          "explanation": "Fixture explanation: code-6 unlocks whatsit feature 6.",
+          "options": [
+            {
+              "text": "code-6",
+              "correct": true
+            },
+            {
+              "text": "code-000"
+            },
+            {
+              "text": "code-999"
+            }
+          ]
+        },
+        {
+          "questionText": "Which whatsit code unlocks feature 7?",
+          "explanation": "Fixture explanation: code-7 unlocks whatsit feature 7.",
+          "options": [
+            {
+              "text": "code-7",
+              "correct": true
+            },
+            {
+              "text": "code-000"
+            },
+            {
+              "text": "code-999"
+            }
+          ]
+        },
+        {
+          "questionText": "Which whatsit code unlocks feature 8?",
+          "explanation": "Fixture explanation: code-8 unlocks whatsit feature 8.",
+          "options": [
+            {
+              "text": "code-8",
+              "correct": true
+            },
+            {
+              "text": "code-000"
+            },
+            {
+              "text": "code-999"
+            }
+          ]
+        },
+        {
+          "questionText": "Which whatsit code unlocks feature 9?",
+          "explanation": "Fixture explanation: code-9 unlocks whatsit feature 9.",
+          "options": [
+            {
+              "text": "code-9",
+              "correct": true
+            },
+            {
+              "text": "code-000"
+            },
+            {
+              "text": "code-999"
+            }
+          ]
+        },
+        {
+          "questionText": "Which of these are whatsit finishes (batch 10)?",
+          "explanation": "Fixture explanation: polished and brushed are real whatsit finishes for batch 10.",
+          "options": [
+            {
+              "text": "polished",
+              "correct": true
+            },
+            {
+              "text": "brushed",
+              "correct": true
+            },
+            {
+              "text": "cracked"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "quizId": "fixture-gadgets",
+      "resources": [
+        {
+          "title": "Fixture Gadgets 101",
+          "url": "https://fixture.example/gadgets-101",
+          "host": "fixture.example"
+        },
+        {
+          "title": "Advanced Fixture Gadgets",
+          "url": "https://fixture.example/gadgets-advanced",
+          "host": "fixture.example"
+        }
+      ]
+    }
+  ]
+}

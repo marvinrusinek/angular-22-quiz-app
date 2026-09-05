@@ -11,7 +11,6 @@ describe('loadConfig — defaults', () => {
     expect(config.nodeEnv).toBe('test');
     expect(config.isProduction).toBe(false);
     expect(config.port).toBe(3000);
-    expect(config.quizDataPath).toBe('./data/quiz.json');
     // No default connection string: a development server with no DATABASE_URL
     // should fail when it tries to connect, not silently target something.
     expect(config.databaseUrl).toBe('');
@@ -98,13 +97,6 @@ describe('loadConfig — allowed origins', () => {
     expect(() =>
       loadConfig(env({ NODE_ENV: 'production', ALLOWED_ORIGINS: '  ,  ' }))
     ).toThrow(/required in production/i);
-  });
-});
-
-describe('loadConfig — data paths', () => {
-  it('accepts an override for the private quiz bank', () => {
-    const config = loadConfig(env({ QUIZ_DATA_PATH: '/srv/private/quiz.json' }));
-    expect(config.quizDataPath).toBe('/srv/private/quiz.json');
   });
 });
 

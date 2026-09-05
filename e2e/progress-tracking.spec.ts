@@ -1,10 +1,10 @@
 import { test, expect, Page } from '@playwright/test';
-import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading } from './helpers';
+import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading, correctRowsForHeading } from './helpers';
 
 const PANEL = 'mat-expansion-panel';
 const PANEL_HEADER = 'mat-expansion-panel-header';
 const PANEL_DETAILS = '.progress-summary';
-const TS_TILE = '.quiz-tile:has(h5.quiz-title:text-is("TypeScript"))';
+const TS_TILE = '.quiz-tile:has(h5.quiz-title:text-is("Fixture Widgets"))';
 const BEST_SCORES_KEY = 'quizBestScores';
 
 /**
@@ -50,16 +50,16 @@ async function storedBestScores(page: Page): Promise<Record<string, number>> {
 }
 
 /**
- * Enter the way a real user does: Quiz Selection → TypeScript tile → Start.
+ * Enter the way a real user does: Quiz Selection → Fixture Widgets tile → Start.
  * The tile click is what calls `onSelect()` → `markEngaged()`.
  */
 async function engageViaTileAndStart(page: Page): Promise<void> {
   await page.goto('/quiz');
   await page.locator(TS_TILE).waitFor({ state: 'visible', timeout: 20_000 });
   await page.locator(TS_TILE).click();
-  await expect(page).toHaveURL(/\/quiz\/intro\/typescript/);
+  await expect(page).toHaveURL(/\/quiz\/intro\/fixture-widgets/);
   await page.locator('.start-btn').click();
-  await expect(page).toHaveURL(/\/question\/typescript\/1$/);
+  await expect(page).toHaveURL(/\/question\/fixture-widgets\/1$/);
 }
 
 /** Return to Quiz Selection through the app (router navigation, not a reload). */
@@ -68,8 +68,8 @@ async function backToSelection(page: Page): Promise<void> {
   await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
 }
 
-/** Answer the whole typescript quiz (single-answer). `wrongFirst` misses Q1 → 90%. */
-async function answerTypescript(page: Page, wrongFirst = false): Promise<void> {
+/** Answer the whole fixture-widgets quiz. `wrongFirst` misses Q1 → 90%. */
+async function answerFixtureWidgets(page: Page, wrongFirst = false): Promise<void> {
   const total = tsQuiz.questions.length;
   for (let i = 0; i < total; i++) {
     const rows = page.locator('.option-row');
@@ -80,9 +80,20 @@ async function answerTypescript(page: Page, wrongFirst = false): Promise<void> {
         { timeout: 8000 })
       .toBeGreaterThanOrEqual(0);
 
-    const correct = correctIndexForHeading((await page.locator(HEADING).textContent()) ?? '');
-    const pick = wrongFirst && i === 0 ? (correct === 0 ? 1 : 0) : correct;
-    await rows.nth(pick).click();
+    const heading = (await page.locator(HEADING).textContent()) ?? '';
+    const correct = correctIndexForHeading(heading);
+
+    if (wrongFirst && i === 0) {
+      await rows.nth(correct === 0 ? 1 : 0).click();
+    } else {
+      // Multi-answer aware — fixture-widgets has one multi-answer question
+      // among otherwise single-answer ones.
+      const corrects = await correctRowsForHeading(rows, tsQuiz, heading);
+      for (const idx of corrects) {
+        await rows.nth(idx).click();
+        await page.waitForTimeout(250);
+      }
+    }
 
     if (i < total - 1) {
       await page.locator(NEXT_BTN).click();
@@ -99,7 +110,7 @@ test('progress: score persists durably, the panel is retained once progress exis
   // ── complete the quiz perfectly (100%), entering via the tile so the
   //    session-engagement flag is set the way a real user sets it ───────────
   await engageViaTileAndStart(page);
-  await answerTypescript(page);
+  await answerFixtureWidgets(page);
   await backToSelection(page);
 
   // ── panel is visible for an ENGAGED session ─────────────────────────────
@@ -130,7 +141,7 @@ test('progress: score persists durably, the panel is retained once progress exis
   await expect(completedTile.locator('.quiz-card-progress')).toContainText('100%');
 
   // ── the DURABLE record, asserted independently of any UI ────────────────
-  expect((await storedBestScores(page))['typescript']).toBe(100);
+  expect((await storedBestScores(page))['fixture-widgets']).toBe(100);
 
   // ── refresh: the in-memory flag resets, but DURABLE progress keeps the panel ──
   await page.reload();
@@ -140,13 +151,13 @@ test('progress: score persists durably, the panel is retained once progress exis
   // quiz, so hasAccessedQuizzes() (sessionStorage — intact, same tab) and
   // achievementsEarned() (localStorage) each hold the gate open on their own.
   await expect(page.locator(PANEL)).toBeVisible();
-  expect((await storedBestScores(page))['typescript']).toBe(100);
+  expect((await storedBestScores(page))['fixture-widgets']).toBe(100);
 
   // ── navigate away through the app and come back ────────────────────────
   // Where the tile lands depends on state — an untouched quiz opens its intro,
   // an already-completed one opens its results — so accept either.
   await page.locator(TS_TILE).click();
-  await expect(page).toHaveURL(/\/quiz\/(intro|results)\/typescript/);
+  await expect(page).toHaveURL(/\/quiz\/(intro|results)\/fixture-widgets/);
   await page.goBack();
   await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -159,15 +170,15 @@ test('progress: score persists durably, the panel is retained once progress exis
   await page.locator('.quiz-tile.completed').click();
   await expect(page).toHaveURL(/\/results\//);
   await page.getByTitle('restart').click();
-  await expect(page).toHaveURL(/\/question\/typescript\/1$/);
-  await answerTypescript(page, /* wrongFirst */ true);  // 90%
+  await expect(page).toHaveURL(/\/question\/fixture-widgets\/1$/);
+  await answerFixtureWidgets(page, /* wrongFirst */ true);  // 90%
 
   // Back to selection: the best score must remain 100%, not the 90% retake —
   // in the UI and in the durable store.
   await backToSelection(page);
   await expect(page.locator('.quiz-tile.completed .quiz-card-progress')).toContainText('100%');
   await expect(page.locator('.quiz-tile.completed .quiz-card-progress')).not.toContainText('90%');
-  expect((await storedBestScores(page))['typescript']).toBe(100);
+  expect((await storedBestScores(page))['fixture-widgets']).toBe(100);
 });
 
 /**
@@ -200,7 +211,7 @@ test('progress: a brand-new user starts clean, and engaging opens the gate durab
 
   // Tile click calls onSelect() -> markEngaged(), which opens the gate.
   await page.locator(TS_TILE).click();
-  await expect(page).toHaveURL(/\/quiz\/(intro|results)\/typescript/);
+  await expect(page).toHaveURL(/\/quiz\/(intro|results)\/fixture-widgets/);
   await page.goBack();   // router navigation, so the in-memory flag survives
   await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
   await expect(page.locator(PANEL)).toBeVisible();

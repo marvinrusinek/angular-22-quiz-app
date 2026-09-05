@@ -34,28 +34,28 @@ async function assertOptionsRender(page: Page, quizId: string, oneBasedIndex: nu
 }
 
 test.describe('cold load — options render on direct deep-link', () => {
-  test('typescript Q1 renders options on a fresh deep-link', async ({ page }) => {
-    await page.goto('/quiz/question/typescript/1');
-    await assertOptionsRender(page, 'typescript', 1, tsQuiz);
+  test('fixture-widgets Q1 renders options on a fresh deep-link', async ({ page }) => {
+    await page.goto('/quiz/question/fixture-widgets/1');
+    await assertOptionsRender(page, 'fixture-widgets', 1, tsQuiz);
   });
 
-  test('typescript mid-quiz question renders options on a fresh deep-link', async ({ page }) => {
+  test('fixture-widgets mid-quiz question renders options on a fresh deep-link', async ({ page }) => {
     const idx = Math.min(4, tsQuiz.questions.length); // a later question exercises URL-index resolution
-    await page.goto(`/quiz/question/typescript/${idx}`);
-    await assertOptionsRender(page, 'typescript', idx, tsQuiz);
+    await page.goto(`/quiz/question/fixture-widgets/${idx}`);
+    await assertOptionsRender(page, 'fixture-widgets', idx, tsQuiz);
   });
 
-  test('dependency-injection Q1 (multi-answer quiz) renders options on a fresh deep-link', async ({ page }) => {
-    await page.goto('/quiz/question/dependency-injection/1');
-    await assertOptionsRender(page, 'dependency-injection', 1, diQuiz);
+  test('fixture-gadgets Q1 (from the multi-answer bank) renders options on a fresh deep-link', async ({ page }) => {
+    await page.goto('/quiz/question/fixture-gadgets/1');
+    await assertOptionsRender(page, 'fixture-gadgets', 1, diQuiz);
   });
 
   test('options still render after an in-place reload (address-bar reload path)', async ({ page }) => {
     const idx = Math.min(3, tsQuiz.questions.length);
-    await page.goto(`/quiz/question/typescript/${idx}`);
-    await assertOptionsRender(page, 'typescript', idx, tsQuiz);
+    await page.goto(`/quiz/question/fixture-widgets/${idx}`);
+    await assertOptionsRender(page, 'fixture-widgets', idx, tsQuiz);
 
     await page.reload();
-    await assertOptionsRender(page, 'typescript', idx, tsQuiz);
+    await assertOptionsRender(page, 'fixture-widgets', idx, tsQuiz);
   });
 });

@@ -9,7 +9,7 @@ import { NEXT_BTN, PREV_BTN, HEADING, diQuiz, correctRowsForHeading, findMultiAn
  * than hardcoded, so these specs don't drift when the quiz is re-ordered/edited.
  */
 const SCORE = '.scoreboard';
-const MULTI = findMultiAnswerQuestion(diQuiz);  // dependency-injection: the >=2-correct question
+const MULTI = findMultiAnswerQuestion(diQuiz);  // fixture-gadgets: the >=2-correct question
 
 const optText = async (row: Locator): Promise<string> =>
   norm(((await row.locator('.option-text').textContent()) ?? '').replace(/^\s*\d+\.\s*/, ''));
@@ -20,7 +20,7 @@ const optText = async (row: Locator): Promise<string> =>
  * `.option-row` locator, positioned on the multi-answer question.
  */
 async function reachMultiAnswerQuestion(page: Page): Promise<Locator> {
-  await page.goto('/quiz/question/dependency-injection/1');
+  await page.goto('/quiz/question/fixture-gadgets/1');
   const rows = page.locator('.option-row');
   await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -152,7 +152,7 @@ test('revisiting a PARTIAL multi-answer WITHOUT completing must NOT credit', asy
 // cross-visit uiSelectedTexts union into the all-correct count so COMPLETING a
 // multi-answer on REVISIT credits the score (not just the win feedback).
 async function startShuffledDI(page: Page): Promise<void> {
-  await page.goto('/quiz/intro/dependency-injection');
+  await page.goto('/quiz/intro/fixture-gadgets');
   const toggle = page.locator('mat-slide-toggle button[role="switch"]');
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-checked', 'true');

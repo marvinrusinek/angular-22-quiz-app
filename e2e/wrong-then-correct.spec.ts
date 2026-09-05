@@ -19,7 +19,7 @@ import { diQuiz } from './helpers';
  *
  * Asserted here on the DOM the user actually sees, not on internals.
  */
-const QUIZ = 'dependency-injection';
+const QUIZ = 'fixture-gadgets';
 
 test('wrong pick then correct pick ends green with the win message', async ({ page }) => {
   test.setTimeout(120_000);

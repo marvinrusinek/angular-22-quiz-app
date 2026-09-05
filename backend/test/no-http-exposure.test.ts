@@ -5,19 +5,22 @@ import { resolve } from 'node:path';
 import { createApp } from '../src/app';
 import { loadConfig } from '../src/config';
 import { createQuizRepository } from '../src/quiz/quiz.repository';
-import { realRepository } from './helpers/fixtures';
+import { fixtureRepository, FIXTURE_SOURCE } from './helpers/fixtures';
 
 /**
  * The repository now exists and holds the answer key in memory. This suite
  * proves that adding it did NOT open any HTTP path to it — Stage 2 introduces
  * no public quiz endpoint.
+ *
+ * Stage 15: this suite is about the HTTP SURFACE (does any route serve the
+ * bank?), not about the real bank's content, so the synthetic FIXTURE_SOURCE
+ * (same shape, same 'rxjs:q:0' question id) proves the same thing without a
+ * dependency on `backend/data/quiz.json`.
  */
-
-/** Deliberately wired to the REAL bank — this suite hunts for real leaks. */
 function app() {
   return createApp(
     loadConfig({ NODE_ENV: 'test', ALLOWED_ORIGINS: 'http://localhost:4200' } as NodeJS.ProcessEnv),
-    { quizRepository: realRepository() }
+    { quizRepository: fixtureRepository() }
   );
 }
 
@@ -63,8 +66,8 @@ describe('no HTTP route reaches the private bank', () => {
     }
   });
 
-  it('a real question text from the bank never appears in any response', async () => {
-    const repo = createQuizRepository({ dataPath: './data/quiz.json' });
+  it('a distinctive question text from the bank never appears in any response', async () => {
+    const repo = createQuizRepository({ source: FIXTURE_SOURCE });
     const sample = repo.getQuestionById('rxjs:q:0')!;
     const distinctive = sample.questionText.slice(0, 24);
 
@@ -75,8 +78,8 @@ describe('no HTTP route reaches the private bank', () => {
     }
   });
 
-  it('a real explanation from the bank never appears in any response', async () => {
-    const repo = createQuizRepository({ dataPath: './data/quiz.json' });
+  it('a distinctive explanation from the bank never appears in any response', async () => {
+    const repo = createQuizRepository({ source: FIXTURE_SOURCE });
     const distinctive = repo.getQuestionById('rxjs:q:0')!.explanation.slice(0, 24);
 
     for (const path of [...PATHS, '/api/quizzes', '/api/quizzes/rxjs']) {

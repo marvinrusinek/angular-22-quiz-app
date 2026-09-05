@@ -18,7 +18,7 @@ import { HEADING, NEXT_BTN, PREV_BTN, correctIndexForHeading } from './helpers';
 const TIMER = '.scoreboard-timer .scoreboard';
 
 async function startTs(page: Page) {
-  await page.goto('/quiz/intro/typescript');
+  await page.goto('/quiz/intro/fixture-widgets');
   await page.locator('.start-btn').click();
   await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
 }

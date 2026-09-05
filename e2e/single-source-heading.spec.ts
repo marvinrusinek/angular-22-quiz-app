@@ -20,12 +20,12 @@ test.describe('single-source heading (flag on)', () => {
   });
 
   async function startTs(page: Page) {
-    await page.goto('/quiz/intro/typescript');
+    await page.goto('/quiz/intro/fixture-widgets');
     await page.locator('.start-btn').click();
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
   }
   async function startDi(page: Page) {
-    await page.goto('/quiz/intro/dependency-injection');
+    await page.goto('/quiz/intro/fixture-gadgets');
     await page.locator('.start-btn').click();
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
   }
@@ -107,7 +107,7 @@ test.describe('single-source heading (flag on)', () => {
   });
 
   test('shuffle: correct click -> FET', async ({ page }) => {
-    await page.goto('/quiz/intro/typescript');
+    await page.goto('/quiz/intro/fixture-widgets');
     const toggle = page.locator('mat-slide-toggle button[role="switch"]');
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
@@ -116,8 +116,10 @@ test.describe('single-source heading (flag on)', () => {
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
     const h = (await page.locator(HEADING).textContent()) ?? '';
     const correct = await correctRowsForHeading(rows, tsQuiz, h);
-    await rows.nth(correct[0]).click();
-    await expect(page.locator(HEADING)).toContainText(/is correct because/i);
+    // Multi-answer aware — fixture-widgets has one multi-answer question among
+    // otherwise single-answer ones, and shuffle can land on it first.
+    for (const idx of correct) await rows.nth(idx).click();
+    await expect(page.locator(HEADING)).toContainText(/is correct because|are correct because/i);
   });
 
   test('timer expiry -> FET on live view; persists are question-text on revisit', async ({ page }) => {

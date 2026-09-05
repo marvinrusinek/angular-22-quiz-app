@@ -31,10 +31,10 @@ import * as path from 'path';
  */
 
 const quizData = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), 'backend/data/quiz.json'), 'utf8')
+  fs.readFileSync(path.join(process.cwd(), 'backend/test/helpers/synthetic-quiz-bank.json'), 'utf8')
 ).quizzes;
-const cdQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'change-detection');
-const diQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'dependency-injection');
+const cdQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-doohickeys');
+const diQuiz = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-gadgets');
 
 const HEADING = 'codelab-quiz-content h3';
 const MSG = '.instructions-message';
@@ -47,7 +47,7 @@ const CONFIRM_RESTART_BTN = '.confirm-actions button:has-text("Restart")';
 test.describe('Refresh after a legitimate FET reveal restores the FET, from durable verdict state', () => {
   test('1. expire -> FET shows -> refresh -> FET remains (the core fix)', async ({ page }) => {
     test.setTimeout(90_000);
-    await page.goto('/quiz/question/change-detection/1');
+    await page.goto('/quiz/question/fixture-doohickeys/1');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -67,7 +67,7 @@ test.describe('Refresh after a legitimate FET reveal restores the FET, from dura
 
   test('2. expire -> Next -> Previous still shows the question, not the FET (revisit is not a reveal, unaffected by the fix)', async ({ page }) => {
     test.setTimeout(90_000);
-    await page.goto('/quiz/question/change-detection/1');
+    await page.goto('/quiz/question/fixture-doohickeys/1');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -87,7 +87,7 @@ test.describe('Refresh after a legitimate FET reveal restores the FET, from dura
 
   test('3. expire -> refresh (FET restored) -> Next -> Previous: still question text, not a leaked FET from the restore', async ({ page }) => {
     test.setTimeout(90_000);
-    await page.goto('/quiz/question/change-detection/1');
+    await page.goto('/quiz/question/fixture-doohickeys/1');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -111,7 +111,7 @@ test.describe('Refresh after a legitimate FET reveal restores the FET, from dura
 
   test('4. a NORMAL correctly-answered question also restores its FET on refresh (verdictEarnedReveal is not expiry-specific)', async ({ page }) => {
     test.setTimeout(60_000);
-    await page.goto('/quiz/question/change-detection/1');
+    await page.goto('/quiz/question/fixture-doohickeys/1');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -133,7 +133,7 @@ test.describe('Refresh after a legitimate FET reveal restores the FET, from dura
 
   test('5. an unanswered, not-yet-expired question still shows the question text on refresh', async ({ page }) => {
     test.setTimeout(60_000);
-    await page.goto('/quiz/question/change-detection/1');
+    await page.goto('/quiz/question/fixture-doohickeys/1');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -146,7 +146,7 @@ test.describe('Refresh after a legitimate FET reveal restores the FET, from dura
 
   test('6. restarting the quiz clears the durable expiry/FET state — Q1 is fresh again', async ({ page }) => {
     test.setTimeout(90_000);
-    await page.goto('/quiz/question/change-detection/1');
+    await page.goto('/quiz/question/fixture-doohickeys/1');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -175,7 +175,7 @@ test.describe('Refresh after a legitimate FET reveal restores the FET, from dura
 
   test('7. switching to a different topic quiz does not leak a restored FET into its Q1', async ({ page }) => {
     test.setTimeout(90_000);
-    await page.goto('/quiz/question/change-detection/1');
+    await page.goto('/quiz/question/fixture-doohickeys/1');
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -185,7 +185,7 @@ test.describe('Refresh after a legitimate FET reveal restores the FET, from dura
     await expect(page.locator(HEADING)).toContainText(/correct because/i, { timeout: 15_000 });
 
     // Now switch quizzes entirely (in-SPA, not a fresh page.goto reload).
-    await page.goto('/quiz/question/dependency-injection/1');
+    await page.goto('/quiz/question/fixture-gadgets/1');
     const diRows = page.locator('.option-row');
     await diRows.first().waitFor({ state: 'visible', timeout: 20_000 });
 

@@ -65,6 +65,10 @@ const INTERNAL_FIELDS = [
   'data_path',
   'databasePath',
   'database_path',
+  // `quizDataPath` no longer names a live AppConfig field (Stage 15 removed
+  // it — the bank is PostgreSQL-only). Kept here anyway: this list guards
+  // ANY object accidentally handed to res.json(), not just AppConfig, and a
+  // stale entry costs nothing.
   'quizDataPath',
   'allowedOrigins',
   // Internal attempt identity. The client is given `sessionId`; `attemptId` is

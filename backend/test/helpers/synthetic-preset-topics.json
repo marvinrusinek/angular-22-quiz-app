@@ -1,0 +1,2144 @@
+{
+  "quizzes": [
+    {
+      "quizId": "typescript",
+      "milestone": "typescript",
+      "summary": "Synthetic preset-topic fixture for \"typescript\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "beginner",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for typescript: pick the correct one.",
+          "explanation": "Fixture explanation 1 for typescript.",
+          "options": [
+            {
+              "text": "typescript correct-1",
+              "correct": true
+            },
+            {
+              "text": "typescript wrong-1-1"
+            },
+            {
+              "text": "typescript wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for typescript: pick the correct one.",
+          "explanation": "Fixture explanation 2 for typescript.",
+          "options": [
+            {
+              "text": "typescript correct-2",
+              "correct": true
+            },
+            {
+              "text": "typescript wrong-2-1"
+            },
+            {
+              "text": "typescript wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for typescript: pick the correct one.",
+          "explanation": "Fixture explanation 3 for typescript.",
+          "options": [
+            {
+              "text": "typescript correct-3",
+              "correct": true
+            },
+            {
+              "text": "typescript wrong-3-1"
+            },
+            {
+              "text": "typescript wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for typescript: which options apply?",
+          "explanation": "Fixture explanation 4 for typescript.",
+          "options": [
+            {
+              "text": "typescript option A-4",
+              "correct": true
+            },
+            {
+              "text": "typescript option B-4",
+              "correct": true
+            },
+            {
+              "text": "typescript option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for typescript: pick the correct one.",
+          "explanation": "Fixture explanation 5 for typescript.",
+          "options": [
+            {
+              "text": "typescript correct-5",
+              "correct": true
+            },
+            {
+              "text": "typescript wrong-5-1"
+            },
+            {
+              "text": "typescript wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for typescript: pick the correct one.",
+          "explanation": "Fixture explanation 6 for typescript.",
+          "options": [
+            {
+              "text": "typescript correct-6",
+              "correct": true
+            },
+            {
+              "text": "typescript wrong-6-1"
+            },
+            {
+              "text": "typescript wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "create-first-app",
+      "milestone": "create-first-app",
+      "summary": "Synthetic preset-topic fixture for \"create-first-app\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "beginner",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for create-first-app: pick the correct one.",
+          "explanation": "Fixture explanation 1 for create-first-app.",
+          "options": [
+            {
+              "text": "create-first-app correct-1",
+              "correct": true
+            },
+            {
+              "text": "create-first-app wrong-1-1"
+            },
+            {
+              "text": "create-first-app wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for create-first-app: pick the correct one.",
+          "explanation": "Fixture explanation 2 for create-first-app.",
+          "options": [
+            {
+              "text": "create-first-app correct-2",
+              "correct": true
+            },
+            {
+              "text": "create-first-app wrong-2-1"
+            },
+            {
+              "text": "create-first-app wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for create-first-app: pick the correct one.",
+          "explanation": "Fixture explanation 3 for create-first-app.",
+          "options": [
+            {
+              "text": "create-first-app correct-3",
+              "correct": true
+            },
+            {
+              "text": "create-first-app wrong-3-1"
+            },
+            {
+              "text": "create-first-app wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for create-first-app: which options apply?",
+          "explanation": "Fixture explanation 4 for create-first-app.",
+          "options": [
+            {
+              "text": "create-first-app option A-4",
+              "correct": true
+            },
+            {
+              "text": "create-first-app option B-4",
+              "correct": true
+            },
+            {
+              "text": "create-first-app option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for create-first-app: pick the correct one.",
+          "explanation": "Fixture explanation 5 for create-first-app.",
+          "options": [
+            {
+              "text": "create-first-app correct-5",
+              "correct": true
+            },
+            {
+              "text": "create-first-app wrong-5-1"
+            },
+            {
+              "text": "create-first-app wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for create-first-app: pick the correct one.",
+          "explanation": "Fixture explanation 6 for create-first-app.",
+          "options": [
+            {
+              "text": "create-first-app correct-6",
+              "correct": true
+            },
+            {
+              "text": "create-first-app wrong-6-1"
+            },
+            {
+              "text": "create-first-app wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "templates",
+      "milestone": "templates",
+      "summary": "Synthetic preset-topic fixture for \"templates\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "beginner",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for templates: pick the correct one.",
+          "explanation": "Fixture explanation 1 for templates.",
+          "options": [
+            {
+              "text": "templates correct-1",
+              "correct": true
+            },
+            {
+              "text": "templates wrong-1-1"
+            },
+            {
+              "text": "templates wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for templates: pick the correct one.",
+          "explanation": "Fixture explanation 2 for templates.",
+          "options": [
+            {
+              "text": "templates correct-2",
+              "correct": true
+            },
+            {
+              "text": "templates wrong-2-1"
+            },
+            {
+              "text": "templates wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for templates: pick the correct one.",
+          "explanation": "Fixture explanation 3 for templates.",
+          "options": [
+            {
+              "text": "templates correct-3",
+              "correct": true
+            },
+            {
+              "text": "templates wrong-3-1"
+            },
+            {
+              "text": "templates wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for templates: which options apply?",
+          "explanation": "Fixture explanation 4 for templates.",
+          "options": [
+            {
+              "text": "templates option A-4",
+              "correct": true
+            },
+            {
+              "text": "templates option B-4",
+              "correct": true
+            },
+            {
+              "text": "templates option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for templates: pick the correct one.",
+          "explanation": "Fixture explanation 5 for templates.",
+          "options": [
+            {
+              "text": "templates correct-5",
+              "correct": true
+            },
+            {
+              "text": "templates wrong-5-1"
+            },
+            {
+              "text": "templates wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for templates: pick the correct one.",
+          "explanation": "Fixture explanation 6 for templates.",
+          "options": [
+            {
+              "text": "templates correct-6",
+              "correct": true
+            },
+            {
+              "text": "templates wrong-6-1"
+            },
+            {
+              "text": "templates wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "directives",
+      "milestone": "directives",
+      "summary": "Synthetic preset-topic fixture for \"directives\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "beginner",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for directives: pick the correct one.",
+          "explanation": "Fixture explanation 1 for directives.",
+          "options": [
+            {
+              "text": "directives correct-1",
+              "correct": true
+            },
+            {
+              "text": "directives wrong-1-1"
+            },
+            {
+              "text": "directives wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for directives: pick the correct one.",
+          "explanation": "Fixture explanation 2 for directives.",
+          "options": [
+            {
+              "text": "directives correct-2",
+              "correct": true
+            },
+            {
+              "text": "directives wrong-2-1"
+            },
+            {
+              "text": "directives wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for directives: pick the correct one.",
+          "explanation": "Fixture explanation 3 for directives.",
+          "options": [
+            {
+              "text": "directives correct-3",
+              "correct": true
+            },
+            {
+              "text": "directives wrong-3-1"
+            },
+            {
+              "text": "directives wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for directives: which options apply?",
+          "explanation": "Fixture explanation 4 for directives.",
+          "options": [
+            {
+              "text": "directives option A-4",
+              "correct": true
+            },
+            {
+              "text": "directives option B-4",
+              "correct": true
+            },
+            {
+              "text": "directives option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for directives: pick the correct one.",
+          "explanation": "Fixture explanation 5 for directives.",
+          "options": [
+            {
+              "text": "directives correct-5",
+              "correct": true
+            },
+            {
+              "text": "directives wrong-5-1"
+            },
+            {
+              "text": "directives wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for directives: pick the correct one.",
+          "explanation": "Fixture explanation 6 for directives.",
+          "options": [
+            {
+              "text": "directives correct-6",
+              "correct": true
+            },
+            {
+              "text": "directives wrong-6-1"
+            },
+            {
+              "text": "directives wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "pipes",
+      "milestone": "pipes",
+      "summary": "Synthetic preset-topic fixture for \"pipes\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "beginner",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for pipes: pick the correct one.",
+          "explanation": "Fixture explanation 1 for pipes.",
+          "options": [
+            {
+              "text": "pipes correct-1",
+              "correct": true
+            },
+            {
+              "text": "pipes wrong-1-1"
+            },
+            {
+              "text": "pipes wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for pipes: pick the correct one.",
+          "explanation": "Fixture explanation 2 for pipes.",
+          "options": [
+            {
+              "text": "pipes correct-2",
+              "correct": true
+            },
+            {
+              "text": "pipes wrong-2-1"
+            },
+            {
+              "text": "pipes wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for pipes: pick the correct one.",
+          "explanation": "Fixture explanation 3 for pipes.",
+          "options": [
+            {
+              "text": "pipes correct-3",
+              "correct": true
+            },
+            {
+              "text": "pipes wrong-3-1"
+            },
+            {
+              "text": "pipes wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for pipes: which options apply?",
+          "explanation": "Fixture explanation 4 for pipes.",
+          "options": [
+            {
+              "text": "pipes option A-4",
+              "correct": true
+            },
+            {
+              "text": "pipes option B-4",
+              "correct": true
+            },
+            {
+              "text": "pipes option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for pipes: pick the correct one.",
+          "explanation": "Fixture explanation 5 for pipes.",
+          "options": [
+            {
+              "text": "pipes correct-5",
+              "correct": true
+            },
+            {
+              "text": "pipes wrong-5-1"
+            },
+            {
+              "text": "pipes wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for pipes: pick the correct one.",
+          "explanation": "Fixture explanation 6 for pipes.",
+          "options": [
+            {
+              "text": "pipes correct-6",
+              "correct": true
+            },
+            {
+              "text": "pipes wrong-6-1"
+            },
+            {
+              "text": "pipes wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "angular-cli",
+      "milestone": "angular-cli",
+      "summary": "Synthetic preset-topic fixture for \"angular-cli\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "beginner",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for angular-cli: pick the correct one.",
+          "explanation": "Fixture explanation 1 for angular-cli.",
+          "options": [
+            {
+              "text": "angular-cli correct-1",
+              "correct": true
+            },
+            {
+              "text": "angular-cli wrong-1-1"
+            },
+            {
+              "text": "angular-cli wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for angular-cli: pick the correct one.",
+          "explanation": "Fixture explanation 2 for angular-cli.",
+          "options": [
+            {
+              "text": "angular-cli correct-2",
+              "correct": true
+            },
+            {
+              "text": "angular-cli wrong-2-1"
+            },
+            {
+              "text": "angular-cli wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for angular-cli: pick the correct one.",
+          "explanation": "Fixture explanation 3 for angular-cli.",
+          "options": [
+            {
+              "text": "angular-cli correct-3",
+              "correct": true
+            },
+            {
+              "text": "angular-cli wrong-3-1"
+            },
+            {
+              "text": "angular-cli wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for angular-cli: which options apply?",
+          "explanation": "Fixture explanation 4 for angular-cli.",
+          "options": [
+            {
+              "text": "angular-cli option A-4",
+              "correct": true
+            },
+            {
+              "text": "angular-cli option B-4",
+              "correct": true
+            },
+            {
+              "text": "angular-cli option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for angular-cli: pick the correct one.",
+          "explanation": "Fixture explanation 5 for angular-cli.",
+          "options": [
+            {
+              "text": "angular-cli correct-5",
+              "correct": true
+            },
+            {
+              "text": "angular-cli wrong-5-1"
+            },
+            {
+              "text": "angular-cli wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for angular-cli: pick the correct one.",
+          "explanation": "Fixture explanation 6 for angular-cli.",
+          "options": [
+            {
+              "text": "angular-cli correct-6",
+              "correct": true
+            },
+            {
+              "text": "angular-cli wrong-6-1"
+            },
+            {
+              "text": "angular-cli wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "component-tree",
+      "milestone": "component-tree",
+      "summary": "Synthetic preset-topic fixture for \"component-tree\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "beginner",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for component-tree: pick the correct one.",
+          "explanation": "Fixture explanation 1 for component-tree.",
+          "options": [
+            {
+              "text": "component-tree correct-1",
+              "correct": true
+            },
+            {
+              "text": "component-tree wrong-1-1"
+            },
+            {
+              "text": "component-tree wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for component-tree: pick the correct one.",
+          "explanation": "Fixture explanation 2 for component-tree.",
+          "options": [
+            {
+              "text": "component-tree correct-2",
+              "correct": true
+            },
+            {
+              "text": "component-tree wrong-2-1"
+            },
+            {
+              "text": "component-tree wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for component-tree: pick the correct one.",
+          "explanation": "Fixture explanation 3 for component-tree.",
+          "options": [
+            {
+              "text": "component-tree correct-3",
+              "correct": true
+            },
+            {
+              "text": "component-tree wrong-3-1"
+            },
+            {
+              "text": "component-tree wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for component-tree: which options apply?",
+          "explanation": "Fixture explanation 4 for component-tree.",
+          "options": [
+            {
+              "text": "component-tree option A-4",
+              "correct": true
+            },
+            {
+              "text": "component-tree option B-4",
+              "correct": true
+            },
+            {
+              "text": "component-tree option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for component-tree: pick the correct one.",
+          "explanation": "Fixture explanation 5 for component-tree.",
+          "options": [
+            {
+              "text": "component-tree correct-5",
+              "correct": true
+            },
+            {
+              "text": "component-tree wrong-5-1"
+            },
+            {
+              "text": "component-tree wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for component-tree: pick the correct one.",
+          "explanation": "Fixture explanation 6 for component-tree.",
+          "options": [
+            {
+              "text": "component-tree correct-6",
+              "correct": true
+            },
+            {
+              "text": "component-tree wrong-6-1"
+            },
+            {
+              "text": "component-tree wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "router",
+      "milestone": "router",
+      "summary": "Synthetic preset-topic fixture for \"router\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "beginner",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for router: pick the correct one.",
+          "explanation": "Fixture explanation 1 for router.",
+          "options": [
+            {
+              "text": "router correct-1",
+              "correct": true
+            },
+            {
+              "text": "router wrong-1-1"
+            },
+            {
+              "text": "router wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for router: pick the correct one.",
+          "explanation": "Fixture explanation 2 for router.",
+          "options": [
+            {
+              "text": "router correct-2",
+              "correct": true
+            },
+            {
+              "text": "router wrong-2-1"
+            },
+            {
+              "text": "router wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for router: pick the correct one.",
+          "explanation": "Fixture explanation 3 for router.",
+          "options": [
+            {
+              "text": "router correct-3",
+              "correct": true
+            },
+            {
+              "text": "router wrong-3-1"
+            },
+            {
+              "text": "router wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for router: which options apply?",
+          "explanation": "Fixture explanation 4 for router.",
+          "options": [
+            {
+              "text": "router option A-4",
+              "correct": true
+            },
+            {
+              "text": "router option B-4",
+              "correct": true
+            },
+            {
+              "text": "router option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for router: pick the correct one.",
+          "explanation": "Fixture explanation 5 for router.",
+          "options": [
+            {
+              "text": "router correct-5",
+              "correct": true
+            },
+            {
+              "text": "router wrong-5-1"
+            },
+            {
+              "text": "router wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for router: pick the correct one.",
+          "explanation": "Fixture explanation 6 for router.",
+          "options": [
+            {
+              "text": "router correct-6",
+              "correct": true
+            },
+            {
+              "text": "router wrong-6-1"
+            },
+            {
+              "text": "router wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "forms",
+      "milestone": "forms",
+      "summary": "Synthetic preset-topic fixture for \"forms\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "beginner",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for forms: pick the correct one.",
+          "explanation": "Fixture explanation 1 for forms.",
+          "options": [
+            {
+              "text": "forms correct-1",
+              "correct": true
+            },
+            {
+              "text": "forms wrong-1-1"
+            },
+            {
+              "text": "forms wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for forms: pick the correct one.",
+          "explanation": "Fixture explanation 2 for forms.",
+          "options": [
+            {
+              "text": "forms correct-2",
+              "correct": true
+            },
+            {
+              "text": "forms wrong-2-1"
+            },
+            {
+              "text": "forms wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for forms: pick the correct one.",
+          "explanation": "Fixture explanation 3 for forms.",
+          "options": [
+            {
+              "text": "forms correct-3",
+              "correct": true
+            },
+            {
+              "text": "forms wrong-3-1"
+            },
+            {
+              "text": "forms wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for forms: which options apply?",
+          "explanation": "Fixture explanation 4 for forms.",
+          "options": [
+            {
+              "text": "forms option A-4",
+              "correct": true
+            },
+            {
+              "text": "forms option B-4",
+              "correct": true
+            },
+            {
+              "text": "forms option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for forms: pick the correct one.",
+          "explanation": "Fixture explanation 5 for forms.",
+          "options": [
+            {
+              "text": "forms correct-5",
+              "correct": true
+            },
+            {
+              "text": "forms wrong-5-1"
+            },
+            {
+              "text": "forms wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for forms: pick the correct one.",
+          "explanation": "Fixture explanation 6 for forms.",
+          "options": [
+            {
+              "text": "forms correct-6",
+              "correct": true
+            },
+            {
+              "text": "forms wrong-6-1"
+            },
+            {
+              "text": "forms wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "dependency-injection",
+      "milestone": "dependency-injection",
+      "summary": "Synthetic preset-topic fixture for \"dependency-injection\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "intermediate",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for dependency-injection: pick the correct one.",
+          "explanation": "Fixture explanation 1 for dependency-injection.",
+          "options": [
+            {
+              "text": "dependency-injection correct-1",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection wrong-1-1"
+            },
+            {
+              "text": "dependency-injection wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for dependency-injection: pick the correct one.",
+          "explanation": "Fixture explanation 2 for dependency-injection.",
+          "options": [
+            {
+              "text": "dependency-injection correct-2",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection wrong-2-1"
+            },
+            {
+              "text": "dependency-injection wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for dependency-injection: pick the correct one.",
+          "explanation": "Fixture explanation 3 for dependency-injection.",
+          "options": [
+            {
+              "text": "dependency-injection correct-3",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection wrong-3-1"
+            },
+            {
+              "text": "dependency-injection wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for dependency-injection: which options apply?",
+          "explanation": "Fixture explanation 4 for dependency-injection.",
+          "options": [
+            {
+              "text": "dependency-injection option A-4",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection option B-4",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for dependency-injection: pick the correct one.",
+          "explanation": "Fixture explanation 5 for dependency-injection.",
+          "options": [
+            {
+              "text": "dependency-injection correct-5",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection wrong-5-1"
+            },
+            {
+              "text": "dependency-injection wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for dependency-injection: pick the correct one.",
+          "explanation": "Fixture explanation 6 for dependency-injection.",
+          "options": [
+            {
+              "text": "dependency-injection correct-6",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection wrong-6-1"
+            },
+            {
+              "text": "dependency-injection wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "http",
+      "milestone": "http",
+      "summary": "Synthetic preset-topic fixture for \"http\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "intermediate",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for http: pick the correct one.",
+          "explanation": "Fixture explanation 1 for http.",
+          "options": [
+            {
+              "text": "http correct-1",
+              "correct": true
+            },
+            {
+              "text": "http wrong-1-1"
+            },
+            {
+              "text": "http wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for http: pick the correct one.",
+          "explanation": "Fixture explanation 2 for http.",
+          "options": [
+            {
+              "text": "http correct-2",
+              "correct": true
+            },
+            {
+              "text": "http wrong-2-1"
+            },
+            {
+              "text": "http wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for http: pick the correct one.",
+          "explanation": "Fixture explanation 3 for http.",
+          "options": [
+            {
+              "text": "http correct-3",
+              "correct": true
+            },
+            {
+              "text": "http wrong-3-1"
+            },
+            {
+              "text": "http wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for http: which options apply?",
+          "explanation": "Fixture explanation 4 for http.",
+          "options": [
+            {
+              "text": "http option A-4",
+              "correct": true
+            },
+            {
+              "text": "http option B-4",
+              "correct": true
+            },
+            {
+              "text": "http option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for http: pick the correct one.",
+          "explanation": "Fixture explanation 5 for http.",
+          "options": [
+            {
+              "text": "http correct-5",
+              "correct": true
+            },
+            {
+              "text": "http wrong-5-1"
+            },
+            {
+              "text": "http wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for http: pick the correct one.",
+          "explanation": "Fixture explanation 6 for http.",
+          "options": [
+            {
+              "text": "http correct-6",
+              "correct": true
+            },
+            {
+              "text": "http wrong-6-1"
+            },
+            {
+              "text": "http wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "testing",
+      "milestone": "testing",
+      "summary": "Synthetic preset-topic fixture for \"testing\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "intermediate",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for testing: pick the correct one.",
+          "explanation": "Fixture explanation 1 for testing.",
+          "options": [
+            {
+              "text": "testing correct-1",
+              "correct": true
+            },
+            {
+              "text": "testing wrong-1-1"
+            },
+            {
+              "text": "testing wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for testing: pick the correct one.",
+          "explanation": "Fixture explanation 2 for testing.",
+          "options": [
+            {
+              "text": "testing correct-2",
+              "correct": true
+            },
+            {
+              "text": "testing wrong-2-1"
+            },
+            {
+              "text": "testing wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for testing: pick the correct one.",
+          "explanation": "Fixture explanation 3 for testing.",
+          "options": [
+            {
+              "text": "testing correct-3",
+              "correct": true
+            },
+            {
+              "text": "testing wrong-3-1"
+            },
+            {
+              "text": "testing wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for testing: which options apply?",
+          "explanation": "Fixture explanation 4 for testing.",
+          "options": [
+            {
+              "text": "testing option A-4",
+              "correct": true
+            },
+            {
+              "text": "testing option B-4",
+              "correct": true
+            },
+            {
+              "text": "testing option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for testing: pick the correct one.",
+          "explanation": "Fixture explanation 5 for testing.",
+          "options": [
+            {
+              "text": "testing correct-5",
+              "correct": true
+            },
+            {
+              "text": "testing wrong-5-1"
+            },
+            {
+              "text": "testing wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for testing: pick the correct one.",
+          "explanation": "Fixture explanation 6 for testing.",
+          "options": [
+            {
+              "text": "testing correct-6",
+              "correct": true
+            },
+            {
+              "text": "testing wrong-6-1"
+            },
+            {
+              "text": "testing wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "material",
+      "milestone": "material",
+      "summary": "Synthetic preset-topic fixture for \"material\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "intermediate",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for material: pick the correct one.",
+          "explanation": "Fixture explanation 1 for material.",
+          "options": [
+            {
+              "text": "material correct-1",
+              "correct": true
+            },
+            {
+              "text": "material wrong-1-1"
+            },
+            {
+              "text": "material wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for material: pick the correct one.",
+          "explanation": "Fixture explanation 2 for material.",
+          "options": [
+            {
+              "text": "material correct-2",
+              "correct": true
+            },
+            {
+              "text": "material wrong-2-1"
+            },
+            {
+              "text": "material wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for material: pick the correct one.",
+          "explanation": "Fixture explanation 3 for material.",
+          "options": [
+            {
+              "text": "material correct-3",
+              "correct": true
+            },
+            {
+              "text": "material wrong-3-1"
+            },
+            {
+              "text": "material wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for material: which options apply?",
+          "explanation": "Fixture explanation 4 for material.",
+          "options": [
+            {
+              "text": "material option A-4",
+              "correct": true
+            },
+            {
+              "text": "material option B-4",
+              "correct": true
+            },
+            {
+              "text": "material option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for material: pick the correct one.",
+          "explanation": "Fixture explanation 5 for material.",
+          "options": [
+            {
+              "text": "material correct-5",
+              "correct": true
+            },
+            {
+              "text": "material wrong-5-1"
+            },
+            {
+              "text": "material wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for material: pick the correct one.",
+          "explanation": "Fixture explanation 6 for material.",
+          "options": [
+            {
+              "text": "material correct-6",
+              "correct": true
+            },
+            {
+              "text": "material wrong-6-1"
+            },
+            {
+              "text": "material wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "rxjs",
+      "milestone": "rxjs",
+      "summary": "Synthetic preset-topic fixture for \"rxjs\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "intermediate",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for rxjs: pick the correct one.",
+          "explanation": "Fixture explanation 1 for rxjs.",
+          "options": [
+            {
+              "text": "rxjs correct-1",
+              "correct": true
+            },
+            {
+              "text": "rxjs wrong-1-1"
+            },
+            {
+              "text": "rxjs wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for rxjs: pick the correct one.",
+          "explanation": "Fixture explanation 2 for rxjs.",
+          "options": [
+            {
+              "text": "rxjs correct-2",
+              "correct": true
+            },
+            {
+              "text": "rxjs wrong-2-1"
+            },
+            {
+              "text": "rxjs wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for rxjs: pick the correct one.",
+          "explanation": "Fixture explanation 3 for rxjs.",
+          "options": [
+            {
+              "text": "rxjs correct-3",
+              "correct": true
+            },
+            {
+              "text": "rxjs wrong-3-1"
+            },
+            {
+              "text": "rxjs wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for rxjs: which options apply?",
+          "explanation": "Fixture explanation 4 for rxjs.",
+          "options": [
+            {
+              "text": "rxjs option A-4",
+              "correct": true
+            },
+            {
+              "text": "rxjs option B-4",
+              "correct": true
+            },
+            {
+              "text": "rxjs option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for rxjs: pick the correct one.",
+          "explanation": "Fixture explanation 5 for rxjs.",
+          "options": [
+            {
+              "text": "rxjs correct-5",
+              "correct": true
+            },
+            {
+              "text": "rxjs wrong-5-1"
+            },
+            {
+              "text": "rxjs wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for rxjs: pick the correct one.",
+          "explanation": "Fixture explanation 6 for rxjs.",
+          "options": [
+            {
+              "text": "rxjs correct-6",
+              "correct": true
+            },
+            {
+              "text": "rxjs wrong-6-1"
+            },
+            {
+              "text": "rxjs wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "signals",
+      "milestone": "signals",
+      "summary": "Synthetic preset-topic fixture for \"signals\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "intermediate",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for signals: pick the correct one.",
+          "explanation": "Fixture explanation 1 for signals.",
+          "options": [
+            {
+              "text": "signals correct-1",
+              "correct": true
+            },
+            {
+              "text": "signals wrong-1-1"
+            },
+            {
+              "text": "signals wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for signals: pick the correct one.",
+          "explanation": "Fixture explanation 2 for signals.",
+          "options": [
+            {
+              "text": "signals correct-2",
+              "correct": true
+            },
+            {
+              "text": "signals wrong-2-1"
+            },
+            {
+              "text": "signals wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for signals: pick the correct one.",
+          "explanation": "Fixture explanation 3 for signals.",
+          "options": [
+            {
+              "text": "signals correct-3",
+              "correct": true
+            },
+            {
+              "text": "signals wrong-3-1"
+            },
+            {
+              "text": "signals wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for signals: which options apply?",
+          "explanation": "Fixture explanation 4 for signals.",
+          "options": [
+            {
+              "text": "signals option A-4",
+              "correct": true
+            },
+            {
+              "text": "signals option B-4",
+              "correct": true
+            },
+            {
+              "text": "signals option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for signals: pick the correct one.",
+          "explanation": "Fixture explanation 5 for signals.",
+          "options": [
+            {
+              "text": "signals correct-5",
+              "correct": true
+            },
+            {
+              "text": "signals wrong-5-1"
+            },
+            {
+              "text": "signals wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for signals: pick the correct one.",
+          "explanation": "Fixture explanation 6 for signals.",
+          "options": [
+            {
+              "text": "signals correct-6",
+              "correct": true
+            },
+            {
+              "text": "signals wrong-6-1"
+            },
+            {
+              "text": "signals wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "performance",
+      "milestone": "performance",
+      "summary": "Synthetic preset-topic fixture for \"performance\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "advanced",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for performance: pick the correct one.",
+          "explanation": "Fixture explanation 1 for performance.",
+          "options": [
+            {
+              "text": "performance correct-1",
+              "correct": true
+            },
+            {
+              "text": "performance wrong-1-1"
+            },
+            {
+              "text": "performance wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for performance: pick the correct one.",
+          "explanation": "Fixture explanation 2 for performance.",
+          "options": [
+            {
+              "text": "performance correct-2",
+              "correct": true
+            },
+            {
+              "text": "performance wrong-2-1"
+            },
+            {
+              "text": "performance wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for performance: pick the correct one.",
+          "explanation": "Fixture explanation 3 for performance.",
+          "options": [
+            {
+              "text": "performance correct-3",
+              "correct": true
+            },
+            {
+              "text": "performance wrong-3-1"
+            },
+            {
+              "text": "performance wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for performance: which options apply?",
+          "explanation": "Fixture explanation 4 for performance.",
+          "options": [
+            {
+              "text": "performance option A-4",
+              "correct": true
+            },
+            {
+              "text": "performance option B-4",
+              "correct": true
+            },
+            {
+              "text": "performance option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for performance: pick the correct one.",
+          "explanation": "Fixture explanation 5 for performance.",
+          "options": [
+            {
+              "text": "performance correct-5",
+              "correct": true
+            },
+            {
+              "text": "performance wrong-5-1"
+            },
+            {
+              "text": "performance wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for performance: pick the correct one.",
+          "explanation": "Fixture explanation 6 for performance.",
+          "options": [
+            {
+              "text": "performance correct-6",
+              "correct": true
+            },
+            {
+              "text": "performance wrong-6-1"
+            },
+            {
+              "text": "performance wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "component-architecture",
+      "milestone": "component-architecture",
+      "summary": "Synthetic preset-topic fixture for \"component-architecture\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "advanced",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for component-architecture: pick the correct one.",
+          "explanation": "Fixture explanation 1 for component-architecture.",
+          "options": [
+            {
+              "text": "component-architecture correct-1",
+              "correct": true
+            },
+            {
+              "text": "component-architecture wrong-1-1"
+            },
+            {
+              "text": "component-architecture wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for component-architecture: pick the correct one.",
+          "explanation": "Fixture explanation 2 for component-architecture.",
+          "options": [
+            {
+              "text": "component-architecture correct-2",
+              "correct": true
+            },
+            {
+              "text": "component-architecture wrong-2-1"
+            },
+            {
+              "text": "component-architecture wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for component-architecture: pick the correct one.",
+          "explanation": "Fixture explanation 3 for component-architecture.",
+          "options": [
+            {
+              "text": "component-architecture correct-3",
+              "correct": true
+            },
+            {
+              "text": "component-architecture wrong-3-1"
+            },
+            {
+              "text": "component-architecture wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for component-architecture: which options apply?",
+          "explanation": "Fixture explanation 4 for component-architecture.",
+          "options": [
+            {
+              "text": "component-architecture option A-4",
+              "correct": true
+            },
+            {
+              "text": "component-architecture option B-4",
+              "correct": true
+            },
+            {
+              "text": "component-architecture option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for component-architecture: pick the correct one.",
+          "explanation": "Fixture explanation 5 for component-architecture.",
+          "options": [
+            {
+              "text": "component-architecture correct-5",
+              "correct": true
+            },
+            {
+              "text": "component-architecture wrong-5-1"
+            },
+            {
+              "text": "component-architecture wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for component-architecture: pick the correct one.",
+          "explanation": "Fixture explanation 6 for component-architecture.",
+          "options": [
+            {
+              "text": "component-architecture correct-6",
+              "correct": true
+            },
+            {
+              "text": "component-architecture wrong-6-1"
+            },
+            {
+              "text": "component-architecture wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "dependency-injection-advanced",
+      "milestone": "dependency-injection-advanced",
+      "summary": "Synthetic preset-topic fixture for \"dependency-injection-advanced\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "advanced",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for dependency-injection-advanced: pick the correct one.",
+          "explanation": "Fixture explanation 1 for dependency-injection-advanced.",
+          "options": [
+            {
+              "text": "dependency-injection-advanced correct-1",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection-advanced wrong-1-1"
+            },
+            {
+              "text": "dependency-injection-advanced wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for dependency-injection-advanced: pick the correct one.",
+          "explanation": "Fixture explanation 2 for dependency-injection-advanced.",
+          "options": [
+            {
+              "text": "dependency-injection-advanced correct-2",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection-advanced wrong-2-1"
+            },
+            {
+              "text": "dependency-injection-advanced wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for dependency-injection-advanced: pick the correct one.",
+          "explanation": "Fixture explanation 3 for dependency-injection-advanced.",
+          "options": [
+            {
+              "text": "dependency-injection-advanced correct-3",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection-advanced wrong-3-1"
+            },
+            {
+              "text": "dependency-injection-advanced wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for dependency-injection-advanced: which options apply?",
+          "explanation": "Fixture explanation 4 for dependency-injection-advanced.",
+          "options": [
+            {
+              "text": "dependency-injection-advanced option A-4",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection-advanced option B-4",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection-advanced option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for dependency-injection-advanced: pick the correct one.",
+          "explanation": "Fixture explanation 5 for dependency-injection-advanced.",
+          "options": [
+            {
+              "text": "dependency-injection-advanced correct-5",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection-advanced wrong-5-1"
+            },
+            {
+              "text": "dependency-injection-advanced wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for dependency-injection-advanced: pick the correct one.",
+          "explanation": "Fixture explanation 6 for dependency-injection-advanced.",
+          "options": [
+            {
+              "text": "dependency-injection-advanced correct-6",
+              "correct": true
+            },
+            {
+              "text": "dependency-injection-advanced wrong-6-1"
+            },
+            {
+              "text": "dependency-injection-advanced wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "design-patterns",
+      "milestone": "design-patterns",
+      "summary": "Synthetic preset-topic fixture for \"design-patterns\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "advanced",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for design-patterns: pick the correct one.",
+          "explanation": "Fixture explanation 1 for design-patterns.",
+          "options": [
+            {
+              "text": "design-patterns correct-1",
+              "correct": true
+            },
+            {
+              "text": "design-patterns wrong-1-1"
+            },
+            {
+              "text": "design-patterns wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for design-patterns: pick the correct one.",
+          "explanation": "Fixture explanation 2 for design-patterns.",
+          "options": [
+            {
+              "text": "design-patterns correct-2",
+              "correct": true
+            },
+            {
+              "text": "design-patterns wrong-2-1"
+            },
+            {
+              "text": "design-patterns wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for design-patterns: pick the correct one.",
+          "explanation": "Fixture explanation 3 for design-patterns.",
+          "options": [
+            {
+              "text": "design-patterns correct-3",
+              "correct": true
+            },
+            {
+              "text": "design-patterns wrong-3-1"
+            },
+            {
+              "text": "design-patterns wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for design-patterns: which options apply?",
+          "explanation": "Fixture explanation 4 for design-patterns.",
+          "options": [
+            {
+              "text": "design-patterns option A-4",
+              "correct": true
+            },
+            {
+              "text": "design-patterns option B-4",
+              "correct": true
+            },
+            {
+              "text": "design-patterns option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for design-patterns: pick the correct one.",
+          "explanation": "Fixture explanation 5 for design-patterns.",
+          "options": [
+            {
+              "text": "design-patterns correct-5",
+              "correct": true
+            },
+            {
+              "text": "design-patterns wrong-5-1"
+            },
+            {
+              "text": "design-patterns wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for design-patterns: pick the correct one.",
+          "explanation": "Fixture explanation 6 for design-patterns.",
+          "options": [
+            {
+              "text": "design-patterns correct-6",
+              "correct": true
+            },
+            {
+              "text": "design-patterns wrong-6-1"
+            },
+            {
+              "text": "design-patterns wrong-6-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "quizId": "change-detection",
+      "milestone": "change-detection",
+      "summary": "Synthetic preset-topic fixture for \"change-detection\" — used only by automated tests.",
+      "image": "",
+      "difficulty": "advanced",
+      "facts": [],
+      "questions": [
+        {
+          "questionText": "Fixture question 1 for change-detection: pick the correct one.",
+          "explanation": "Fixture explanation 1 for change-detection.",
+          "options": [
+            {
+              "text": "change-detection correct-1",
+              "correct": true
+            },
+            {
+              "text": "change-detection wrong-1-1"
+            },
+            {
+              "text": "change-detection wrong-1-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 2 for change-detection: pick the correct one.",
+          "explanation": "Fixture explanation 2 for change-detection.",
+          "options": [
+            {
+              "text": "change-detection correct-2",
+              "correct": true
+            },
+            {
+              "text": "change-detection wrong-2-1"
+            },
+            {
+              "text": "change-detection wrong-2-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 3 for change-detection: pick the correct one.",
+          "explanation": "Fixture explanation 3 for change-detection.",
+          "options": [
+            {
+              "text": "change-detection correct-3",
+              "correct": true
+            },
+            {
+              "text": "change-detection wrong-3-1"
+            },
+            {
+              "text": "change-detection wrong-3-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 4 for change-detection: which options apply?",
+          "explanation": "Fixture explanation 4 for change-detection.",
+          "options": [
+            {
+              "text": "change-detection option A-4",
+              "correct": true
+            },
+            {
+              "text": "change-detection option B-4",
+              "correct": true
+            },
+            {
+              "text": "change-detection option C-4"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 5 for change-detection: pick the correct one.",
+          "explanation": "Fixture explanation 5 for change-detection.",
+          "options": [
+            {
+              "text": "change-detection correct-5",
+              "correct": true
+            },
+            {
+              "text": "change-detection wrong-5-1"
+            },
+            {
+              "text": "change-detection wrong-5-2"
+            }
+          ]
+        },
+        {
+          "questionText": "Fixture question 6 for change-detection: pick the correct one.",
+          "explanation": "Fixture explanation 6 for change-detection.",
+          "options": [
+            {
+              "text": "change-detection correct-6",
+              "correct": true
+            },
+            {
+              "text": "change-detection wrong-6-1"
+            },
+            {
+              "text": "change-detection wrong-6-2"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

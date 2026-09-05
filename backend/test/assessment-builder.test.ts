@@ -14,7 +14,7 @@ import {
 } from '../src/interview/assessment.random';
 import { AssessmentBuildError } from '../src/interview/assessment.types';
 import { createQuizRepository, type QuizRepository } from '../src/quiz/quiz.repository';
-import { realRepository } from './helpers/fixtures';
+import { syntheticBankRepository } from './helpers/fixtures';
 
 /**
  * PARITY REFERENCE
@@ -24,13 +24,13 @@ import { realRepository } from './helpers/fixtures';
  * AOTA:           src/app/shared/utils/all-of-the-above.ts
  */
 
-const repo = () => realRepository();
+const repo = () => syntheticBankRepository();
 const seeded = () => seededRandomSource(20260801);
 
 function config(overrides: Partial<Parameters<typeof buildInterviewAssessment>[0]> = {}) {
   return {
     difficulty: 'mixed' as const,
-    topicIds: ['rxjs', 'signals', 'testing'],
+    topicIds: ['fixture-widgets', 'fixture-gadgets', 'fixture-gizmos'],
     questionCount: 20 as const,
     durationSeconds: 1800,
     ...overrides
@@ -148,7 +148,7 @@ describe('allocate() parity', () => {
 describe('configuration validation', () => {
   it('accepts a valid configuration and derives the duration', () => {
     const result = validateBuildRequest(
-      { difficulty: 'mixed', topicIds: ['rxjs', 'signals'], questionCount: 10 },
+      { difficulty: 'mixed', topicIds: ['fixture-widgets', 'fixture-gadgets'], questionCount: 10 },
       repo()
     );
     expect(result.questionCount).toBe(10);
@@ -159,7 +159,7 @@ describe('configuration validation', () => {
     'count %i maps to %i seconds — parity with DURATION_SECONDS_BY_COUNT',
     (count, seconds) => {
       const result = validateBuildRequest(
-        { difficulty: 'mixed', topicIds: ['rxjs', 'signals', 'testing', 'http'], questionCount: count },
+        { difficulty: 'mixed', topicIds: ['fixture-widgets', 'fixture-gadgets', 'fixture-gizmos', 'fixture-doohickeys'], questionCount: count },
         repo()
       );
       expect(result.durationSeconds).toBe(seconds);
@@ -168,23 +168,23 @@ describe('configuration validation', () => {
 
   it('NORMALIZES difficulty casing at this one boundary', () => {
     const result = validateBuildRequest(
-      { difficulty: '  MIXED  ', topicIds: ['rxjs'], questionCount: 10 },
+      { difficulty: '  MIXED  ', topicIds: ['fixture-widgets'], questionCount: 10 },
       repo()
     );
     expect(result.difficulty).toBe('mixed');
   });
 
   it.each([
-    ['missing difficulty', { topicIds: ['rxjs'], questionCount: 10 }],
-    ['unsupported difficulty', { difficulty: 'expert', topicIds: ['rxjs'], questionCount: 10 }],
+    ['missing difficulty', { topicIds: ['fixture-widgets'], questionCount: 10 }],
+    ['unsupported difficulty', { difficulty: 'expert', topicIds: ['fixture-widgets'], questionCount: 10 }],
     ['missing topics', { difficulty: 'mixed', questionCount: 10 }],
     ['empty topics', { difficulty: 'mixed', topicIds: [], questionCount: 10 }],
     ['non-string topic', { difficulty: 'mixed', topicIds: [7], questionCount: 10 }],
-    ['duplicate topics', { difficulty: 'mixed', topicIds: ['rxjs', 'rxjs'], questionCount: 10 }],
-    ['non-integer count', { difficulty: 'mixed', topicIds: ['rxjs'], questionCount: 10.5 }],
-    ['unsupported count', { difficulty: 'mixed', topicIds: ['rxjs'], questionCount: 15 }],
-    ['count too small', { difficulty: 'mixed', topicIds: ['rxjs'], questionCount: 1 }],
-    ['count too large', { difficulty: 'mixed', topicIds: ['rxjs'], questionCount: 40 }]
+    ['duplicate topics', { difficulty: 'mixed', topicIds: ['fixture-widgets', 'fixture-widgets'], questionCount: 10 }],
+    ['non-integer count', { difficulty: 'mixed', topicIds: ['fixture-widgets'], questionCount: 10.5 }],
+    ['unsupported count', { difficulty: 'mixed', topicIds: ['fixture-widgets'], questionCount: 15 }],
+    ['count too small', { difficulty: 'mixed', topicIds: ['fixture-widgets'], questionCount: 1 }],
+    ['count too large', { difficulty: 'mixed', topicIds: ['fixture-widgets'], questionCount: 40 }]
   ])('rejects %s', (_label, request) => {
     expect(() => validateBuildRequest(request, repo())).toThrow(AssessmentBuildError);
   });
@@ -192,7 +192,7 @@ describe('configuration validation', () => {
   it('REJECTS an unknown topic instead of silently ignoring it (Angular divergence)', () => {
     try {
       validateBuildRequest(
-        { difficulty: 'mixed', topicIds: ['rxjs', 'not-a-topic'], questionCount: 10 },
+        { difficulty: 'mixed', topicIds: ['fixture-widgets', 'not-a-topic'], questionCount: 10 },
         repo()
       );
       throw new Error('expected failure');
@@ -225,13 +225,15 @@ describe('configuration validation', () => {
 
   it('reports INSUFFICIENT_QUESTIONS with counts but no content', () => {
     try {
-      // 'router' holds 7 questions; 20 cannot be satisfied.
-      validateBuildRequest({ difficulty: 'mixed', topicIds: ['router'], questionCount: 20 }, repo());
+      // 'fixture-doohickeys' holds 6 questions; 20 cannot be satisfied.
+      validateBuildRequest(
+        { difficulty: 'mixed', topicIds: ['fixture-doohickeys'], questionCount: 20 }, repo()
+      );
       throw new Error('expected failure');
     } catch (err) {
       const error = err as AssessmentBuildError;
       expect(error.code).toBe('INSUFFICIENT_QUESTIONS');
-      expect(error.message).toMatch(/only 7 questions available for 20 requested/);
+      expect(error.message).toMatch(/only 6 questions available for 20 requested/);
       expect(error.message).not.toMatch(/\?|correct|explanation/i);
     }
   });
@@ -256,7 +258,7 @@ describe('building an assessment', () => {
     for (const question of snapshot.questions) {
       counts.set(question.sourceQuizId, (counts.get(question.sourceQuizId) ?? 0) + 1);
     }
-    expect([...counts.keys()].sort()).toEqual(['rxjs', 'signals', 'testing']);
+    expect([...counts.keys()].sort()).toEqual(['fixture-gadgets', 'fixture-gizmos', 'fixture-widgets']);
     expect([...counts.values()].sort((a, b) => b - a)).toEqual([7, 7, 6]);
   });
 
@@ -330,9 +332,9 @@ describe('building an assessment', () => {
 
   it('handles a topic with FEWER questions than its share', () => {
     const repository = repo();
-    // 'router' has 7; asking 20 across router + two 10s forces redistribution.
+    // 'fixture-doohickeys' has 6; asking 20 across it + two larger topics forces redistribution.
     const validated = validateBuildRequest(
-      { difficulty: 'mixed', topicIds: ['router', 'rxjs', 'signals'], questionCount: 20 },
+      { difficulty: 'mixed', topicIds: ['fixture-doohickeys', 'fixture-widgets', 'fixture-gadgets'], questionCount: 20 },
       repository
     );
     const snapshot = buildInterviewAssessment(validated, repository, seeded());
@@ -456,10 +458,10 @@ describe('source immutability', () => {
 
   it('a SECOND build starts from original source order, not the first shuffle', () => {
     const repository = repo();
-    const before = repository.getQuizById('rxjs')!.questions.map((q) => q.questionId);
+    const before = repository.getQuizById('fixture-widgets')!.questions.map((q) => q.questionId);
 
     buildInterviewAssessment(config(), repository, seededRandomSource(1));
-    const afterFirst = repository.getQuizById('rxjs')!.questions.map((q) => q.questionId);
+    const afterFirst = repository.getQuizById('fixture-widgets')!.questions.map((q) => q.questionId);
     expect(afterFirst).toEqual(before);
 
     // Same seed ⇒ identical result, which can only hold if the source was not
@@ -467,14 +469,14 @@ describe('source immutability', () => {
     const a = buildInterviewAssessment(config(), repository, seededRandomSource(11));
     const b = buildInterviewAssessment(config(), repository, seededRandomSource(11));
     expect(a.questions.map((q) => q.questionId)).toEqual(b.questions.map((q) => q.questionId));
-    expect(repository.getQuizById('rxjs')!.questions.map((q) => q.questionId)).toEqual(before);
+    expect(repository.getQuizById('fixture-widgets')!.questions.map((q) => q.questionId)).toEqual(before);
   });
 
   it('option arrays in the repository keep their source order', () => {
     const repository = repo();
-    const before = repository.getQuestionById('rxjs:q:0')!.options.map((o) => o.optionId);
+    const before = repository.getQuestionById('fixture-widgets:q:0')!.options.map((o) => o.optionId);
     buildInterviewAssessment(config(), repository, seeded());
-    expect(repository.getQuestionById('rxjs:q:0')!.options.map((o) => o.optionId)).toEqual(before);
+    expect(repository.getQuestionById('fixture-widgets:q:0')!.options.map((o) => o.optionId)).toEqual(before);
   });
 });
 

@@ -10,7 +10,7 @@ const FET_RE = /correct because/i;
 
 test('timed-out question -> Next shows the next question TEXT first, not its FET', async ({ page }) => {
   test.setTimeout(180_000);
-  await page.goto('/quiz/question/dependency-injection/1');
+  await page.goto('/quiz/question/fixture-gadgets/1');
   const rows = page.locator('.option-row');
   await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 

@@ -39,7 +39,7 @@ const remainingMsg = (n: number) =>
   `Select ${n} more correct answer${n === 1 ? '' : 's'} to continue...`;
 
 async function openDiMulti(page: Page): Promise<number[]> {
-  await page.goto('/quiz/question/dependency-injection/3');
+  await page.goto('/quiz/question/fixture-gadgets/3');
   await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
   const heading = (await page.locator(HEADING).first().textContent()) ?? '';
   const correct = correctIndicesForHeading(diQuiz, heading);

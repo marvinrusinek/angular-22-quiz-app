@@ -7,7 +7,7 @@ import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading } from '
  * (The 100% distinction is surfaced separately via achievements.)
  */
 test('a non-perfect completion still shows the tile checkmark on Quiz Selection', async ({ page }) => {
-  await page.goto('/quiz/question/typescript/1');
+  await page.goto('/quiz/question/fixture-widgets/1');
   const total = tsQuiz.questions.length;
 
   for (let i = 0; i < total; i++) {

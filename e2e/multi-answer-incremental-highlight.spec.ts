@@ -39,7 +39,7 @@ import { diQuiz, correctIndicesForHeading, HEADING, NEXT_BTN, PREV_BTN } from '.
 const MSG = '.instructions-message';
 
 async function openDiMulti(page: Page): Promise<number[]> {
-  await page.goto('/quiz/question/dependency-injection/3');
+  await page.goto('/quiz/question/fixture-gadgets/3');
   await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
   const heading = (await page.locator(HEADING).first().textContent()) ?? '';
   const correct = correctIndicesForHeading(diQuiz, heading);
@@ -174,7 +174,7 @@ test.describe('multi-answer highlighting survives a completed-then-re-entered qu
     await page.locator('.quiz-tile:not(.interview-tile)').first().waitFor({ state: 'visible', timeout: 30_000 });
 
     const enterDiQuiz = async () => {
-      await page.locator('.quiz-tile:not(.interview-tile)', { hasText: 'Dependency Injection' }).first()
+      await page.locator('.quiz-tile:not(.interview-tile)', { hasText: 'Fixture Gadgets' }).first()
         .click({ timeout: 15_000 });
       await page.locator('.start-btn').click({ timeout: 15_000 });
       await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });

@@ -7,9 +7,13 @@
  *   npm --prefix backend run import:quiz-bank -- --file ../private/quiz.json
  *   npm --prefix backend run import:quiz-bank -- --file ./data/quiz.json --dry-run
  *
- * THE SOURCE FILE MUST NOT LIVE IN THE PUBLIC REPOSITORY once the migration is
- * complete. During the transition it still does, and this script warns when the
- * path it was given is inside the working tree.
+ * Stage 15: the real private bank no longer lives in this repository at all
+ * (there is no `backend/data/quiz.json` to fall back to) — `--file` is always
+ * required and always explicit, whether it points at an operator's private
+ * bank outside the repo (production) or at a committed, non-secret synthetic
+ * fixture (backend/test/helpers/synthetic-quiz-bank.json, used by E2E's
+ * throwaway-database seeding). Nothing about this script cares which kind of
+ * file it was given — it validates and imports either the same way.
  *
  * ── Why it reuses validateAndNormalize ─────────────────────────────
  *
@@ -30,7 +34,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { relative, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 import { openDatabase, type DatabaseHandle, type Queryable } from '../src/db/database';
 import { migrate } from '../src/db/migrate';
@@ -72,24 +76,6 @@ function fail(message: string): never {
 }
 
 /**
- * Warn when the source sits inside the repository.
- *
- * Not fatal: during the migration the bank is still committed at
- * `backend/data/quiz.json`, and that file is what we import FROM. Once the
- * removal stage lands, the source must live outside the working tree.
- */
-function warnIfInsideRepo(filePath: string): void {
-  const repoRoot = resolve(__dirname, '..', '..');
-  const rel = relative(repoRoot, resolve(filePath));
-  if (!rel.startsWith('..')) {
-    console.warn(
-      `[import] WARNING: source is inside the repository (${rel}).\n` +
-      '[import] This is expected during the migration, but the real bank must\n' +
-      '[import] live OUTSIDE the public repo before the removal stage.'
-    );
-  }
-}
-
 /** Counts only — never text, correctness or explanations. */
 interface ImportSummary {
   quizzes: number;
@@ -327,7 +313,6 @@ async function verify(
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  warnIfInsideRepo(args.file);
 
   let raw: unknown;
   try {

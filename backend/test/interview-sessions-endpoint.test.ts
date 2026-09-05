@@ -8,7 +8,7 @@ import { type SessionRepository } from '../src/interview/session.repository';
 import { InterviewSessionService } from '../src/interview/session.service';
 import { hashToken, extractBearerToken, isWellFormedToken, tokenMatches } from '../src/interview/session.token';
 import { seededRandomSource } from '../src/interview/assessment.random';
-import { realRepository } from './helpers/fixtures';
+import { presetTopicsRepository } from './helpers/fixtures';
 import { memoryDb } from './helpers/db';
 
 /** Mutable test clock — expiry is driven deliberately, never by wall time. */
@@ -24,7 +24,7 @@ beforeEach(async () => {
   sessions = ctx.repo;
 
   const service = new InterviewSessionService({
-    quizRepository: realRepository(),
+    quizRepository: presetTopicsRepository(),
     sessionRepository: sessions,
     now: () => clock,
     random: seededRandomSource(4242)
@@ -32,12 +32,12 @@ beforeEach(async () => {
 
   app = createApp(
     loadConfig({ NODE_ENV: 'test', ALLOWED_ORIGINS: 'http://localhost:4200' } as NodeJS.ProcessEnv),
-    { quizRepository: realRepository(), sessionRepository: sessions, interviewSessionService: service }
+    { quizRepository: presetTopicsRepository(), sessionRepository: sessions, interviewSessionService: service }
   );
 });
 afterEach(() => handle.close());
 
-const CUSTOM = { mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs', 'signals'], questionCount: 10 };
+const CUSTOM = { mode: 'custom', difficulty: 'mixed', topicIds: ['typescript', 'templates'], questionCount: 10 };
 const PRESET = { mode: 'preset', presetId: 'junior' };
 
 async function create(body: unknown = CUSTOM) {
@@ -65,7 +65,7 @@ describe('POST /api/interview-sessions — custom', () => {
     expect(res.body.questions).toHaveLength(10);
     expect(res.body.answers).toEqual([]);
     expect(res.body.config).toEqual({
-      mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs', 'signals'], questionCount: 10
+      mode: 'custom', difficulty: 'mixed', topicIds: ['typescript', 'templates'], questionCount: 10
     });
   });
 
@@ -128,7 +128,7 @@ describe('POST /api/interview-sessions — preset', () => {
   );
 
   it('REJECTS client-supplied topics, difficulty or count alongside a preset', async () => {
-    for (const extra of [{ topicIds: ['rxjs'] }, { difficulty: 'advanced' }, { questionCount: 30 }]) {
+    for (const extra of [{ topicIds: ['typescript'] }, { difficulty: 'advanced' }, { questionCount: 30 }]) {
       const res = await create({ ...PRESET, ...extra });
       expect(res.status).toBe(400);
       expect(res.body.error.message).toMatch(/may not be supplied with a preset/);
@@ -168,17 +168,17 @@ describe('request validation', () => {
   });
 
   it('rejects an oversized topic list and over-long ids', async () => {
-    expect((await create({ ...CUSTOM, topicIds: Array(80).fill('rxjs') })).status).toBe(400);
+    expect((await create({ ...CUSTOM, topicIds: Array(80).fill('typescript') })).status).toBe(400);
     expect((await create({ ...CUSTOM, topicIds: ['x'.repeat(200)] })).status).toBe(400);
   });
 
   it.each([
-    ['missing mode', { difficulty: 'mixed', topicIds: ['rxjs'], questionCount: 10 }],
+    ['missing mode', { difficulty: 'mixed', topicIds: ['typescript'], questionCount: 10 }],
     ['bad mode', { mode: 'turbo' }],
     ['unknown topic', { ...CUSTOM, topicIds: ['nope'] }],
-    ['duplicate topics', { ...CUSTOM, topicIds: ['rxjs', 'rxjs'] }],
+    ['duplicate topics', { ...CUSTOM, topicIds: ['typescript', 'typescript'] }],
     ['bad count', { ...CUSTOM, questionCount: 15 }],
-    ['too few questions available', { ...CUSTOM, topicIds: ['router'], questionCount: 30 }]
+    ['too few questions available', { ...CUSTOM, topicIds: ['typescript'], questionCount: 30 }]
   ])('rejects %s with a safe message', async (_label, body) => {
     const res = await create(body);
     expect(res.status).toBe(400);
@@ -326,7 +326,7 @@ describe('active response contains no private data', () => {
   });
 
   it('no real explanation text from the bank leaks', async () => {
-    const repository = realRepository();
+    const repository = presetTopicsRepository();
     const res = await create();
     for (const question of res.body.questions) {
       const explanation = repository.getQuestionById(question.questionId)!.explanation;

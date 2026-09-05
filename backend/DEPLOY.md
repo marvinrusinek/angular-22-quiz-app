@@ -32,6 +32,18 @@ in Postgres, not on the container's disk, so no volume is required.
 The schema is created automatically. Migrations run at startup, inside a
 transaction each, and are idempotent — a second boot applies nothing.
 
+The QUIZ BANK is not. The server fails closed — it refuses to start — if the
+`quizzes` table is empty, so a freshly migrated database still needs one
+explicit import before the API can serve anything:
+
+```
+npm run import:quiz-bank -- --file <path-to-your-quiz-bank.json> --database-url <the-pooled-connection-string>
+```
+
+Run this once per database (a fresh Neon project, a new environment), from a
+machine that has the private bank file — never from inside the deployed
+container, and never automatically as part of a deploy.
+
 ### Render (blueprint included)
 
 1. Push this branch to GitHub.
@@ -97,7 +109,6 @@ regardless.
 | `ALLOWED_ORIGINS` | `https://marvinrusinek.github.io` | EXACT origins, comma-separated. A wildcard is rejected outright, and production requires https — the server refuses to start otherwise rather than starting insecure. |
 | `DATABASE_URL` | Neon **pooled** connection string | Required in production; the server refuses to start without it. Never commit it. |
 | `PORT` | injected by the host | Do not hard-code. |
-| `QUIZ_DATA_PATH` | *(leave unset)* | Defaults to `./data/quiz.json`, baked into the image. |
 
 Add your dev origin (`http://localhost:4200`) only if you want a local frontend
 to talk to the hosted API. It is not needed for the deployed site.

@@ -9,22 +9,23 @@ import { HEADING, NEXT_BTN, RESULTS_BTN, correctIndicesForHeading, diQuiz } from
  * `GET /api/quizzes/:quizId/resources`, served from PostgreSQL — which is
  * what let that asset actually be deleted (Angular Stage 14, S6p).
  *
- * Run against the e2e database, which is seeded by the SAME import script the
- * developer database uses from backend/data/quiz.json — the actual ground
- * truth for what the running app serves — so the links here are the real
- * ones (not deleted; backend seed data is a separate concern from the
- * client asset).
+ * Run against the e2e database, which Stage 15 seeds from a deterministic
+ * SYNTHETIC bank (backend/test/helpers/synthetic-quiz-bank.json, the same
+ * fixture the backend's own unit tests use) rather than any real quiz
+ * content — that fixture is the actual ground truth for what the running
+ * app serves during E2E.
  *
- * `dependency-injection` is used because it is one of the eight quizzes that
- * actually has resources and it already has helpers in this suite.
+ * `fixture-gadgets` is used because it is the one quiz the fixture's
+ * top-level `resources` block assigns links to, and it already has helpers
+ * in this suite.
  */
 
-const QUIZ = 'dependency-injection';
+const QUIZ = 'fixture-gadgets';
 
 /** Resources the seeded bank holds for this quiz, in source order. */
 const EXPECTED: readonly { title: string; url: string }[] =
   (JSON.parse(
-    require('node:fs').readFileSync('backend/data/quiz.json', 'utf8')
+    require('node:fs').readFileSync('backend/test/helpers/synthetic-quiz-bank.json', 'utf8')
   ).resources ?? [])
     .find((entry: { quizId: string }) => entry.quizId === QUIZ)
     ?.resources ?? [];

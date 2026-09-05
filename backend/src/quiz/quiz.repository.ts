@@ -98,10 +98,20 @@ export async function createQuizRepositoryFromDatabase(db: Queryable): Promise<Q
 }
 
 export function createQuizRepository(options: RepositoryOptions = {}): QuizRepository {
+  // NO DEFAULT PATH. `dataPath` is an explicit, caller-supplied file — for
+  // tests and the one-time import tool — never a fallback a caller can reach
+  // by omission. A caller that supplies neither `source` nor `dataPath` gets
+  // a clear configuration error, not a silent read of a file that may not
+  // even exist in this environment.
+  if (options.source === undefined && !options.dataPath) {
+    throw new Error(
+      'createQuizRepository requires either `source` or an explicit `dataPath` — there is no default file.'
+    );
+  }
   const raw =
     options.source !== undefined
       ? options.source
-      : readQuizDataFile(options.dataPath ?? './data/quiz.json', options);
+      : readQuizDataFile(options.dataPath!, options);
 
   // Throws QuizDataError on any problem — an invalid bank must not start.
   const { quizzes } = validateAndNormalize(raw);

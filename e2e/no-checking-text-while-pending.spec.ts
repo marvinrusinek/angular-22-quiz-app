@@ -40,7 +40,7 @@ test.describe('Topic Quiz shows no request-status text while /check is pending',
   test('single-answer: neutral pending, no red/green until the verdict lands', async ({ page }) => {
     const release = await holdCheckPending(page);
 
-    await page.goto('/quiz/question/typescript/1');
+    await page.goto('/quiz/question/fixture-widgets/1');
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30000 });
     await page.locator('.option-row').first().click({ timeout: 15000 });
     await page.waitForTimeout(1500);
@@ -62,7 +62,7 @@ test.describe('Topic Quiz shows no request-status text while /check is pending',
   test('multi-answer: neutral pending on the first-ever pick, no request-status text', async ({ page }) => {
     const release = await holdCheckPending(page);
 
-    await page.goto('/quiz/question/dependency-injection/3');
+    await page.goto('/quiz/question/fixture-gadgets/3');
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30000 });
     const heading = (await page.locator(HEADING).first().textContent()) ?? '';
     const correct = correctIndicesForHeading(diQuiz, heading);

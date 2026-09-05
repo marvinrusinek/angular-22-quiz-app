@@ -15,7 +15,7 @@ import {
  */
 
 async function enableShuffleAndStart(page: Page) {
-  await page.goto('/quiz/intro/typescript');
+  await page.goto('/quiz/intro/fixture-widgets');
   const toggle = page.locator('mat-slide-toggle button[role="switch"]');
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
@@ -32,8 +32,10 @@ test.describe('shuffle mode — explanation pipeline', () => {
     const correct = await correctRowsForHeading(rows, tsQuiz, headingText);
     expect(correct.length).toBeGreaterThan(0);
 
-    await rows.nth(correct[0]).click();
-    await expect(page.locator(HEADING)).toContainText(/is correct because/i);
+    // Multi-answer aware — fixture-widgets has one multi-answer question among
+    // otherwise single-answer ones, and shuffle can land on it first.
+    for (const idx of correct) await rows.nth(idx).click();
+    await expect(page.locator(HEADING)).toContainText(/is correct because|are correct because/i);
     await expect(page.locator(FEEDBACK)).toContainText(/right/i);
   });
 
@@ -43,14 +45,16 @@ test.describe('shuffle mode — explanation pipeline', () => {
     const rows = page.locator('.option-row');
     const headingText = (await page.locator(HEADING).textContent()) ?? '';
     const correct = await correctRowsForHeading(rows, tsQuiz, headingText);
-    await rows.nth(correct[0]).click();
-    await expect(page.locator(HEADING)).toContainText(/is correct because/i);
+    // Multi-answer aware — fixture-widgets has one multi-answer question among
+    // otherwise single-answer ones, and shuffle can land on it first.
+    for (const idx of correct) await rows.nth(idx).click();
+    await expect(page.locator(HEADING)).toContainText(/is correct because|are correct because/i);
 
     await page.locator(NEXT_BTN).click();
 
     // The next heading must be a real (unanswered) question, not the prior
     // explanation and not blank.
-    await expect(page.locator(HEADING)).not.toContainText(/is correct because/i);
+    await expect(page.locator(HEADING)).not.toContainText(/is correct because|are correct because/i);
     await expect
       .poll(async () => {
         const t = (await page.locator(HEADING).textContent()) ?? '';

@@ -355,6 +355,32 @@ describe('WeakAreasPracticeComponent — options stay changeable until resolved'
     fixture.detectChanges();
     expect(inputs(fixture).every((input) => !input.disabled)).toBe(true);
   });
+
+  it('MULTI: an interspersed WRONG pick does NOT poison a LATER correct completion (correct -> wrong -> correct) — Topic Quiz DI Q3 preservation case', async () => {
+    const { fixture, session } = await mount([MULTI]);
+
+    // Click 1: first correct option (A)
+    session.select(0, [1]);
+    fixture.detectChanges();
+    expect(nextButton(fixture).disabled).toBe(true);
+    expect(explanationText(fixture)).toBe('');
+
+    // Click 2: a WRONG option (B), added alongside the still-standing correct pick
+    session.select(0, [1, 2]);
+    fixture.detectChanges();
+    expect(nextButton(fixture).disabled).toBe(true);
+    expect(explanationText(fixture)).toBe('');
+    expect(fixture.nativeElement.textContent).toContain('Your answer — incorrect');
+
+    // Click 3: the SECOND correct option (C) completes the correct set
+    session.select(0, [1, 2, 3]);
+    fixture.detectChanges();
+
+    // The earlier wrong pick must not latch onto this later correct completion.
+    expect(nextButton(fixture).disabled).toBe(false);
+    expect(explanationText(fixture)).toBe('MULTI-FET');
+    expect(fixture.nativeElement.textContent).toContain('Correct answer');
+  });
 });
 
 describe('WeakAreasPracticeComponent — exits', () => {

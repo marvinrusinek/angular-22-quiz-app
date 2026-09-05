@@ -750,6 +750,12 @@ export class ExplanationFormatterService {
     return [];
   }
 
+  // A word never lowercased as the FET lead even though it has no internal
+  // capital to trip the acronym/identifier guard below — "Angular" is a
+  // proper noun, not a sentence-starting common word. Kept as a single named
+  // exception rather than a general proper-noun dictionary.
+  private static readonly LEAD_WORD_EXCEPTIONS = new Set(['Angular']);
+
   // Lowercases only the first letter of the leading word, leaving acronyms and
   // camelCase/PascalCase identifiers (OnPush, RxJS, TypeScript, HTTP) untouched so
   // the FET reads naturally after "… correct because" without corrupting a name.
@@ -760,6 +766,7 @@ export class ExplanationFormatterService {
     const first = word.charAt(0);
     if (first < 'A' || first > 'Z') return text;   // first char isn't an uppercase letter
     if (/[A-Z]/.test(word.slice(1))) return text;  // internal caps -> identifier/acronym
+    if (ExplanationFormatterService.LEAD_WORD_EXCEPTIONS.has(word.replace(/[^\w]+$/, ''))) return text;
     return ws + first.toLowerCase() + word.slice(1) + tail;
   }
 

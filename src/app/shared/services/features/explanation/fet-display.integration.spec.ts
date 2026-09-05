@@ -199,6 +199,71 @@ describe('FET display integration', () => {
       });
     });
 
+    // ── lowercaseLead "Angular" regression ──────────────────────
+    //
+    // BUG: lowercaseLead() only skips lowercasing when the leading word has an
+    // INTERNAL capital letter (an acronym/identifier shape like "DI" or
+    // "HttpClient"). "Angular" has no internal capital — only its own leading
+    // letter — so it fell through and was downcased to "angular" whenever it
+    // led an explanation, e.g. "Option 4 is correct because Angular supplies
+    // ..." rendered as "... because angular supplies ...". The stored
+    // PostgreSQL/seed explanation was never wrong; this was a render-time-only
+    // defect. Fixed by special-casing "Angular" specifically, not by adding a
+    // general proper-noun dictionary.
+    describe('formatExplanation — preserves a leading "Angular"', () => {
+      const angularLeadQ: QuizQuestion = {
+        questionText: 'In modern Angular, how can a class obtain one of its dependencies?',
+        type: QuestionType.SingleAnswer,
+        options: [
+          makeOption('Through constructor injection, or by calling the inject() function.', true, 1),
+          makeOption('Only by importing the dependency\'s file.', false, 2)
+        ],
+        explanation:
+          'Angular supplies a dependency either as a constructor parameter or through the inject() function.'
+      };
+
+      it('keeps a leading "Angular" capitalized instead of lowercasing it', () => {
+        const result = service.formatExplanation(angularLeadQ, [1], angularLeadQ.explanation!, 0);
+        expect(result).toBe(
+          'Option 1 is correct because Angular supplies a dependency either as a constructor parameter or through the inject() function.'
+        );
+      });
+
+      it('still lowercases an ordinary leading word exactly as before (no regression to existing behavior)', () => {
+        // Unchanged from the pre-existing "Both" -> "both" coverage above —
+        // repeated here so the Angular fix and this guard live side by side.
+        const result = service.formatExplanation(multiAnswerQ, [2, 4], multiAnswerQ.explanation!, 1);
+        expect(result).toBe('Options 2 and 4 are correct because both 2 and 4 are even.');
+      });
+
+      it('still preserves internally-capitalized acronyms/identifiers like "DI" and "HttpClient" as the leading word', () => {
+        const diLeadQ: QuizQuestion = {
+          ...angularLeadQ,
+          explanation: 'DI is a technique for supplying dependencies from outside a class.'
+        };
+        const diResult = service.formatExplanation(diLeadQ, [1], diLeadQ.explanation!, 0);
+        expect(diResult).toBe('Option 1 is correct because DI is a technique for supplying dependencies from outside a class.');
+
+        const httpClientLeadQ: QuizQuestion = {
+          ...angularLeadQ,
+          explanation: 'HttpClient resolves to the same injector-provided instance every time.'
+        };
+        const httpResult = service.formatExplanation(httpClientLeadQ, [1], httpClientLeadQ.explanation!, 0);
+        expect(httpResult).toBe('Option 1 is correct because HttpClient resolves to the same injector-provided instance every time.');
+      });
+
+      it('only affects the leading word — "Angular" appearing later in the explanation is untouched either way', () => {
+        const midSentenceQ: QuizQuestion = {
+          ...angularLeadQ,
+          explanation: 'Both Angular and RxJS play a role here.'
+        };
+        const result = service.formatExplanation(midSentenceQ, [1], midSentenceQ.explanation!, 0);
+        // Leading "Both" (ordinary word) lowercases as usual; "Angular" and
+        // "RxJS" mid-sentence are untouched by lowercaseLead either way.
+        expect(result).toBe('Option 1 is correct because both Angular and RxJS play a role here.');
+      });
+    });
+
     // ── storeFormattedExplanation + getFormattedSync ───────────
 
     describe('storeFormattedExplanation + getFormattedSync', () => {

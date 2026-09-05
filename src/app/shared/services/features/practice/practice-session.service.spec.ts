@@ -15,9 +15,14 @@ import { QuizQuestion } from '../../../models/QuizQuestion.model';
 import { QuestionType } from '../../../models/question-type.enum';
 // S6p (Angular Stage 14): src/assets/data/quiz.json was deleted — see
 // shared/testing/quiz-catalog-fixture.json (test-only, never bundled).
+//
+// Stage 13: the fixture is EXPLICITLY SYNTHETIC — every questionText/option/
+// explanation is freshly authored placeholder text, not sampled from the
+// canonical bank. Only quizId/milestone/difficulty/per-quiz question count
+// are real public catalog metadata.
 import quizData from '../../../testing/quiz-catalog-fixture.json';
 
-const REAL_CATALOG = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as Quiz[];
+const SYNTHETIC_CATALOG = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as Quiz[];
 
 const weakIds = signal<string[]>(['rxjs', 'signals']);
 const weakAreasStub = { weakTopicIds: weakIds } as unknown as WeakAreasService;
@@ -33,7 +38,7 @@ const weakAreasStub = { weakTopicIds: weakIds } as unknown as WeakAreasService;
  */
 const questionsApiStub = {
   loadQuestions: (quizId: string) => {
-    const quiz = REAL_CATALOG.find((q) => (q.quizId ?? (q as { id?: string }).id) === quizId);
+    const quiz = SYNTHETIC_CATALOG.find((q) => (q.quizId ?? (q as { id?: string }).id) === quizId);
     const views = (quiz?.questions ?? []).map((q) => {
       const correctCount = (q.options ?? []).filter((o) => o.correct === true).length;
       return {
@@ -133,7 +138,7 @@ function answerAllCorrectly(svc: PracticeSessionService): void {
 
 /** The catalog entry for a generated question, matched by exact text. */
 function catalogQuestionFor(question: QuizQuestion): QuizQuestion | undefined {
-  const quiz = REAL_CATALOG.find(
+  const quiz = SYNTHETIC_CATALOG.find(
     (q) => (q.quizId ?? (q as { id?: string }).id) === question.sourceQuizId
   );
   return (quiz?.questions ?? []).find((q) => q.questionText === question.questionText);
@@ -183,7 +188,7 @@ function completeSession(svc: PracticeSessionService): void {
 function reset(): void {
   sessionStorage.clear();
   localStorage.clear();
-  setQuizDataCache(REAL_CATALOG, []);
+  setQuizDataCache(SYNTHETIC_CATALOG, []);
   weakIds.set(['rxjs', 'signals']);
 }
 
@@ -703,7 +708,7 @@ describe('PracticeSessionService — the API is the ONLY question source', () =>
 
     // The local bank is fully populated and would happily supply questions —
     // which is exactly why this must still refuse.
-    expect(REAL_CATALOG.length).toBeGreaterThan(0);
+    expect(SYNTHETIC_CATALOG.length).toBeGreaterThan(0);
     expect(await svc.start()).toBe(false);
     expect(svc.hasSession()).toBe(false);
     expect(svc.total()).toBe(0);

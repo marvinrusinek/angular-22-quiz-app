@@ -16,9 +16,15 @@ import { validateQuizData } from './quiz-data-validation';
  * or bundles any answer-bearing bank, and main.ts no longer calls
  * validateQuizData() at all (there is nothing left to validate at bootstrap).
  * This describe block now reads the explicit, test-only fixture at
- * shared/testing/quiz-catalog-fixture.json (identical real content, sampled
- * from the authoritative backend copy) instead, preserving the same coverage
- * of validateQuizData()'s behavior against realistic, well-formed data.
+ * shared/testing/quiz-catalog-fixture.json.
+ *
+ * Stage 13: that fixture is EXPLICITLY SYNTHETIC — every question, option,
+ * and explanation is freshly authored placeholder text, generated
+ * independently from public catalog metadata (quizId/milestone/difficulty/
+ * per-quiz question count) rather than sampled from any canonical/production
+ * source. It MUST NOT be re-sourced from the real quiz bank; the point of
+ * this fixture is well-formed, realistically-shaped data the validator can
+ * exercise, not authoritative content.
  */
 describe('validateQuizData', () => {
   describe('against a realistic well-formed dataset', () => {

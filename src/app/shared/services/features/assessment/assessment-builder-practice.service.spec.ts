@@ -6,9 +6,14 @@ import { ArrayUtils } from '../../../utils/array-utils';
 import { Quiz } from '../../../models/Quiz.model';
 // S6p (Angular Stage 14): src/assets/data/quiz.json was deleted — see
 // shared/testing/quiz-catalog-fixture.json (test-only, never bundled).
+//
+// Stage 13: the fixture is EXPLICITLY SYNTHETIC — every questionText/option/
+// explanation is freshly authored placeholder text, not sampled from the
+// canonical bank. Only quizId/milestone/difficulty/per-quiz question count
+// are real public catalog metadata.
 import quizData from '../../../testing/quiz-catalog-fixture.json';
 
-const REAL_CATALOG = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as Quiz[];
+const SYNTHETIC_CATALOG = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as Quiz[];
 
 function service(): AssessmentBuilderService {
   TestBed.resetTestingModule();
@@ -17,8 +22,8 @@ function service(): AssessmentBuilderService {
 }
 
 describe('AssessmentBuilderService.buildPractice — weak areas generation', () => {
-  beforeEach(() => setQuizDataCache(REAL_CATALOG, []));
-  afterEach(() => setQuizDataCache(REAL_CATALOG, []));
+  beforeEach(() => setQuizDataCache(SYNTHETIC_CATALOG, []));
+  afterEach(() => setQuizDataCache(SYNTHETIC_CATALOG, []));
 
   it('returns null for ZERO weak topics — never an empty session', () => {
     expect(service().buildPractice([])).toBeNull();
@@ -61,7 +66,7 @@ describe('AssessmentBuilderService.buildPractice — weak areas generation', () 
   });
 
   it('returns FEWER than 10 when the eligible bank is smaller', () => {
-    const trimmed = REAL_CATALOG.map((q) =>
+    const trimmed = SYNTHETIC_CATALOG.map((q) =>
       q.quizId === 'rxjs' ? { ...q, questions: (q.questions ?? []).slice(0, 4) } : q
     );
     setQuizDataCache(trimmed as Quiz[], []);
@@ -70,7 +75,7 @@ describe('AssessmentBuilderService.buildPractice — weak areas generation', () 
   });
 
   it('returns null when the weak topics hold no questions at all', () => {
-    const gutted = REAL_CATALOG.map((q) =>
+    const gutted = SYNTHETIC_CATALOG.map((q) =>
       q.quizId === 'rxjs' ? { ...q, questions: [] } : q
     );
     setQuizDataCache(gutted as Quiz[], []);

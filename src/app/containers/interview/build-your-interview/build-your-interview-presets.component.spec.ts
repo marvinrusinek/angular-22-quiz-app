@@ -17,20 +17,24 @@ import { Quiz } from '../../../shared/models/Quiz.model';
 import { findInterviewPreset } from '../../../shared/models/interview-preset.model';
 // S6p (Angular Stage 14): src/assets/data/quiz.json was deleted — the
 // production client no longer bundles/fetches any answer-bearing bank. This
-// explicit, test-only fixture (identical content, sampled from the
-// authoritative backend copy) replaces it; it lives under shared/testing/,
+// explicit, test-only fixture replaces it; it lives under shared/testing/,
 // is imported only from specs, and is never reachable from main.ts's build
 // graph, so it does not get bundled into the production artifact.
+//
+// Stage 13: the fixture is EXPLICITLY SYNTHETIC — question/option text is
+// freshly authored placeholder content, not sampled from the canonical bank.
+// Only quizId/milestone/difficulty/per-quiz question count are real public
+// catalog metadata (already served by GET /api/quizzes).
 import quizData from '../../../shared/testing/quiz-catalog-fixture.json';
 
-const REAL_CATALOG = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as Quiz[];
+const SYNTHETIC_CATALOG = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as Quiz[];
 
 /**
  * What the BACKEND catalogue reports. Mutable so a test can simulate a bank
  * too small to fill a preset — the old setQuizDataCache() trick no longer
  * applies, because the builder does not read the local quiz bank.
  */
-let catalogQuizzes: Quiz[] = REAL_CATALOG;
+let catalogQuizzes: Quiz[] = SYNTHETIC_CATALOG;
 const asTopic = (quiz: Quiz) => ({
   id: quiz.quizId,
   name: quiz.milestone,
@@ -101,7 +105,7 @@ function render(): ComponentFixture<BuildYourInterviewComponent> {
               .map(asTopic);
           },
           availableQuestions: (ids: readonly string[]) =>
-            REAL_CATALOG
+            SYNTHETIC_CATALOG
               .filter((quiz) => ids.includes(quiz.quizId))
               .reduce((sum, quiz) => sum + (quiz.questions?.length ?? 0), 0),
           questionsByDifficulty: (ids: readonly string[]) => {
@@ -133,8 +137,8 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
   beforeEach(() => {
     // Restore the full catalogue — the starvation tests mutate it, and without
     // this the next test inherits a bank too small to fill any preset.
-    catalogQuizzes = REAL_CATALOG;
-    setQuizDataCache(REAL_CATALOG, []);
+    catalogQuizzes = SYNTHETIC_CATALOG;
+    setQuizDataCache(SYNTHETIC_CATALOG, []);
     sessionStorage.clear();
     createSession.mockReset();
     createSession.mockReturnValue(of(CREATED));
@@ -271,7 +275,7 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
 
   it('keeps the real Start button DISABLED when a preset cannot be filled', () => {
     // Starve the BACKEND catalogue — the builder no longer reads the local bank.
-    catalogQuizzes = REAL_CATALOG.map((q) => ({ ...q, questions: (q.questions ?? []).slice(0, 1) })) as Quiz[];
+    catalogQuizzes = SYNTHETIC_CATALOG.map((q) => ({ ...q, questions: (q.questions ?? []).slice(0, 1) })) as Quiz[];
     const fixture = render();
     fixture.componentInstance.selectPreset('senior');
     fixture.detectChanges();
@@ -338,7 +342,7 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
   it('disables Start and explains the shortfall when capacity is insufficient', () => {
     // Starve the bank so no preset can be filled.
     // Starve the BACKEND catalogue — the builder no longer reads the local bank.
-    catalogQuizzes = REAL_CATALOG.map((q) => ({ ...q, questions: (q.questions ?? []).slice(0, 1) })) as Quiz[];
+    catalogQuizzes = SYNTHETIC_CATALOG.map((q) => ({ ...q, questions: (q.questions ?? []).slice(0, 1) })) as Quiz[];
 
     const fixture = render();
     fixture.componentInstance.selectPreset('senior');

@@ -10,9 +10,15 @@ import { isValidDistribution } from '../utils/difficulty-quota';
 import { getQuizData } from '../quiz-data-cache';
 // S6p (Angular Stage 14): src/assets/data/quiz.json was deleted — see
 // shared/testing/quiz-catalog-fixture.json (test-only, never bundled).
+//
+// Stage 13: that fixture is EXPLICITLY SYNTHETIC — question/option content is
+// freshly authored placeholder text, not sampled from the canonical bank.
+// Only its public metadata (quizId/milestone/difficulty) is real, since this
+// spec needs the real 20-topic vocabulary to validate INTERVIEW_PRESETS.
 import quizData from '../testing/quiz-catalog-fixture.json';
 
-// The real catalog, read the same way the app reads it.
+// The public topic catalog (quizId/difficulty only), read the same way the
+// app reads it — question content beneath these ids is synthetic.
 const catalog = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as {
   quizId: string;
   difficulty?: string;

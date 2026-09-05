@@ -217,10 +217,18 @@ export class QuizSelectionComponent implements OnInit {
   // Summary stats for the catalog row: total quizzes, total questions, and a
   // difficulty breakdown (e.g. "4 Beginner / 5 Intermediate"). Computed from the
   // FULL catalog (not the filtered/searched view).
+  //
+  // Stage 11: `this.quizzes()` above is built ENTIRELY from
+  // TopicQuizMetadataService's signals (see its own `computed`) — every
+  // object it produces has no `questions` array at all, so a
+  // `quiz.questions?.length` fallback here could never fire. `questionCount`
+  // (the metadata-sourced field the Quiz model's own doc comment says to
+  // prefer) is authoritative for this catalog projection; the dead fallback
+  // is removed.
   readonly quizStats = computed(() => {
     const list = this.quizzes() ?? [];
     const quizCount = list.length;
-    const questionCount = list.reduce((sum, quiz) => sum + (quiz.questionCount ?? quiz.questions?.length ?? 0), 0);
+    const questionCount = list.reduce((sum, quiz) => sum + (quiz.questionCount ?? 0), 0);
 
     const counts = new Map<string, number>();
     for (const quiz of list) {

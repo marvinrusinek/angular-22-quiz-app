@@ -161,6 +161,7 @@ export class IntroductionComponent implements OnInit {
     this.activatedRoute.params
       .pipe(
         tap((params) => this.handleRouteParams(params)),
+        tap((params) => this.paintFromSeededMetadata(params['quizId'])),
         switchMap((params) => this.fetchQuiz(params)),
         tap((quiz) => this.logQuizLoaded(quiz)),
         takeUntilDestroyed(this.destroyRef)
@@ -175,6 +176,22 @@ export class IntroductionComponent implements OnInit {
     this.quizId = params['quizId'];
   }
 
+  /**
+   * First paint, synchronously. `TopicQuizMetadataService` seeds its public
+   * metadata signals from the bundled `QUIZ_CATALOG_METADATA` at construction
+   * — the same mechanism QuizSelection's tiles already read to paint instantly
+   * — so a known quiz id resolves here before `metadataApi.load()`'s HTTP round
+   * trip ever settles. Without this, Introduction sat on "Loading…" for
+   * however long a cold `GET /api/quizzes` took (visible on a cold Render
+   * backend); `fetchQuiz` below still runs afterwards and refreshes
+   * `selectedQuiz` once the authoritative response lands.
+   */
+  private paintFromSeededMetadata(quizId: string | undefined): void {
+    if (!quizId) return;
+    const seeded = this.buildQuizFromMetadata(quizId);
+    if (seeded) this.handleLoadedQuiz(seeded);
+  }
+
   private fetchQuiz(params: Params) {
     const quizId = params['quizId'];
     if (!quizId) {
@@ -183,7 +200,9 @@ export class IntroductionComponent implements OnInit {
 
     // Hard refresh on /quiz/intro/:quizId skips QuizSelection, so the
     // metadata list may not have been fetched yet. load() triggers the HTTP
-    // fetch on first run (shared/cached), then buildQuizFromMetadata resolves.
+    // fetch on first run (shared/cached), then buildQuizFromMetadata resolves
+    // again against the authoritative response — refreshing (or, for a quiz id
+    // absent from the bundled seed, first supplying) selectedQuiz.
     return this.metadataApi.load().pipe(
       map(() => this.buildQuizFromMetadata(quizId)),
       catchError(() => EMPTY)

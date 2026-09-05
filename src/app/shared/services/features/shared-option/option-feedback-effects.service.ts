@@ -35,13 +35,14 @@ export class OptionFeedbackEffectsService {
 
   registerFeedbackEffects(host: Host): void {
     const h = host as any;
-    // Three independent effects; bodies extracted to named helpers. The signal
+    // Four independent effects; bodies extracted to named helpers. The signal
     // reads happen synchronously inside each effect, so dependency tracking is
     // intact (Angular tracks signals read during the effect's execution,
     // including nested calls).
     effect(() => this.applyMultiAnswerAutoDisable(h));
     effect(() => this.applyTimerExpiryStamp(h));
     effect(() => this.repaintOnVerdictArrival(h));
+    effect(() => this.stopTimerOnVerdictComplete(h));
   }
 
   /**
@@ -99,6 +100,39 @@ export class OptionFeedbackEffectsService {
 
       h.optionBindings.set(bindings.map((b: OptionBindings) => ({ ...b })));
       h.cdRef?.markForCheck?.();
+    });
+  }
+
+  /**
+   * Stop the timer the moment the VERDICT says this question is fully,
+   * correctly answered — single-answer resolved-correct, or multi-answer with
+   * every required correct option selected.
+   *
+   * REGRESSION (post-Stage-14). The synchronous click-time path
+   * (`QqcOptionClickOrchestratorService#computeCorrectness`) derives
+   * `allCorrect` from `option.correct` / `isOptionCorrect(option)` — data the
+   * API never sends once questions come from `/questions`, so it always read
+   * false and the timer never stopped, for single- or multi-answer alike.
+   * Nothing else re-checked once the actual `/check` verdict landed.
+   *
+   * This asks the SAME authority `TimerService#hasRecordedCorrectCompletion`
+   * (and therefore `allCorrectSelectedFromVerdict`) already uses for the
+   * freeze-on-revisit decision — never local bookkeeping, never `option.correct`.
+   * Reading `verdicts.states()` makes verdict arrival itself the trigger, so
+   * this fires the instant a terminal verdict lands, however long `/check`
+   * took, and stays a no-op for every OTHER question's verdict arrivals.
+   */
+  private stopTimerOnVerdictComplete(h: any): void {
+    // THE DEPENDENCY. Read first and unconditionally — an early return above
+    // this line would silently unsubscribe the effect from verdict arrivals.
+    this.verdicts.states();
+
+    untracked(() => {
+      const qIdx = h.currentQuestionIndex ?? h.quizService?.currentQuestionIndex ?? 0;
+      if (!h.timerService?.hasRecordedCorrectCompletion?.(qIdx)) return;
+
+      h.timerService.allowAuthoritativeStop?.();
+      h.timerService.attemptStopTimerForQuestion?.({ questionIndex: qIdx });
     });
   }
 

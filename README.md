@@ -26,7 +26,7 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 
 <hr>
 
-<h2>📸 Screenshot</h2>
+<h2>📸 Screenshots</h2>
 
 <p align="center">
 <img src="screenshots/ss01.jpg" alt="Dependency Injection Quiz — Question 1 of 6" width="420">

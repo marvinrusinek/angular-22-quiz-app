@@ -13,13 +13,13 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
   <img src="https://img.shields.io/badge/TypeScript-Enabled-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/RxJS-Reactive-purple" alt="RxJS">
   <img src="https://img.shields.io/badge/Signals-Integrated-orange" alt="Angular Signals">
-  <img src="https://img.shields.io/badge/Status-Active%20Development-brightgreen" alt="Active Development">
+  <img src="https://img.shields.io/badge/Status-Production%20Ready-brightgreen" alt="Production Ready">
 </p>
 
 <p align="center">
   <a href="https://marvinrusinek.github.io/angular-22-quiz-app">
-    ▶ Launch Live Demo
-  </a>
+    ▶ Live Demo
+  </a> · Screenshots · Architecture
 </p>
 
 <hr>
@@ -49,7 +49,7 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 <li>Backend-driven Interview Mode with timed mixed-topic assessments, session persistence, answer submission, server-side scoring, and protected result retrieval</li>
 <li>Topic Quiz system supporting single-answer, multiple-answer, immediate feedback, explanations, timers, shuffling, and detailed results</li>
 <li>Performance analytics including interview history, performance trends, topic-level analysis, and Weak Areas Practice</li>
-<li>Production-oriented security including strict CSP and backend boundaries that prevent interview answers from being exposed to the active client session</li>
+<li>Backend-authoritative quiz architecture with PostgreSQL as the source of truth, server-side correctness evaluation, protected assessment data, strict CSP, and no answer-bearing quiz bank shipped with the Angular application.</li>
 <li>Comprehensive automated testing covering Angular unit tests and Playwright end-to-end workflows</li>
 <li>PWA and responsive UI built with Angular Material and accessibility-conscious interaction patterns</li>
 </ul>
@@ -82,21 +82,21 @@ event coordination, and cross-component communication.
 <h3>High-Level Flow</h3>
 
 <pre><code>
-                         Angular 22 Frontend
+                        Angular 22 Frontend
                                 │
-                 ┌──────────────┴──────────────┐
-                 │                             │
-            Topic Quizzes                 Interview Mode
-                 │                             │
-        Angular Services             Interview API Services
-                 │                             │
-          Signals + RxJS                    REST API
-                 │                             │
-           Reactive UI                 Node / Express
-                                               │
-                                  Interview Session Layer
-                                               │
-                                          PostgreSQL
+               ┌────────────────┴────────────────┐
+               │                                 │
+          Topic Quizzes                    Interview Mode
+               │                                 │
+       Quiz API Services                 Interview API Services
+               │                                 │
+               └──────────────┬──────────────────┘
+                              │
+                           REST API
+                              │
+                       Node / Express
+                              │
+                         PostgreSQL
 </code></pre>
 
 <hr>
@@ -108,8 +108,9 @@ event coordination, and cross-component communication.
 <li><strong>Reactive State:</strong> Angular Signals, RxJS</li>
 <li><strong>UI:</strong> Angular Material, SCSS</li>
 <li><strong>Forms:</strong> Reactive Forms, Signal Forms</li>
-<li><strong>Backend:</strong> Node.js, Express</li>
-<li><strong>Database:</strong> PostgreSQL</li>
+<li><strong>Backend:</strong> Node.js, Express, REST API</li>
+<li><strong>Database:</strong> PostgreSQL — authoritative quiz and interview data store</li>
+<li><strong>Security:</strong> Backend-authoritative correctness, strict CSP, fail-closed data access</li>
 <li><strong>Testing:</strong> Unit Testing, Playwright End-to-End Testing</li>
 <li><strong>Platform:</strong> Progressive Web App (PWA)</li>
 </ul>

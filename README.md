@@ -17,9 +17,11 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 </p>
 
 <p align="center">
-  <a href="https://marvinrusinek.github.io/angular-22-quiz-app">
-    ▶ Live Demo
-  </a> · Screenshots · Architecture
+  <a href="https://marvinrusinek.github.io/angular-22-quiz-app">▶ Live Demo</a>
+  ·
+  <a href="#-screenshots">📸 Screenshots</a>
+  ·
+  <a href="#-architecture-overview">🧭 Architecture</a>
 </p>
 
 <hr>
@@ -49,7 +51,7 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 <li>Backend-driven Interview Mode with timed mixed-topic assessments, session persistence, answer submission, server-side scoring, and protected result retrieval</li>
 <li>Topic Quiz system supporting single-answer, multiple-answer, immediate feedback, explanations, timers, shuffling, and detailed results</li>
 <li>Performance analytics including interview history, performance trends, topic-level analysis, and Weak Areas Practice</li>
-<li>Backend-authoritative quiz architecture with PostgreSQL as the source of truth, server-side correctness evaluation, protected assessment data, strict CSP, and no answer-bearing quiz bank shipped with the Angular application.</li>
+<li>Backend-authoritative quiz architecture with PostgreSQL as the source of truth, server-side correctness evaluation, protected assessment data, strict CSP, and no answer-bearing quiz bank shipped with the Angular application</li>
 <li>Comprehensive automated testing covering Angular unit tests and Playwright end-to-end workflows</li>
 <li>PWA and responsive UI built with Angular Material and accessibility-conscious interaction patterns</li>
 </ul>
@@ -70,14 +72,9 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 
 <h2>🧭 Architecture Overview</h2>
 
-<p>
-The application follows a modular frontend/backend architecture. Angular container components orchestrate application flow, focused services encapsulate business logic, and reactive state keeps the UI synchronized with user interactions. Interview Mode communicates with a Node/Express REST API responsible for session persistence, answer submission, server-side scoring, and protected result retrieval.
-</p>
+<p> The application follows a modular frontend/backend architecture. Angular container components orchestrate application flow, focused services encapsulate business logic, and Signals and RxJS keep the UI synchronized with user interactions. Both Topic Quiz and Interview Mode communicate with a Node/Express REST API backed by PostgreSQL, which serves as the authoritative data store for quiz content, assessment sessions, answers, and scoring. </p>
 
-<p>
-It combines <strong>Angular Signals</strong> for fine-grained reactive UI state with <strong>RxJS</strong> for asynchronous data flows,
-event coordination, and cross-component communication.
-</p>
+<p> The frontend combines <strong>Angular Signals</strong> for fine-grained reactive UI state with <strong>RxJS</strong> for asynchronous data flows, event coordination, and cross-component communication. Correctness-sensitive operations remain backend-authoritative so answer-bearing quiz data is not shipped with the Angular application. </p>
 
 <h3>High-Level Flow</h3>
 

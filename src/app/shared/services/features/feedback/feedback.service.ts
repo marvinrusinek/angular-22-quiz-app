@@ -15,7 +15,7 @@ import { ExplanationTextService } from '../explanation/explanation-text.service'
 import { QuizService } from '../../data/quiz.service';
 import { SelectedOptionService } from '../../state/selectedoption.service';
 import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { verdictStateForDisplayIndex } from '../verdict/authorized-correctness';
+import { selectedVerdictFor, verdictStateForDisplayIndex } from '../verdict/authorized-correctness';
 
 @Service()
 export class FeedbackService {
@@ -120,11 +120,22 @@ export class FeedbackService {
           typeof state.remainingCorrectCount === 'number' &&
           state.remainingCorrectCount > 0
         ) {
-          // Only "That's correct!" when nothing selected so far is wrong —
-          // `selectedVerdicts` is per-submitted-option, authorized the same
-          // way `remainingCorrectCount` is.
-          const anyWrongSelected = [...state.selectedVerdicts.values()].some((v) => v === false);
-          if (anyWrongSelected) return 'Not this one, try again!';
+          // Only "Not this one" for THE CURRENTLY RELEVANT CLICK, never for the
+          // question's history. `selectedVerdicts` accumulates every submitted
+          // option for this question — an earlier wrong pick (which correctly
+          // showed "Not this one" on ITS OWN click) stays in that map forever,
+          // so scanning the whole map for any `false` value latched that one
+          // wrong click's message onto every later CORRECT click too (a real
+          // click sequence: correct, wrong, correct, correct — the 3rd and 4th
+          // clicks read the 2nd click's leftover `false` and repeated its
+          // message). `targetOption` identifies the option this render is
+          // actually about; ask the verdict for THAT option specifically, via
+          // the same per-option lookup `selection-message.service.ts` already
+          // uses for its own (correct) single-answer lock decision.
+          const targetVerdict = targetOption?.text != null
+            ? selectedVerdictFor(state, targetOption.text)
+            : undefined;
+          if (targetVerdict === false) return 'Not this one, try again!';
           const remainingText = state.remainingCorrectCount === 1
             ? '1 more correct answer'
             : `${state.remainingCorrectCount} more correct answers`;
@@ -138,6 +149,25 @@ export class FeedbackService {
       correctIndices.length > 1 ||
       question.type === QuestionType.MultipleAnswer ||
       (question as any).multipleAnswer === true;
+
+    // AUTHORITATIVE RESOLUTION FIRST. The SUPERSET rule (established and
+    // tested elsewhere — quiz-scoring-verdict.spec.ts: "SUPERSET: all correct
+    // plus an incorrect pick is still creditable") means an EARLIER wrong pick
+    // in this same attempt does not block completion once every correct
+    // option has also been selected — the server's own `/check` verdict
+    // already resolves the question `correct: true` in that case. The local
+    // count below (`numIncorrectSelected === 0`) has no way to know that: it
+    // vetoes the win the instant ANY incorrect option was ever selected, even
+    // after the question legitimately resolved correct — the same "history
+    // poisons the current state" mistake as the wrong-message fix above, just
+    // on the completion path instead of the partial-progress path.
+    if (isMultiMode && typeof idxForLookup === 'number' && quizSvc) {
+      const verdicts = this.injector.get(QuestionVerdictService, null);
+      const state = verdictStateForDisplayIndex(quizSvc, idxForLookup, verdicts);
+      if (state?.phase === 'resolved' && state.isResolvedCorrect === true) {
+        return this.buildCorrectFeedback(correctIndices);
+      }
+    }
 
     const { numCorrectSelected, numIncorrectSelected, dedupedSelected } =
       this.countSelectedCorrectness(selected, optionsRaw, correctIndices, resolvedQuestion, quizSvc, isMultiMode, targetOption, idxForLookup);

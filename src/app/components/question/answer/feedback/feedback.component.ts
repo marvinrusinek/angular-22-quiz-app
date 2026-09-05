@@ -327,7 +327,15 @@ export class FeedbackComponent {
         selected,
         false,
         cfg.timedOut === true,
-        idx
+        idx,
+        undefined,
+        // This config is built per-option (getInlineFeedbackConfig(b, i) in
+        // shared-option-binding.service.ts), so `cfg.selectedOption` IS the
+        // option this specific feedback render is about — the piece
+        // buildFeedbackMessage needs to ask the verdict for THIS click's own
+        // correctness rather than scanning the whole question's selection
+        // history (see the fix in FeedbackService for what that scan broke).
+        cfg.selectedOption ?? undefined
       )
       : '';
   }

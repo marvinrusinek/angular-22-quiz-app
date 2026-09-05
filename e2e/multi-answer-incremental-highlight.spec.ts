@@ -112,6 +112,59 @@ test.describe('multi-answer incremental highlighting (3-correct question)', () =
     }
   });
 
+  /**
+   * THE REGRESSION (live report): correct -> WRONG -> correct -> correct.
+   * clicking correct #2 and #3 after an earlier wrong pick both rendered
+   * "Not this one, try again!" — the wrong click's verdict, stuck in the
+   * question's selectedVerdicts map, was read as "any wrong ever selected"
+   * instead of "was THIS click's own option wrong". Same mistake on
+   * completion: an earlier wrong pick also blocked the final win message
+   * even once the server's own SUPERSET rule resolved the question correct.
+   * Fixed in feedback.service.ts (see its own comments for the exact trace).
+   */
+  test('a wrong pick does NOT poison later correct clicks\' messages (correct -> wrong -> correct -> correct)', async ({ page }) => {
+    const correct = await openDiMulti(page);
+    const wrong = [0, 1, 2, 3].find((i) => !correct.includes(i))!;
+    const FEEDBACK = 'codelab-quiz-feedback';
+
+    // Click 1: correct.
+    await page.locator('.option-row').nth(correct[0]).click({ timeout: 15_000 });
+    await page.waitForTimeout(800);
+    let msg = (await page.locator(FEEDBACK).textContent()) ?? '';
+    expect(msg).toContain("That's correct");
+    expect(msg).not.toContain('Not this one');
+
+    // Click 2: the genuinely wrong option — SHOULD say "Not this one".
+    await page.locator('.option-row').nth(wrong).click({ timeout: 15_000 });
+    await page.waitForTimeout(800);
+    msg = (await page.locator(FEEDBACK).textContent()) ?? '';
+    expect(msg).toContain('Not this one, try again!');
+
+    // Click 3: correct again — must NOT still say "Not this one" (the bug).
+    await page.locator('.option-row').nth(correct[1]).click({ timeout: 15_000 });
+    await page.waitForTimeout(800);
+    msg = (await page.locator(FEEDBACK).textContent()) ?? '';
+    expect(msg, 'click 3 (correct) must not repeat click 2\'s wrong message').not.toContain('Not this one');
+    expect(msg).toContain("That's correct");
+
+    // Click 4: final correct pick — completes the question; must show the WIN
+    // message, not the leftover wrong message, despite the earlier wrong pick.
+    await page.locator('.option-row').nth(correct[2]).click({ timeout: 15_000 });
+    await page.waitForTimeout(800);
+    msg = (await page.locator(FEEDBACK).textContent()) ?? '';
+    expect(msg, 'completion must not repeat the earlier wrong message').not.toContain('Not this one');
+    expect(msg).toContain("You're right");
+
+    // Highlighting stays correct throughout: all 3 correct options green,
+    // the wrong one never shown as correct. Word-boundary match — a plain
+    // substring check would false-positive on "incorrect-option".
+    for (const i of correct) {
+      expect(await classesOf(page, i)).toMatch(/\bcorrect-option\b/);
+    }
+    expect(await classesOf(page, wrong)).not.toMatch(/\bcorrect-option\b/);
+    expect(await classesOf(page, wrong)).toContain('incorrect-option');
+  });
+
   test('a genuine revisit of a PARTIAL multi-answer question still shows only the picked option, never the full set', async ({ page }) => {
     const correct = await openDiMulti(page);
 

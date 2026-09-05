@@ -246,7 +246,7 @@ describe('FeedbackService.buildFeedbackMessage — partial-progress from authori
     expect(msg).toBe("That's correct! Please select 2 more correct answers.");
   });
 
-  it('does not claim "That\'s correct" when a wrong option was also selected', () => {
+  it('claims "Not this one" when the CURRENTLY CLICKED option is the wrong one', () => {
     const q = apiMultiQuestion();
     const alpha = q.options![0];
     const bravo = q.options![1];
@@ -263,8 +263,37 @@ describe('FeedbackService.buildFeedbackMessage — partial-progress from authori
       isResolvedCorrect: null
     };
 
-    const msg = service.buildFeedbackMessage(q, [alpha, bravo], false, false, 0, q.options);
+    // targetOption identifies which click this message is FOR — bravo, the
+    // one that was actually just (wrongly) clicked.
+    const msg = service.buildFeedbackMessage(q, [alpha, bravo], false, false, 0, q.options, bravo);
     expect(msg).toBe('Not this one, try again!');
+  });
+
+  it('does NOT latch an earlier wrong click onto a LATER correct click\'s message (the regression: correct -> wrong -> correct)', () => {
+    // The exact sequence reported live: Option A (correct), Option B (wrong),
+    // Option C (correct). Clicking C must describe C's own verdict, not
+    // B's leftover `false` still sitting in selectedVerdicts.
+    const q = apiMultiQuestion();
+    const alpha = q.options![0];
+    const bravo = q.options![1];
+    const charlie = q.options![2];
+    alpha.selected = true;
+    bravo.selected = true;
+    charlie.selected = true;
+
+    currentVerdict = {
+      phase: 'incomplete',
+      selectedOptionTexts: ['Alpha', 'Bravo', 'Charlie'],
+      selectedVerdicts: new Map([['Alpha', true], ['Bravo', false], ['Charlie', true]]),
+      remainingCorrectCount: 1,
+      correctOptionTexts: [],
+      explanation: null,
+      isResolvedCorrect: null
+    };
+
+    const msg = service.buildFeedbackMessage(q, [alpha, bravo, charlie], false, false, 0, q.options, charlie);
+    expect(msg).toBe("That's correct! Please select 1 more correct answer.");
+    expect(msg).not.toBe('Not this one, try again!');
   });
 
   it('does not fabricate a count for a single-answer question (multi-only path)', () => {

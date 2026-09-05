@@ -178,12 +178,13 @@ npm install</code></pre>
 <hr>
 
 <h2>🗺️ Roadmap</h2>
-
 <ul>
-<li>Expand quiz review with advanced filtering and sorting</li>
-<li>Continue adopting modern Angular reactive patterns and APIs</li>
-<li>Further simplify complex feature areas through architectural refactoring</li>
-<li>Continue improving accessibility, responsive design, and touch interactions</li>
+  <li>Add code-based Angular questions with syntax-highlighted code snippets</li>
+  <li>Add Mark for Review functionality to Interview Mode</li>
+  <li>Introduce automated question-quality validation for quiz content</li>
+  <li>Expand Interview Mode reporting and performance analytics</li>
+  <li>Continue adopting modern Angular APIs and reactive patterns where they provide measurable architectural or UX improvements</li>
+  <li>Continue improving accessibility, responsive design, and mobile/touch interactions</li>
 </ul>
 
 <hr>

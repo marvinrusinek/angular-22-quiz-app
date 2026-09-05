@@ -32,11 +32,27 @@ const DIST = process.argv[2] ?? path.join('dist', 'demo');
 const SCANNED_EXT = new Set(['.js', '.json', '.mjs', '.txt', '.html', '.css']);
 
 /**
- * Correctness markers. `"correct":true` is the shape the bank uses; the spaced
- * variant catches a pretty-printed copy. These are what an attacker would read,
- * so their absence is the actual security property — not merely the filename's.
+ * Correctness markers. `"correct":true` is the JSON shape the bank uses; the
+ * spaced variant catches a pretty-printed copy.
+ *
+ * The UNQUOTED variants (Stage 16) exist because a production minifier strips
+ * the quotes from an object-literal key that is already a valid JS identifier
+ * — `{ "correct": true }` survives as JSON but `{correct: true}` in SOURCE
+ * becomes `{correct:true}` after minification, not `{"correct":true}`. A bank
+ * accidentally reintroduced as an imported JS/TS object literal (rather than a
+ * fetched JSON asset) would only ever appear in the built artifact in this
+ * unquoted shape, so relying on the quoted pattern alone would miss it.
+ * Verified against the real production build to produce zero false positives.
+ *
+ * These are what an attacker would read, so their absence is the actual
+ * security property — not merely the filename's.
  */
-const CORRECTNESS_MARKERS = [/"correct"\s*:\s*true/i, /"correctCount"\s*:\s*\d+\s*,\s*"options"/i];
+const CORRECTNESS_MARKERS = [
+  /"correct"\s*:\s*true/i,
+  /"correctCount"\s*:\s*\d+\s*,\s*"options"/i,
+  /\bcorrect\s*:\s*true\b/,
+  /\bcorrectCount\s*:\s*\d+\s*,\s*options\s*:/,
+];
 
 function walk(dir, out = []) {
   let entries;
@@ -53,18 +69,18 @@ function walk(dir, out = []) {
   return out;
 }
 
-function main() {
-  if (!fs.existsSync(DIST)) {
-    console.error(`[artifact] build output not found at ${DIST} — run \`npm run build\` first.`);
-    process.exit(2);
-  }
-
-  const files = walk(DIST);
+/**
+ * Core scan, extracted from `main()` so it can run against a controlled test
+ * fixture directory (see verify-no-bank-in-artifact.test.js) as well as a real
+ * `dist`. Returns the same failure-message list `main()` prints.
+ */
+function scanArtifact(distDir) {
+  const files = walk(distDir);
   const failures = [];
 
   // 1 + 2. The asset by name, anywhere in the tree or referenced from any file.
   for (const file of files) {
-    const rel = path.relative(DIST, file);
+    const rel = path.relative(distDir, file);
     if (/quiz\.json$/i.test(rel)) {
       failures.push(`SHIPPED ASSET: ${rel}`);
     }
@@ -79,7 +95,7 @@ function main() {
     } catch {
       continue;
     }
-    const rel = path.relative(DIST, file);
+    const rel = path.relative(distDir, file);
 
     if (/assets\/data\/quiz\.json/i.test(text)) {
       failures.push(`REFERENCES THE ASSET: ${rel}`);
@@ -92,6 +108,17 @@ function main() {
     }
   }
 
+  return { files, failures };
+}
+
+function main() {
+  if (!fs.existsSync(DIST)) {
+    console.error(`[artifact] build output not found at ${DIST} — run \`npm run build\` first.`);
+    process.exit(2);
+  }
+
+  const { files, failures } = scanArtifact(DIST);
+
   if (failures.length > 0) {
     console.error(`\n[artifact] FAIL — the answer key still reaches the browser (${failures.length}):\n`);
     for (const failure of new Set(failures)) console.error(`  - ${failure}`);
@@ -102,4 +129,6 @@ function main() {
   console.log(`[artifact] PASS — no bank, no asset reference, no correctness markers in ${files.length} files under ${DIST}.`);
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { scanArtifact, walk, CORRECTNESS_MARKERS };

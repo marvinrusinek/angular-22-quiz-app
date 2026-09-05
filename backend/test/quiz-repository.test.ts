@@ -96,6 +96,24 @@ describe('file-path safety', () => {
   });
 });
 
+describe('no default path (Stage 16)', () => {
+  // `createQuizRepository` is shared by the production path
+  // (`createQuizRepositoryFromDatabase`, which always supplies `source` and
+  // never `dataPath`) and the test/import tooling (which supplies `dataPath`
+  // explicitly). This proves the shared factory has no silent third option:
+  // calling it with neither is a configuration error, never a read of some
+  // implicit file. There is no `backend/data/quiz.json` for that to even be.
+  it('throws when called with neither `source` nor `dataPath`', () => {
+    expect(() => createQuizRepository({}))
+      .toThrow(/requires either .source. or an explicit .dataPath./i);
+  });
+
+  it('throws the same way when called with no arguments at all', () => {
+    expect(() => createQuizRepository())
+      .toThrow(/requires either .source. or an explicit .dataPath./i);
+  });
+});
+
 describe('stable ids', () => {
   it('question ids follow <quizId>:q:<sourceIndex> and are unique bank-wide', () => {
     const repo = realRepo();

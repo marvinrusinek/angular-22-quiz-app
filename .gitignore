@@ -6,6 +6,18 @@ test-results
 playwright-report
 .playwright
 
+# ── Private quiz bank (Stage 16 defense-in-depth) ────────────────────────
+# Stage 14/15 removed the client-side quiz bank; PostgreSQL (via the backend)
+# is the sole authoritative source. Nothing has a legitimate reason to live
+# under this path again, under ANY filename — ignored here (mirroring backend/
+# .gitignore's equivalent rule) so a locally re-created copy is never
+# accidentally staged/committed. The real enforcement is
+# scripts/verify-no-bank-in-artifact.js, which checks the BUILT ARTIFACT
+# regardless of what git tracks (a renamed file would still ignore just as
+# well, but its content would still be caught there); this is a second,
+# earlier layer that stops the file from being committed in the first place.
+src/assets/data/
+
 # Throwaway SQLite databases created per Playwright run (see
 # e2e/support/e2e-database.ts). Deleted on teardown; anything left here is
 # from an interrupted run and is swept at the next startup.

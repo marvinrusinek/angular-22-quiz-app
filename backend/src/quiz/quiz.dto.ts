@@ -1,4 +1,6 @@
-import type { PrivateOption, PrivateQuestion, QuestionType, QuizMetadata } from './quiz.types';
+import type {
+  CodeSnippet, PrivateOption, PrivateQuestion, QuestionType, QuizMetadata
+} from './quiz.types';
 
 /**
  * Public DTOs and their mappers.
@@ -112,6 +114,25 @@ export function toQuizResourcesDto(
  * the lookup on the way in.
  */
 
+/**
+ * A read-only code snippet shown alongside a question's text. Question
+ * CONTENT, never answer-key material — carries no correctness and is safe
+ * under every pre-submit/pre-answer policy that already allows `questionText`.
+ */
+export interface CodeSnippetDto {
+  readonly language: 'typescript' | 'html' | 'css' | 'json';
+  readonly code: string;
+  readonly filename?: string;
+}
+
+export function toCodeSnippetDto(snippet: CodeSnippet): CodeSnippetDto {
+  return {
+    language: snippet.language,
+    code: snippet.code,
+    ...(snippet.filename ? { filename: snippet.filename } : {})
+  };
+}
+
 export interface TopicQuizOptionDto {
   readonly text: string;
 }
@@ -145,6 +166,8 @@ export interface TopicQuizQuestionDto {
    */
   readonly correctCount: number;
   readonly options: readonly TopicQuizOptionDto[];
+  /** Absent on every question that predates this feature. */
+  readonly codeSnippet?: CodeSnippetDto;
 }
 
 export interface TopicQuizQuestionsDto {
@@ -173,7 +196,8 @@ export function toTopicQuizQuestionDto(
     correctCount: question.options.filter((option) => option.isCorrect).length,
     // Source order preserved. Ordering is expressed ONLY by array position —
     // there is no displayOrder field on the wire.
-    options: question.options.map(toTopicQuizOptionDto)
+    options: question.options.map(toTopicQuizOptionDto),
+    ...(question.codeSnippet ? { codeSnippet: toCodeSnippetDto(question.codeSnippet) } : {})
   };
 }
 

@@ -1,44 +1,61 @@
 @use '../../../variables' as vars;
 @use 'sass:color';
 
-// Question / FET heading. The <h3> is now PROJECTED from THIS template into
-// <codelab-quiz-content>'s <ng-content>, so it carries this component's
-// encapsulation — its styles must live here (the receiving component's scoped
-// h3 rule can't reach projected content).
+// Question box. The <div class="question-box"> is now PROJECTED from THIS
+// template into <codelab-quiz-content>'s <ng-content>, so it carries this
+// component's encapsulation — its styles must live here (the receiving
+// component's scoped rules can't reach projected content).
+//
+// The box itself owns the background/border/sizing; the <h3> inside owns only
+// text presentation. A question's optional <app-code-snippet> is a literal
+// DOM child of this SAME box (see quiz.component.html) — not a sibling glued
+// on with CSS — so it naturally sits inside the bordered area, below the
+// question text, with its own subtle inner surface (like a code block nested
+// in a document), never a second outer card.
+.question-box {
+  margin: 5px 0;
+  padding: 10px 15px;
+  background-color: var(--bg-option, vars.$light-gray);
+  border: 2px solid vars.$vivid-blue;
+  width: 100%;
+  max-width: 615px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+
+  // Empty exactly when the heading has no text yet (e.g. between loads) —
+  // hide the whole box then, matching the box's old behavior of being the
+  // <h3> itself. `app-code-snippet` never renders on its own with no heading.
+  &:has(h3:empty) {
+    display: none;
+  }
+}
+
 h3 {
   display: block;
   font-family: vars.$font-stack;
   font-size: 30px;
   font-weight: 500;
-  margin: 5px 0;
-  padding: 10px 15px;
-  background-color: var(--bg-option, vars.$light-gray);
-  border: 2px solid vars.$vivid-blue;
+  margin: 0;
   color: var(--text-option, vars.$dark-brown);
-  width: 100%;
-  max-width: 615px;
   height: auto;
-  box-sizing: border-box;
   line-height: 1.35;
-  position: relative;
-  z-index: 1;
   // Break long unbreakable tokens (e.g. code identifiers in a FET like
   // "provideHttpClient(withInterceptors([...]))") so they wrap inside the box
   // instead of spilling past the border.
   overflow-wrap: break-word;
   word-break: break-word;
-
-  &:empty {
-    display: none;
-  }
 }
 
 @media (max-width: 600px) {
-  h3 {
-    font-size: 22px;
+  .question-box {
     padding: 8px 12px;
     max-width: 100% !important;
     width: 100% !important;
+  }
+
+  h3 {
+    font-size: 22px;
   }
 }
 

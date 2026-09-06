@@ -268,7 +268,8 @@ export function buildInterviewAssessment(
     questionText: question.questionText,
     questionType: question.type,
     explanation: question.explanation,
-    options: orderOptions(question, random)
+    options: orderOptions(question, random),
+    ...(question.codeSnippet ? { codeSnippet: question.codeSnippet } : {})
   }));
 
   const snapshot: GeneratedInterviewSnapshot = {

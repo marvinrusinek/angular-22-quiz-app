@@ -175,7 +175,7 @@ export const QUIZ_CATALOG_METADATA: readonly QuizCatalogMetadataEntry[] = [
     image: "assets/images/signals.svg",
     difficulty: "advanced",
     facts: ["input() creates a signal-based component input that replaces the @Input decorator and is read like any other signal in templates and computed values.","toSignal() and toObservable() bridge RxJS and Signals, so you can adopt Signals incrementally alongside existing Observable code.","In a zoneless Angular app, signals are the primary way Angular knows when to update the view, replacing Zone.js-based change detection."],
-    questionCount: 10,
+    questionCount: 11,
   },
   {
     quizId: "component-architecture",

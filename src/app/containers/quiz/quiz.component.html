@@ -20,15 +20,30 @@
                 [questionIndex]="questionIndex"
                 [questionToDisplay$]="questionToDisplay$"
               >
-                <!-- Projected heading: lands in codelab-quiz-content's
-                     <ng-content select="[quiz-projected-content]"> slot and is
-                     filled via contentChild('qText') there. -->
-                <h3
-                  #qText
+                <!-- Projected question box: lands in codelab-quiz-content's
+                     <ng-content select="[quiz-projected-content]"> slot as ONE
+                     unit, so the heading and its optional code snippet are
+                     literal DOM children of the same box element, not merely
+                     adjacent siblings. contentChild('qText') still finds the
+                     <h3> anywhere within this projected subtree. -->
+                <div
                   quiz-projected-content
-                  aria-live="polite"
-                  aria-atomic="true"
-                ></h3>
+                  class="question-box"
+                >
+                  <h3
+                    #qText
+                    aria-live="polite"
+                    aria-atomic="true"
+                  ></h3>
+
+                  @if (qa.question.codeSnippet; as snippet) {
+                    <app-code-snippet
+                      [code]="snippet.code"
+                      [language]="snippet.language"
+                      [filename]="snippet.filename"
+                    />
+                  }
+                </div>
               </codelab-quiz-content>
 
               <codelab-quiz-question

@@ -1,4 +1,4 @@
-import type { QuestionType } from '../quiz/quiz.types';
+import type { CodeSnippet, QuestionType } from '../quiz/quiz.types';
 
 /**
  * The FROZEN interview result.
@@ -28,6 +28,8 @@ export interface FrozenReviewQuestion {
   readonly explanation: string;
   /** The user's own Mark-for-Review note, frozen at submission. Never scored. */
   readonly flagged: boolean;
+  /** Question CONTENT, frozen at submission. Absent on most questions. */
+  readonly codeSnippet?: CodeSnippet;
 }
 
 export interface FrozenTopicBucket {

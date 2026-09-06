@@ -1,4 +1,4 @@
-import type { QuestionType } from '../quiz/quiz.types';
+import type { CodeSnippet, QuestionType } from '../quiz/quiz.types';
 
 /**
  * Assessment-generation contracts — BACKEND PRIVATE.
@@ -68,6 +68,7 @@ export interface GeneratedQuestionSnapshot {
   readonly questionType: QuestionType;
   readonly explanation: string;
   readonly options: readonly GeneratedOptionSnapshot[];
+  readonly codeSnippet?: CodeSnippet;
 }
 
 export interface GeneratedInterviewSnapshot {

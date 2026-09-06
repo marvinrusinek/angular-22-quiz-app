@@ -1,3 +1,4 @@
+import type { CodeSnippet } from '../quiz/quiz.types';
 import type { SessionQuestionSnapshot } from './session.types';
 
 /**
@@ -50,6 +51,8 @@ export interface ScoredReviewQuestion {
   readonly explanation: string;
   /** The user's own Mark-for-Review note. Never affects scoring. */
   readonly flagged: boolean;
+  /** Question CONTENT. Never affects scoring. Absent on most questions. */
+  readonly codeSnippet?: CodeSnippet;
 }
 
 export interface ScoredInterview {
@@ -129,7 +132,8 @@ export function scoreInterview(params: {
       selectedOptionIds,
       correctOptionIds,
       explanation: question.explanation,
-      flagged: question.flagged
+      flagged: question.flagged,
+      ...(question.codeSnippet ? { codeSnippet: question.codeSnippet } : {})
     });
   }
 

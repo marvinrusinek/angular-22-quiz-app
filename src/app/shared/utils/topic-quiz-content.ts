@@ -72,9 +72,10 @@ export function questionFromApiView(
   return {
     questionText: view.questionText,
     type: questionTypeFromApi(view.type),
-    options
+    options,
     // NO `explanation`. The FET body is authorized by /check (S1).
     // NO `answer`. That array is the answer key by another name.
+    ...(view.codeSnippet ? { codeSnippet: { ...view.codeSnippet } } : {})
   };
 }
 

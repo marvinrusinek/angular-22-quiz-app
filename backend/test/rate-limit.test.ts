@@ -7,7 +7,7 @@ import { createRateLimiter } from '../src/shared/rate-limit';
  * The check-endpoint throttle.
  *
  * `/check` releases correctness and an explanation per call, so without a limit
- * it is a complete answer-key oracle — roughly 185 requests would drain the
+ * it is a complete answer-key oracle — roughly 186 requests would drain the
  * bank. This does not make extraction impossible; it makes it slow, visible and
  * attributable.
  *

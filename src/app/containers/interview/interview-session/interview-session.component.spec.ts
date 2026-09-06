@@ -178,6 +178,32 @@ describe('rendering', () => {
   });
 });
 
+describe('code snippet', () => {
+  it('does not render app-code-snippet when the question has none', () => {
+    render();
+    expect(fixture.nativeElement.querySelector('app-code-snippet')).toBeNull();
+  });
+
+  it('renders app-code-snippet with the question when present', () => {
+    backend = TestBed.inject(BackendInterviewSessionService);
+    backend.activateCreatedSession({
+      ...session(),
+      questions: [
+        { ...QUESTIONS[0]!, codeSnippet: { language: 'typescript', code: 'const x = 1;', filename: 'x.ts' } },
+        ...QUESTIONS.slice(1)
+      ]
+    }, TOKEN);
+    fixture = TestBed.createComponent(InterviewSessionComponent);
+    rendered = true;
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const snippetEl = fixture.nativeElement.querySelector('app-code-snippet');
+    expect(snippetEl).not.toBeNull();
+    expect(snippetEl.textContent).toContain('const x = 1;');
+  });
+});
+
 describe('saving', () => {
   it('shows the optimistic selection immediately, then the canonical value', async () => {
     render();

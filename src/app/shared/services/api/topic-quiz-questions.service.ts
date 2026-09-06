@@ -36,12 +36,20 @@ interface TopicQuizOptionDto {
   readonly text: string;
 }
 
+/** A read-only code snippet — question CONTENT, never answer-key material. */
+interface TopicQuizCodeSnippetDto {
+  readonly language: unknown;
+  readonly code: unknown;
+  readonly filename?: unknown;
+}
+
 interface TopicQuizQuestionDto {
   readonly questionText: string;
   readonly type: TopicQuizQuestionType;
   readonly difficulty: string | null;
   readonly correctCount: number;
   readonly options: readonly TopicQuizOptionDto[];
+  readonly codeSnippet?: TopicQuizCodeSnippetDto;
 }
 
 interface TopicQuizQuestionsDto {
@@ -66,6 +74,18 @@ export interface TopicQuizOptionView {
   readonly text: string;
 }
 
+export type TopicQuizCodeSnippetLanguage = 'typescript' | 'html' | 'css' | 'json';
+
+/** A read-only code snippet — question CONTENT, never answer-key material. */
+export interface TopicQuizCodeSnippetView {
+  readonly language: TopicQuizCodeSnippetLanguage;
+  readonly code: string;
+  readonly filename?: string;
+}
+
+const VALID_CODE_SNIPPET_LANGUAGES: readonly TopicQuizCodeSnippetLanguage[] =
+  ['typescript', 'html', 'css', 'json'];
+
 /** A question the player can see. No correctness, no explanation, no ids. */
 export interface TopicQuizQuestionView {
   readonly questionText: string;
@@ -83,6 +103,8 @@ export interface TopicQuizQuestionView {
    */
   readonly correctCount: number;
   readonly options: readonly TopicQuizOptionView[];
+  /** Absent on every question that predates this feature. */
+  readonly codeSnippet?: TopicQuizCodeSnippetView;
 }
 
 export class TopicQuizQuestionsError extends Error {
@@ -194,8 +216,36 @@ export class TopicQuizQuestionsService {
             throw new TopicQuizQuestionsError('Could not load questions');
           }
           return { text: option.text };
-        })
+        }),
+        ...(question.codeSnippet !== undefined
+          ? { codeSnippet: this.toCodeSnippetView(question.codeSnippet) }
+          : {})
       };
     });
+  }
+
+  /**
+   * Malformed rejects the whole question (matching every other field above) —
+   * absent is the only valid "no snippet" state; there is no silent recovery.
+   */
+  private toCodeSnippetView(raw: TopicQuizCodeSnippetDto): TopicQuizCodeSnippetView {
+    if (
+      !raw ||
+      typeof raw.language !== 'string' ||
+      !VALID_CODE_SNIPPET_LANGUAGES.includes(raw.language as TopicQuizCodeSnippetLanguage) ||
+      typeof raw.code !== 'string' ||
+      !raw.code
+    ) {
+      throw new TopicQuizQuestionsError('Could not load questions');
+    }
+    if (raw.filename !== undefined && (typeof raw.filename !== 'string' || !raw.filename)) {
+      throw new TopicQuizQuestionsError('Could not load questions');
+    }
+
+    return {
+      language: raw.language as TopicQuizCodeSnippetLanguage,
+      code: raw.code,
+      ...(raw.filename ? { filename: raw.filename as string } : {})
+    };
   }
 }

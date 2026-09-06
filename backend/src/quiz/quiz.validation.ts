@@ -1,5 +1,7 @@
 import { makeOptionId, makeQuestionId } from './quiz.ids';
 import type {
+  CodeSnippet,
+  CodeSnippetLanguage,
   PrivateOption,
   PrivateQuestion,
   PrivateQuiz,
@@ -7,6 +9,13 @@ import type {
   QuizBankSource,
   QuizSource
 } from './quiz.types';
+
+const CODE_SNIPPET_LANGUAGES: readonly CodeSnippetLanguage[] = ['typescript', 'html', 'css', 'json'];
+
+/** Generous for a short, illustrative example; well short of "paste a whole file". */
+const MAX_CODE_LENGTH = 2000;
+const MAX_CODE_LINES = 40;
+const MAX_FILENAME_LENGTH = 80;
 
 /**
  * Source validation + normalization.
@@ -101,6 +110,70 @@ function readCorrectFlag(
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+/**
+ * Optional read-only code snippet. Absent entirely is valid (every question
+ * predating this feature has none); present-but-malformed is a hard failure,
+ * matching this module's "nothing is silently repaired" rule.
+ */
+function normalizeCodeSnippet(
+  raw: unknown,
+  at: string,
+  problems: ValidationProblem[]
+): CodeSnippet | undefined {
+  if (raw === undefined) return undefined;
+
+  if (raw === null || typeof raw !== 'object') {
+    problems.push({ at: `${at}.codeSnippet`, message: 'codeSnippet must be an object' });
+    return undefined;
+  }
+
+  const source = raw as { language?: unknown; code?: unknown; filename?: unknown };
+
+  if (typeof source.language !== 'string' || !CODE_SNIPPET_LANGUAGES.includes(source.language as CodeSnippetLanguage)) {
+    problems.push({
+      at: `${at}.codeSnippet`,
+      message: `language must be one of: ${CODE_SNIPPET_LANGUAGES.join(', ')}`
+    });
+    return undefined;
+  }
+
+  if (!isNonEmptyString(source.code)) {
+    problems.push({ at: `${at}.codeSnippet`, message: 'code must be a non-empty string' });
+    return undefined;
+  }
+  if (source.code.length > MAX_CODE_LENGTH) {
+    problems.push({ at: `${at}.codeSnippet`, message: `code exceeds ${MAX_CODE_LENGTH} characters` });
+    return undefined;
+  }
+  if (source.code.split('\n').length > MAX_CODE_LINES) {
+    problems.push({ at: `${at}.codeSnippet`, message: `code exceeds ${MAX_CODE_LINES} lines` });
+    return undefined;
+  }
+
+  let filename: string | undefined;
+  if (source.filename !== undefined) {
+    if (!isNonEmptyString(source.filename)) {
+      problems.push({ at: `${at}.codeSnippet`, message: 'filename must be a non-empty string when present' });
+      return undefined;
+    }
+    if (source.filename.length > MAX_FILENAME_LENGTH) {
+      problems.push({ at: `${at}.codeSnippet`, message: `filename exceeds ${MAX_FILENAME_LENGTH} characters` });
+      return undefined;
+    }
+    if (/[/\\]|\.\./.test(source.filename)) {
+      problems.push({ at: `${at}.codeSnippet`, message: 'filename must not contain path separators' });
+      return undefined;
+    }
+    filename = source.filename.trim();
+  }
+
+  return {
+    language: source.language as CodeSnippetLanguage,
+    code: source.code,
+    ...(filename ? { filename } : {})
+  };
 }
 
 function normalizeText(value: string): string {
@@ -254,7 +327,9 @@ function normalizeQuestion(
     return null;
   }
 
-  const source = raw as { questionText?: unknown; explanation?: unknown; options?: unknown };
+  const source = raw as {
+    questionText?: unknown; explanation?: unknown; options?: unknown; codeSnippet?: unknown;
+  };
 
   if (!isNonEmptyString(source.questionText)) {
     problems.push({ at, message: 'missing or blank questionText' });
@@ -350,6 +425,8 @@ function normalizeQuestion(
     problems.push({ at, message: 'true/false question must have exactly one correct option' });
   }
 
+  const codeSnippet = normalizeCodeSnippet(source.codeSnippet, at, problems);
+
   return {
     questionId,
     sourceQuizId: quizId,
@@ -357,6 +434,7 @@ function normalizeQuestion(
     questionText,
     type,
     explanation: isNonEmptyString(source.explanation) ? source.explanation : '',
-    options
+    options,
+    ...(codeSnippet ? { codeSnippet } : {})
   };
 }

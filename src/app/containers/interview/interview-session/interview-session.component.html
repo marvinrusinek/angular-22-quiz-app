@@ -117,6 +117,14 @@
         [innerHTML]="questionText()"
       ></h3>
 
+      @if (currentQuestion()?.codeSnippet; as snippet) {
+        <app-code-snippet
+          [code]="snippet.code"
+          [language]="snippet.language"
+          [filename]="snippet.filename"
+        />
+      }
+
       <!-- Multi-select comes from the server TYPE. There is no correctness in
            the active model to infer it from. -->
       <app-interview-options

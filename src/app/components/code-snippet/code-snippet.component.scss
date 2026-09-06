@@ -1,0 +1,122 @@
+.code-snippet {
+  --cs-border: #d0d0d0;
+  --cs-bg: #f7f7f8;
+  --cs-header-bg: #ececee;
+  --cs-text: #1a1a1a;
+  --cs-muted: #6a6a6a;
+
+  // Token colors — a neutral, readable palette, deliberately distinct from
+  // the app's green/red correctness colors (this is code, never a verdict).
+  --cs-comment: #6a737d;
+  --cs-keyword: #a626a4;
+  --cs-string: #50a14f;
+  --cs-function: #4078f2;
+  --cs-number: #986801;
+  --cs-tag: #e45649;
+  --cs-attr: #986801;
+  --cs-punctuation: #383a42;
+
+  margin: 10px 0;
+  border: 1px solid var(--cs-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--cs-bg);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 12px;
+    background: var(--cs-header-bg);
+    border-bottom: 1px solid var(--cs-border);
+    font-size: 12px;
+
+    &--language-only {
+      justify-content: flex-end;
+    }
+  }
+
+  &__filename {
+    color: var(--cs-text);
+    font-weight: 600;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__language {
+    flex: none;
+    color: var(--cs-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  &__pre {
+    margin: 0;
+    padding: 12px 14px;
+    overflow-x: auto;
+    // The scrollable region itself is the one place this component adds a
+    // focus ring — it is real keyboard-operable surface (see tabindex="0" in
+    // the template), unlike the rest of the box.
+    &:focus-visible {
+      outline: 2px solid #007aff;
+      outline-offset: -2px;
+    }
+  }
+
+  &__code {
+    display: block;
+    color: var(--cs-text);
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  // Prism token classes — hand-mapped to this app's own palette rather than
+  // an imported Prism theme stylesheet, so light/dark stays in step with the
+  // rest of the app's existing [data-theme] convention below. Plain
+  // (unscoped) selectors are correct here: this component uses
+  // ViewEncapsulation.None, same as the rest of this app's components.
+  .token.comment,
+  .token.prolog,
+  .token.doctype,
+  .token.cdata {
+    color: var(--cs-comment);
+    font-style: italic;
+  }
+  .token.keyword { color: var(--cs-keyword); }
+  .token.string,
+  .token.attr-value { color: var(--cs-string); }
+  .token.function { color: var(--cs-function); }
+  .token.number,
+  .token.boolean { color: var(--cs-number); }
+  .token.tag,
+  .token.selector { color: var(--cs-tag); }
+  .token.attr-name,
+  .token.property { color: var(--cs-attr); }
+  .token.punctuation,
+  .token.operator { color: var(--cs-punctuation); }
+}
+
+[data-theme='dark'] .code-snippet {
+  --cs-border: #3d3d3d;
+  --cs-bg: #1e1e1e;
+  --cs-header-bg: #252525;
+  --cs-text: #e6e6e6;
+  --cs-muted: #9a9a9a;
+
+  --cs-comment: #8a939c;
+  --cs-keyword: #d783e0;
+  --cs-string: #8fd682;
+  --cs-function: #7aa6f7;
+  --cs-number: #e0a838;
+  --cs-tag: #f37667;
+  --cs-attr: #e0a838;
+  --cs-punctuation: #c8ccd4;
+}

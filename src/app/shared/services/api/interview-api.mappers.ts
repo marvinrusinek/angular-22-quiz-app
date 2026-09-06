@@ -47,7 +47,8 @@ export function toQuestionViewModel(
     options: question.options.map((option) => ({
       optionId: option.optionId,
       text: option.text
-    }))
+    })),
+    ...(question.codeSnippet ? { codeSnippet: { ...question.codeSnippet } } : {})
   };
 }
 
@@ -95,7 +96,8 @@ export function toReviewQuestionViewModel(
     // scored with — never a separate interpretation of correctness.
     isCorrect: selectedOptionIds.length > 0 && sameSet(selectedOptionIds, correctOptionIds),
     isAnswered: selectedOptionIds.length > 0,
-    flagged: question.flagged
+    flagged: question.flagged,
+    ...(question.codeSnippet ? { codeSnippet: { ...question.codeSnippet } } : {})
   };
 }
 

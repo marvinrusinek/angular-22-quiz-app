@@ -1,6 +1,25 @@
 import type { InterviewSessionRecord, SessionQuestionSnapshot } from './session.types';
-import type { QuestionType } from '../quiz/quiz.types';
+import type { CodeSnippet, QuestionType } from '../quiz/quiz.types';
 import type { FrozenInterviewResult } from './result.types';
+
+/**
+ * A read-only code snippet shown alongside a question's text. Question
+ * CONTENT, never answer-key material — safe under both ACTIVE_ASSESSMENT and
+ * SUBMITTED_REVIEW, which already permit `questionText`.
+ */
+export interface CodeSnippetDto {
+  readonly language: 'typescript' | 'html' | 'css' | 'json';
+  readonly code: string;
+  readonly filename?: string;
+}
+
+function toCodeSnippetDto(snippet: CodeSnippet): CodeSnippetDto {
+  return {
+    language: snippet.language,
+    code: snippet.code,
+    ...(snippet.filename ? { filename: snippet.filename } : {})
+  };
+}
 
 /**
  * ACTIVE-session DTOs.
@@ -23,6 +42,8 @@ export interface ActiveInterviewQuestionDto {
   readonly options: readonly ActiveInterviewOptionDto[];
   /** The user's own Mark-for-Review note. Never correctness. */
   readonly flagged: boolean;
+  /** Absent on every question that predates this feature. */
+  readonly codeSnippet?: CodeSnippetDto;
 }
 
 export interface ActiveInterviewAnswerDto {
@@ -74,6 +95,8 @@ export interface InterviewReviewQuestionDto {
   readonly explanation: string;
   /** The user's own Mark-for-Review note, frozen at submission. */
   readonly flagged: boolean;
+  /** Absent on every question that predates this feature. */
+  readonly codeSnippet?: CodeSnippetDto;
 }
 
 export interface InterviewPerformanceBucketDto {
@@ -155,7 +178,8 @@ export function toInterviewResultDto(result: FrozenInterviewResult): InterviewRe
       selectedOptionIds: [...question.selectedOptionIds],
       correctOptionIds: [...question.correctOptionIds],
       explanation: question.explanation,
-      flagged: question.flagged
+      flagged: question.flagged,
+      ...(question.codeSnippet ? { codeSnippet: toCodeSnippetDto(question.codeSnippet) } : {})
     }))
   };
 }
@@ -172,7 +196,8 @@ export function toActiveQuestionDto(
     options: [...question.options]
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map((option) => ({ optionId: option.optionId, text: option.text })),
-    flagged: question.flagged
+    flagged: question.flagged,
+    ...(question.codeSnippet ? { codeSnippet: toCodeSnippetDto(question.codeSnippet) } : {})
   };
 }
 

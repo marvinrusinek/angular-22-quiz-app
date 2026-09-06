@@ -2,6 +2,13 @@ import { QuestionType } from './question-type.enum';
 
 import { Option } from './Option.model';
 
+/** A read-only code snippet shown alongside a question's text. Question CONTENT, never answer-key material. */
+export interface CodeSnippet {
+  language: 'typescript' | 'html' | 'css' | 'json';
+  code: string;
+  filename?: string;
+}
+
 export interface QuizQuestion {
   questionText: string;
   options: Option[];
@@ -15,4 +22,6 @@ export interface QuizQuestion {
   // (Interview Mode) assessment, so Review + per-topic breakdown can attribute
   // each question to its source topic quiz. Never present on catalog questions.
   sourceQuizId?: string;
+  // Absent on every question that predates this feature.
+  codeSnippet?: CodeSnippet;
 }

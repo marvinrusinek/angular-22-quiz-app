@@ -175,6 +175,44 @@ const BANNED_KEYS = [
 
 const get = (quizId: string) => request(app).get(`/api/quizzes/${quizId}/questions`);
 
+describe('code snippet', () => {
+  it('is absent when the question has none', async () => {
+    const res = await get('rxjs');
+    expect(res.body.questions[0].codeSnippet).toBeUndefined();
+    expect('codeSnippet' in res.body.questions[0]).toBe(false);
+  });
+
+  // The quiz repository loads the whole bank ONCE at construction time (see
+  // quiz.repository.ts), so a snippet written after `app` already exists would
+  // never be seen — these two tests write it first, then rebuild the app over
+  // the SAME (already migrated + seeded) database handle.
+  async function withSnippet(filename: string | null): Promise<request.Response> {
+    const { rows } = await handle.query<{ id: string }>(
+      `SELECT q.id FROM questions q JOIN quizzes z ON z.id = q.quiz_pk
+        WHERE z.quiz_id = 'signals' ORDER BY q.display_order LIMIT 1`
+    );
+    await handle.query(
+      `UPDATE questions SET code = $1, code_language = $2, code_filename = $3 WHERE id = $4`,
+      ['const x = signal(0);', 'typescript', filename, rows[0]!['id']]
+    );
+    const freshApp = buildApp(await createQuizRepositoryFromDatabase(handle), handle);
+    return request(freshApp).get('/api/quizzes/signals/questions');
+  }
+
+  it('is included when the question has one', async () => {
+    const res = await withSnippet('x.ts');
+    expect(res.body.questions[0].codeSnippet).toEqual({
+      language: 'typescript', code: 'const x = signal(0);', filename: 'x.ts'
+    });
+  });
+
+  it('never leaks correctness merely because a snippet is present', async () => {
+    const res = await withSnippet(null);
+    const keys = keysDeep(res.body);
+    for (const banned of BANNED_KEYS) expect(keys).not.toContain(banned);
+  });
+});
+
 describe('contract shape', () => {
   it('returns the quiz and all of its questions', async () => {
     const res = await get('rxjs');

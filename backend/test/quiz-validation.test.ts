@@ -161,6 +161,76 @@ describe('the "correct" flag convention', () => {
   );
 });
 
+describe('code snippet validation', () => {
+  const SNIPPET = { language: 'typescript', code: 'const x = signal(0);', filename: 'x.ts' };
+
+  it('is entirely optional — absent is valid', () => {
+    expect(problemsFrom(bank([quiz()]))).toEqual([]);
+    expect(validateAndNormalize(bank([quiz()])).quizzes[0]!.questions[0]!.codeSnippet).toBeUndefined();
+  });
+
+  it('is carried through when present and well-formed', () => {
+    const q = validateAndNormalize(bank([quiz({ questions: [question({ codeSnippet: SNIPPET })] })]))
+      .quizzes[0]!.questions[0]!;
+    expect(q.codeSnippet).toEqual(SNIPPET);
+  });
+
+  it('filename is optional on the snippet itself', () => {
+    const q = validateAndNormalize(bank([quiz({
+      questions: [question({ codeSnippet: { language: 'json', code: '{}' } })]
+    })])).quizzes[0]!.questions[0]!;
+    expect(q.codeSnippet).toEqual({ language: 'json', code: '{}' });
+  });
+
+  it('rejects an unsupported language', () => {
+    expect(problemsFrom(bank([quiz({
+      questions: [question({ codeSnippet: { language: 'python', code: 'x = 1' } })]
+    })]))).toEqual([expect.stringMatching(/language must be one of/i)]);
+  });
+
+  it('rejects empty code', () => {
+    expect(problemsFrom(bank([quiz({
+      questions: [question({ codeSnippet: { language: 'typescript', code: '' } })]
+    })]))).toEqual([expect.stringMatching(/code must be a non-empty string/i)]);
+  });
+
+  it('rejects code over the length limit', () => {
+    expect(problemsFrom(bank([quiz({
+      questions: [question({ codeSnippet: { language: 'typescript', code: 'x'.repeat(2001) } })]
+    })]))).toEqual([expect.stringMatching(/exceeds 2000 characters/i)]);
+  });
+
+  it('rejects code over the line-count limit', () => {
+    expect(problemsFrom(bank([quiz({
+      questions: [question({ codeSnippet: { language: 'typescript', code: Array(41).fill('x').join('\n') } })]
+    })]))).toEqual([expect.stringMatching(/exceeds 40 lines/i)]);
+  });
+
+  it('rejects a blank filename when present', () => {
+    expect(problemsFrom(bank([quiz({
+      questions: [question({ codeSnippet: { language: 'typescript', code: 'x', filename: '   ' } })]
+    })]))).toEqual([expect.stringMatching(/filename must be a non-empty string/i)]);
+  });
+
+  it('rejects a filename containing a path separator', () => {
+    expect(problemsFrom(bank([quiz({
+      questions: [question({ codeSnippet: { language: 'typescript', code: 'x', filename: '../evil.ts' } })]
+    })]))).toEqual([expect.stringMatching(/must not contain path separators/i)]);
+  });
+
+  it('rejects a malformed codeSnippet object', () => {
+    expect(problemsFrom(bank([quiz({
+      questions: [question({ codeSnippet: 'not an object' })]
+    })]))).toEqual([expect.stringMatching(/codeSnippet must be an object/i)]);
+  });
+
+  it('a malformed snippet does not silently repair — it fails the whole import', () => {
+    expect(() => validateAndNormalize(bank([quiz({
+      questions: [question({ codeSnippet: { language: 'python', code: 'x' } })]
+    })]))).toThrow(QuizDataError);
+  });
+});
+
 describe('question-type derivation', () => {
   it('multiple when more than one option is correct', () => {
     expect(deriveQuestionType(['a', 'b', 'c'], 2)).toBe('multiple');

@@ -33,6 +33,7 @@ import {
 import { InterviewPaginatorComponent } from '../../../components/interview/interview-paginator/interview-paginator.component';
 import { InterviewOptionsComponent } from '../../../components/interview/interview-options/interview-options.component';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
+import { CodeSnippetComponent } from '../../../components/code-snippet/code-snippet.component';
 import {
   InterviewSubmitDialogComponent,
   InterviewSubmitDialogData
@@ -63,7 +64,8 @@ import type { InterviewOptionViewModel } from '../../../shared/models/interview/
     MatTooltipModule,
     InterviewPaginatorComponent,
     InterviewOptionsComponent,
-    ThemeToggleComponent
+    ThemeToggleComponent,
+    CodeSnippetComponent
   ],
   templateUrl: './interview-session.component.html',
   styleUrls: ['./interview-session.component.scss'],

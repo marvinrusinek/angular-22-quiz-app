@@ -63,6 +63,7 @@ import {
 } from '../../components/dialogs/confirm-dialog/confirm-dialog.component';
 import { QuizQuestionComponent } from '../../components/question/quiz-question/quiz-question.component';
 import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
+import { CodeSnippetComponent } from '../../components/code-snippet/code-snippet.component';
 import { SharedOptionComponent } from '../../components/question/answer/shared-option-component/shared-option.component';
 
 import { QUESTION_ROUTE_REGEX } from '../../shared/constants/route-patterns';
@@ -88,6 +89,7 @@ type AnimationState = 'animationStarted' | 'none';
     CodelabQuizHeaderComponent,
     CodelabQuizContentComponent,
     ScoreboardComponent,
+    CodeSnippetComponent,
   ],
   templateUrl: './quiz.component.html',
   styleUrls: ['./quiz.component.scss'],

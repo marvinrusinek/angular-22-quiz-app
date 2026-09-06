@@ -88,6 +88,21 @@ describe('the mapped question carries content and nothing else', () => {
   });
 });
 
+describe('code snippet is carried through, and only when present', () => {
+  it('is absent when the view has none', () => {
+    const q = questionFromApiView(view(), 0);
+    expect(q.codeSnippet).toBeUndefined();
+    expect('codeSnippet' in q).toBe(false);
+  });
+
+  it('is carried through, as a NEW object (not the same reference)', () => {
+    const snippet = { language: 'typescript' as const, code: 'const x = 1;', filename: 'x.ts' };
+    const q = questionFromApiView(view({ codeSnippet: snippet }), 0);
+    expect(q.codeSnippet).toEqual(snippet);
+    expect(q.codeSnippet).not.toBe(snippet);
+  });
+});
+
 describe('C. the declared API type wins', () => {
   it('maps each server type to the app enum, keeping trueFalse distinct', () => {
     expect(questionTypeFromApi('single')).toBe(QuestionType.SingleAnswer);

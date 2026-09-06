@@ -16,7 +16,7 @@ import { createTestPool } from './helpers/pg-mem-pool';
  * public API — so any drift here would silently change a shipped contract.
  *
  * These tests use a small fixture rather than the real bank, so they assert the
- * MECHANISM. Equivalence against the real 185-question bank is verified
+ * MECHANISM. Equivalence against the real 186-question bank is verified
  * separately against real PostgreSQL.
  */
 

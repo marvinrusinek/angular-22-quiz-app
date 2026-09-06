@@ -184,7 +184,8 @@ export function buildPresetAssessment(
     questionText: question.questionText,
     questionType: question.type,
     explanation: question.explanation,
-    options: orderOptions(question, random)
+    options: orderOptions(question, random),
+    ...(question.codeSnippet ? { codeSnippet: question.codeSnippet } : {})
   }));
 
   const resolved = resolvePreset(preset);

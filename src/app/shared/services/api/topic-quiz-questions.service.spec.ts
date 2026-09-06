@@ -187,6 +187,60 @@ describe('the response cannot smuggle correctness through', () => {
   });
 });
 
+describe('code snippet', () => {
+  const SNIPPET = { language: 'typescript', code: 'const x = 1;', filename: 'x.ts' };
+
+  it('is absent when the question has none', () => {
+    const view = load()[0]!;
+    expect(view.codeSnippet).toBeUndefined();
+    expect('codeSnippet' in view).toBe(false);
+  });
+
+  it('maps language, code and filename when present', () => {
+    const views = load({
+      quizId: QUIZ,
+      questions: [{ ...RESPONSE.questions[0], codeSnippet: SNIPPET }]
+    });
+    expect(views[0]!.codeSnippet).toEqual(SNIPPET);
+  });
+
+  it('filename is optional on the snippet itself', () => {
+    const views = load({
+      quizId: QUIZ,
+      questions: [{ ...RESPONSE.questions[0], codeSnippet: { language: 'json', code: '{}' } }]
+    });
+    expect(views[0]!.codeSnippet).toEqual({ language: 'json', code: '{}' });
+  });
+
+  it('rejects an unsupported language rather than guessing', () => {
+    expectErrorHelper({
+      quizId: QUIZ,
+      questions: [{ ...RESPONSE.questions[0], codeSnippet: { language: 'python', code: 'x = 1' } }]
+    });
+  });
+
+  it('rejects an empty code string', () => {
+    expectErrorHelper({
+      quizId: QUIZ,
+      questions: [{ ...RESPONSE.questions[0], codeSnippet: { language: 'typescript', code: '' } }]
+    });
+  });
+
+  it('rejects a malformed codeSnippet object', () => {
+    expectErrorHelper({
+      quizId: QUIZ,
+      questions: [{ ...RESPONSE.questions[0], codeSnippet: 'not an object' }]
+    });
+  });
+
+  function expectErrorHelper(body: unknown): void {
+    let error: unknown;
+    service.loadQuestions(QUIZ).subscribe({ error: (e) => (error = e) });
+    http.expectOne({ method: 'GET', url: URL }).flush(body as object);
+    expect(error).toBeInstanceOf(TopicQuizQuestionsError);
+  }
+});
+
 describe('failure is closed', () => {
   const expectError = (body: unknown, status = 200) => {
     let error: unknown;

@@ -118,6 +118,54 @@ describe('AccordionComponent — Review filter Angular Aria Toolbar prototype', 
     expect(comp.incorrectCount()).toBe(before.incorrect);
   });
 
+  it('renders app-code-snippet in the expanded panel only for a question that has one', async () => {
+    const withSnippet: QuizQuestion[] = [
+      { ...QUESTIONS[0]!, codeSnippet: { language: 'typescript', code: 'const x = 1;' } },
+      QUESTIONS[1]!
+    ];
+    TestBed.configureTestingModule({
+      imports: [AccordionComponent],
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, parent: null } },
+        {
+          provide: QuizService, useValue: {
+            questionsSig: () => withSnippet,
+            userAnswers: [],
+            questions: [],
+            quizId: 'fixture-quiz',
+            setQuizId: jest.fn(),
+            getFinalResultSnapshot: () => null
+          }
+        },
+        { provide: QuizDataService, useValue: { getQuestionsForQuiz: () => ({ pipe: () => ({ subscribe: () => undefined }) }) } },
+        {
+          provide: SelectedOptionService, useValue: {
+            recoverAnswersForResults: jest.fn(),
+            rawSelectionsMap: new Map(),
+            selectedOptionsMap: new Map()
+          }
+        },
+        { provide: TimerService, useValue: { elapsedTimes: [], isCountdown: () => false } }
+      ]
+    });
+    const fixture = TestBed.createComponent(AccordionComponent);
+    fixture.componentRef.setInput('questions', withSnippet);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const headers = [...fixture.nativeElement.querySelectorAll('mat-expansion-panel-header')] as HTMLElement[];
+    headers[0]!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const snippetEls = fixture.nativeElement.querySelectorAll('app-code-snippet');
+    expect(snippetEls.length).toBe(1);
+    expect(snippetEls[0].textContent).toContain('const x = 1;');
+  });
+
   it('mouse click on "Incorrect" filters to Q1 only', async () => {
     const { fixture, comp } = await render();
     const incorrectBtn = filterButtons(fixture).find((b) => b.textContent?.includes('Incorrect'))!;

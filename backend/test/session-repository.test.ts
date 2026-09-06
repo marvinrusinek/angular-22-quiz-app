@@ -121,6 +121,68 @@ describe('atomic session creation', () => {
   });
 });
 
+describe('code snippets (session-questions persistence)', () => {
+  const SNIPPET = { language: 'typescript' as const, code: 'const x = 1;', filename: 'x.ts' };
+
+  it('defaults to no snippet', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput());
+    const snapshot = (await ctx.repo.getSessionSnapshot('sess_1'))!;
+    expect(snapshot.questions[0]!.codeSnippet).toBeUndefined();
+  });
+
+  it('persists and round-trips a snippet through session creation and hydration', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput({
+      questions: [question({ codeSnippet: SNIPPET })]
+    }));
+    const snapshot = (await ctx.repo.getSessionSnapshot('sess_1'))!;
+    expect(snapshot.questions[0]!.codeSnippet).toEqual(SNIPPET);
+  });
+
+  it('filename is optional on the snippet', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput({
+      questions: [question({ codeSnippet: { language: 'json', code: '{}' } })]
+    }));
+    const snapshot = (await ctx.repo.getSessionSnapshot('sess_1'))!;
+    expect(snapshot.questions[0]!.codeSnippet).toEqual({ language: 'json', code: '{}' });
+  });
+
+  it('persists across a rebuilt repository over the same database', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput({
+      questions: [question({ codeSnippet: SNIPPET })]
+    }));
+    const reopened = reopen(ctx.handle);
+    const snapshot = (await reopened.repo.getSessionSnapshot('sess_1'))!;
+    expect(snapshot.questions[0]!.codeSnippet).toEqual(SNIPPET);
+  });
+
+  it('flows into the FROZEN result at finalization, never affecting scoring', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput({
+      questions: [question({ codeSnippet: SNIPPET })]
+    }));
+    const result = await ctx.repo.finalizeSession({
+      sessionId: 'sess_1', now: CLOCK.CREATED_AT, topicTitleFor: () => 'RxJS'
+    });
+    expect(result.review[0]!.codeSnippet).toEqual(SNIPPET);
+    expect(result.unanswered).toBe(1);
+    expect(result.correct).toBe(0);
+  });
+
+  it('the schema requires a language whenever code is present', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput());
+    await expect(raw(
+      `UPDATE session_questions SET code = 'const x = 1;' WHERE session_id = 'sess_1' AND position = 0`
+    )).rejects.toThrow(CHECK_VIOLATION);
+  });
+
+  it('the schema rejects an unsupported language', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput());
+    await expect(raw(
+      `UPDATE session_questions SET code = 'x = 1', code_language = 'python'
+       WHERE session_id = 'sess_1' AND position = 0`
+    )).rejects.toThrow(CHECK_VIOLATION);
+  });
+});
+
 describe('setFlagged (Mark for Review persistence)', () => {
   it('defaults every question to unflagged', async () => {
     await ctx.repo.createSessionSnapshot(sessionInput());

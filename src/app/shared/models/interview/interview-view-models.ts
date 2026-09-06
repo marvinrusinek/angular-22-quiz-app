@@ -1,4 +1,4 @@
-import type { InterviewQuestionTypeDto } from '../api/interview-api.dto';
+import type { CodeSnippetDto, InterviewQuestionTypeDto } from '../api/interview-api.dto';
 
 /**
  * SAFE view models for an ACTIVE Interview.
@@ -25,6 +25,8 @@ export interface InterviewQuestionViewModel {
   readonly questionText: string;
   readonly type: InterviewQuestionType;
   readonly options: readonly InterviewOptionViewModel[];
+  /** Question CONTENT — static for the whole session. Absent on most questions. */
+  readonly codeSnippet?: CodeSnippetDto;
 }
 
 /** True when a question accepts more than one selection. */
@@ -82,6 +84,8 @@ export interface InterviewReviewQuestionViewModel {
   readonly isAnswered: boolean;
   /** The user's own Mark-for-Review note, frozen at submission. */
   readonly flagged: boolean;
+  /** Absent on every question that predates this feature. */
+  readonly codeSnippet?: CodeSnippetDto;
 }
 
 export interface InterviewTopicPerformanceViewModel {

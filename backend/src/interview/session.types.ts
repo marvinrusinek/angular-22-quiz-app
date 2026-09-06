@@ -1,4 +1,4 @@
-import type { QuestionType } from '../quiz/quiz.types';
+import type { CodeSnippet, QuestionType } from '../quiz/quiz.types';
 
 /**
  * Persistence types for Interview sessions — BACKEND PRIVATE.
@@ -58,6 +58,8 @@ export interface SessionQuestionSnapshot {
   readonly options: readonly SessionOptionSnapshot[];
   /** Mark for Review — the user's own note, never correctness. */
   readonly flagged: boolean;
+  /** Question CONTENT, frozen at session creation. Absent on most questions. */
+  readonly codeSnippet?: CodeSnippet;
 }
 
 export interface InterviewSessionSnapshot {
@@ -89,6 +91,7 @@ export interface CreateSessionQuestionInput {
   readonly type: QuestionType;
   readonly explanation: string;
   readonly options: readonly CreateSessionOptionInput[];
+  readonly codeSnippet?: CodeSnippet;
 }
 
 export interface CreateSessionInput {

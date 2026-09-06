@@ -26,6 +26,8 @@ export interface QuestionSource {
   readonly questionText?: unknown;
   readonly explanation?: unknown;
   readonly options?: unknown;
+  /** Optional read-only code snippet — question CONTENT, never answer-key material. */
+  readonly codeSnippet?: unknown;
 }
 
 export interface QuizSource {
@@ -58,6 +60,20 @@ export function isSingleSelect(type: QuestionType): boolean {
   return type !== 'multiple';
 }
 
+export type CodeSnippetLanguage = 'typescript' | 'html' | 'css' | 'json';
+
+/**
+ * A read-only code snippet shown alongside a question's text. Question
+ * CONTENT, never answer-key material — carries no correctness of its own and
+ * is safe under every pre-submit response policy that already permits
+ * `questionText`.
+ */
+export interface CodeSnippet {
+  readonly language: CodeSnippetLanguage;
+  readonly code: string;
+  readonly filename?: string;
+}
+
 export interface PrivateOption {
   /** Unique WITHIN its question only — never globally. See quiz.ids.ts. */
   readonly optionId: number;
@@ -76,6 +92,8 @@ export interface PrivateQuestion {
   /** ANSWER KEY material — withheld until the feedback policy allows it. */
   readonly explanation: string;
   readonly options: readonly PrivateOption[];
+  /** Optional. Absent on every question that predates this feature. */
+  readonly codeSnippet?: CodeSnippet;
 }
 
 export interface PrivateQuiz {

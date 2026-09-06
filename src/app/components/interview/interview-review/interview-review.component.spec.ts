@@ -320,6 +320,21 @@ describe('InterviewReviewComponent', () => {
     expect(itemEls()[0]!.textContent).toContain('Q2');
   });
 
+  it('renders app-code-snippet only on questions that have one', () => {
+    // None of the base QUESTIONS carry a snippet.
+    setup();
+    expect(el().querySelectorAll('app-code-snippet')).toHaveLength(0);
+
+    const withSnippet = QUESTIONS.map((q, i) =>
+      i === 0 ? { ...q, codeSnippet: { language: 'typescript' as const, code: 'const x = 1;' } } : q
+    );
+    setup(withSnippet);
+    const snippetEls = el().querySelectorAll('app-code-snippet');
+    expect(snippetEls).toHaveLength(1);
+    expect(itemEls()[0]!.querySelector('app-code-snippet')).not.toBeNull();
+    expect(itemEls()[1]!.querySelector('app-code-snippet')).toBeNull();
+  });
+
   it('embedded mode hides the header meta but keeps the review list', () => {
     setup();
     expect(el().querySelector('.rv-meta')).not.toBeNull();

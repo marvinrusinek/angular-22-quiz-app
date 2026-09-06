@@ -1,0 +1,16 @@
+<div class="code-snippet">
+  @if (filename(); as file) {
+    <div class="code-snippet__header">
+      <span class="code-snippet__filename">{{ file }}</span>
+      <span class="code-snippet__language">{{ languageLabel() }}</span>
+    </div>
+  } @else {
+    <div class="code-snippet__header code-snippet__header--language-only">
+      <span class="code-snippet__language">{{ languageLabel() }}</span>
+    </div>
+  }
+  <!-- tabindex so a keyboard user can scroll long lines without a mouse.
+       Highlighted markup is Prism's own escaped-and-tokenized output — see
+       the component's security note — never raw, untrusted HTML. -->
+  <pre class="code-snippet__pre" tabindex="0"><code class="code-snippet__code" [innerHTML]="highlighted()"></code></pre>
+</div>

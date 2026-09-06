@@ -126,6 +126,14 @@
         </span>
       </header>
 
+      @if (item.codeSnippet; as snippet) {
+        <app-code-snippet
+          [code]="snippet.code"
+          [language]="snippet.language"
+          [filename]="snippet.filename"
+        />
+      }
+
       @if (item.status === 'unanswered') {
         <p class="rv-unanswered" role="note" i18n>You did not answer this question.</p>
       }

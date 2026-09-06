@@ -30,13 +30,14 @@ import { TimerService } from '../../../shared/services/features/timer/timer.serv
 
 import { norm } from '../../../shared/utils/text-norm';
 import { swallow } from '../../../shared/utils/error-logging';
+import { CodeSnippetComponent } from '../../../components/code-snippet/code-snippet.component';
 
 export type ReviewFilter = 'all' | 'incorrect' | 'correct';
 
 @Component({
   selector: 'codelab-results-accordion',
   standalone: true,
-  imports: [MatExpansionModule, MatIconModule, Toolbar, ToolbarWidget, ToolbarWidgetGroup],
+  imports: [MatExpansionModule, MatIconModule, Toolbar, ToolbarWidget, ToolbarWidgetGroup, CodeSnippetComponent],
   templateUrl: './accordion.component.html',
   styleUrls: ['./accordion.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

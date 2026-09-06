@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
 import { Toolbar, ToolbarWidget, ToolbarWidgetGroup } from '@angular/aria/toolbar';
+import { CodeSnippetComponent } from '../../code-snippet/code-snippet.component';
 
 import type {
   InterviewResultViewModel,
@@ -55,6 +56,8 @@ interface ReviewItem {
   status: ReviewStatus;
   /** Mark for Review, as the user left it before submitting. */
   flagged: boolean;
+  /** Question CONTENT, frozen at submission. Absent on most questions. */
+  codeSnippet: InterviewReviewQuestionViewModel['codeSnippet'];
   options: ReviewOptionView[];
   /** "A and C" — shown for multi-answer / unanswered where it aids clarity. */
   correctSummary: string;
@@ -73,7 +76,7 @@ interface ReviewItem {
 @Component({
   selector: 'app-interview-review',
   standalone: true,
-  imports: [TitleCasePipe, Toolbar, ToolbarWidget, ToolbarWidgetGroup],
+  imports: [TitleCasePipe, Toolbar, ToolbarWidget, ToolbarWidgetGroup, CodeSnippetComponent],
   templateUrl: './interview-review.component.html',
   styleUrls: ['./interview-review.component.scss'],
   encapsulation: ViewEncapsulation.None,
@@ -158,6 +161,7 @@ export class InterviewReviewComponent {
         explanation: q.explanation,
         status,
         flagged: q.flagged,
+        codeSnippet: q.codeSnippet,
         options,
         correctSummary: showSummary ? joinWithAnd(correctLabels) : ''
       };

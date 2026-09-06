@@ -11,6 +11,18 @@
 
 export type InterviewQuestionTypeDto = 'single' | 'multiple' | 'trueFalse';
 
+/**
+ * A read-only code snippet shown alongside a question's text. Question
+ * CONTENT, never answer-key material — present on both the active-session and
+ * submitted-review question DTOs, since a snippet is safe to see both before
+ * and after answering.
+ */
+export interface CodeSnippetDto {
+  readonly language: 'typescript' | 'html' | 'css' | 'json';
+  readonly code: string;
+  readonly filename?: string;
+}
+
 // ── requests ────────────────────────────────────────────────────────
 
 /** A preset owns its topics, count, duration and quotas — send only the id. */
@@ -49,6 +61,8 @@ export interface ActiveInterviewQuestionDto {
   readonly options: readonly ActiveInterviewOptionDto[];
   /** The user's own Mark-for-Review note. Never correctness. */
   readonly flagged: boolean;
+  /** Absent on every question that predates this feature. */
+  readonly codeSnippet?: CodeSnippetDto;
 }
 
 export interface ActiveInterviewAnswerDto {
@@ -115,6 +129,8 @@ export interface InterviewReviewQuestionDto {
   readonly explanation: string;
   /** The user's own Mark-for-Review note, frozen at submission. */
   readonly flagged: boolean;
+  /** Absent on every question that predates this feature. */
+  readonly codeSnippet?: CodeSnippetDto;
 }
 
 export interface InterviewPerformanceBucketDto {

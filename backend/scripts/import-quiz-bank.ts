@@ -204,8 +204,9 @@ async function importBank(
     for (const [questionIndex, question] of quiz.questions.entries()) {
       const inserted = await client.query<{ id: string }>(
         `INSERT INTO questions
-           (quiz_pk, question_text, question_type, explanation, display_order, legacy_question_id)
-         VALUES ($1, $2, $3, $4, $5, $6)
+           (quiz_pk, question_text, question_type, explanation, display_order, legacy_question_id,
+            code, code_language, code_filename)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id`,
         [
           quizPk,
@@ -213,7 +214,10 @@ async function importBank(
           question.type,
           question.explanation,
           questionIndex,
-          question.questionId          // provenance: '<quizId>:q:<index>'
+          question.questionId,          // provenance: '<quizId>:q:<index>'
+          question.codeSnippet?.code ?? null,
+          question.codeSnippet?.language ?? null,
+          question.codeSnippet?.filename ?? null
         ]
       );
       const questionPk = Number(inserted.rows[0]!['id']);

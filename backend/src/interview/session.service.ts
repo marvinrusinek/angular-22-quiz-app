@@ -567,7 +567,8 @@ export class InterviewSessionService {
           text: option.optionText,
           displayOrder: option.displayOrder,
           isCorrect: option.isCorrect
-        }))
+        })),
+        ...(question.codeSnippet ? { codeSnippet: question.codeSnippet } : {})
       }))
     };
   }

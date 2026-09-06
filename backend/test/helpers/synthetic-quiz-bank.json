@@ -977,6 +977,11 @@
         {
           "questionText": "Which whatsit code unlocks feature 1?",
           "explanation": "Fixture explanation: code-1 unlocks whatsit feature 1.",
+          "codeSnippet": {
+            "language": "typescript",
+            "code": "const codeSignal = signal(1);\nconst codeLabel = computed(() => `code-${codeSignal()}`);",
+            "filename": "code.ts"
+          },
           "options": [
             {
               "text": "code-1",
@@ -993,6 +998,10 @@
         {
           "questionText": "Which whatsit code unlocks feature 2?",
           "explanation": "Fixture explanation: code-2 unlocks whatsit feature 2.",
+          "codeSnippet": {
+            "language": "html",
+            "code": "<div>code-2</div>\n<script>window.__CODE_SNIPPET_E2E_XSS__ = true;</script>"
+          },
           "options": [
             {
               "text": "code-2",

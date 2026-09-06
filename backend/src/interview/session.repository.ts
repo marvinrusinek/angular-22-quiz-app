@@ -1,6 +1,6 @@
 import type { DatabaseHandle, Queryable } from '../db/database';
 
-import type { QuestionType } from '../quiz/quiz.types';
+import type { CodeSnippetLanguage, QuestionType } from '../quiz/quiz.types';
 import { computeTimeUsedSeconds, scoreInterview } from './result.scoring';
 import {
   assertResultInvariants,
@@ -80,6 +80,7 @@ export interface FlaggedState {
 }
 
 const QUESTION_TYPES: readonly QuestionType[] = ['single', 'multiple', 'trueFalse'];
+const CODE_SNIPPET_LANGUAGES: readonly CodeSnippetLanguage[] = ['typescript', 'html', 'css', 'json'];
 
 // ── row shapes (module-private) ─────────────────────────────────────
 
@@ -105,6 +106,9 @@ interface QuestionRow {
   question_type: string;
   explanation: string;
   flagged: number;
+  code: string | null;
+  code_language: string | null;
+  code_filename: string | null;
 }
 
 interface OptionRow {
@@ -205,6 +209,14 @@ function toQuestionType(raw: string, context: string): QuestionType {
   const match = QUESTION_TYPES.find((type) => type === raw);
   if (!match) {
     throw new SessionRepositoryError('CORRUPT_DATA', `${context} has an unknown question type`);
+  }
+  return match;
+}
+
+function toCodeSnippetLanguage(raw: string | null, context: string): CodeSnippetLanguage {
+  const match = CODE_SNIPPET_LANGUAGES.find((language) => language === raw);
+  if (!match) {
+    throw new SessionRepositoryError('CORRUPT_DATA', `${context} has an unknown code snippet language`);
   }
   return match;
 }
@@ -317,8 +329,9 @@ export function createSessionRepository(db: DatabaseHandle): SessionRepository {
   `;
   const INSERT_QUESTION = `
     INSERT INTO session_questions
-      (session_id, position, question_id, source_quiz_id, question_text, question_type, explanation)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+      (session_id, position, question_id, source_quiz_id, question_text, question_type, explanation,
+       code, code_language, code_filename)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
   `;
   const INSERT_OPTION = `
     INSERT INTO session_options
@@ -329,7 +342,8 @@ export function createSessionRepository(db: DatabaseHandle): SessionRepository {
   const SELECT_SESSION = 'SELECT * FROM interview_sessions WHERE id = $1';
   const SELECT_BY_ATTEMPT = 'SELECT * FROM interview_sessions WHERE attempt_id = $1';
   const SELECT_QUESTIONS = `
-    SELECT position, question_id, source_quiz_id, question_text, question_type, explanation, flagged
+    SELECT position, question_id, source_quiz_id, question_text, question_type, explanation, flagged,
+           code, code_language, code_filename
     FROM session_questions WHERE session_id = $1 ORDER BY position
   `;
   const SELECT_OPTIONS = `
@@ -448,7 +462,16 @@ export function createSessionRepository(db: DatabaseHandle): SessionRepository {
       type: toQuestionType(row.question_type, `${context} question ${num(row.position)}`),
       explanation: row.explanation,
       options: optionsByPosition.get(num(row.position)) ?? [],
-      flagged: num(row.flagged) === 1
+      flagged: num(row.flagged) === 1,
+      ...(row.code
+        ? {
+            codeSnippet: {
+              language: toCodeSnippetLanguage(row.code_language, `${context} question ${num(row.position)}`),
+              code: row.code,
+              ...(row.code_filename ? { filename: row.code_filename } : {})
+            }
+          }
+        : {})
     }));
   }
 
@@ -530,7 +553,10 @@ export function createSessionRepository(db: DatabaseHandle): SessionRepository {
               question.sourceQuizId,
               question.questionText,
               question.type,
-              question.explanation
+              question.explanation,
+              question.codeSnippet?.code ?? null,
+              question.codeSnippet?.language ?? null,
+              question.codeSnippet?.filename ?? null
             ]);
 
             for (const option of question.options) {

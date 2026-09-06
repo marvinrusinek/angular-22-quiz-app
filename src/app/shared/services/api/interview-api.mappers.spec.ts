@@ -101,6 +101,19 @@ describe('question mapping', () => {
     // The determination cannot be using correctness, because none exists.
     expect(JSON.stringify(multiple)).not.toContain('correct');
   });
+
+  it('is absent when the question has none', () => {
+    const vm = toQuestionViewModel(session.questions[0]!);
+    expect(vm.codeSnippet).toBeUndefined();
+    expect('codeSnippet' in vm).toBe(false);
+  });
+
+  it('carries codeSnippet through, as a NEW object', () => {
+    const snippet = { language: 'typescript' as const, code: 'const x = 1;', filename: 'x.ts' };
+    const vm = toQuestionViewModel({ ...session.questions[0]!, codeSnippet: snippet });
+    expect(vm.codeSnippet).toEqual(snippet);
+    expect(vm.codeSnippet).not.toBe(snippet);
+  });
 });
 
 describe('session mapping', () => {
@@ -151,6 +164,13 @@ describe('review mapping', () => {
   it('carries the flagged note through untouched', () => {
     expect(toReviewQuestionViewModel(question({ flagged: true })).flagged).toBe(true);
     expect(toReviewQuestionViewModel(question({ flagged: false })).flagged).toBe(false);
+  });
+
+  it('carries the code snippet through, or leaves it absent', () => {
+    expect(toReviewQuestionViewModel(question()).codeSnippet).toBeUndefined();
+
+    const snippet = { language: 'typescript' as const, code: 'const x = 1;' };
+    expect(toReviewQuestionViewModel(question({ codeSnippet: snippet })).codeSnippet).toEqual(snippet);
   });
 
   it('derives isCorrect by EXACT SET equality, order-independent', () => {

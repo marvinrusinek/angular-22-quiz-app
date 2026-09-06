@@ -161,6 +161,22 @@
     </span>
   }
 
+  <!-- Announces the updated count while actively searching. Not shown when the
+       search box is empty (avoids a spurious announcement on every page load)
+       and not shown for zero results (the "no quizzes match" message above
+       already covers that, so this never duplicates it). Visually hidden —
+       the tile grid itself already shows the count to sighted users. -->
+  @if (searchTerm().trim().length > 0 && displayedQuizzes().length > 0) {
+    <span
+      class="visually-hidden"
+      role="status"
+      aria-live="polite"
+      i18n
+    >
+      {{ displayedQuizzes().length }} {{ displayedQuizzes().length === 1 ? 'quiz found' : 'quizzes found' }}
+    </span>
+  }
+
   <!-- Quiz Tiles Grid -->
   <div class="quiz-grid">
     <!-- Featured Interview Mode card. Rendered OUTSIDE the @for so it is not a
@@ -196,12 +212,27 @@
         [class.completed]="isCompleted(quiz)"
         [@slideLeftToRight]="animationStateSig()"
         (@slideLeftToRight.done)="animationDoneHandler()"
-        (click)="onSelect(quiz.quizId, i)"
         routerLinkActive="active"
         [ngStyle]="getQuizTileStyles(quiz)"
       >
+        <!-- Native, full-tile activation control. An absolutely-positioned
+             overlay (not a wrapper) so it covers the SAME clickable area the
+             tile always has, without requiring the flex/layout of the visible
+             content below to change. Its accessible name is derived from the
+             visible title/summary via aria-labelledby (below), not a
+             duplicate aria-label. Kept as a SIBLING of .status-icon's <a>,
+             never an ancestor, because a <button> cannot legally contain
+             another interactive element (nested-interactive markup). -->
+        <button
+          type="button"
+          class="quiz-tile__activate"
+          [attr.aria-labelledby]="'quiz-title-' + i + ' quiz-summary-' + i"
+          (click)="onSelect(quiz.quizId, i)"
+        ></button>
+
         <summary class="quiz-info">
           <h5
+            [id]="'quiz-title-' + i"
             class="quiz-title"
             i18n
           >
@@ -209,6 +240,7 @@
           </h5>
 
           <h6
+            [id]="'quiz-summary-' + i"
             class="quiz-summary"
             i18n
           >

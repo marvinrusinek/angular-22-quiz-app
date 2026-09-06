@@ -167,6 +167,21 @@
     color: vars.$gray;
   }
 
+  // Screen-reader-only content: present in the accessibility tree, removed
+  // from visual layout without display:none (which would also hide it from
+  // assistive tech). Standard clip-based pattern; no layout shift.
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
   .achievements-summary-row {
     display: flex;
     flex-direction: row;
@@ -296,6 +311,31 @@
 
     .quiz-tile {
       position: relative;
+
+      // Native, full-tile activation control (see the template comment).
+      // Transparent + absolutely-positioned so it covers exactly the area the
+      // tile has always been clickable across, without touching the layout of
+      // the visible content it sits above. outline-offset is NEGATIVE because
+      // the tile clips overflow — a positive offset would draw the ring
+      // outside the tile and get clipped away.
+      .quiz-tile__activate {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        z-index: 1;
+
+        &:focus-visible {
+          outline: 3px solid vars.$dodger-blue;
+          outline-offset: -3px;
+        }
+      }
+
       // Flex column so the difficulty badge can be pinned to the bottom of every
       // tile (via margin-top:auto) and line up across the row, regardless of how
       // long each summary is.
@@ -444,6 +484,10 @@
         position: absolute;
         top: 10px;
         right: 10px;
+        // Above .quiz-tile__activate (z-index: 1) so its own link stays
+        // independently clickable/focusable rather than being swallowed by
+        // the full-tile overlay button.
+        z-index: 2;
 
         mat-card-actions {
           padding: 0;

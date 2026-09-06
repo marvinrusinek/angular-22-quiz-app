@@ -1,7 +1,8 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
-import { Router } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
 import { QuizSelectionComponent } from './quiz-selection.component';
 import { QuizService } from '../../shared/services/data/quiz.service';
@@ -188,5 +189,133 @@ describe('QuizSelectionComponent — bank-absence catalog (S6o)', () => {
     await comp.onSelect('create-first-app', 0);
 
     expect(router.navigate).toHaveBeenCalledWith(['results/', 'create-first-app']);
+  });
+});
+
+/**
+ * Accessibility regression coverage for the quiz-tile keyboard-operability fix.
+ *
+ * ROOT DEFECT this guards against: the tile's ENTIRE clickable surface was a
+ * plain `<div class="quiz-tile" (click)="onSelect(...)">` with no `tabindex`,
+ * `role`, or keydown handler — a keyboard-only or screen-reader user could not
+ * reach or activate it at all. The fix adds a real `<button type="button">`
+ * (`.quiz-tile__activate`) as a full-tile overlay, so native browser semantics
+ * (Tab reachability, Enter/Space activation) apply for free.
+ *
+ * Native Enter/Space-to-click activation for a real <button> is supplied by
+ * the BROWSER's own interaction layer, which jsdom does not simulate — a
+ * dispatched `keydown` on a jsdom button does not synthesize a `click`. That
+ * half of the contract is verified in Playwright
+ * (e2e/quiz-selection-tile-a11y.spec.ts), not here. This spec proves the
+ * structural/DOM-level half: a real, focusable, correctly-labelled button
+ * exists and drives the exact same onSelect() path a click always has.
+ */
+describe('QuizSelectionComponent — tile keyboard accessibility', () => {
+  let router: { navigate: jest.Mock };
+
+  const difficultyMap = new Map<string, string | null>([['create-first-app', 'beginner']]);
+  const milestoneMap = new Map<string, string>([['create-first-app', 'Create Your First App']]);
+  const summaryMap = new Map<string, string>([['create-first-app', 'Get started with Angular.']]);
+  const questionCountMap = new Map<string, number | null>([['create-first-app', 5]]);
+  const imageMap = new Map<string, string>();
+  const factsMap = new Map<string, readonly string[]>();
+
+  const makeMetadataApi = (): any => ({
+    load: jest.fn(() => of([{ quizId: 'create-first-app' }])),
+    difficultyByQuiz: signal(difficultyMap),
+    milestoneByQuiz: signal(milestoneMap),
+    summaryByQuiz: signal(summaryMap),
+    imageByQuiz: signal(imageMap),
+    factsByQuiz: signal(factsMap),
+    questionCountByQuiz: signal(questionCountMap),
+    imageFor: (id: string) => imageMap.get(id) ?? '',
+    factsFor: (id: string) => factsMap.get(id) ?? []
+  });
+
+  function render(): { fixture: ComponentFixture<QuizSelectionComponent>; comp: QuizSelectionComponent } {
+    sessionStorage.clear();
+    localStorage.clear();
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: QuizService, useValue: {
+            setQuizId: jest.fn(),
+            setQuizStatus: jest.fn(),
+            setCompletedQuizId: jest.fn(),
+            setCheckedShuffle: jest.fn(),
+            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            quizCompleted: false
+          }
+        },
+        { provide: AchievementService, useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() } },
+        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+        { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
+        { provide: TopicQuizMetadataService, useValue: makeMetadataApi() }
+      ]
+    });
+
+    // Real Router (via provideRouter) so RouterLink/RouterLinkActive on the
+    // status-icon link and the tile work exactly as they do in the app;
+    // navigate() itself is spied rather than replaced, so onSelect()'s real
+    // call still resolves.
+    router = { navigate: jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true) as any };
+
+    const fixture = TestBed.createComponent(QuizSelectionComponent);
+    fixture.detectChanges();
+    return { fixture, comp: fixture.componentInstance };
+  }
+
+  it('renders the tile\'s activation control as a real native <button>, not a non-semantic clickable container', () => {
+    const { fixture } = render();
+    const activateBtn: HTMLElement | null =
+      fixture.nativeElement.querySelector('.quiz-tile:not(.interview-tile) .quiz-tile__activate');
+
+    expect(activateBtn).not.toBeNull();
+    expect(activateBtn!.tagName).toBe('BUTTON');
+    expect(activateBtn!.getAttribute('type')).toBe('button');
+  });
+
+  it('the button\'s accessible name is derived from the tile\'s own visible title and summary', () => {
+    const { fixture } = render();
+    const activateBtn: HTMLElement =
+      fixture.nativeElement.querySelector('.quiz-tile:not(.interview-tile) .quiz-tile__activate');
+    const labelledBy = (activateBtn.getAttribute('aria-labelledby') ?? '').split(' ').filter(Boolean);
+
+    expect(labelledBy.length).toBe(2);
+    const labelText = labelledBy
+      .map((id) => fixture.nativeElement.querySelector(`#${id}`)?.textContent?.trim())
+      .join(' ');
+    expect(labelText).toContain('Create Your First App');
+    expect(labelText).toContain('Get started with Angular.');
+  });
+
+  it('activating the tile button invokes the SAME onSelect() path a mouse click always has', () => {
+    const { fixture, comp } = render();
+    const spy = jest.spyOn(comp, 'onSelect');
+    const activateBtn: HTMLElement =
+      fixture.nativeElement.querySelector('.quiz-tile:not(.interview-tile) .quiz-tile__activate');
+
+    activateBtn.click();
+
+    expect(spy).toHaveBeenCalledWith('create-first-app', 0);
+  });
+
+  it('the outer tile container itself no longer owns the click handler — only the button does', () => {
+    const { fixture, comp } = render();
+    const spy = jest.spyOn(comp, 'onSelect');
+    const tile: HTMLElement = fixture.nativeElement.querySelector('.quiz-tile:not(.interview-tile)');
+
+    // Dispatched directly on the container, NOT the button — before the fix
+    // this alone called onSelect(); after the fix, activation lives solely on
+    // .quiz-tile__activate, so this must NOT fire it.
+    tile.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(spy).not.toHaveBeenCalled();
   });
 });

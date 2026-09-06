@@ -52,7 +52,13 @@
     <span class="option-text">{{ getOptionDisplayText() }}</span>
 
     @if (shouldShowIcon()) {
-      <mat-icon class="opt-icon">{{ getOptionIcon() }}</mat-icon>
+      <!-- Decorative reinforcement only: correctness is already announced via
+           the codelab-quiz-feedback aria-live region and conveyed by the
+           option's own correct/incorrect background color. Without
+           aria-hidden a screen reader would read the raw icon-font ligature
+           text ("check"/"close"), which is not a duplicate announcement of
+           correctness, just confusing noise. -->
+      <mat-icon class="opt-icon" aria-hidden="true">{{ getOptionIcon() }}</mat-icon>
     }
   </div>
 </ng-template>

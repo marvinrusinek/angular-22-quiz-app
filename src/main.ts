@@ -1,5 +1,5 @@
 import { bootstrapApplication } from '@angular/platform-browser';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import {
@@ -18,6 +18,7 @@ import { ANSWER_COMPONENT } from './app/shared/tokens/answer-component.token';
 import { PwaUpdateService } from './app/shared/services/pwa-update.service';
 import { GlobalErrorHandler, installGlobalErrorLogging } from './app/shared/utils/error-logging';
 import { provideApiBaseUrl } from './app/shared/tokens/api-base-url.token';
+import { apiErrorInterceptor } from './app/shared/http/api-error.interceptor';
 import { provideApiTopicQuizVerdictAdapter } from './app/shared/services/features/verdict/verdict-adapter';
 import { InterviewSessionReferenceStorage } from './app/shared/services/interview/interview-session-reference.storage';
 
@@ -36,7 +37,7 @@ bootstrapApplication(AppComponent, {
     // GitHub Pages build, no SSR), so there is never serialized server state to
     // hydrate from. Angular 22 warns about exactly that combination (NG0505),
     // and the provider did nothing for us, so it is gone rather than silenced.
-    provideHttpClient(withFetch()),
+    provideHttpClient(withFetch(), withInterceptors([apiErrorInterceptor])),
     // Base URL for the private quiz API. Provided centrally so no service or
     // component hard-codes a host.
     provideApiBaseUrl(),

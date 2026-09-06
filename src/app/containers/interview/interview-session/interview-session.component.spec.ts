@@ -22,28 +22,35 @@ const QUESTIONS = [
   {
     questionId: 'rxjs:q:0', sourceQuizId: 'rxjs',
     questionText: 'Which answer is correct?', type: 'single' as const,
-    options: [{ optionId: 101, text: 'A' }, { optionId: 102, text: 'B' }]
+    options: [{ optionId: 101, text: 'A' }, { optionId: 102, text: 'B' }],
+    flagged: false
   },
   {
     questionId: 'rxjs:q:1', sourceQuizId: 'rxjs',
     questionText: 'Select all that apply', type: 'multiple' as const,
-    options: [{ optionId: 201, text: 'C' }, { optionId: 202, text: 'D' }, { optionId: 203, text: 'E' }]
+    options: [{ optionId: 201, text: 'C' }, { optionId: 202, text: 'D' }, { optionId: 203, text: 'E' }],
+    flagged: false
   },
   {
     questionId: 'signals:q:0', sourceQuizId: 'signals',
     questionText: 'True or false?', type: 'trueFalse' as const,
-    options: [{ optionId: 301, text: 'True' }, { optionId: 302, text: 'False' }]
+    options: [{ optionId: 301, text: 'True' }, { optionId: 302, text: 'False' }],
+    flagged: false
   }
 ];
 
-function session(answers = new Map<string, readonly number[]>()): InterviewSessionViewModel {
+function session(
+  answers = new Map<string, readonly number[]>(),
+  flags = new Map<string, boolean>()
+): InterviewSessionViewModel {
   return {
     sessionId: 'is_1', status: 'active',
     createdAtMs: 1_700_000_000_000, expiresAtMs: 1_700_000_900_000,
     durationSeconds: 900, remainingSeconds: 900,
     config: { mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs'], questionCount: 3 },
     questions: QUESTIONS,
-    answers
+    answers,
+    flags
   };
 }
 
@@ -54,12 +61,14 @@ let fixture: ComponentFixture<InterviewSessionComponent>;
 let rendered = false;
 let component: InterviewSessionComponent;
 let backend: BackendInterviewSessionService;
-let api: { saveAnswer: jest.Mock; submitSession: jest.Mock; resumeSession: jest.Mock };
+let api: {
+  saveAnswer: jest.Mock; submitSession: jest.Mock; resumeSession: jest.Mock; setReviewFlag: jest.Mock;
+};
 let router: Router;
 
-function render(answers?: Map<string, readonly number[]>): void {
+function render(answers?: Map<string, readonly number[]>, flags?: Map<string, boolean>): void {
   backend = TestBed.inject(BackendInterviewSessionService);
-  backend.activateCreatedSession(session(answers), TOKEN);
+  backend.activateCreatedSession(session(answers, flags), TOKEN);
 
   fixture = TestBed.createComponent(InterviewSessionComponent);
   rendered = true;
@@ -82,7 +91,10 @@ const settleMicrotasks = async (): Promise<void> => {
 
 beforeEach(() => {
   sessionStorage.clear();
-  api = { saveAnswer: jest.fn(), submitSession: jest.fn(), resumeSession: jest.fn() };
+  api = {
+    saveAnswer: jest.fn(), submitSession: jest.fn(), resumeSession: jest.fn(),
+    setReviewFlag: jest.fn()
+  };
 
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({

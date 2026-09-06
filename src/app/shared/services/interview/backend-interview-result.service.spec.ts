@@ -35,7 +35,7 @@ function result(over: Partial<InterviewResultViewModel> = {}): InterviewResultVi
       questionId: 'rxjs:q:0', sourceQuizId: 'rxjs', questionText: 'Q?', type: 'single',
       options: [{ optionId: 1, text: 'A' }, { optionId: 2, text: 'B' }],
       selectedOptionIds: [1], correctOptionIds: [1], explanation: 'Because.',
-      isCorrect: true, isAnswered: true
+      isCorrect: true, isAnswered: true, flagged: false
     }],
     ...over
   };
@@ -118,7 +118,7 @@ describe('loading', () => {
       sessionId: 'is_1', status: 'active', createdAtMs: 0, expiresAtMs: 0,
       durationSeconds: 900, remainingSeconds: 900,
       config: { mode: 'custom', topicIds: ['rxjs'], questionCount: 1 },
-      questions: [], answers: new Map()
+      questions: [], answers: new Map(), flags: new Map()
     }, TOKEN);
     await session.submit();
 
@@ -136,7 +136,7 @@ describe('loading', () => {
       sessionId, status: 'active', createdAtMs: 0, expiresAtMs: 0,
       durationSeconds: 900, remainingSeconds: 900,
       config: { mode: 'custom', topicIds: ['rxjs'], questionCount: 1 },
-      questions: [], answers: new Map()
+      questions: [], answers: new Map(), flags: new Map()
     }, TOKEN);
 
     api.submitSession.mockReturnValue(of(result({ sessionId: 'is_1' })));

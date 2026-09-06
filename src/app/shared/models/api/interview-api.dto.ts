@@ -47,6 +47,8 @@ export interface ActiveInterviewQuestionDto {
   readonly questionText: string;
   readonly type: InterviewQuestionTypeDto;
   readonly options: readonly ActiveInterviewOptionDto[];
+  /** The user's own Mark-for-Review note. Never correctness. */
+  readonly flagged: boolean;
 }
 
 export interface ActiveInterviewAnswerDto {
@@ -85,6 +87,15 @@ export interface SaveInterviewAnswerResponse {
   readonly questionCount: number;
 }
 
+export interface SetReviewFlagRequest {
+  readonly flagged: boolean;
+}
+
+export interface SetReviewFlagResponse {
+  readonly questionId: string;
+  readonly flagged: boolean;
+}
+
 // ── submitted result ────────────────────────────────────────────────
 
 export interface InterviewReviewOptionDto {
@@ -102,6 +113,8 @@ export interface InterviewReviewQuestionDto {
   /** Authorized only after submission. */
   readonly correctOptionIds: readonly number[];
   readonly explanation: string;
+  /** The user's own Mark-for-Review note, frozen at submission. */
+  readonly flagged: boolean;
 }
 
 export interface InterviewPerformanceBucketDto {

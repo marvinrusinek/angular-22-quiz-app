@@ -121,6 +121,108 @@ describe('atomic session creation', () => {
   });
 });
 
+describe('setFlagged (Mark for Review persistence)', () => {
+  it('defaults every question to unflagged', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput());
+    const snapshot = (await ctx.repo.getSessionSnapshot('sess_1'))!;
+    expect(snapshot.questions[0]!.flagged).toBe(false);
+  });
+
+  it('sets the flag on an UNANSWERED question without creating an answer row', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput());
+    const result = await ctx.repo.setFlagged({
+      sessionId: 'sess_1', questionId: 'rxjs:q:0', flagged: true, now: CLOCK.CREATED_AT
+    });
+
+    expect(result).toEqual({ questionId: 'rxjs:q:0', flagged: true });
+    expect((await ctx.repo.getSessionSnapshot('sess_1'))!.questions[0]!.flagged).toBe(true);
+    expect(await countRows('session_answers')).toBe(0);
+  });
+
+  it('clears the flag', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput());
+    await ctx.repo.setFlagged({
+      sessionId: 'sess_1', questionId: 'rxjs:q:0', flagged: true, now: CLOCK.CREATED_AT
+    });
+    await ctx.repo.setFlagged({
+      sessionId: 'sess_1', questionId: 'rxjs:q:0', flagged: false, now: CLOCK.CREATED_AT
+    });
+    expect((await ctx.repo.getSessionSnapshot('sess_1'))!.questions[0]!.flagged).toBe(false);
+  });
+
+  it('persists across a rebuilt repository over the same database', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput());
+    await ctx.repo.setFlagged({
+      sessionId: 'sess_1', questionId: 'rxjs:q:0', flagged: true, now: CLOCK.CREATED_AT
+    });
+
+    const reopened = reopen(ctx.handle);
+    expect((await reopened.repo.getSessionSnapshot('sess_1'))!.questions[0]!.flagged).toBe(true);
+  });
+
+  it('rejects an unknown session', async () => {
+    await expect(ctx.repo.setFlagged({
+      sessionId: 'nope', questionId: 'rxjs:q:0', flagged: true, now: CLOCK.CREATED_AT
+    })).rejects.toThrow(SessionRepositoryError);
+  });
+
+  it('rejects a question that does not belong to the session', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput());
+    await expect(ctx.repo.setFlagged({
+      sessionId: 'sess_1', questionId: 'rxjs:q:99', flagged: true, now: CLOCK.CREATED_AT
+    })).rejects.toThrow(SessionRepositoryError);
+  });
+
+  it('rejects once the deadline has passed, and marks the session expired', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput());
+    const afterDeadline = CLOCK.CREATED_AT + CLOCK.HOUR_MS;
+
+    await expect(ctx.repo.setFlagged({
+      sessionId: 'sess_1', questionId: 'rxjs:q:0', flagged: true, now: afterDeadline
+    })).rejects.toThrow(SessionRepositoryError);
+
+    expect((await ctx.repo.getSessionById('sess_1'))!.status).toBe('expired');
+  });
+
+  it('rejects once the session is submitted', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput());
+    await ctx.repo.finalizeSession({
+      sessionId: 'sess_1', now: CLOCK.CREATED_AT, topicTitleFor: () => 'RxJS'
+    });
+
+    await expect(ctx.repo.setFlagged({
+      sessionId: 'sess_1', questionId: 'rxjs:q:0', flagged: true, now: CLOCK.CREATED_AT
+    })).rejects.toThrow(SessionRepositoryError);
+  });
+
+  it('the persisted column is exactly 0 or 1 — never anything else', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput());
+    await ctx.repo.setFlagged({
+      sessionId: 'sess_1', questionId: 'rxjs:q:0', flagged: true, now: CLOCK.CREATED_AT
+    });
+    const { rows } = await raw(
+      'SELECT flagged FROM session_questions WHERE session_id = $1 AND position = 0', ['sess_1']
+    );
+    expect(Number((rows as { flagged: number }[])[0]!.flagged)).toBe(1);
+  });
+
+  it('flows into the FROZEN result at finalization, without affecting scoring', async () => {
+    await ctx.repo.createSessionSnapshot(sessionInput());
+    await ctx.repo.setFlagged({
+      sessionId: 'sess_1', questionId: 'rxjs:q:0', flagged: true, now: CLOCK.CREATED_AT
+    });
+
+    const result = await ctx.repo.finalizeSession({
+      sessionId: 'sess_1', now: CLOCK.CREATED_AT, topicTitleFor: () => 'RxJS'
+    });
+
+    expect(result.review[0]!.flagged).toBe(true);
+    expect(result.answered).toBe(0);
+    expect(result.unanswered).toBe(1);
+    expect(result.correct).toBe(0);
+  });
+});
+
 describe('schema constraints', () => {
   function rawInsertSession(overrides: Record<string, unknown> = {}): Promise<unknown> {
     const row = {

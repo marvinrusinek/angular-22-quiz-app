@@ -10,7 +10,8 @@ describe('InterviewPaginatorComponent', () => {
     total: number,
     current: number,
     answered: ReadonlySet<number> = new Set(),
-    canNext = true
+    canNext = true,
+    marked: ReadonlySet<number> = new Set()
   ) {
     fixture = TestBed.createComponent(InterviewPaginatorComponent);
     component = fixture.componentInstance;
@@ -18,6 +19,7 @@ describe('InterviewPaginatorComponent', () => {
     fixture.componentRef.setInput('currentIndex', current);
     fixture.componentRef.setInput('answered', answered);
     fixture.componentRef.setInput('canNext', canNext);
+    fixture.componentRef.setInput('marked', marked);
     fixture.detectChanges();
   }
 
@@ -78,7 +80,7 @@ describe('InterviewPaginatorComponent', () => {
     expect(ellipsis.getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('conveys answered state without color (underline class + accessible label)', () => {
+  it('conveys answered state via a filled-background class + accessible label', () => {
     setup(10, 3, new Set([2]));   // current Q4; Q3 answered; window covers Q1–Q6 + Q10
     const q3 = pageButtons().find((b) => b.textContent!.trim() === '3')!;
     expect(q3.classList.contains('answered')).toBe(true);
@@ -87,6 +89,43 @@ describe('InterviewPaginatorComponent', () => {
     const q5 = pageButtons().find((b) => b.textContent!.trim() === '5')!;
     expect(q5.classList.contains('answered')).toBe(false);
     expect(q5.getAttribute('aria-label')).toBe('Go to question 5, not answered');
+  });
+
+  describe('marked for review', () => {
+    it('conveys marked state via its own class + accessible label suffix', () => {
+      setup(10, 3, new Set(), true, new Set([4]));   // Q5 marked, window covers Q1–Q6 + Q10
+      const q5 = pageButtons().find((b) => b.textContent!.trim() === '5')!;
+      expect(q5.classList.contains('marked')).toBe(true);
+      expect(q5.getAttribute('aria-label')).toBe('Go to question 5, not answered, marked for review');
+
+      const q3 = pageButtons().find((b) => b.textContent!.trim() === '3')!;
+      expect(q3.classList.contains('marked')).toBe(false);
+      expect(q3.getAttribute('aria-label')).toBe('Go to question 3, not answered');
+    });
+
+    it('combines with answered — a question can be both at once, neither class overwrites the other', () => {
+      setup(10, 3, new Set([4]), true, new Set([4]));   // Q5 answered AND marked
+      const q5 = pageButtons().find((b) => b.textContent!.trim() === '5')!;
+      expect(q5.classList.contains('answered')).toBe(true);
+      expect(q5.classList.contains('marked')).toBe(true);
+      expect(q5.getAttribute('aria-label')).toBe('Go to question 5, answered, marked for review');
+    });
+
+    it('never exposes correctness via the marked state', () => {
+      setup(10, 0, new Set(), true, new Set([1, 2]));
+      for (const b of pageButtons()) {
+        expect(b.className).not.toMatch(/correct|incorrect|wrong|right/i);
+      }
+    });
+
+    it('defaults to an empty set so the component works standalone', () => {
+      fixture = TestBed.createComponent(InterviewPaginatorComponent);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('total', 10);
+      fixture.componentRef.setInput('currentIndex', 0);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.pg-page.marked')).toBeNull();
+    });
   });
 
   it('never exposes correctness on any page', () => {

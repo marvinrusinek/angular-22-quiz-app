@@ -273,6 +273,37 @@
     color: var(--is-muted);
     font-variant-numeric: tabular-nums;
   }
+
+  // Own row below the existing three-column row, so the fullscreen/progress/
+  // focus-status layout above is completely untouched.
+  .ai-mark-review-btn {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: 1px solid var(--is-border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--is-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+
+    mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+    &:hover { background: var(--bg-option, rgba(0, 0, 0, 0.04)); }
+    &:focus-visible { outline: 2px solid vars.$vivid-blue; outline-offset: 2px; }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    // Pressed (marked): a neutral amber note, not the green/red of correctness.
+    &.active {
+      border-color: #b8860b;
+      color: #b8860b;
+    }
+  }
 }
 
 // Match the topic quiz's question box: a light-blue-bordered box around the

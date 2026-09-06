@@ -24,7 +24,7 @@ function result(over: Partial<InterviewResultViewModel> = {}): InterviewResultVi
         options: [{ optionId: 1, text: 'switchMap' }, { optionId: 2, text: 'tap' }],
         selectedOptionIds: [1], correctOptionIds: [1],
         explanation: 'switchMap cancels the previous inner observable.',
-        isCorrect: true, isAnswered: true
+        isCorrect: true, isAnswered: true, flagged: false
       }
     ],
     ...over

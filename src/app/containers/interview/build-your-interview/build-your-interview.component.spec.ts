@@ -32,7 +32,8 @@ const CREATED: CreatedInterviewSession = {
         options: [{ optionId: 101, text: 'a' }, { optionId: 102, text: 'b' }]
       }
     ],
-    answers: new Map()
+    answers: new Map(),
+    flags: new Map()
   }
 };
 

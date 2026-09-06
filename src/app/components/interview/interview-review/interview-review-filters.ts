@@ -4,10 +4,10 @@
  * match predicate, and its friendly empty-state text, so counts, filtering and
  * empty states all derive from one place and stay in sync.
  *
- * FLAGGING (future-ready): the 'flagged' filter already works against
- * `item.flagged`; it is marked `requiresFlagging` so the UI hides it until a
- * flagging feature exists. Adding flagging later means populating `flagged` and
- * flipping availability — the filtering system itself does not change.
+ * FLAGGING: the 'flagged' filter matches `item.flagged`, populated from the
+ * backend's Mark-for-Review data. It stays `requiresFlagging` so the chip is
+ * hidden for any attempt where nothing was marked, rather than always showing
+ * an empty filter.
  */
 export type ReviewStatus = 'correct' | 'incorrect' | 'unanswered';
 

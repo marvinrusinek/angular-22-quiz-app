@@ -4,6 +4,7 @@
   --pg-muted: #6a6a6a;
   --pg-border: #d0d0d0;
   --pg-answered-bg: rgba(0, 122, 255, 0.14);
+  --pg-marked-dot: #b8860b;
 
   display: flex;
   align-items: center;
@@ -78,6 +79,25 @@
       outline: 2px solid var(--pg-accent);
       outline-offset: 2px;
     }
+
+    // Marked for review: an independent corner marker, layered on top of
+    // whatever background `.answered`/`.current` already applied — it never
+    // replaces or overrides either. The accessible label carries the real
+    // semantics (see pageLabel()); this dot is purely decorative.
+    &.marked {
+      position: relative;
+    }
+    &.marked::after {
+      content: '';
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--pg-marked-dot);
+      border: 1px solid var(--pg-page-bg, transparent);
+    }
   }
 
   .pg-ellipsis {
@@ -146,4 +166,5 @@
   --pg-muted: #9a9a9a;
   --pg-border: #3d3d3d;
   --pg-answered-bg: rgba(76, 157, 255, 0.24);
+  --pg-marked-dot: #e0a838;
 }

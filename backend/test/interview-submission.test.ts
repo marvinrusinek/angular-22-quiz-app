@@ -124,7 +124,8 @@ describe('scoreInterview totals', () => {
       explanation: `Explanation ${position}`,
       options: allIds.map((id, i) => ({
         optionId: id, text: `opt ${id}`, displayOrder: i, isCorrect: correctIds.includes(id)
-      }))
+      })),
+      flagged: false
     };
   }
 
@@ -202,6 +203,25 @@ describe('scoreInterview totals', () => {
     expect(multi.correctOptionIds).toEqual([301, 303]);
     expect(multi.selectedOptionIds).toEqual([303, 301]);
     expect(multi.explanation).toBe('Explanation 2');
+  });
+
+  it('Mark for Review: flagged is carried into review verbatim, never affects scoring', () => {
+    const flaggedQuestions = [
+      question(0, [101], [101, 102]),
+      { ...question(1, [201], [201, 202]), flagged: true },
+      question(2, [301, 303], [301, 302, 303]),
+      question(3, [401], [401, 402])
+    ];
+    const flaggedScore = scoreInterview({
+      questions: flaggedQuestions,
+      answersByPosition: new Map([[0, [101]], [1, [202]], [2, [301, 303]]]),
+      topicTitleFor: (id) => (id === 'rxjs' ? 'RxJS' : 'Signals')
+    });
+    const unflaggedScore = score([[0, [101]], [1, [202]], [2, [301, 303]]]);
+
+    // Marking q:1 changes nothing about the totals — only its own flag.
+    expect({ ...flaggedScore, review: undefined }).toEqual({ ...unflaggedScore, review: undefined });
+    expect(flaggedScore.review.map((q) => q.flagged)).toEqual([false, true, false, false]);
   });
 });
 

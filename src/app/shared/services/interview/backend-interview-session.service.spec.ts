@@ -35,7 +35,8 @@ function session(overrides: Partial<InterviewSessionViewModel> = {}): InterviewS
     config: { mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs'], questionCount: 3 },
     questions: [single, multi, trueFalse],
     answers: new Map(),
-    ...overrides
+    ...overrides,
+    flags: overrides.flags ?? new Map()
   };
 }
 
@@ -45,12 +46,16 @@ function saveResponse(
   return { saved: true, questionId, selectedOptionIds: ids, answeredCount, questionCount: 3 };
 }
 
+function flagResponse(questionId: string, flagged: boolean) {
+  return { questionId, flagged };
+}
+
 let service: BackendInterviewSessionService;
-let api: { resumeSession: jest.Mock; saveAnswer: jest.Mock };
+let api: { resumeSession: jest.Mock; saveAnswer: jest.Mock; setReviewFlag: jest.Mock };
 
 beforeEach(() => {
   sessionStorage.clear();
-  api = { resumeSession: jest.fn(), saveAnswer: jest.fn() };
+  api = { resumeSession: jest.fn(), saveAnswer: jest.fn(), setReviewFlag: jest.fn() };
 
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
@@ -479,6 +484,97 @@ describe('awaitPendingSaves', () => {
   });
 });
 
+describe('Mark for Review', () => {
+  beforeEach(() => service.activateCreatedSession(session(), TOKEN));
+
+  it('marking an UNANSWERED question never answers it', async () => {
+    api.setReviewFlag.mockReturnValue(of(flagResponse('q:single', true)));
+    await service.setFlagged('q:single', true);
+
+    expect(service.isFlagged('q:single')).toBe(true);
+    expect(service.selectionFor('q:single')).toEqual([]);
+    expect(service.confirmedAnswers().has('q:single')).toBe(false);
+    expect(service.answeredCount()).toBe(0);
+  });
+
+  it('shows the optimistic mark immediately, then the confirmed value', async () => {
+    api.setReviewFlag.mockReturnValue(of(flagResponse('q:single', true)));
+    const promise = service.setFlagged('q:single', true);
+    expect(service.isFlagged('q:single')).toBe(true);   // optimistic
+    await promise;
+    expect(service.isFlagged('q:single')).toBe(true);
+    expect(service.confirmedFlagged().has('q:single')).toBe(true);
+  });
+
+  it('unmarking clears the flag and persists', async () => {
+    api.setReviewFlag.mockReturnValueOnce(of(flagResponse('q:single', true)));
+    await service.setFlagged('q:single', true);
+
+    api.setReviewFlag.mockReturnValue(of(flagResponse('q:single', false)));
+    await service.setFlagged('q:single', false);
+
+    expect(service.isFlagged('q:single')).toBe(false);
+    expect(service.confirmedFlagged().has('q:single')).toBe(false);
+  });
+
+  it('marking an ANSWERED question does not alter its answer, and vice versa', async () => {
+    api.saveAnswer.mockReturnValue(of(saveResponse('q:single', [101])));
+    await service.updateAnswer('q:single', [101]);
+
+    api.setReviewFlag.mockReturnValue(of(flagResponse('q:single', true)));
+    await service.setFlagged('q:single', true);
+
+    expect(service.selectionFor('q:single')).toEqual([101]);   // answer untouched
+    expect(service.isFlagged('q:single')).toBe(true);          // AND marked
+
+    api.saveAnswer.mockReturnValue(of(saveResponse('q:single', [102])));
+    await service.updateAnswer('q:single', [102]);
+    expect(service.isFlagged('q:single')).toBe(true);           // mark untouched by the answer save
+    expect(service.selectionFor('q:single')).toEqual([102]);
+  });
+
+  it('a FAILED mark save rolls back to the last confirmed value — never blocks submission', async () => {
+    api.setReviewFlag.mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    await service.setFlagged('q:single', true);
+
+    expect(service.isFlagged('q:single')).toBe(false);   // rolled back
+    await expect(service.awaitPendingSaves()).resolves.toBeUndefined();
+  });
+
+  it('hydrating a session with a persisted flag restores it', () => {
+    service.activateCreatedSession(session({ flags: new Map([['q:multi', true]]) }), TOKEN);
+    expect(service.isFlagged('q:multi')).toBe(true);
+    expect(service.confirmedFlagged().has('q:multi')).toBe(true);
+  });
+
+  it('does not answer or reveal correctness through the flag state', () => {
+    service.activateCreatedSession(session({ flags: new Map([['q:multi', true]]) }), TOKEN);
+    const snapshot = JSON.stringify([...service.confirmedFlagged()]);
+    expect(snapshot).not.toMatch(/correct|isCorrect|explanation/i);
+  });
+
+  it('awaitPendingSaves WAITS for an in-flight mark before resolving', async () => {
+    const gate = new Subject<{ questionId: string; flagged: boolean }>();
+    api.setReviewFlag.mockReturnValue(gate);
+
+    const markPromise = service.setFlagged('q:single', true);
+    let settled = false;
+    const waiter = service.awaitPendingSaves().then(() => { settled = true; });
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(settled).toBe(false);   // the mark save has not settled yet
+
+    gate.next(flagResponse('q:single', true));
+    gate.complete();
+    await markPromise;
+    await waiter;
+
+    expect(settled).toBe(true);
+    expect(service.isFlagged('q:single')).toBe(true);   // the mark survived the race
+  });
+});
+
 describe('clearSession', () => {
   it('wipes state and the stored reference', () => {
     service.activateCreatedSession(session(), TOKEN);
@@ -488,5 +584,14 @@ describe('clearSession', () => {
     expect(service.questionCount()).toBe(0);
     expect(service.answeredCount()).toBe(0);
     expect(TestBed.inject(InterviewSessionReferenceStorage).read()).toBeNull();
+  });
+
+  it('also wipes Mark-for-Review state', async () => {
+    service.activateCreatedSession(session({ flags: new Map([['q:single', true]]) }), TOKEN);
+    expect(service.isFlagged('q:single')).toBe(true);
+
+    service.clearSession();
+    expect(service.isFlagged('q:single')).toBe(false);
+    expect(service.confirmedFlagged().size).toBe(0);
   });
 });

@@ -66,6 +66,19 @@ export interface SavedAnswerState {
   readonly questionCount: number;
 }
 
+export interface SetFlaggedInput {
+  readonly sessionId: string;
+  readonly questionId: string;
+  readonly flagged: boolean;
+  /** Captured ONCE by the caller and used for the whole transaction. */
+  readonly now: number;
+}
+
+export interface FlaggedState {
+  readonly questionId: string;
+  readonly flagged: boolean;
+}
+
 const QUESTION_TYPES: readonly QuestionType[] = ['single', 'multiple', 'trueFalse'];
 
 // ── row shapes (module-private) ─────────────────────────────────────
@@ -91,6 +104,7 @@ interface QuestionRow {
   question_text: string;
   question_type: string;
   explanation: string;
+  flagged: number;
 }
 
 interface OptionRow {
@@ -268,6 +282,11 @@ export interface SessionRepository {
    */
   saveAnswer(input: SaveAnswerInput): Promise<SavedAnswerState>;
   /**
+   * Set or clear the Mark-for-Review flag for ONE question. Never touches
+   * `session_answers` — marking never creates, requires or implies an answer.
+   */
+  setFlagged(input: SetFlaggedInput): Promise<FlaggedState>;
+  /**
    * Score and close the session in ONE transaction. Idempotent: an already
    * submitted session returns its stored result and is never rescored.
    */
@@ -310,7 +329,7 @@ export function createSessionRepository(db: DatabaseHandle): SessionRepository {
   const SELECT_SESSION = 'SELECT * FROM interview_sessions WHERE id = $1';
   const SELECT_BY_ATTEMPT = 'SELECT * FROM interview_sessions WHERE attempt_id = $1';
   const SELECT_QUESTIONS = `
-    SELECT position, question_id, source_quiz_id, question_text, question_type, explanation
+    SELECT position, question_id, source_quiz_id, question_text, question_type, explanation, flagged
     FROM session_questions WHERE session_id = $1 ORDER BY position
   `;
   const SELECT_OPTIONS = `
@@ -337,6 +356,10 @@ export function createSessionRepository(db: DatabaseHandle): SessionRepository {
   const SELECT_QUESTION_BY_PUBLIC_ID = `
     SELECT position, question_type FROM session_questions
     WHERE session_id = $1 AND question_id = $2
+  `;
+  const UPDATE_FLAGGED = `
+    UPDATE session_questions SET flagged = $1
+    WHERE session_id = $2 AND position = $3
   `;
   const SELECT_OPTION_IDS_FOR_QUESTION = `
     SELECT option_id FROM session_options
@@ -424,7 +447,8 @@ export function createSessionRepository(db: DatabaseHandle): SessionRepository {
       questionText: row.question_text,
       type: toQuestionType(row.question_type, `${context} question ${num(row.position)}`),
       explanation: row.explanation,
-      options: optionsByPosition.get(num(row.position)) ?? []
+      options: optionsByPosition.get(num(row.position)) ?? [],
+      flagged: num(row.flagged) === 1
     }));
   }
 
@@ -714,6 +738,58 @@ export function createSessionRepository(db: DatabaseHandle): SessionRepository {
         // no trace. Record the expiry now, OUTSIDE it, so the state change
         // survives. The UPDATE is guarded on status = 'active', making it safe
         // to run repeatedly and under concurrency.
+        if (err instanceof SessionRepositoryError && err.category === 'SESSION_EXPIRED') {
+          await db.query(EXPIRE_NOW, [input.sessionId]);
+        }
+        throw err;
+      }
+    },
+
+    /**
+     * Set or clear the Mark-for-Review flag for ONE question — never an
+     * answer. Mirrors `saveAnswer`'s transaction shape (state check, boundary
+     * expiry check, question lookup) but skips every selection/ownership
+     * check, since a flag carries no selection.
+     */
+    async setFlagged(input) {
+      try {
+        return await db.transaction(async (client) => {
+          const stateResult = await client.query<{
+            id: string; status: string; expires_at: string;
+          }>(SELECT_STATE_FOR_UPDATE, [input.sessionId]);
+          const state = stateResult.rows[0];
+
+          if (!state) {
+            throw new SessionRepositoryError('SESSION_NOT_FOUND', 'Session not found');
+          }
+          if (state.status === 'submitted') {
+            throw new SessionRepositoryError('SESSION_NOT_ACTIVE', 'Session already submitted');
+          }
+          if (state.status === 'expired') {
+            throw new SessionRepositoryError('SESSION_EXPIRED', 'Session expired');
+          }
+          if (input.now >= num(state.expires_at)) {
+            throw new SessionRepositoryError('SESSION_EXPIRED', 'Session expired');
+          }
+
+          const questionResult = await client.query<{ position: number }>(
+            SELECT_QUESTION_BY_PUBLIC_ID,
+            [input.sessionId, input.questionId]
+          );
+          const question = questionResult.rows[0];
+          if (!question) {
+            throw new SessionRepositoryError(
+              'QUESTION_NOT_IN_SESSION',
+              'Question does not belong to this session'
+            );
+          }
+
+          const position = num(question.position);
+          await client.query(UPDATE_FLAGGED, [input.flagged ? 1 : 0, input.sessionId, position]);
+
+          return { questionId: input.questionId, flagged: input.flagged };
+        });
+      } catch (err: unknown) {
         if (err instanceof SessionRepositoryError && err.category === 'SESSION_EXPIRED') {
           await db.query(EXPIRE_NOW, [input.sessionId]);
         }

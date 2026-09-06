@@ -53,7 +53,7 @@ interface ReviewItem {
   questionText: string;
   explanation: string;
   status: ReviewStatus;
-  /** Reserved for a future flagging feature; always false until then. */
+  /** Mark for Review, as the user left it before submitting. */
   flagged: boolean;
   options: ReviewOptionView[];
   /** "A and C" — shown for multi-answer / unanswered where it aids clarity. */
@@ -157,7 +157,7 @@ export class InterviewReviewComponent {
         questionText: q.questionText,
         explanation: q.explanation,
         status,
-        flagged: false,
+        flagged: q.flagged,
         options,
         correctSummary: showSummary ? joinWithAnd(correctLabels) : ''
       };

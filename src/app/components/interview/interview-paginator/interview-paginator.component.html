@@ -24,6 +24,7 @@
             class="pg-page"
             [class.current]="isCurrent(item.index)"
             [class.answered]="isAnswered(item.index)"
+            [class.marked]="isMarked(item.index)"
             [attr.aria-current]="isCurrent(item.index) ? 'true' : null"
             [attr.aria-label]="pageLabel(item.index)"
             [disabled]="disabled()"

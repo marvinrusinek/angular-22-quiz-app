@@ -334,11 +334,11 @@ describe('active response contains no private data', () => {
     }
   });
 
-  it('questions expose only the four safe fields', async () => {
+  it('questions expose only the five safe fields', async () => {
     const res = await create();
     for (const question of res.body.questions) {
       expect(Object.keys(question).sort())
-        .toEqual(['options', 'questionId', 'questionText', 'sourceQuizId', 'type']);
+        .toEqual(['flagged', 'options', 'questionId', 'questionText', 'sourceQuizId', 'type']);
       for (const option of question.options) {
         expect(Object.keys(option).sort()).toEqual(['optionId', 'text']);
       }

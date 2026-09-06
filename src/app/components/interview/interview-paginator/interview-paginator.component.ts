@@ -18,8 +18,11 @@ type PaginatorItem =
  * presentational. Desktop shows `Prev 1 … 6 7 8 9 10 … 20 Next`; a narrow
  * viewport collapses to `Prev  Question X of Y  Next` (CSS-toggled).
  *
- * Answered/unanswered is conveyed by an underline marker AND the accessible
- * label — never by color alone — and NEVER reveals correctness.
+ * Answered/unanswered is conveyed by a filled background AND the accessible
+ * label — never by color alone. Marked-for-review adds an independent corner
+ * marker + label suffix, which can combine with answered/current freely
+ * (a question can be answered AND marked). Nothing here ever reveals
+ * correctness.
  */
 @Component({
   selector: 'app-interview-paginator',
@@ -34,6 +37,8 @@ export class InterviewPaginatorComponent {
   readonly total = input.required<number>();
   readonly currentIndex = input.required<number>();          // 0-based
   readonly answered = input<ReadonlySet<number>>(new Set());  // 0-based indices
+  /** Mark-for-Review state. Independent of `answered` — never overlaps it structurally. */
+  readonly marked = input<ReadonlySet<number>>(new Set());    // 0-based indices
 
   /**
    * Whether forward navigation is currently allowed. Supplied by the session
@@ -95,9 +100,14 @@ export class InterviewPaginatorComponent {
     return this.answered().has(index);
   }
 
+  isMarked(index: number): boolean {
+    return this.marked().has(index);
+  }
+
   pageLabel(index: number): string {
     const answered = this.isAnswered(index) ? ', answered' : ', not answered';
-    return `Go to question ${index + 1}${answered}`;
+    const marked = this.isMarked(index) ? ', marked for review' : '';
+    return `Go to question ${index + 1}${answered}${marked}`;
   }
 
   goPrevious(): void {

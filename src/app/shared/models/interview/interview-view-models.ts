@@ -62,6 +62,8 @@ export interface InterviewSessionViewModel {
   readonly questions: readonly InterviewQuestionViewModel[];
   /** questionId → the selections the SERVER currently holds. */
   readonly answers: ReadonlyMap<string, readonly number[]>;
+  /** questionId → true for every question the SERVER currently holds flagged. */
+  readonly flags: ReadonlyMap<string, boolean>;
 }
 
 // ── submitted result ────────────────────────────────────────────────
@@ -78,6 +80,8 @@ export interface InterviewReviewQuestionViewModel {
   /** Derived here so each review row does not recompute it while rendering. */
   readonly isCorrect: boolean;
   readonly isAnswered: boolean;
+  /** The user's own Mark-for-Review note, frozen at submission. */
+  readonly flagged: boolean;
 }
 
 export interface InterviewTopicPerformanceViewModel {

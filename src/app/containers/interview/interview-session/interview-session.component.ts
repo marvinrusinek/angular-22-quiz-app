@@ -117,6 +117,28 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
 
   readonly answeredCount = computed(() => this.answeredIndices().size);
 
+  /**
+   * Paginator markers follow CONFIRMED server marks — same durability contract
+   * as `answeredIndices` — DISTINCT from it: a question can be marked,
+   * answered, both, or neither, and marking never touches the answer map.
+   */
+  readonly markedIndices = computed<ReadonlySet<number>>(() => {
+    const confirmed = this.session.confirmedFlagged();
+    const marked = new Set<number>();
+    this.questions().forEach((question, index) => {
+      if (confirmed.has(question.questionId)) marked.add(index);
+    });
+    return marked;
+  });
+
+  readonly markedCount = computed(() => this.markedIndices().size);
+
+  /** Displayed (optimistic-aware) state for the current question's toggle. */
+  readonly isCurrentMarked = computed(() => {
+    const questionId = this.currentQuestion()?.questionId;
+    return !!questionId && this.session.isFlagged(questionId);
+  });
+
   // ── save / navigation gating ──────────────────────────────────────
   readonly isSavingCurrent = computed(() => {
     const questionId = this.currentQuestion()?.questionId;
@@ -242,6 +264,20 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
     await this.session.retryFailedSave(question.questionId);
   }
 
+  // ── Mark for Review ───────────────────────────────────────────────
+
+  /**
+   * Toggle the current question's Mark-for-Review flag. Gated ONLY on
+   * `inputsLocked()` — deliberately NOT on `navigationBlocked()`, since a
+   * pending or failed ANSWER save must never block marking: the two are
+   * independent state machines, and marking never touches the answer.
+   */
+  async toggleMarkForReview(): Promise<void> {
+    const question = this.currentQuestion();
+    if (!question || this.inputsLocked()) return;
+    await this.session.setFlagged(question.questionId, !this.isCurrentMarked());
+  }
+
   // ── navigation ────────────────────────────────────────────────────
 
   onNavigate(index: number): void {
@@ -308,7 +344,8 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
       data: {
         answered,
         unanswered: Math.max(0, this.total() - answered),
-        timeRemaining: this.timeRemaining()
+        timeRemaining: this.timeRemaining(),
+        markedCount: this.markedCount()
       }
     });
 

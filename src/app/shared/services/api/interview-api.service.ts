@@ -10,6 +10,8 @@ import type {
   InterviewResultDto,
   SaveInterviewAnswerRequest,
   SaveInterviewAnswerResponse,
+  SetReviewFlagRequest,
+  SetReviewFlagResponse,
   QuizMetadataDto,
   QuizMetadataListDto
 } from '../../models/api/interview-api.dto';
@@ -115,6 +117,25 @@ export class InterviewApiService {
     return this.http
       .put<SaveInterviewAnswerResponse>(
         `${this.sessionUrl(sessionId)}/answers/${encodeURIComponent(questionId)}`,
+        body,
+        { headers: this.auth(token) }
+      )
+      .pipe(catchError((err: unknown) => throwError(() => toInterviewApiError(err))));
+  }
+
+  /** Set or clear the Mark-for-Review flag for ONE question. Never an answer. */
+  setReviewFlag(
+    sessionId: string,
+    token: string,
+    questionId: string,
+    flagged: boolean
+  ): Observable<SetReviewFlagResponse> {
+    if (!this.configured) return this.notConfigured();
+    const body: SetReviewFlagRequest = { flagged };
+
+    return this.http
+      .put<SetReviewFlagResponse>(
+        `${this.sessionUrl(sessionId)}/review/${encodeURIComponent(questionId)}`,
         body,
         { headers: this.auth(token) }
       )

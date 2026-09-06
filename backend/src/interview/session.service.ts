@@ -1,5 +1,5 @@
 import type { QuizRepository } from '../quiz/quiz.repository';
-import type { SessionRepository, SavedAnswerState } from './session.repository';
+import type { SessionRepository, SavedAnswerState, FlaggedState } from './session.repository';
 import { SessionRepositoryError } from './session.repository';
 import { buildInterviewAssessment, validateBuildRequest } from './assessment.builder';
 import { buildPresetAssessment } from './assessment.preset-builder';
@@ -104,6 +104,32 @@ function parseSelectedOptionIds(body: unknown): readonly number[] {
   }
 
   return raw as readonly number[];
+}
+
+/**
+ * Strict body validation for a review-flag write. Accepts ONLY
+ * `{ flagged: boolean }` — no selection, no question metadata, nothing that
+ * could be mistaken for an answer.
+ */
+function parseFlagged(body: unknown): boolean {
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    throw new SessionServiceError('BAD_REQUEST', 'Request body must be an object');
+  }
+
+  for (const key of Object.keys(body)) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      throw new SessionServiceError('BAD_REQUEST', 'Request contains a forbidden key');
+    }
+    if (key !== 'flagged') {
+      throw new SessionServiceError('BAD_REQUEST', `Unexpected field "${key}"`);
+    }
+  }
+
+  const flagged = (body as { flagged?: unknown }).flagged;
+  if (typeof flagged !== 'boolean') {
+    throw new SessionServiceError('BAD_REQUEST', 'flagged must be a boolean');
+  }
+  return flagged;
 }
 
 /** Map repository categories onto service errors, revealing nothing extra. */
@@ -213,6 +239,34 @@ export class InterviewSessionService {
         sessionId,
         questionId,
         selectedOptionIds,
+        now: this.now()
+      });
+    } catch (err: unknown) {
+      throw translateRepositoryError(err);
+    }
+  }
+
+  /**
+   * Set or clear the Mark-for-Review flag for ONE question.
+   *
+   * Never touches an answer, never affects scoring or navigation, and never
+   * reveals correctness — the response is `{ questionId, flagged }` only.
+   */
+  async setFlagged(
+    sessionId: string,
+    questionId: string,
+    rawToken: string | null,
+    body: unknown
+  ): Promise<FlaggedState> {
+    await this.authenticate(sessionId, rawToken);
+
+    const flagged = parseFlagged(body);
+
+    try {
+      return await this.sessionRepository.setFlagged({
+        sessionId,
+        questionId,
+        flagged,
         now: this.now()
       });
     } catch (err: unknown) {

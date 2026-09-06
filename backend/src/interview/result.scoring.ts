@@ -48,6 +48,8 @@ export interface ScoredReviewQuestion {
   readonly selectedOptionIds: readonly number[];
   readonly correctOptionIds: readonly number[];
   readonly explanation: string;
+  /** The user's own Mark-for-Review note. Never affects scoring. */
+  readonly flagged: boolean;
 }
 
 export interface ScoredInterview {
@@ -126,7 +128,8 @@ export function scoreInterview(params: {
       options: options.map((option) => ({ optionId: option.optionId, text: option.text })),
       selectedOptionIds,
       correctOptionIds,
-      explanation: question.explanation
+      explanation: question.explanation,
+      flagged: question.flagged
     });
   }
 

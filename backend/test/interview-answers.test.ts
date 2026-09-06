@@ -64,6 +64,13 @@ function resume(session: Created, token = session.token) {
     .set('Authorization', `Bearer ${token}`);
 }
 
+function mark(session: Created, questionId: string, flagged: unknown, token = session.token) {
+  return request(app)
+    .put(`/api/interview-sessions/${session.id}/review/${encodeURIComponent(questionId)}`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({ flagged } as object);
+}
+
 const firstOf = (s: Created, type: QuestionDto['type']) =>
   s.questions.find((q) => q.type === type)!;
 
@@ -619,6 +626,185 @@ describe('restart and frozen-bank independence', () => {
   });
 });
 
+describe('marking questions for review', () => {
+  it('marks an UNANSWERED question without creating an answer row', async () => {
+    const session = await createSession();
+    const question = firstOf(session, 'single');
+
+    const res = await mark(session, question.questionId, true);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ questionId: question.questionId, flagged: true });
+    expect(await countAnswers()).toBe(0);
+  });
+
+  it('the flag survives a resume, and does not appear as an answer', async () => {
+    const session = await createSession();
+    const question = firstOf(session, 'single');
+    await mark(session, question.questionId, true);
+
+    const res = await resume(session);
+    expect(res.status).toBe(200);
+    const resumed = res.body.questions.find((q: QuestionDto) => q.questionId === question.questionId);
+    expect(resumed.flagged).toBe(true);
+    expect(res.body.answers).toEqual([]);
+  });
+
+  it('unmarking clears the flag', async () => {
+    const session = await createSession();
+    const question = firstOf(session, 'single');
+    await mark(session, question.questionId, true);
+
+    const res = await mark(session, question.questionId, false);
+    expect(res.body).toEqual({ questionId: question.questionId, flagged: false });
+
+    const resumed = await resume(session);
+    const q = resumed.body.questions.find((x: QuestionDto) => x.questionId === question.questionId);
+    expect(q.flagged).toBe(false);
+  });
+
+  it('marking does not alter an existing answer, and answering does not alter an existing mark', async () => {
+    const session = await createSession();
+    const question = firstOf(session, 'single');
+    const optionId = question.options[0]!.optionId;
+
+    await save(session, question.questionId, [optionId]);
+    await mark(session, question.questionId, true);
+
+    const afterMark = await resume(session);
+    expect(afterMark.body.answers).toEqual([{ questionId: question.questionId, selectedOptionIds: [optionId] }]);
+    expect(afterMark.body.questions.find((q: QuestionDto) => q.questionId === question.questionId).flagged)
+      .toBe(true);
+
+    await save(session, question.questionId, [question.options[1]!.optionId]);
+    const afterAnswer = await resume(session);
+    expect(afterAnswer.body.questions.find((q: QuestionDto) => q.questionId === question.questionId).flagged)
+      .toBe(true);
+  });
+
+  it('the response has ONLY questionId and flagged — no banned keys', async () => {
+    const session = await createSession();
+    const question = firstOf(session, 'single');
+    const res = await mark(session, question.questionId, true);
+
+    expect(Object.keys(res.body).sort()).toEqual(['flagged', 'questionId']);
+    const keys = keysDeep(res.body);
+    for (const banned of BANNED) expect(keys).not.toContain(banned);
+  });
+
+  it('does not repeat the session token and is no-store', async () => {
+    const session = await createSession();
+    const question = firstOf(session, 'single');
+    const res = await mark(session, question.questionId, true);
+    expect(res.text).not.toContain(session.token);
+    expect(res.headers['cache-control']).toBe('no-store');
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['wrong scheme', 'Basic abc'],
+    ['malformed', 'Bearer short'],
+    ['wrong token', `Bearer ${'A'.repeat(43)}`]
+  ])('returns a generic 401 for a %s token', async (_label, header) => {
+    const session = await createSession();
+    const question = firstOf(session, 'single');
+    const call = request(app)
+      .put(`/api/interview-sessions/${session.id}/review/${question.questionId}`)
+      .send({ flagged: true });
+    if (header !== undefined) call.set('Authorization', header);
+    const res = await call;
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: { code: 'UNAUTHORIZED', message: 'Invalid session credentials' } });
+  });
+
+  it("cannot mark a question in ANOTHER session", async () => {
+    const a = await createSession();
+    const b = await createSession();
+    const question = firstOf(a, 'single');
+
+    const res = await mark(a, question.questionId, true, b.token);
+    expect(res.status).toBe(401);
+  });
+
+  it('REJECTS an unknown question id', async () => {
+    const session = await createSession();
+    const res = await mark(session, 'rxjs:q:99', true);
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toMatch(/does not belong to this session/i);
+  });
+
+  it.each([
+    ['a string', 'true'],
+    ['a number', 1],
+    ['null', null],
+    ['missing', undefined]
+  ])('rejects flagged as %s', async (_label, flagged) => {
+    const session = await createSession();
+    const question = firstOf(session, 'single');
+    const body = flagged === undefined ? {} : { flagged };
+    const res = await request(app)
+      .put(`/api/interview-sessions/${session.id}/review/${question.questionId}`)
+      .set('Authorization', `Bearer ${session.token}`)
+      .send(body);
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects an unexpected field', async () => {
+    const session = await createSession();
+    const question = firstOf(session, 'single');
+    const res = await request(app)
+      .put(`/api/interview-sessions/${session.id}/review/${question.questionId}`)
+      .set('Authorization', `Bearer ${session.token}`)
+      .send({ flagged: true, correct: true });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a prototype-pollution key', async () => {
+    const session = await createSession();
+    const question = firstOf(session, 'single');
+    const res = await request(app)
+      .put(`/api/interview-sessions/${session.id}/review/${question.questionId}`)
+      .set('Authorization', `Bearer ${session.token}`)
+      .set('Content-Type', 'application/json')
+      .send('{"flagged":true,"__proto__":{"x":1}}');
+    expect(res.status).toBe(400);
+  });
+
+  describe('expiry boundary', () => {
+    async function sessionAt(msBeforeExpiry: number) {
+      const session = await createSession({
+        mode: 'custom', difficulty: 'mixed', topicIds: ['typescript', 'templates'], questionCount: 10
+      });
+      clock = clock + 900_000 - msBeforeExpiry;
+      return session;
+    }
+
+    it('one millisecond BEFORE expiry succeeds', async () => {
+      const session = await sessionAt(1);
+      const res = await mark(session, session.questions[0]!.questionId, true);
+      expect(res.status).toBe(200);
+    });
+
+    it('EXACTLY at expiry fails', async () => {
+      const session = await sessionAt(0);
+      const res = await mark(session, session.questions[0]!.questionId, true);
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('SESSION_EXPIRED');
+    });
+
+    it('after a SUBMITTED session, marking is rejected as a conflict', async () => {
+      const session = await createSession();
+      await request(app)
+        .post(`/api/interview-sessions/${session.id}/submit`)
+        .set('Authorization', `Bearer ${session.token}`)
+        .send({});
+
+      const res = await mark(session, session.questions[0]!.questionId, true);
+      expect(res.status).toBe(409);
+    });
+  });
+});
+
 describe('route surface', () => {
   it.each([
     ['get', '/api/interview-sessions/is_x/review'],
@@ -630,7 +816,8 @@ describe('route surface', () => {
 
   it.each([
     ['post', '/api/interview-sessions/is_x/submit'],
-    ['get', '/api/interview-sessions/is_x/result']
+    ['get', '/api/interview-sessions/is_x/result'],
+    ['put', '/api/interview-sessions/is_x/review/q1']
   ])('%s %s EXISTS as of Stage 8 and requires authentication', async (method, path) => {
     const call = (request(app) as unknown as Record<string, (p: string) => request.Test>)[method]!;
     expect((await call(path)).status).toBe(401);   // registered, not 404

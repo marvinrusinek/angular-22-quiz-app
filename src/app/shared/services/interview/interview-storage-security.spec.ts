@@ -49,7 +49,7 @@ function result(): InterviewResultViewModel {
         options: [{ optionId: 1, text: 'switchMap' }, { optionId: 2, text: 'tap' }],
         selectedOptionIds: [1], correctOptionIds: [1],
         explanation: 'switchMap cancels the previous inner observable.',
-        isCorrect: true, isAnswered: true
+        isCorrect: true, isAnswered: true, flagged: false
       },
       {
         questionId: 'signals:q:0', sourceQuizId: 'signals',
@@ -57,7 +57,7 @@ function result(): InterviewResultViewModel {
         options: [{ optionId: 3, text: 'A reactive primitive' }, { optionId: 4, text: 'A pipe' }],
         selectedOptionIds: [4], correctOptionIds: [3],
         explanation: 'A reactive primitive that notifies consumers.',
-        isCorrect: false, isAnswered: true
+        isCorrect: false, isAnswered: true, flagged: false
       }
     ]
   };

@@ -28,15 +28,18 @@ const session: ActiveInterviewSessionDto = {
   questions: [
     {
       questionId: 'rxjs:q:2', sourceQuizId: 'rxjs', questionText: 'Q A', type: 'single',
-      options: [{ optionId: 304, text: 'd' }, { optionId: 301, text: 'a' }, { optionId: 303, text: 'c' }]
+      options: [{ optionId: 304, text: 'd' }, { optionId: 301, text: 'a' }, { optionId: 303, text: 'c' }],
+      flagged: false
     },
     {
       questionId: 'signals:q:0', sourceQuizId: 'signals', questionText: 'Q B', type: 'multiple',
-      options: [{ optionId: 101, text: 'x' }, { optionId: 102, text: 'y' }]
+      options: [{ optionId: 101, text: 'x' }, { optionId: 102, text: 'y' }],
+      flagged: true
     },
     {
       questionId: 'signals:q:4', sourceQuizId: 'signals', questionText: 'Q C', type: 'trueFalse',
-      options: [{ optionId: 501, text: 'True' }, { optionId: 502, text: 'False' }]
+      options: [{ optionId: 501, text: 'True' }, { optionId: 502, text: 'False' }],
+      flagged: false
     }
   ],
   answers: [{ questionId: 'signals:q:0', selectedOptionIds: [101, 102] }]
@@ -115,6 +118,13 @@ describe('session mapping', () => {
     expect(vm.answers.has('rxjs:q:2')).toBe(false);
   });
 
+  it('indexes Mark-for-Review flags by questionId — only TRUE entries', () => {
+    const vm = toSessionViewModel(session);
+    expect(vm.flags.get('signals:q:0')).toBe(true);
+    expect(vm.flags.has('rxjs:q:2')).toBe(false);
+    expect(vm.flags.has('signals:q:4')).toBe(false);
+  });
+
   it('keeps preset metadata', () => {
     const vm = toSessionViewModel(session);
     expect(vm.config.mode).toBe('preset');
@@ -134,7 +144,13 @@ describe('review mapping', () => {
     type: 'multiple',
     options: [{ optionId: 101, text: 'a' }, { optionId: 102, text: 'b' }, { optionId: 103, text: 'c' }],
     selectedOptionIds: [101, 103], correctOptionIds: [101, 103], explanation: 'Because.',
+    flagged: false,
     ...overrides
+  });
+
+  it('carries the flagged note through untouched', () => {
+    expect(toReviewQuestionViewModel(question({ flagged: true })).flagged).toBe(true);
+    expect(toReviewQuestionViewModel(question({ flagged: false })).flagged).toBe(false);
   });
 
   it('derives isCorrect by EXACT SET equality, order-independent', () => {

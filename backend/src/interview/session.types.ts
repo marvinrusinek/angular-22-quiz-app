@@ -56,6 +56,8 @@ export interface SessionQuestionSnapshot {
   /** ANSWER KEY material — withheld until the policy allows it. */
   readonly explanation: string;
   readonly options: readonly SessionOptionSnapshot[];
+  /** Mark for Review — the user's own note, never correctness. */
+  readonly flagged: boolean;
 }
 
 export interface InterviewSessionSnapshot {

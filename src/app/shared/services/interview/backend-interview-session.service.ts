@@ -48,6 +48,14 @@ interface QuestionSaveState {
   chain: Promise<unknown>;
 }
 
+/**
+ * Mark-for-Review save state — the SAME versioned-chain shape as
+ * `QuestionSaveState`, kept in its own map. A distinct state machine from the
+ * answer Map by design: a flag toggle must never share a version counter or
+ * chain with an answer save, or a burst of one could supersede the other.
+ */
+type ReviewSaveState = QuestionSaveState;
+
 @Service()
 export class BackendInterviewSessionService {
   private readonly api = inject(InterviewApiService);
@@ -83,8 +91,16 @@ export class BackendInterviewSessionService {
   /** IN MEMORY ONLY. Never persisted — the results route re-fetches it. */
   private readonly _result = signal<InterviewResultViewModel | null>(null);
 
+  /**
+   * Mark-for-Review state — DISTINCT from the answer signals above, never
+   * piggybacked on `_answers`/`_optimistic`. Marking never touches an answer.
+   */
+  private readonly _confirmedFlags = signal<ReadonlySet<string>>(new Set());
+  private readonly _optimisticFlags = signal<ReadonlyMap<string, boolean>>(new Map());
+
   private token = '';
   private readonly saveState = new Map<string, QuestionSaveState>();
+  private readonly reviewSaveState = new Map<string, ReviewSaveState>();
   /**
    * Selection a failed save was trying to write, kept so Retry can resend it.
    *
@@ -138,6 +154,27 @@ export class BackendInterviewSessionService {
 
   isQuestionSaving(questionId: string): boolean {
     return this._saving().has(questionId);
+  }
+
+  /**
+   * Marks the SERVER has confirmed. Drives durable paginator markers, exactly
+   * like `confirmedAnswers` — a failed optimistic toggle never leaves a
+   * question looking marked.
+   */
+  readonly confirmedFlagged = this._confirmedFlags.asReadonly();
+
+  /** What the UI renders: confirmed marks with the optimistic overlay applied. */
+  private readonly displayedFlagged = computed<ReadonlySet<string>>(() => {
+    const merged = new Set(this._confirmedFlags());
+    for (const [questionId, flagged] of this._optimisticFlags()) {
+      if (flagged) merged.add(questionId);
+      else merged.delete(questionId);
+    }
+    return merged;
+  });
+
+  isFlagged(questionId: string): boolean {
+    return this.displayedFlagged().has(questionId);
   }
 
   // ── hydration ─────────────────────────────────────────────────────
@@ -197,6 +234,9 @@ export class BackendInterviewSessionService {
     this._questions.set(session.questions);
     this._answers.set(new Map(session.answers));
     this._optimistic.set(new Map());
+    this._confirmedFlags.set(new Set([...session.flags].filter(([, flagged]) => flagged).map(([id]) => id)));
+    this._optimisticFlags.set(new Map());
+    this.reviewSaveState.clear();
     this._config.set(session.config);
     this._createdAtMs.set(session.createdAtMs);
     this._expiresAtMs.set(session.expiresAtMs);
@@ -238,6 +278,9 @@ export class BackendInterviewSessionService {
     this._questions.set([]);
     this._answers.set(new Map());
     this._optimistic.set(new Map());
+    this._confirmedFlags.set(new Set());
+    this._optimisticFlags.set(new Map());
+    this.reviewSaveState.clear();
     this._config.set(null);
     this._createdAtMs.set(0);
     this._expiresAtMs.set(0);
@@ -412,6 +455,86 @@ export class BackendInterviewSessionService {
   /** Any question whose latest save failed — blocks navigation and submission. */
   readonly hasUnsavedChanges = computed(() => this._failed().size > 0);
 
+  // ── Mark for Review ───────────────────────────────────────────────
+
+  /**
+   * Persist the Mark-for-Review flag for one question.
+   *
+   * Mirrors `updateAnswer`'s optimistic + versioned-chain pattern exactly, in
+   * its OWN state (`reviewSaveState`, `_optimisticFlags`) — never the answer's
+   * — so a mark toggle can never supersede, or be superseded by, an answer
+   * save for the same question. Non-blocking: a failure simply rolls the
+   * displayed flag back to the last confirmed value.
+   */
+  async setFlagged(questionId: string, flagged: boolean): Promise<void> {
+    const question = this._questions().find((q) => q.questionId === questionId);
+    if (!question) return;
+
+    const state = this.reviewState(questionId);
+    const version = ++state.requestedVersion;
+
+    this.applyOptimisticFlag(questionId, flagged);
+
+    const run = state.chain.then(() => this.performFlagSave(questionId, flagged, version));
+    state.chain = run.catch(() => undefined);
+    await run;
+  }
+
+  private async performFlagSave(questionId: string, flagged: boolean, version: number): Promise<void> {
+    const state = this.reviewState(questionId);
+
+    try {
+      const response = await firstValueFrom(
+        this.api.setReviewFlag(this._sessionId(), this.token, questionId, flagged)
+      );
+
+      if (version < state.requestedVersion) return;   // a newer toggle already won
+      if (version <= state.confirmedVersion) return;
+      state.confirmedVersion = version;
+
+      this.commitConfirmedFlag(questionId, response.flagged);
+    } catch {
+      if (version < state.requestedVersion) return;    // a newer toggle already won
+      // Roll back to the last CONFIRMED value — the same fail-closed contract
+      // as a failed answer save.
+      this.rollbackFlag(questionId);
+    }
+  }
+
+  private reviewState(questionId: string): ReviewSaveState {
+    let state = this.reviewSaveState.get(questionId);
+    if (!state) {
+      state = { requestedVersion: 0, confirmedVersion: 0, chain: Promise.resolve() };
+      this.reviewSaveState.set(questionId, state);
+    }
+    return state;
+  }
+
+  private applyOptimisticFlag(questionId: string, flagged: boolean): void {
+    const next = new Map(this._optimisticFlags());
+    next.set(questionId, flagged);
+    this._optimisticFlags.set(next);
+  }
+
+  private commitConfirmedFlag(questionId: string, flagged: boolean): void {
+    const confirmed = new Set(this._confirmedFlags());
+    if (flagged) confirmed.add(questionId);
+    else confirmed.delete(questionId);
+    this._confirmedFlags.set(confirmed);
+
+    const optimistic = new Map(this._optimisticFlags());
+    if (optimistic.get(questionId) === flagged) {
+      optimistic.delete(questionId);
+      this._optimisticFlags.set(optimistic);
+    }
+  }
+
+  private rollbackFlag(questionId: string): void {
+    const optimistic = new Map(this._optimisticFlags());
+    optimistic.delete(questionId);
+    this._optimisticFlags.set(optimistic);
+  }
+
   // ── submission (Stage 9D handoff) ─────────────────────────────────
 
   /**
@@ -447,11 +570,23 @@ export class BackendInterviewSessionService {
   }
 
   /**
-   * Resolve once every in-flight save has settled. Rejects when the LATEST
-   * attempt for any question failed — Stage 9D gates submission on this.
+   * Resolve once every in-flight save has settled — answers AND Mark-for-
+   * Review flags alike, so a manual submit or an expiry-triggered auto-submit
+   * can never finalize while a mark write is still in flight (which could
+   * otherwise freeze a stale, pre-mark `flagged` value into the result). ONE
+   * mechanism, not a second wait system.
+   *
+   * Rejects when the LATEST attempt to save an ANSWER failed — scoring stale
+   * data would be a correctness bug. A failed FLAG save does NOT reject:
+   * marking never affects scoring, and the assessment must remain fully
+   * submittable regardless of whether a mark was successfully recorded — its
+   * own optimistic value has already rolled back to the last confirmed one.
    */
   async awaitPendingSaves(): Promise<void> {
-    const chains = [...this.saveState.values()].map((state) => state.chain);
+    const chains = [
+      ...[...this.saveState.values()].map((state) => state.chain),
+      ...[...this.reviewSaveState.values()].map((state) => state.chain)
+    ];
     await Promise.all(chains);
 
     for (const [questionId, state] of this.saveState) {

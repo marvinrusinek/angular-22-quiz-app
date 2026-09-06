@@ -48,14 +48,16 @@ function activeDto(overrides: Partial<ActiveInterviewSessionDto> = {}): ActiveIn
         sourceQuizId: 'rxjs',
         questionText: 'Which answer is correct?',
         type: 'single',
-        options: [{ optionId: 101, text: 'A' }, { optionId: 102, text: 'B' }]
+        options: [{ optionId: 101, text: 'A' }, { optionId: 102, text: 'B' }],
+        flagged: false
       },
       {
         questionId: 'rxjs:q:1',
         sourceQuizId: 'rxjs',
         questionText: 'Pick two',
         type: 'multiple',
-        options: [{ optionId: 201, text: 'C' }, { optionId: 202, text: 'D' }, { optionId: 203, text: 'E' }]
+        options: [{ optionId: 201, text: 'C' }, { optionId: 202, text: 'D' }, { optionId: 203, text: 'E' }],
+        flagged: false
       }
     ],
     answers: [],
@@ -264,12 +266,12 @@ function resultDto(): InterviewResultDto {
       {
         questionId: 'rxjs:q:0', sourceQuizId: 'rxjs', questionText: 'Which answer is correct?',
         type: 'single', options: [{ optionId: 101, text: 'A' }, { optionId: 102, text: 'B' }],
-        selectedOptionIds: [101], correctOptionIds: [101], explanation: 'Because A.'
+        selectedOptionIds: [101], correctOptionIds: [101], explanation: 'Because A.', flagged: false
       },
       {
         questionId: 'rxjs:q:1', sourceQuizId: 'rxjs', questionText: 'Pick two',
         type: 'multiple', options: [{ optionId: 201, text: 'C' }, { optionId: 202, text: 'D' }],
-        selectedOptionIds: [], correctOptionIds: [201, 202], explanation: 'Because C and D.'
+        selectedOptionIds: [], correctOptionIds: [201, 202], explanation: 'Because C and D.', flagged: false
       }
     ]
   };

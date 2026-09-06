@@ -28,19 +28,19 @@ const QUESTIONS: InterviewReviewQuestionViewModel[] = [
     questionId: 'q1', sourceQuizId: 'rxjs', questionText: 'Q1', type: 'single',
     options: [{ optionId: 1, text: 'A' }, { optionId: 2, text: 'B' }],
     selectedOptionIds: [1], correctOptionIds: [1], explanation: 'E1',
-    isCorrect: true, isAnswered: true
+    isCorrect: true, isAnswered: true, flagged: false
   },
   {
     questionId: 'q2', sourceQuizId: 'signals', questionText: 'Q2', type: 'multiple',
     options: [{ optionId: 3, text: 'C' }, { optionId: 4, text: 'D' }, { optionId: 5, text: 'E' }],
     selectedOptionIds: [3], correctOptionIds: [3, 5], explanation: 'E2',
-    isCorrect: false, isAnswered: true
+    isCorrect: false, isAnswered: true, flagged: true
   },
   {
     questionId: 'q3', sourceQuizId: 'rxjs', questionText: 'Q3', type: 'trueFalse',
     options: [{ optionId: 6, text: 'True' }, { optionId: 7, text: 'False' }],
     selectedOptionIds: [], correctOptionIds: [6], explanation: '',
-    isCorrect: false, isAnswered: false
+    isCorrect: false, isAnswered: false, flagged: false
   }
 ];
 
@@ -189,10 +189,11 @@ describe('InterviewReviewComponent', () => {
   });
 
   // ── filters ─────────────────────────────────────────────────────────
-  it('filter counts + order (All / Incorrect / Unanswered / Correct)', () => {
+  it('filter counts + order (All / Incorrect / Unanswered / Correct / Flagged)', () => {
     setup();
-    expect(chipIds()).toEqual(['all', 'incorrect', 'unanswered', 'correct']);
-    expect(component.counts()).toEqual({ all: 3, incorrect: 1, unanswered: 1, correct: 1, flagged: 0 });
+    // QUESTIONS includes q2 with flagged: true, so Flagged is already visible.
+    expect(chipIds()).toEqual(['all', 'incorrect', 'unanswered', 'correct', 'flagged']);
+    expect(component.counts()).toEqual({ all: 3, incorrect: 1, unanswered: 1, correct: 1, flagged: 1 });
   });
 
   it('each filter shows only its questions, preserving order', () => {
@@ -293,9 +294,30 @@ describe('InterviewReviewComponent', () => {
     }
   });
 
-  it('hides the Flagged chip until flagging is enabled', () => {
-    setup();
+  it('hides the Flagged chip when nothing is flagged and flaggingEnabled is false', () => {
+    setup(QUESTIONS.map((q) => ({ ...q, flagged: false })));
     expect(chipIds()).toEqual(['all', 'incorrect', 'unanswered', 'correct']);
+  });
+
+  it('reveals the Flagged chip once ANY question was actually marked — no flaggingEnabled needed', () => {
+    setup();   // QUESTIONS includes q2 with flagged: true
+    expect(chipIds()).toEqual(['all', 'incorrect', 'unanswered', 'correct', 'flagged']);
+  });
+
+  it('shows a "Marked for review" badge only on flagged questions', () => {
+    setup();
+    const badges = el().querySelectorAll('.rv-flag-badge');
+    expect(badges).toHaveLength(1);
+    expect(itemEls()[1]!.querySelector('.rv-flag-badge')).not.toBeNull();
+    expect(itemEls()[0]!.querySelector('.rv-flag-badge')).toBeNull();
+  });
+
+  it('the Flagged filter shows only flagged questions', () => {
+    setup();
+    component.setFilter('flagged');
+    fixture.detectChanges();
+    expect(itemEls()).toHaveLength(1);
+    expect(itemEls()[0]!.textContent).toContain('Q2');
   });
 
   it('embedded mode hides the header meta but keeps the review list', () => {

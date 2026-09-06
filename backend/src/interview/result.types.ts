@@ -26,6 +26,8 @@ export interface FrozenReviewQuestion {
   readonly selectedOptionIds: readonly number[];
   readonly correctOptionIds: readonly number[];
   readonly explanation: string;
+  /** The user's own Mark-for-Review note, frozen at submission. Never scored. */
+  readonly flagged: boolean;
 }
 
 export interface FrozenTopicBucket {

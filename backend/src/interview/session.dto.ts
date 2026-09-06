@@ -21,6 +21,8 @@ export interface ActiveInterviewQuestionDto {
   readonly questionText: string;
   readonly type: QuestionType;
   readonly options: readonly ActiveInterviewOptionDto[];
+  /** The user's own Mark-for-Review note. Never correctness. */
+  readonly flagged: boolean;
 }
 
 export interface ActiveInterviewAnswerDto {
@@ -70,6 +72,8 @@ export interface InterviewReviewQuestionDto {
   readonly selectedOptionIds: readonly number[];
   readonly correctOptionIds: readonly number[];
   readonly explanation: string;
+  /** The user's own Mark-for-Review note, frozen at submission. */
+  readonly flagged: boolean;
 }
 
 export interface InterviewPerformanceBucketDto {
@@ -150,7 +154,8 @@ export function toInterviewResultDto(result: FrozenInterviewResult): InterviewRe
       options: question.options.map((option) => ({ optionId: option.optionId, text: option.text })),
       selectedOptionIds: [...question.selectedOptionIds],
       correctOptionIds: [...question.correctOptionIds],
-      explanation: question.explanation
+      explanation: question.explanation,
+      flagged: question.flagged
     }))
   };
 }
@@ -166,7 +171,8 @@ export function toActiveQuestionDto(
     // Stored display order IS the delivery order — never reshuffled on resume.
     options: [...question.options]
       .sort((a, b) => a.displayOrder - b.displayOrder)
-      .map((option) => ({ optionId: option.optionId, text: option.text }))
+      .map((option) => ({ optionId: option.optionId, text: option.text })),
+    flagged: question.flagged
   };
 }
 

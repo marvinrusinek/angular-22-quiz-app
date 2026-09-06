@@ -73,6 +73,26 @@
         <span i18n>Question</span> {{ currentIndex() + 1 }} <span i18n>of</span> {{ total() }}
       </span>
 
+      <!-- Marking never answers the question, alters selections, affects
+           scoring, or reveals correctness — it is purely the user's own note.
+           Disabled ONLY once inputs are locked; a pending/failed ANSWER save
+           never blocks it, since the two are independent state machines. -->
+      <button
+        type="button"
+        class="ai-mark-review-btn"
+        [class.active]="isCurrentMarked()"
+        [attr.aria-pressed]="isCurrentMarked()"
+        [disabled]="inputsLocked()"
+        (click)="toggleMarkForReview()"
+      >
+        <mat-icon aria-hidden="true">{{ isCurrentMarked() ? 'flag' : 'outlined_flag' }}</mat-icon>
+        @if (isCurrentMarked()) {
+          <span i18n>Marked for Review</span>
+        } @else {
+          <span i18n>Mark for Review</span>
+        }
+      </button>
+
       @if (focusChanges() > 0) {
         <span class="ai-focus-status" role="status" aria-live="polite">
           <ng-container i18n>Focus changes recorded:</ng-container> {{ focusChanges() }}
@@ -126,6 +146,7 @@
       [total]="total()"
       [currentIndex]="currentIndex()"
       [answered]="answeredIndices()"
+      [marked]="markedIndices()"
       [canNext]="canNavigateNext()"
       [disabled]="navigationBlocked()"
       (select)="onNavigate($event)"

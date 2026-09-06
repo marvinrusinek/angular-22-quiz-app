@@ -69,6 +69,24 @@ export function createInterviewSessionsRouter(service: InterviewSessionService):
     }
   });
 
+  router.put('/interview-sessions/:sessionId/review/:questionId', async (req, res, next) => {
+    setResponsePolicy(res, 'ACTIVE_ASSESSMENT');
+    try {
+      const token = extractBearerToken(req.header('authorization'));
+      const result = await service.setFlagged(
+        req.params.sessionId ?? '',
+        req.params.questionId ?? '',
+        token,
+        req.body ?? {}
+      );
+      // Safe log: a boolean flag only — never the question or its content.
+      console.log(`[interview] review flag ${result.flagged ? 'set' : 'cleared'}`);
+      res.status(200).json({ questionId: result.questionId, flagged: result.flagged });
+    } catch (err: unknown) {
+      next(translate(err));
+    }
+  });
+
   // SUBMITTED_REVIEW is the only policy that permits correctOptionIds and
   // explanation. It is set on these two routes ONLY; active routes keep
   // rejecting both.

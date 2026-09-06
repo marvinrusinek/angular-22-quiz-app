@@ -34,7 +34,8 @@ const SESSION: InterviewSessionViewModel = {
     questionText: 'Q', type: 'single',
     options: [{ optionId: 101, text: 'A' }]
   }],
-  answers: new Map()
+  answers: new Map(),
+  flags: new Map()
 };
 
 let guard: BackendInterviewSessionGuard;

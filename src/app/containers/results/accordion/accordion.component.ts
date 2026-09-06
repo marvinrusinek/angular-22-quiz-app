@@ -14,6 +14,7 @@ import { ActivatedRoute } from '@angular/router';
 
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
+import { Toolbar, ToolbarWidget, ToolbarWidgetGroup } from '@angular/aria/toolbar';
 
 import { SK_USER_ANSWERS } from '../../../shared/constants/session-keys';
 
@@ -35,7 +36,7 @@ export type ReviewFilter = 'all' | 'incorrect' | 'correct';
 @Component({
   selector: 'codelab-results-accordion',
   standalone: true,
-  imports: [MatExpansionModule, MatIconModule],
+  imports: [MatExpansionModule, MatIconModule, Toolbar, ToolbarWidget, ToolbarWidgetGroup],
   templateUrl: './accordion.component.html',
   styleUrls: ['./accordion.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -114,6 +115,17 @@ export class AccordionComponent implements OnInit {
 
   setReviewFilter(filter: ReviewFilter): void {
     this.reviewFilter.set(filter);
+  }
+
+  /**
+   * Angular Aria's ngToolbar reports the user's selection here on click/
+   * Enter/Space; `reviewFilter` (fed back in via `[value]="[reviewFilter()]"`)
+   * remains the ONE authoritative signal — this only relays the toolbar's
+   * report into the existing setter, exactly as a click handler always did.
+   */
+  onReviewFilterToolbarChange(values: readonly ReviewFilter[]): void {
+    const next = values[0];
+    if (next !== undefined) this.setReviewFilter(next);
   }
 
   results: Result = {

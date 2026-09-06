@@ -63,20 +63,43 @@
       aria-label="Your interviews"
       i18n-aria-label
     >
-      <!-- Filter (client-side): All / Submitted / Time Expired. -->
-      <div class="ih-filters" role="group" aria-label="Filter interviews by completion" i18n-aria-label>
-      @for (f of filters; track f.id) {
-        <button
-          type="button"
-          class="ih-filter"
-          [class.ih-filter--active]="filter() === f.id"
-          [attr.aria-pressed]="filter() === f.id"
-          (click)="setFilter(f.id)"
+      <!-- Filter (client-side): All / Submitted / Time Expired.
+           Angular Aria Toolbar prototype: ngToolbar/ngToolbarWidgetGroup
+           supply roving tabindex + Arrow Left/Right navigation + radio-style
+           mutual exclusivity natively; `filter` stays the ONE authoritative
+           signal (fed in one-way via [value], reported back via
+           valueChange — see onFilterToolbarChange). -->
+      <div
+        ngToolbar
+        orientation="horizontal"
+        class="ih-filters-toolbar"
+        [value]="[filter()]"
+        (valueChange)="onFilterToolbarChange($event)"
+      >
+        <div
+          ngToolbarWidgetGroup
+          [multi]="false"
+          class="ih-filters"
+          role="radiogroup"
+          aria-label="Filter interviews by completion"
+          i18n-aria-label
         >
-          {{ f.label }} <span class="ih-filter__count">({{ counts()[f.id] }})</span>
-        </button>
-      }
-    </div>
+        @for (f of filters; track f.id) {
+          <button
+            ngToolbarWidget
+            #w="ngToolbarWidget"
+            [value]="f.id"
+            type="button"
+            class="ih-filter"
+            [class.ih-filter--active]="filter() === f.id"
+            role="radio"
+            [attr.aria-checked]="w.selected()"
+          >
+            {{ f.label }} <span class="ih-filter__count">({{ counts()[f.id] }})</span>
+          </button>
+        }
+        </div>
+      </div>
 
     @if (cards().length === 0) {
       <p class="interview-history__none" role="status" i18n>

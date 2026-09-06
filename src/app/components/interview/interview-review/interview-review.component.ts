@@ -7,6 +7,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
+import { Toolbar, ToolbarWidget, ToolbarWidgetGroup } from '@angular/aria/toolbar';
 
 import type {
   InterviewResultViewModel,
@@ -72,7 +73,7 @@ interface ReviewItem {
 @Component({
   selector: 'app-interview-review',
   standalone: true,
-  imports: [TitleCasePipe],
+  imports: [TitleCasePipe, Toolbar, ToolbarWidget, ToolbarWidgetGroup],
   templateUrl: './interview-review.component.html',
   styleUrls: ['./interview-review.component.scss'],
   encapsulation: ViewEncapsulation.None,
@@ -205,6 +206,17 @@ export class InterviewReviewComponent {
 
   setFilter(id: ReviewFilterId): void {
     this.filter.set(id);
+  }
+
+  /**
+   * Angular Aria's ngToolbar reports the user's selection here on click/
+   * Enter/Space; `filter` (fed back in via `[value]="[filter()]"`) remains
+   * the ONE authoritative signal — this only relays the toolbar's report
+   * into the existing setter, exactly as a click handler always did.
+   */
+  onFilterToolbarChange(values: readonly ReviewFilterId[]): void {
+    const next = values[0];
+    if (next !== undefined) this.setFilter(next);
   }
 
   /** Accessible chip name with correct singular/plural. */

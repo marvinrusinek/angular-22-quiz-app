@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@angular/animations": "22.1.0",
+    "@angular/aria": "22.1.0",
     "@angular/cdk": "^22.1.0",
     "@angular/common": "22.1.0",
     "@angular/compiler": "22.1.0",

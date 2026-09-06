@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { Toolbar, ToolbarWidget, ToolbarWidgetGroup } from '@angular/aria/toolbar';
 
 import { formatDuration } from '../../../shared/utils/format-time';
 import { swallow } from '../../../shared/utils/error-logging';
@@ -54,7 +55,10 @@ interface HistoryCard {
     ThemeToggleComponent,
     InterviewReadinessComponent,
     InterviewTopicTrendsComponent,
-    ScrollDownIndicatorComponent
+    ScrollDownIndicatorComponent,
+    Toolbar,
+    ToolbarWidget,
+    ToolbarWidgetGroup
   ],
   templateUrl: './interview-history.component.html',
   styleUrls: ['./interview-history.component.scss'],
@@ -187,6 +191,17 @@ export class InterviewHistoryComponent implements OnInit {
 
   setFilter(id: InterviewHistoryFilter): void {
     this.filter.set(id);
+  }
+
+  /**
+   * Angular Aria's ngToolbar reports the user's selection here on click/
+   * Enter/Space; `filter` (fed back in via `[value]="[filter()]"`) remains
+   * the ONE authoritative signal — this only relays the toolbar's report
+   * into the existing setter, exactly as a click handler always did.
+   */
+  onFilterToolbarChange(values: readonly InterviewHistoryFilter[]): void {
+    const next = values[0];
+    if (next !== undefined) this.setFilter(next);
   }
 
   /** Role preset name, or "Custom Interview" for custom and legacy entries. */

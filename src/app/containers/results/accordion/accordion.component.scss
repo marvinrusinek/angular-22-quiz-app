@@ -251,6 +251,13 @@ mat-accordion {
   }
 }
 // ── Quiz Review filter (All / Incorrect / Correct) ──────────────────
+// Angular Aria prototype: this wraps .review-filter's ngToolbarWidgetGroup in
+// an ngToolbar host element. display:contents keeps it out of layout
+// entirely, so .review-filter's own flex rules apply exactly as before.
+.review-filter-toolbar {
+  display: contents;
+}
+
 .review-filter {
   display: flex;
   gap: 8px;

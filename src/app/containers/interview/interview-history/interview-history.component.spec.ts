@@ -142,7 +142,8 @@ describe('InterviewHistoryComponent', () => {
     seed([entry(70, 1)]);
     const el = render().nativeElement as HTMLElement;
     expect(el.querySelector('.ih-filter')?.tagName).toBe('BUTTON');
-    expect(el.querySelector('.ih-filter')?.getAttribute('aria-pressed')).toBe('true'); // All active by default
+    expect(el.querySelector('.ih-filter')?.getAttribute('role')).toBe('radio');
+    expect(el.querySelector('.ih-filter')?.getAttribute('aria-checked')).toBe('true'); // All active by default
     expect(el.querySelector('.ih-card__actions a')?.tagName).toBe('A');
   });
 
@@ -225,5 +226,62 @@ describe('InterviewHistoryComponent — lifetime vs retained counts', () => {
     const comp = render().componentInstance;
     expect(comp.lifetimeCount()).toBe(2);
     expect(comp.hasAgedOut()).toBe(false);
+  });
+});
+
+/**
+ * Angular Aria Toolbar prototype coverage for the interview-history filter
+ * (All / Submitted / Time Expired). `filter` remains the ONE authoritative
+ * signal — fed in one-way via `[value]="[filter()]"`, reported back via
+ * `(valueChange)="onFilterToolbarChange($event)"`.
+ */
+describe('InterviewHistoryComponent — filter Angular Aria Toolbar prototype', () => {
+  async function renderAsync(): Promise<ComponentFixture<InterviewHistoryComponent>> {
+    const fixture = render();
+    // ngToolbar establishes its default active/roving-tabindex item via
+    // afterRenderEffect, which flushes on the next render pass rather than
+    // synchronously within the first detectChanges() render() already did.
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function filterButtons(fixture: ComponentFixture<InterviewHistoryComponent>): HTMLButtonElement[] {
+    return [...fixture.nativeElement.querySelectorAll('.ih-filter')] as HTMLButtonElement[];
+  }
+
+  it('only ONE filter button participates in the initial Tab order (native roving tabindex)', async () => {
+    seed([entry(70, 1, 'submitted'), entry(50, 2, 'time-expired')]);
+    const fixture = await renderAsync();
+
+    const tabbable = filterButtons(fixture).filter((b) => b.tabIndex === 0);
+    expect(tabbable).toHaveLength(1);
+  });
+
+  it('mouse click on "Submitted" updates filter, aria-checked, and the displayed cards', async () => {
+    seed([entry(70, 1, 'submitted'), entry(50, 2, 'time-expired')]);
+    const fixture = await renderAsync();
+    const comp = fixture.componentInstance;
+
+    const submittedBtn = filterButtons(fixture).find((b) => b.textContent?.includes('Submitted'))!;
+    submittedBtn.click();
+    fixture.detectChanges();
+
+    expect(comp.filter()).toBe('submitted');
+    expect(submittedBtn.getAttribute('aria-checked')).toBe('true');
+    expect(comp.cards()).toHaveLength(1);
+    expect(comp.cards()[0].entry.completionReason).toBe('submitted');
+  });
+
+  it('the ngToolbar valueChange path drives the SAME setFilter() a click always has', async () => {
+    seed([entry(70, 1, 'submitted')]);
+    const fixture = await renderAsync();
+    const comp = fixture.componentInstance;
+    const spy = jest.spyOn(comp, 'setFilter');
+
+    comp.onFilterToolbarChange(['time-expired']);
+
+    expect(spy).toHaveBeenCalledWith('time-expired');
+    expect(comp.filter()).toBe('time-expired');
   });
 });

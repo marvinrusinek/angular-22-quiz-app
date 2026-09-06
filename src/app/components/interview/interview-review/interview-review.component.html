@@ -46,24 +46,47 @@
     </div>
   </dl>
 
-  <!-- Filter chips: data-driven from REVIEW_FILTERS. Only-one-active is conveyed
-       by aria-pressed; the count comes from the same predicate as the list. -->
-  <div class="rv-filters" role="group" aria-label="Filter review answers" i18n-aria-label>
-    @for (f of visibleFilters(); track f.id) {
-      <button
-        type="button"
-        class="rv-filter"
-        [class.active]="filter() === f.id"
-        [attr.aria-pressed]="filter() === f.id"
-        [attr.aria-label]="filterAria(f)"
-        (click)="setFilter(f.id)"
-      >
-        <span class="rv-filter__text" aria-hidden="true">
-          {{ f.label }}
-          <span class="rv-filter__count">{{ counts()[f.id] }}</span>
-        </span>
-      </button>
-    }
+  <!-- Filter chips: data-driven from REVIEW_FILTERS. Only-one-active is now
+       conveyed via role=radio + aria-checked (Angular Aria Toolbar
+       prototype: ngToolbar/ngToolbarWidgetGroup supply roving tabindex +
+       Arrow Left/Right navigation + radio-style mutual exclusivity
+       natively); the count comes from the same predicate as the list.
+       `filter` stays the ONE authoritative signal (fed in one-way via
+       [value], reported back via valueChange — see onFilterToolbarChange). -->
+  <div
+    ngToolbar
+    orientation="horizontal"
+    class="rv-filters-toolbar"
+    [value]="[filter()]"
+    (valueChange)="onFilterToolbarChange($event)"
+  >
+    <div
+      ngToolbarWidgetGroup
+      [multi]="false"
+      class="rv-filters"
+      role="radiogroup"
+      aria-label="Filter review answers"
+      i18n-aria-label
+    >
+      @for (f of visibleFilters(); track f.id) {
+        <button
+          ngToolbarWidget
+          #w="ngToolbarWidget"
+          [value]="f.id"
+          type="button"
+          class="rv-filter"
+          [class.active]="filter() === f.id"
+          role="radio"
+          [attr.aria-checked]="w.selected()"
+          [attr.aria-label]="filterAria(f)"
+        >
+          <span class="rv-filter__text" aria-hidden="true">
+            {{ f.label }}
+            <span class="rv-filter__count">{{ counts()[f.id] }}</span>
+          </span>
+        </button>
+      }
+    </div>
   </div>
 
   @for (item of filtered(); track item.number) {

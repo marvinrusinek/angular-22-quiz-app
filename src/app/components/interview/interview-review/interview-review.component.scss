@@ -82,6 +82,13 @@
   &__unanswered { color: var(--rv-muted); }
 }
 
+// Angular Aria prototype: wraps .rv-filters's ngToolbarWidgetGroup in an
+// ngToolbar host element. display:contents keeps it out of layout entirely,
+// so .rv-filters's own flex rules apply exactly as before.
+.rv-filters-toolbar {
+  display: contents;
+}
+
 .rv-filters {
   display: flex;
   flex-wrap: wrap;

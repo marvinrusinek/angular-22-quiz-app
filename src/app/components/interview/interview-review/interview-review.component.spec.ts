@@ -230,14 +230,54 @@ describe('InterviewReviewComponent', () => {
   });
 
   // ── accessibility ───────────────────────────────────────────────────
-  it('filters use aria-pressed + singular/plural accessible names', () => {
+  it('filters use role=radio + aria-checked + singular/plural accessible names', () => {
     setup();
     const chips = Array.from(el().querySelectorAll('.rv-filter')) as HTMLElement[];
-    expect(chips.filter((c) => c.getAttribute('aria-pressed') === 'true')).toHaveLength(1);
+    expect(chips.every((c) => c.getAttribute('role') === 'radio')).toBe(true);
+    expect(chips.filter((c) => c.getAttribute('aria-checked') === 'true')).toHaveLength(1);
     expect(chips.find((c) => c.getAttribute('aria-label')?.startsWith('Correct'))!.getAttribute('aria-label'))
       .toBe('Correct, 1 question');
     expect(chips.find((c) => c.getAttribute('aria-label')?.startsWith('Unanswered'))!.getAttribute('aria-label'))
       .toBe('Unanswered, 1 question');
+  });
+
+  // ── Angular Aria Toolbar prototype ─────────────────────────────────────
+  it('only ONE filter chip participates in the initial Tab order (native roving tabindex)', async () => {
+    setup();
+    // ngToolbar establishes its default active/roving-tabindex item via
+    // afterRenderEffect, which flushes on the next render pass rather than
+    // synchronously within setup()'s detectChanges().
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const chips = Array.from(el().querySelectorAll('.rv-filter')) as HTMLButtonElement[];
+    expect(chips.filter((c) => c.tabIndex === 0)).toHaveLength(1);
+  });
+
+  it('mouse click on the "Correct" chip updates filter, aria-checked, and the rendered list', async () => {
+    setup();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const correctChip = Array.from(el().querySelectorAll('.rv-filter')).find((c) =>
+      c.getAttribute('aria-label')?.startsWith('Correct')
+    ) as HTMLButtonElement;
+    correctChip.click();
+    fixture.detectChanges();
+
+    expect(component.filter()).toBe('correct');
+    expect(correctChip.getAttribute('aria-checked')).toBe('true');
+    expect(itemEls()).toHaveLength(1);
+  });
+
+  it('the ngToolbar valueChange path drives the SAME setFilter() a click always has', () => {
+    setup();
+    const spy = jest.spyOn(component, 'setFilter');
+
+    component.onFilterToolbarChange(['incorrect']);
+
+    expect(spy).toHaveBeenCalledWith('incorrect');
+    expect(component.filter()).toBe('incorrect');
   });
 
   it('read-only options are list items, not buttons/radios/checkboxes', () => {

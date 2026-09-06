@@ -14,31 +14,60 @@
 }
 
 @if (questions().length > 0) {
-  <div class="review-filter" role="group" aria-label="Filter reviewed questions" i18n-aria-label>
-    <button
-      type="button"
-      class="review-filter-btn"
-      [class.active]="reviewFilter() === 'all'"
-      [attr.aria-pressed]="reviewFilter() === 'all'"
-      (click)="setReviewFilter('all')"
-      i18n
-    >All ({{ questions().length }})</button>
-    <button
-      type="button"
-      class="review-filter-btn"
-      [class.active]="reviewFilter() === 'correct'"
-      [attr.aria-pressed]="reviewFilter() === 'correct'"
-      (click)="setReviewFilter('correct')"
-      i18n
-    >Correct ({{ correctCount() }})</button>
-    <button
-      type="button"
-      class="review-filter-btn"
-      [class.active]="reviewFilter() === 'incorrect'"
-      [attr.aria-pressed]="reviewFilter() === 'incorrect'"
-      (click)="setReviewFilter('incorrect')"
-      i18n
-    >Incorrect ({{ incorrectCount() }})</button>
+  <!-- Angular Aria Toolbar prototype: ngToolbar/ngToolbarWidgetGroup supply
+       roving tabindex + Arrow Left/Right navigation + radio-style mutual
+       exclusivity natively; `reviewFilter` stays the ONE authoritative
+       signal (fed in one-way via [value], reported back via valueChange —
+       see onReviewFilterToolbarChange). -->
+  <div
+    ngToolbar
+    orientation="horizontal"
+    class="review-filter-toolbar"
+    [value]="[reviewFilter()]"
+    (valueChange)="onReviewFilterToolbarChange($event)"
+  >
+    <div
+      ngToolbarWidgetGroup
+      [multi]="false"
+      class="review-filter"
+      role="radiogroup"
+      aria-label="Filter reviewed questions"
+      i18n-aria-label
+    >
+      <button
+        ngToolbarWidget
+        #wAll="ngToolbarWidget"
+        [value]="'all'"
+        type="button"
+        class="review-filter-btn"
+        [class.active]="reviewFilter() === 'all'"
+        role="radio"
+        [attr.aria-checked]="wAll.selected()"
+        i18n
+      >All ({{ questions().length }})</button>
+      <button
+        ngToolbarWidget
+        #wCorrect="ngToolbarWidget"
+        [value]="'correct'"
+        type="button"
+        class="review-filter-btn"
+        [class.active]="reviewFilter() === 'correct'"
+        role="radio"
+        [attr.aria-checked]="wCorrect.selected()"
+        i18n
+      >Correct ({{ correctCount() }})</button>
+      <button
+        ngToolbarWidget
+        #wIncorrect="ngToolbarWidget"
+        [value]="'incorrect'"
+        type="button"
+        class="review-filter-btn"
+        [class.active]="reviewFilter() === 'incorrect'"
+        role="radio"
+        [attr.aria-checked]="wIncorrect.selected()"
+        i18n
+      >Incorrect ({{ incorrectCount() }})</button>
+    </div>
   </div>
 }
 

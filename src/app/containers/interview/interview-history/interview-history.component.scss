@@ -151,6 +151,13 @@
   background: var(--ir-surface);
 }
 
+// Angular Aria prototype: wraps .ih-filters's ngToolbarWidgetGroup in an
+// ngToolbar host element. display:contents keeps it out of layout entirely,
+// so .ih-filters's own flex rules apply exactly as before.
+.ih-filters-toolbar {
+  display: contents;
+}
+
 .ih-filters {
   display: flex;
   flex-wrap: wrap;

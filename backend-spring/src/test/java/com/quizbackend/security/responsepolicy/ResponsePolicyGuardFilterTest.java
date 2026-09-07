@@ -2,6 +2,8 @@ package com.quizbackend.security.responsepolicy;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.quizbackend.interview.InterviewQuestionRepository;
+import com.quizbackend.interview.InterviewSessionRepository;
 import com.quizbackend.quiz.QuizRepository;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,6 +44,12 @@ class ResponsePolicyGuardFilterTest {
     // construct, even though this class never exercises quiz behavior.
     @MockitoBean
     private QuizRepository quizRepository;
+
+    @MockitoBean
+    private InterviewQuestionRepository interviewQuestionRepository;
+
+    @MockitoBean
+    private InterviewSessionRepository interviewSessionRepository;
 
     @Test
     void allowsASafeActiveInterviewShapedResponse() throws Exception {
@@ -84,6 +92,37 @@ class ResponsePolicyGuardFilterTest {
         mockMvc.perform(get("/test/response-policy/active/forbidden-explanation"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error.code").value("INTERNAL"));
+    }
+
+    @Test
+    void allowsASafeSessionCreationResponseIncludingTheRawToken() throws Exception {
+        // GREEN: SESSION_CREATED's whole reason to exist — the raw
+        // sessionToken is legitimately present ONLY on this one policy.
+        mockMvc.perform(get("/test/response-policy/session-created/safe"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionToken").value("raw-token-value-returned-once"));
+    }
+
+    @Test
+    void blocksExplanationOnASessionCreationResponseDespiteItsTokenExemption() throws Exception {
+        // RED: SESSION_CREATED's exemption is narrow (sessionToken only) — it
+        // must not become a general answer-key loophole for Interview session
+        // creation.
+        mockMvc.perform(get("/test/response-policy/session-created/forbidden-explanation"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error.code").value("INTERNAL"))
+                .andExpect(jsonPath("$.explanation").doesNotExist());
+    }
+
+    @Test
+    void blocksASessionTokenLeakingIntoAResumeResponse() throws Exception {
+        // RED: proves the token exemption does NOT leak into
+        // ACTIVE_ASSESSMENT (resume's policy) — the global sessionToken ban
+        // stays intact everywhere except the one route that just issued it.
+        mockMvc.perform(get("/test/response-policy/active/forbidden-session-token"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error.code").value("INTERNAL"))
+                .andExpect(jsonPath("$.sessionToken").doesNotExist());
     }
 
     @Test

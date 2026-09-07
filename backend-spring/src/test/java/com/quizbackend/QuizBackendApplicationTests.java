@@ -1,5 +1,7 @@
 package com.quizbackend;
 
+import com.quizbackend.interview.InterviewQuestionRepository;
+import com.quizbackend.interview.InterviewSessionRepository;
 import com.quizbackend.quiz.QuizRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,6 +18,12 @@ class QuizBackendApplicationTests {
 	// construct even though this test only proves the context loads.
 	@MockitoBean
 	private QuizRepository quizRepository;
+
+	@MockitoBean
+	private InterviewQuestionRepository interviewQuestionRepository;
+
+	@MockitoBean
+	private InterviewSessionRepository interviewSessionRepository;
 
 	@Test
 	void contextLoads() {

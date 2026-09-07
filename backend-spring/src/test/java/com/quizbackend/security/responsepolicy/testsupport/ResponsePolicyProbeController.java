@@ -148,6 +148,53 @@ public class ResponsePolicyProbeController {
         return body;
     }
 
+    /**
+     * A representative SAFE session-CREATION response — SESSION_CREATED is
+     * ACTIVE_ASSESSMENT plus a {@code sessionToken} exemption scoped to this
+     * ONE policy. Must pass, including the raw token.
+     */
+    @GetMapping("/test/response-policy/session-created/safe")
+    public Map<String, Object> safeSessionCreated(HttpServletRequest request) {
+        ResponsePolicyContext.set(request, ResponsePolicy.SESSION_CREATED);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("sessionId", "is_abc123");
+        body.put("sessionToken", "raw-token-value-returned-once");
+        body.put("status", "active");
+        body.put("questions", List.of(Map.of("questionId", "signals:q:0", "type", "single")));
+        return body;
+    }
+
+    /**
+     * A session-creation response with an accidentally-included
+     * {@code explanation} field. SESSION_CREATED's token exemption is
+     * narrow — it does NOT also permit answer-key content. Must be blocked.
+     */
+    @GetMapping("/test/response-policy/session-created/forbidden-explanation")
+    public Map<String, Object> forbiddenExplanationOnSessionCreated(HttpServletRequest request) {
+        ResponsePolicyContext.set(request, ResponsePolicy.SESSION_CREATED);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("sessionId", "is_abc123");
+        body.put("sessionToken", "raw-token-value-returned-once");
+        body.put("explanation", "This leaked in by mistake.");
+        return body;
+    }
+
+    /**
+     * The global {@code sessionToken} ban stays intact under
+     * ACTIVE_ASSESSMENT (resume's policy) — the exemption is scoped to
+     * SESSION_CREATED only. Must be blocked, proving resume can never leak
+     * the token even if a future change accidentally included it.
+     */
+    @GetMapping("/test/response-policy/active/forbidden-session-token")
+    public Map<String, Object> forbiddenSessionTokenOnActiveAssessment(HttpServletRequest request) {
+        ResponsePolicyContext.set(request, ResponsePolicy.ACTIVE_ASSESSMENT);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("sessionId", "is_abc123");
+        body.put("sessionToken", "should-never-appear-on-resume");
+        body.put("status", "active");
+        return body;
+    }
+
     private Map<String, Object> activeQuestion(Map<String, Object> option) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("questionId", "rxjs:q:0");

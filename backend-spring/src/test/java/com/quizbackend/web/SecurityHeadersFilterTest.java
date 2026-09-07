@@ -1,5 +1,7 @@
 package com.quizbackend.web;
 
+import com.quizbackend.interview.InterviewQuestionRepository;
+import com.quizbackend.interview.InterviewSessionRepository;
 import com.quizbackend.quiz.QuizRepository;
 import com.quizbackend.quiz.QuizService;
 import com.quizbackend.quiz.dto.QuizMetadataDto;
@@ -44,6 +46,12 @@ class SecurityHeadersFilterTest {
 
     @MockitoBean
     private QuizService quizService;
+
+    @MockitoBean
+    private InterviewQuestionRepository interviewQuestionRepository;
+
+    @MockitoBean
+    private InterviewSessionRepository interviewSessionRepository;
 
     @Test
     void healthResponseCarriesNosniff() throws Exception {

@@ -2,6 +2,8 @@ package com.quizbackend.health;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.quizbackend.interview.InterviewQuestionRepository;
+import com.quizbackend.interview.InterviewSessionRepository;
 import com.quizbackend.quiz.QuizRepository;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -37,6 +39,15 @@ class HealthControllerTest {
     // context and need SOME QuizRepository to construct — a mock is enough.
     @MockitoBean
     private QuizRepository quizRepository;
+
+    // Slice 3 adds InterviewQuestionRepository/InterviewSessionRepository
+    // (both JdbcTemplate-backed, same "no real bean under test profile"
+    // situation as QuizRepository above) — mocked for the same reason.
+    @MockitoBean
+    private InterviewQuestionRepository interviewQuestionRepository;
+
+    @MockitoBean
+    private InterviewSessionRepository interviewSessionRepository;
 
     @Test
     void returns200WithTheExactPublicContractShape() throws Exception {

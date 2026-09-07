@@ -3,13 +3,14 @@ package com.quizbackend.web.error;
 import org.springframework.http.HttpStatus;
 
 /**
- * The minimal Spring equivalent of the Node reference's {@code ApiError}
- * ({@code backend/src/shared/errors.ts}) &mdash; deliberately only as much of
- * that vocabulary as Slice 2's two read-only quiz endpoints need
- * ({@code NOT_FOUND}). Slice 1 intentionally deferred the full Node-parity
- * error model; this adds one code rather than porting all seven, so later
- * slices extend it as they actually need more codes instead of speculatively
- * pre-building them now.
+ * The Spring equivalent of the Node reference's {@code ApiError}
+ * ({@code backend/src/shared/errors.ts}). Slice 2 added {@code NOT_FOUND}
+ * (the only code its two read-only quiz endpoints needed); Slice 3 adds the
+ * four more the Interview session create/resume routes need
+ * (BAD_REQUEST/UNAUTHORIZED/SESSION_EXPIRED/CONFLICT), with the SAME
+ * status-code mapping as Node's {@code STATUS_BY_CODE}. Node's remaining two
+ * codes (PAYLOAD_TOO_LARGE, and a bare INTERNAL factory) are still deferred
+ * until a route actually needs them.
  */
 public final class ApiException extends RuntimeException {
 
@@ -24,6 +25,27 @@ public final class ApiException extends RuntimeException {
 
     public static ApiException notFound(String message) {
         return new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", message);
+    }
+
+    public static ApiException badRequest(String message) {
+        return new ApiException(HttpStatus.BAD_REQUEST, "BAD_REQUEST", message);
+    }
+
+    public static ApiException unauthorized(String message) {
+        return new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", message);
+    }
+
+    /** Same HTTP status as {@link #conflict}, distinct code — matches Node exactly. */
+    public static ApiException sessionExpired(String message) {
+        return new ApiException(HttpStatus.CONFLICT, "SESSION_EXPIRED", message);
+    }
+
+    public static ApiException conflict(String message) {
+        return new ApiException(HttpStatus.CONFLICT, "CONFLICT", message);
+    }
+
+    public static ApiException internal(String message) {
+        return new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL", message);
     }
 
     public HttpStatus getStatus() {

@@ -1,5 +1,7 @@
 package com.quizbackend.quiz;
 
+import com.quizbackend.interview.InterviewQuestionRepository;
+import com.quizbackend.interview.InterviewSessionRepository;
 import com.quizbackend.quiz.dto.QuizMetadataDto;
 import com.quizbackend.web.error.ApiException;
 import org.junit.jupiter.api.Test;
@@ -43,6 +45,20 @@ class QuizControllerTest {
 
     @MockitoBean
     private QuizService quizService;
+
+    // Slice 3's AssessmentBuilder/AssessmentPresetBuilder depend on
+    // QuizRepository directly (not only through QuizService), and on the new
+    // InterviewQuestionRepository — both JdbcTemplate-backed, unavailable
+    // under the "test" profile's JPA/DataSource exclusion. Mocked for the
+    // same reason QuizService is: this class never exercises them.
+    @MockitoBean
+    private QuizRepository quizRepository;
+
+    @MockitoBean
+    private InterviewQuestionRepository interviewQuestionRepository;
+
+    @MockitoBean
+    private InterviewSessionRepository interviewSessionRepository;
 
     private static final QuizMetadataDto RXJS = new QuizMetadataDto(
             "rxjs", "RxJS Fundamentals", "Observables, operators and subscriptions.",

@@ -2,9 +2,12 @@ package com.quizbackend.security.responsepolicy;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.quizbackend.quiz.QuizRepository;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -23,12 +26,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Spring-serialized JSON, never a hand-built string standing in for one. Each
  * test name states the exact shape it proves and why that shape matters.
  */
+// "test" excludes datasource/JPA autoconfiguration (Slice 2) so this class
+// never needs a real Neon connection to run.
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 class ResponsePolicyGuardFilterTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    // See HealthControllerTest for why this mock is required: JPA
+    // autoconfiguration is excluded under "test", so QuizController's real
+    // QuizService/QuizRepository dependency chain needs a stand-in to
+    // construct, even though this class never exercises quiz behavior.
+    @MockitoBean
+    private QuizRepository quizRepository;
 
     @Test
     void allowsASafeActiveInterviewShapedResponse() throws Exception {
@@ -106,6 +119,32 @@ class ResponsePolicyGuardFilterTest {
         mockMvc.perform(get("/test/response-policy/submitted-review/forbidden"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error.code").value("INTERNAL"));
+    }
+
+    @Test
+    void allowsASafeQuizMetadataShapedResponse() throws Exception {
+        // GREEN: the Slice 2 QuizController's real registered policy
+        // (PUBLIC_METADATA) — quizId/milestone/summary/image/difficulty/
+        // facts/questionCount are exactly the QuizMetadataDto field set and
+        // must pass.
+        mockMvc.perform(get("/test/response-policy/public-metadata/safe"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quizId").value("rxjs"))
+                .andExpect(jsonPath("$.questionCount").value(9));
+    }
+
+    @Test
+    void blocksAnAnswerKeyFieldLeakingIntoAQuizMetadataShapedResponse() throws Exception {
+        // RED: proves that IF QuizService/QuizController were ever changed to
+        // accidentally include answer-key material on a PUBLIC_METADATA
+        // response (the exact policy the two Slice 2 quiz endpoints
+        // register), the guard still blocks it — the response-policy
+        // mechanism is wired to the quiz endpoints' own policy, not merely
+        // proven in the abstract against ACTIVE_ASSESSMENT/SUBMITTED_REVIEW.
+        mockMvc.perform(get("/test/response-policy/public-metadata/forbidden-explanation"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error.code").value("INTERNAL"))
+                .andExpect(jsonPath("$.explanation").doesNotExist());
     }
 
     @Test

@@ -2,9 +2,12 @@ package com.quizbackend.health;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.quizbackend.quiz.QuizRepository;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -17,12 +20,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * ({@code backend/src/routes/health.route.ts}): {@code {"status":"ok",
  * "uptimeSeconds":<int>}}, nothing else.
  */
+// "test" excludes datasource/JPA autoconfiguration (Slice 2) so this class
+// never needs a real Neon connection to run.
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 class HealthControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    // Slice 2 excludes JPA/DataSource autoconfiguration under "test" (see
+    // application-test.properties), so QuizRepository has no real bean. This
+    // class does not exercise quiz behavior, but QuizController/QuizService
+    // are still real, component-scanned beans in the same application
+    // context and need SOME QuizRepository to construct — a mock is enough.
+    @MockitoBean
+    private QuizRepository quizRepository;
 
     @Test
     void returns200WithTheExactPublicContractShape() throws Exception {

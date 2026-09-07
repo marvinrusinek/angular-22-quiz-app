@@ -1,5 +1,6 @@
 package com.quizbackend.security.responsepolicy;
 
+import com.quizbackend.web.SecurityHeaders;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -9,6 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingResponseWrapper;
@@ -39,8 +42,21 @@ import java.util.Optional;
  * before every route so a route cannot opt out by forgetting a helper. A
  * controller that never calls {@link ResponsePolicyContext#set} is scanned
  * under {@link ResponsePolicy#DEFAULT}, the strictest policy.
+ *
+ * <p>Explicitly ordered AFTER {@code Ordered.HIGHEST_PRECEDENCE} so
+ * {@code com.quizbackend.web.SecurityHeadersFilter} sits OUTSIDE this filter
+ * in the chain and sets {@code X-Content-Type-Options} before this filter
+ * runs. On a violation this filter's own {@code response.reset()} clears
+ * that header along with everything else &mdash; see
+ * {@code SecurityHeadersFilter}'s javadoc for the pre-chain-placement
+ * reasoning. This filter re-applies {@link SecurityHeaders#NOSNIFF_NAME}
+ * itself immediately after {@code reset()} and before writing the sanitized
+ * body (see {@link #doFilterInternal}), using the same before-the-write
+ * timing that makes header-setting reliable on a real server rather than
+ * only under MockMvc.
  */
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE + 10)
 public class ResponsePolicyGuardFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(ResponsePolicyGuardFilter.class);
@@ -93,6 +109,13 @@ public class ResponsePolicyGuardFilter extends OncePerRequestFilter {
         // controller intended, so the caller must never see a 200 (or any
         // controller-chosen status) carrying a substitute payload either.
         response.reset();
+        // reset() clears every header set earlier in the chain, including
+        // X-Content-Type-Options (set by SecurityHeadersFilter before this
+        // filter ran). Re-applied here, synchronously and before the body
+        // write below, so the sanitized error response still carries it —
+        // matching Node's global security-headers middleware, whose headers
+        // are unaffected by an equivalent guard's own res.json() calls.
+        response.setHeader(SecurityHeaders.NOSNIFF_NAME, SecurityHeaders.NOSNIFF_VALUE);
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         response.setContentType("application/json;charset=UTF-8");
         response.getOutputStream().write(BLOCKED_BODY);

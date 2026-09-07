@@ -111,6 +111,43 @@ public class ResponsePolicyProbeController {
         return body;
     }
 
+    /**
+     * A representative SAFE quiz-metadata-shaped response — the exact field
+     * set {@code QuizController}'s real endpoints emit under PUBLIC_METADATA.
+     * Must pass.
+     */
+    @GetMapping("/test/response-policy/public-metadata/safe")
+    public Map<String, Object> safePublicMetadata(HttpServletRequest request) {
+        ResponsePolicyContext.set(request, ResponsePolicy.PUBLIC_METADATA);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("quizId", "rxjs");
+        body.put("milestone", "RxJS Fundamentals");
+        body.put("summary", "Observables, operators and subscriptions.");
+        body.put("image", "rxjs.svg");
+        body.put("difficulty", "intermediate");
+        body.put("facts", List.of("RxJS ships with over 100 operators."));
+        body.put("questionCount", 9);
+        return body;
+    }
+
+    /**
+     * A quiz-metadata-shaped response with an accidentally-included
+     * {@code explanation} field — answer-key-adjacent content that
+     * PUBLIC_METADATA explicitly bans. Must be blocked. Proves the guard
+     * protects the ACTUAL policy the Slice 2 quiz endpoints register, not
+     * only the Interview-shaped policies exercised above.
+     */
+    @GetMapping("/test/response-policy/public-metadata/forbidden-explanation")
+    public Map<String, Object> forbiddenExplanationOnPublicMetadata(HttpServletRequest request) {
+        ResponsePolicyContext.set(request, ResponsePolicy.PUBLIC_METADATA);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("quizId", "rxjs");
+        body.put("milestone", "RxJS Fundamentals");
+        body.put("questionCount", 9);
+        body.put("explanation", "This leaked in by mistake.");
+        return body;
+    }
+
     private Map<String, Object> activeQuestion(Map<String, Object> option) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("questionId", "rxjs:q:0");

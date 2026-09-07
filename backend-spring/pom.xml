@@ -43,6 +43,22 @@
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 
+		<!-- Slice 2: minimum JPA/PostgreSQL infrastructure. Spring Data JPA
+		     (Hibernate) for entity mapping against the EXISTING Neon schema
+		     (ddl-auto=validate — never create/update), and the PostgreSQL JDBC
+		     driver itself. No Flyway/Liquibase/Testcontainers/Lombok/MapStruct —
+		     the existing schema is canonical and none of those are needed to
+		     read it. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator-test</artifactId>

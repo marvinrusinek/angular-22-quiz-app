@@ -3,6 +3,7 @@ package com.quizbackend.web;
 import com.quizbackend.interview.InterviewQuestionRepository;
 import com.quizbackend.interview.InterviewSessionRepository;
 import com.quizbackend.quiz.QuizRepository;
+import com.quizbackend.quiz.QuizResourceRepository;
 import com.quizbackend.quiz.QuizService;
 import com.quizbackend.quiz.dto.QuizMetadataDto;
 import com.quizbackend.web.error.ApiException;
@@ -57,6 +58,9 @@ class SecurityHeadersFilterTest {
 
     @MockitoBean
     private InterviewSessionRepository interviewSessionRepository;
+
+    @MockitoBean
+    private QuizResourceRepository quizResourceRepository;
 
     /** Asserts the COMPLETE Node-parity header set, verbatim name/value. */
     private static ResultActions expectAllFiveSecurityHeaders(ResultActions actions) throws Exception {

@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.quizbackend.interview.InterviewQuestionRepository;
 import com.quizbackend.interview.InterviewSessionRepository;
 import com.quizbackend.quiz.QuizRepository;
+import com.quizbackend.quiz.QuizResourceRepository;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -48,6 +49,11 @@ class HealthControllerTest {
 
     @MockitoBean
     private InterviewSessionRepository interviewSessionRepository;
+
+    // Slice 6B adds QuizResourceRepository (also JdbcTemplate-backed) for
+    // Topic Quiz's resources route — same "no real bean under test profile" reason.
+    @MockitoBean
+    private QuizResourceRepository quizResourceRepository;
 
     @Test
     void returns200WithTheExactPublicContractShape() throws Exception {

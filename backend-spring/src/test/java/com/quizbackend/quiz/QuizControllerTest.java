@@ -60,6 +60,9 @@ class QuizControllerTest {
     @MockitoBean
     private InterviewSessionRepository interviewSessionRepository;
 
+    @MockitoBean
+    private QuizResourceRepository quizResourceRepository;
+
     private static final QuizMetadataDto RXJS = new QuizMetadataDto(
             "rxjs", "RxJS Fundamentals", "Observables, operators and subscriptions.",
             "rxjs.svg", "intermediate", List.of("RxJS ships with over 100 operators."), 9);

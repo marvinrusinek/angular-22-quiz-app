@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.quizbackend.interview.InterviewQuestionRepository;
 import com.quizbackend.interview.InterviewSessionRepository;
 import com.quizbackend.quiz.QuizRepository;
+import com.quizbackend.quiz.QuizResourceRepository;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -50,6 +51,9 @@ class ResponsePolicyGuardFilterTest {
 
     @MockitoBean
     private InterviewSessionRepository interviewSessionRepository;
+
+    @MockitoBean
+    private QuizResourceRepository quizResourceRepository;
 
     @Test
     void allowsASafeActiveInterviewShapedResponse() throws Exception {

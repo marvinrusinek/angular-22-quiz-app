@@ -14,6 +14,7 @@ import com.quizbackend.interview.dto.InterviewResultDto;
 import com.quizbackend.interview.dto.InterviewReviewOptionDto;
 import com.quizbackend.interview.dto.InterviewReviewQuestionDto;
 import com.quizbackend.quiz.QuizRepository;
+import com.quizbackend.quiz.QuizResourceRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -63,6 +64,8 @@ class InterviewSessionControllerTest {
     private InterviewQuestionRepository interviewQuestionRepository;
     @MockitoBean
     private InterviewSessionRepository interviewSessionRepository;
+    @MockitoBean
+    private QuizResourceRepository quizResourceRepository;
 
     private ActiveInterviewSessionDto sampleDto(String sessionToken) {
         CodeSnippetDto snippet = new CodeSnippetDto("typescript", "const s = signal(0);", null);

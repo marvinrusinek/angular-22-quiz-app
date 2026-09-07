@@ -3,6 +3,7 @@ package com.quizbackend;
 import com.quizbackend.interview.InterviewQuestionRepository;
 import com.quizbackend.interview.InterviewSessionRepository;
 import com.quizbackend.quiz.QuizRepository;
+import com.quizbackend.quiz.QuizResourceRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -24,6 +25,9 @@ class QuizBackendApplicationTests {
 
 	@MockitoBean
 	private InterviewSessionRepository interviewSessionRepository;
+
+	@MockitoBean
+	private QuizResourceRepository quizResourceRepository;
 
 	@Test
 	void contextLoads() {

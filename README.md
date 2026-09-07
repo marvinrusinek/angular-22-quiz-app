@@ -179,8 +179,6 @@ npm install</code></pre>
 
 <h2>🗺️ Roadmap</h2>
 <ul>
-  <li>Add code-based Angular questions with syntax-highlighted code snippets</li>
-  <li>Add Mark for Review functionality to Interview Mode</li>
   <li>Introduce automated question-quality validation for quiz content</li>
   <li>Expand Interview Mode reporting and performance analytics</li>
   <li>Continue adopting modern Angular APIs and reactive patterns where they provide measurable architectural or UX improvements</li>

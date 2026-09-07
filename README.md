@@ -182,7 +182,7 @@ npm install</code></pre>
   <li>Introduce automated question-quality validation for quiz content</li>
   <li>Expand Interview Mode reporting and performance analytics</li>
   <li>Continue adopting modern Angular APIs and reactive patterns where they provide measurable architectural or UX improvements</li>
-  <li>Continue improving accessibility, responsive design, and mobile/touch interactions</li>
+  <li>Expand accessibility and mobile/responsive UX improvements</li>
 </ul>
 
 <hr>

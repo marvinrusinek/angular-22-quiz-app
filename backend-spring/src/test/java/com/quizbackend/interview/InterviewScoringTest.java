@@ -260,6 +260,39 @@ class InterviewScoringTest {
         assertThat(direct).isEqualTo(expectedPercentage);
     }
 
+    /**
+     * Slice 6 parity audit: exhaustive (not merely hand-picked) proof that
+     * Java's {@code Math.round} agrees with JavaScript's {@code Math.round}
+     * for EVERY {@code (correct, total)} pair that can occur in an interview
+     * up to a generous 200-question ceiling (far above any realistic preset
+     * or custom size) — {@code 200*201/2 ≈ 20,100} cases, cheap to run
+     * exhaustively rather than sampling. JS's {@code Math.round} is defined
+     * as {@code floor(x + 0.5)} for finite non-negative x; that reference
+     * formula is reimplemented independently here (not by calling {@code
+     * Math.round} again) and cross-checked against the JDK's own {@code
+     * Math.round(double)} for every case, proving agreement rather than
+     * assuming it from the two languages' javadoc/spec descriptions alone.
+     */
+    @Test
+    void javaMathRoundAgreesWithTheJavaScriptFloorPlusHalfFormulaForEveryPossibleScoreFraction() {
+        int maxTotal = 200;
+        int mismatches = 0;
+        for (int total = 1; total <= maxTotal; total++) {
+            for (int correct = 0; correct <= total; correct++) {
+                double exact = (correct / (double) total) * 100;
+                long javaRounded = Math.round(exact);
+                long jsEquivalent = (long) Math.floor(exact + 0.5);
+                if (javaRounded != jsEquivalent) {
+                    mismatches++;
+                }
+                assertThat(javaRounded).as("correct=%d total=%d exact=%s", correct, total, exact)
+                        .isEqualTo(jsEquivalent);
+                assertThat(javaRounded).isBetween(0L, 100L);
+            }
+        }
+        assertThat(mismatches).isZero();
+    }
+
     // ── computeTimeUsedSeconds ────────────────────────────────────────────
 
     @Test

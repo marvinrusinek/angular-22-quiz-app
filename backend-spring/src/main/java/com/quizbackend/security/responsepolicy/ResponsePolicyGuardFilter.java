@@ -19,6 +19,7 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -45,15 +46,17 @@ import java.util.Optional;
  *
  * <p>Explicitly ordered AFTER {@code Ordered.HIGHEST_PRECEDENCE} so
  * {@code com.quizbackend.web.SecurityHeadersFilter} sits OUTSIDE this filter
- * in the chain and sets {@code X-Content-Type-Options} before this filter
- * runs. On a violation this filter's own {@code response.reset()} clears
- * that header along with everything else &mdash; see
+ * in the chain and sets every entry in {@link SecurityHeaders#ALL} before
+ * this filter runs. On a violation this filter's own {@code response.reset()}
+ * clears every one of those headers along with everything else &mdash; see
  * {@code SecurityHeadersFilter}'s javadoc for the pre-chain-placement
- * reasoning. This filter re-applies {@link SecurityHeaders#NOSNIFF_NAME}
- * itself immediately after {@code reset()} and before writing the sanitized
- * body (see {@link #doFilterInternal}), using the same before-the-write
- * timing that makes header-setting reliable on a real server rather than
- * only under MockMvc.
+ * reasoning. This filter re-applies the COMPLETE {@link SecurityHeaders#ALL}
+ * set itself immediately after {@code reset()} and before writing the
+ * sanitized body (see {@link #doFilterInternal}), using the same
+ * before-the-write timing that makes header-setting reliable on a real
+ * server rather than only under MockMvc &mdash; matching Node's own
+ * guard, whose equivalent {@code res.json()} substitution never clears
+ * headers a prior Express middleware already set.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
@@ -110,12 +113,15 @@ public class ResponsePolicyGuardFilter extends OncePerRequestFilter {
         // controller-chosen status) carrying a substitute payload either.
         response.reset();
         // reset() clears every header set earlier in the chain, including
-        // X-Content-Type-Options (set by SecurityHeadersFilter before this
-        // filter ran). Re-applied here, synchronously and before the body
-        // write below, so the sanitized error response still carries it —
-        // matching Node's global security-headers middleware, whose headers
-        // are unaffected by an equivalent guard's own res.json() calls.
-        response.setHeader(SecurityHeaders.NOSNIFF_NAME, SecurityHeaders.NOSNIFF_VALUE);
+        // the full SecurityHeaders.ALL set (set by SecurityHeadersFilter
+        // before this filter ran). Re-applied here, synchronously and before
+        // the body write below, so the sanitized error response still
+        // carries all five — matching Node's global security-headers
+        // middleware, whose headers are unaffected by an equivalent guard's
+        // own res.json() calls.
+        for (Map.Entry<String, String> header : SecurityHeaders.ALL) {
+            response.setHeader(header.getKey(), header.getValue());
+        }
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         response.setContentType("application/json;charset=UTF-8");
         response.getOutputStream().write(BLOCKED_BODY);

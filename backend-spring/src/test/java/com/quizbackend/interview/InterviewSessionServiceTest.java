@@ -1,6 +1,11 @@
 package com.quizbackend.interview;
 
+import com.quizbackend.interview.InterviewSessionRepository.FlaggedState;
+import com.quizbackend.interview.InterviewSessionRepository.SaveAnswerInput;
+import com.quizbackend.interview.InterviewSessionRepository.SavedAnswerState;
+import com.quizbackend.interview.InterviewSessionRepository.SessionAnswerRecord;
 import com.quizbackend.interview.InterviewSessionRepository.SessionAuthenticationRecord;
+import com.quizbackend.interview.InterviewSessionRepository.SetFlaggedInput;
 import com.quizbackend.interview.dto.ActiveInterviewSessionDto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -329,7 +334,7 @@ class InterviewSessionServiceTest {
     }
 
     @Test
-    void resumeReturnsTheActiveSessionWithoutASessionTokenAndNoEmptyAnswers() {
+    void resumeReturnsTheActiveSessionWithoutASessionTokenAndNoAnswersWhenNonePersisted() {
         SessionToken.SessionIdentity identity = SessionToken.generateSessionIdentity();
         when(sessionRepository.getSessionAuthenticationRecord("is_x"))
                 .thenReturn(Optional.of(new SessionAuthenticationRecord("is_x", identity.tokenHash(), SessionStatus.ACTIVE, fixedNow + 10_000)));
@@ -341,11 +346,341 @@ class InterviewSessionServiceTest {
                 "Because.", List.of(new SessionOptionSnapshot(101, "A", 0, true)), false, null);
         when(sessionRepository.getSessionSnapshot("is_x"))
                 .thenReturn(Optional.of(new InterviewSessionSnapshot(record, List.of(question))));
+        // getAnswers left unstubbed -> Mockito's default empty List, exactly
+        // matching a session with zero persisted rows.
 
         ActiveInterviewSessionDto dto = service().resumeSession("is_x", identity.rawToken());
 
         assertThat(dto.sessionToken()).isNull();
         assertThat(dto.answers()).isEmpty();
         assertThat(dto.questions()).hasSize(1);
+    }
+
+    @Test
+    void resumePopulatesConfirmedAnswersFromPersistedStateOrderedByPosition() {
+        SessionToken.SessionIdentity identity = SessionToken.generateSessionIdentity();
+        when(sessionRepository.getSessionAuthenticationRecord("is_x"))
+                .thenReturn(Optional.of(new SessionAuthenticationRecord("is_x", identity.tokenHash(), SessionStatus.ACTIVE, fixedNow + 10_000)));
+
+        InterviewSessionConfig config = new InterviewSessionConfig("mixed", List.of("signals"), 2, "junior", "Junior Angular Developer");
+        InterviewSessionRecord record = new InterviewSessionRecord("is_x", identity.tokenHash(), SessionStatus.ACTIVE,
+                config, 1200, fixedNow - 500, fixedNow + 10_000, null, false, "ia_x");
+        SessionQuestionSnapshot q0 = new SessionQuestionSnapshot(0, "signals:q:0", "signals", "Q0?", "single",
+                "Because.", List.of(new SessionOptionSnapshot(101, "A", 0, true)), false, null);
+        SessionQuestionSnapshot q1 = new SessionQuestionSnapshot(1, "signals:q:1", "signals", "Q1?", "multiple",
+                "Because.", List.of(new SessionOptionSnapshot(201, "A", 0, true), new SessionOptionSnapshot(202, "B", 1, true)), true, null);
+        when(sessionRepository.getSessionSnapshot("is_x"))
+                .thenReturn(Optional.of(new InterviewSessionSnapshot(record, List.of(q0, q1))));
+        // Stored out of position order deliberately, to prove the service
+        // re-sorts rather than trusting getAnswers' own row order.
+        when(sessionRepository.getAnswers("is_x")).thenReturn(List.of(
+                new SessionAnswerRecord(1, List.of(201, 202), fixedNow),
+                new SessionAnswerRecord(0, List.of(101), fixedNow)));
+
+        ActiveInterviewSessionDto dto = service().resumeSession("is_x", identity.rawToken());
+
+        assertThat(dto.answers()).extracting("questionId", "selectedOptionIds")
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("signals:q:0", List.of(101)),
+                        org.assertj.core.groups.Tuple.tuple("signals:q:1", List.of(201, 202)));
+        // Flag state is on the QUESTION dto, independent of the answers list.
+        assertThat(dto.questions().get(1).flagged()).isTrue();
+        assertThat(dto.questions().get(0).flagged()).isFalse();
+    }
+
+    @Test
+    void resumeOmitsAnEmptyPersistedAnswerRowDefensively() {
+        SessionToken.SessionIdentity identity = SessionToken.generateSessionIdentity();
+        when(sessionRepository.getSessionAuthenticationRecord("is_x"))
+                .thenReturn(Optional.of(new SessionAuthenticationRecord("is_x", identity.tokenHash(), SessionStatus.ACTIVE, fixedNow + 10_000)));
+        InterviewSessionConfig config = new InterviewSessionConfig("mixed", List.of("signals"), 1, "junior", "Junior Angular Developer");
+        InterviewSessionRecord record = new InterviewSessionRecord("is_x", identity.tokenHash(), SessionStatus.ACTIVE,
+                config, 1200, fixedNow - 500, fixedNow + 10_000, null, false, "ia_x");
+        SessionQuestionSnapshot q0 = new SessionQuestionSnapshot(0, "signals:q:0", "signals", "Q0?", "single",
+                "Because.", List.of(new SessionOptionSnapshot(101, "A", 0, true)), false, null);
+        when(sessionRepository.getSessionSnapshot("is_x"))
+                .thenReturn(Optional.of(new InterviewSessionSnapshot(record, List.of(q0))));
+        // Defensive case: an empty selection row should never exist in
+        // practice (cleared answers are deleted, not stored empty), but the
+        // mapping must not surface it as an answer if it somehow did.
+        when(sessionRepository.getAnswers("is_x")).thenReturn(List.of(new SessionAnswerRecord(0, List.of(), fixedNow)));
+
+        ActiveInterviewSessionDto dto = service().resumeSession("is_x", identity.rawToken());
+
+        assertThat(dto.answers()).isEmpty();
+    }
+
+    // ── saveAnswer ───────────────────────────────────────────────────────
+
+    @Test
+    void saveAnswerRejectsAMissingToken() {
+        assertThatThrownBy(() -> service().saveAnswer("is_x", "signals:q:0", null, Map.of("selectedOptionIds", List.of(101))))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.UNAUTHORIZED));
+    }
+
+    @Test
+    void saveAnswerRejectsAWrongToken() {
+        SessionToken.SessionIdentity identity = SessionToken.generateSessionIdentity();
+        when(sessionRepository.getSessionAuthenticationRecord("is_x"))
+                .thenReturn(Optional.of(new SessionAuthenticationRecord("is_x", identity.tokenHash(), SessionStatus.ACTIVE, fixedNow + 10_000)));
+        String wrongToken = SessionToken.generateSessionIdentity().rawToken();
+
+        assertThatThrownBy(() -> service().saveAnswer("is_x", "signals:q:0", wrongToken, Map.of("selectedOptionIds", List.of(101))))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.UNAUTHORIZED));
+        // Body/question validation must never run before authentication.
+        verify(sessionRepository, never()).saveAnswer(any());
+    }
+
+    private String authenticatedSession(String sessionId, SessionStatus status, long expiresAt) {
+        SessionToken.SessionIdentity identity = SessionToken.generateSessionIdentity();
+        when(sessionRepository.getSessionAuthenticationRecord(sessionId))
+                .thenReturn(Optional.of(new SessionAuthenticationRecord(sessionId, identity.tokenHash(), status, expiresAt)));
+        return identity.rawToken();
+    }
+
+    @Test
+    void saveAnswerTranslatesAnUnknownQuestionToBadRequest() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        when(sessionRepository.saveAnswer(any())).thenThrow(new SessionRepositoryException(
+                SessionRepositoryException.Category.QUESTION_NOT_IN_SESSION, "Question does not belong to this session"));
+
+        assertThatThrownBy(() -> service().saveAnswer("is_x", "ghost:q:0", token, Map.of("selectedOptionIds", List.of(101))))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+    }
+
+    @Test
+    void saveAnswerTranslatesAnOptionFromAnotherQuestionToBadRequest() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        when(sessionRepository.saveAnswer(any())).thenThrow(new SessionRepositoryException(
+                SessionRepositoryException.Category.OPTION_NOT_IN_QUESTION, "Selected option does not belong to this question"));
+
+        assertThatThrownBy(() -> service().saveAnswer("is_x", "signals:q:0", token, Map.of("selectedOptionIds", List.of(999))))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+    }
+
+    @Test
+    void saveAnswerTranslatesTooManySelectionsForASingleQuestionToBadRequest() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        when(sessionRepository.saveAnswer(any())).thenThrow(new SessionRepositoryException(
+                SessionRepositoryException.Category.INVALID_SELECTION_COUNT, "This question accepts exactly one selection"));
+
+        assertThatThrownBy(() -> service().saveAnswer("is_x", "signals:q:0", token, Map.of("selectedOptionIds", List.of(101, 102))))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST))
+                .hasMessage("This question accepts exactly one selection");
+    }
+
+    @Test
+    void saveAnswerTranslatesAnExpiredSessionToSessionExpired() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        when(sessionRepository.saveAnswer(any())).thenThrow(new SessionRepositoryException(
+                SessionRepositoryException.Category.SESSION_EXPIRED, "Session expired"));
+
+        assertThatThrownBy(() -> service().saveAnswer("is_x", "signals:q:0", token, Map.of("selectedOptionIds", List.of(101))))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.SESSION_EXPIRED));
+    }
+
+    @Test
+    void saveAnswerTranslatesASubmittedSessionToConflict() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        when(sessionRepository.saveAnswer(any())).thenThrow(new SessionRepositoryException(
+                SessionRepositoryException.Category.SESSION_NOT_ACTIVE, "Session already submitted"));
+
+        assertThatThrownBy(() -> service().saveAnswer("is_x", "signals:q:0", token, Map.of("selectedOptionIds", List.of(101))))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.CONFLICT));
+    }
+
+    @Test
+    void saveAnswerReturnsTheConfirmedCountsFromTheRepositoryOnSuccess() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        ArgumentCaptor<SaveAnswerInput> captor = ArgumentCaptor.forClass(SaveAnswerInput.class);
+        when(sessionRepository.saveAnswer(captor.capture()))
+                .thenReturn(new SavedAnswerState("signals:q:0", List.of(101), 1, 2));
+
+        SavedAnswerState result = service().saveAnswer("is_x", "signals:q:0", token, Map.of("selectedOptionIds", List.of(101)));
+
+        assertThat(result.answeredCount()).isEqualTo(1);
+        assertThat(result.questionCount()).isEqualTo(2);
+        // now is captured ONCE, inside this call — the injected fixed clock.
+        assertThat(captor.getValue().now()).isEqualTo(fixedNow);
+        assertThat(captor.getValue().sessionId()).isEqualTo("is_x");
+        assertThat(captor.getValue().questionId()).isEqualTo("signals:q:0");
+    }
+
+    @Test
+    void saveAnswerAllowsAnEmptySelectionToClearTheAnswer() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        ArgumentCaptor<SaveAnswerInput> captor = ArgumentCaptor.forClass(SaveAnswerInput.class);
+        when(sessionRepository.saveAnswer(captor.capture()))
+                .thenReturn(new SavedAnswerState("signals:q:0", List.of(), 0, 2));
+
+        SavedAnswerState result = service().saveAnswer("is_x", "signals:q:0", token, Map.of("selectedOptionIds", List.of()));
+
+        assertThat(result.selectedOptionIds()).isEmpty();
+        assertThat(captor.getValue().selectedOptionIds()).isEmpty();
+    }
+
+    @Test
+    void saveAnswerRejectsANonArraySelectedOptionIds() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        assertThatThrownBy(() -> service().saveAnswer("is_x", "signals:q:0", token, Map.of("selectedOptionIds", "101")))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+    }
+
+    @Test
+    void saveAnswerRejectsDuplicateSelectedOptionIds() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        assertThatThrownBy(() -> service().saveAnswer("is_x", "signals:q:0", token, Map.of("selectedOptionIds", List.of(101, 101))))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+    }
+
+    @Test
+    void saveAnswerRejectsANonIntegerSelection() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        assertThatThrownBy(() -> service().saveAnswer("is_x", "signals:q:0", token, Map.of("selectedOptionIds", List.of(101.5))))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+    }
+
+    @Test
+    void saveAnswerRejectsTooManySelectedOptionIds() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        List<Integer> tooMany = new java.util.ArrayList<>();
+        for (int i = 0; i < 33; i++) {
+            tooMany.add(i);
+        }
+        assertThatThrownBy(() -> service().saveAnswer("is_x", "signals:q:0", token, Map.of("selectedOptionIds", tooMany)))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+    }
+
+    @Test
+    void saveAnswerRejectsAnUnexpectedBodyField() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        Map<String, Object> body = new HashMap<>();
+        body.put("selectedOptionIds", List.of(101));
+        body.put("isCorrect", true);
+
+        assertThatThrownBy(() -> service().saveAnswer("is_x", "signals:q:0", token, body))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+    }
+
+    // ── setFlagged ───────────────────────────────────────────────────────
+
+    @Test
+    void setFlaggedRejectsAMissingToken() {
+        assertThatThrownBy(() -> service().setFlagged("is_x", "signals:q:0", null, Map.of("flagged", true)))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.UNAUTHORIZED));
+    }
+
+    @Test
+    void setFlaggedRejectsAWrongToken() {
+        when(sessionRepository.getSessionAuthenticationRecord("is_x"))
+                .thenReturn(Optional.of(new SessionAuthenticationRecord(
+                        "is_x", SessionToken.generateSessionIdentity().tokenHash(), SessionStatus.ACTIVE, fixedNow + 10_000)));
+        String wrongToken = SessionToken.generateSessionIdentity().rawToken();
+
+        assertThatThrownBy(() -> service().setFlagged("is_x", "signals:q:0", wrongToken, Map.of("flagged", true)))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.UNAUTHORIZED));
+        verify(sessionRepository, never()).setFlagged(any());
+    }
+
+    @Test
+    void setFlaggedTranslatesAnUnknownQuestionToBadRequest() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        when(sessionRepository.setFlagged(any())).thenThrow(new SessionRepositoryException(
+                SessionRepositoryException.Category.QUESTION_NOT_IN_SESSION, "Question does not belong to this session"));
+
+        assertThatThrownBy(() -> service().setFlagged("is_x", "ghost:q:0", token, Map.of("flagged", true)))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+    }
+
+    @Test
+    void setFlaggedTranslatesAnExpiredSessionToSessionExpired() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        when(sessionRepository.setFlagged(any())).thenThrow(new SessionRepositoryException(
+                SessionRepositoryException.Category.SESSION_EXPIRED, "Session expired"));
+
+        assertThatThrownBy(() -> service().setFlagged("is_x", "signals:q:0", token, Map.of("flagged", true)))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.SESSION_EXPIRED));
+    }
+
+    @Test
+    void setFlaggedTranslatesASubmittedSessionToConflict() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        when(sessionRepository.setFlagged(any())).thenThrow(new SessionRepositoryException(
+                SessionRepositoryException.Category.SESSION_NOT_ACTIVE, "Session already submitted"));
+
+        assertThatThrownBy(() -> service().setFlagged("is_x", "signals:q:0", token, Map.of("flagged", true)))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.CONFLICT));
+    }
+
+    @Test
+    void setFlaggedTrueThenFalseBothRoundTripThroughTheRepositoryUnchanged() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        ArgumentCaptor<SetFlaggedInput> captor = ArgumentCaptor.forClass(SetFlaggedInput.class);
+        when(sessionRepository.setFlagged(captor.capture())).thenAnswer(invocation ->
+                new FlaggedState(captor.getValue().questionId(), captor.getValue().flagged()));
+
+        FlaggedState setTrue = service().setFlagged("is_x", "signals:q:0", token, Map.of("flagged", true));
+        assertThat(setTrue.flagged()).isTrue();
+
+        FlaggedState setFalse = service().setFlagged("is_x", "signals:q:0", token, Map.of("flagged", false));
+        assertThat(setFalse.flagged()).isFalse();
+
+        assertThat(captor.getAllValues()).extracting(SetFlaggedInput::flagged).containsExactly(true, false);
+    }
+
+    @Test
+    void setFlaggedRejectsANonBooleanValue() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        assertThatThrownBy(() -> service().setFlagged("is_x", "signals:q:0", token, Map.of("flagged", "yes")))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+    }
+
+    @Test
+    void setFlaggedRejectsAnUnexpectedBodyField() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        Map<String, Object> body = new HashMap<>();
+        body.put("flagged", true);
+        body.put("selectedOptionIds", List.of(101));
+
+        assertThatThrownBy(() -> service().setFlagged("is_x", "signals:q:0", token, body))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
     }
 }

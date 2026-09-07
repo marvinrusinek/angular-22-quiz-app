@@ -1,12 +1,18 @@
 package com.quizbackend.interview;
 
+import com.quizbackend.interview.InterviewSessionRepository.FlaggedState;
+import com.quizbackend.interview.InterviewSessionRepository.SavedAnswerState;
+import com.quizbackend.interview.InterviewSessionRepository.SessionAnswerRecord;
 import com.quizbackend.interview.InterviewSessionRepository.SessionAuthenticationRecord;
+import com.quizbackend.interview.InterviewSessionRepository.SetFlaggedInput;
 import com.quizbackend.interview.dto.ActiveInterviewAnswerDto;
 import com.quizbackend.interview.dto.ActiveInterviewSessionDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,9 +20,10 @@ import java.util.function.LongSupplier;
 
 /**
  * Interview session orchestration — port of the Node reference's
- * {@code session.service.ts}, scoped to create + resume (Slice 3). Knows
- * nothing about Spring MVC beyond plain values in, plain values out, so the
- * controller stays a thin adapter, mirroring the Node router's own role.
+ * {@code session.service.ts}: create/resume (Slice 3), answer save + Mark
+ * for Review (Slice 4). Knows nothing about Spring MVC beyond plain values
+ * in, plain values out, so the controller stays a thin adapter, mirroring
+ * the Node router's own role.
  */
 @Service
 public class InterviewSessionService {
@@ -32,6 +39,7 @@ public class InterviewSessionService {
     private static final int MAX_TOPIC_IDS = 50;
     private static final int MAX_STRING_LENGTH = 100;
     private static final int MAX_IDENTITY_ATTEMPTS = 3;
+    private static final int MAX_SELECTED_OPTIONS = 32;
 
     private final AssessmentBuilder assessmentBuilder;
     private final AssessmentPresetBuilder presetBuilder;
@@ -94,13 +102,157 @@ public class InterviewSessionService {
         InterviewSessionSnapshot stored = sessionRepository.getSessionSnapshot(sessionId)
                 .orElseThrow(SessionServiceException::unauthorized);
 
-        // No answer persistence in this slice (Slice 3 is create/resume parity
-        // only) — session_answers can never contain rows yet, so an empty
-        // list is not a shortcut, it is the actually-correct current state.
-        List<ActiveInterviewAnswerDto> answers = List.of();
+        List<ActiveInterviewAnswerDto> answers = savedAnswers(sessionId, stored.questions());
 
         return InterviewSessionDtoMapper.toActiveSessionDto(new InterviewSessionDtoMapper.ActiveSessionParams(
                 stored.session(), stored.questions(), answers, nowMs, null));
+    }
+
+    /**
+     * Save or clear ONE question's selection. Authentication happens FIRST —
+     * no question or option validation runs until the bearer token matches,
+     * so the endpoint cannot be used to probe which question ids exist in a
+     * session the caller does not own.
+     */
+    public SavedAnswerState saveAnswer(String sessionId, String questionId, String rawToken, Map<String, Object> body) {
+        authenticate(sessionId, rawToken);
+        List<Integer> selectedOptionIds = parseSelectedOptionIds(body);
+
+        try {
+            // now captured ONCE, inside this call, so the deadline cannot move.
+            return sessionRepository.saveAnswer(new InterviewSessionRepository.SaveAnswerInput(
+                    sessionId, questionId, selectedOptionIds, now.getAsLong()));
+        } catch (SessionRepositoryException e) {
+            throw translateRepositoryError(e);
+        }
+    }
+
+    /**
+     * Set or clear the Mark-for-Review flag for ONE question. Never touches
+     * an answer, never affects scoring or navigation, and never reveals
+     * correctness — the response is {@code {questionId, flagged}} only.
+     */
+    public FlaggedState setFlagged(String sessionId, String questionId, String rawToken, Map<String, Object> body) {
+        authenticate(sessionId, rawToken);
+        boolean flagged = parseFlagged(body);
+
+        try {
+            return sessionRepository.setFlagged(new SetFlaggedInput(sessionId, questionId, flagged, now.getAsLong()));
+        } catch (SessionRepositoryException e) {
+            throw translateRepositoryError(e);
+        }
+    }
+
+    /**
+     * Persisted selections, keyed back to the OPAQUE questionId and ordered
+     * by question position. A cleared answer has no row, so it simply does
+     * not appear — the client's own model treats "no entry" as unanswered.
+     */
+    private List<ActiveInterviewAnswerDto> savedAnswers(String sessionId, List<SessionQuestionSnapshot> questions) {
+        Map<Integer, String> questionIdByPosition = new LinkedHashMap<>();
+        for (SessionQuestionSnapshot question : questions) {
+            questionIdByPosition.put(question.position(), question.questionId());
+        }
+
+        List<SessionAnswerRecord> answers = new ArrayList<>(sessionRepository.getAnswers(sessionId));
+        answers.sort((a, b) -> Integer.compare(a.position(), b.position()));
+
+        List<ActiveInterviewAnswerDto> result = new ArrayList<>();
+        for (SessionAnswerRecord answer : answers) {
+            if (answer.selectedOptionIds().isEmpty()) {
+                continue;
+            }
+            String questionId = questionIdByPosition.get(answer.position());
+            if (questionId == null) {
+                continue; // defensive: orphan rows cannot exist
+            }
+            result.add(new ActiveInterviewAnswerDto(questionId, List.copyOf(answer.selectedOptionIds())));
+        }
+        return result;
+    }
+
+    /** Map repository categories onto service errors, revealing nothing extra. */
+    private static SessionServiceException translateRepositoryError(SessionRepositoryException e) {
+        return switch (e.getCategory()) {
+            // Already authenticated, so this can only be a race with deletion.
+            case SESSION_NOT_FOUND -> SessionServiceException.unauthorized();
+            case SESSION_EXPIRED ->
+                    new SessionServiceException(SessionServiceException.Code.SESSION_EXPIRED, "This assessment has expired");
+            case SESSION_NOT_ACTIVE ->
+                    new SessionServiceException(SessionServiceException.Code.CONFLICT, "This assessment has already been submitted");
+            case QUESTION_NOT_IN_SESSION ->
+                    new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "Question does not belong to this session");
+            case OPTION_NOT_IN_QUESTION ->
+                    new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "Selected option does not belong to this question");
+            case INVALID_SELECTION_COUNT -> new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, e.getMessage());
+            default -> new SessionServiceException(SessionServiceException.Code.INTERNAL, "Answer could not be saved");
+        };
+    }
+
+    /**
+     * Strict body validation for a save. Nothing is coerced: {@code "401"}
+     * is a string, not an option id, and is rejected rather than parsed.
+     */
+    private List<Integer> parseSelectedOptionIds(Map<String, Object> body) {
+        if (body == null) {
+            throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "Request body must be an object");
+        }
+        for (String key : body.keySet()) {
+            if (key.equals("__proto__") || key.equals("constructor") || key.equals("prototype")) {
+                throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "Request contains a forbidden key");
+            }
+            if (!key.equals("selectedOptionIds")) {
+                // Catches correctness/score/explanation/questionId/optionText
+                // claims and anything else a client might invent.
+                throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "Unexpected field \"" + key + "\"");
+            }
+        }
+
+        Object raw = body.get("selectedOptionIds");
+        if (!(raw instanceof List<?> rawList)) {
+            throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "selectedOptionIds must be an array");
+        }
+        if (rawList.size() > MAX_SELECTED_OPTIONS) {
+            throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "Too many selected options");
+        }
+
+        Set<Integer> seen = new HashSet<>();
+        List<Integer> ids = new ArrayList<>(rawList.size());
+        for (Object value : rawList) {
+            if (!(value instanceof Number number) || number.doubleValue() != Math.floor(number.doubleValue())) {
+                throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "selectedOptionIds must contain integers");
+            }
+            int intValue = number.intValue();
+            if (!seen.add(intValue)) {
+                throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "selectedOptionIds contains duplicates");
+            }
+            ids.add(intValue);
+        }
+        return ids;
+    }
+
+    /**
+     * Strict body validation for a review-flag write. Accepts ONLY
+     * {@code { flagged: boolean }} — no selection, no question metadata,
+     * nothing that could be mistaken for an answer.
+     */
+    private boolean parseFlagged(Map<String, Object> body) {
+        if (body == null) {
+            throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "Request body must be an object");
+        }
+        for (String key : body.keySet()) {
+            if (key.equals("__proto__") || key.equals("constructor") || key.equals("prototype")) {
+                throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "Request contains a forbidden key");
+            }
+            if (!key.equals("flagged")) {
+                throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "Unexpected field \"" + key + "\"");
+            }
+        }
+        Object flagged = body.get("flagged");
+        if (!(flagged instanceof Boolean bool)) {
+            throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "flagged must be a boolean");
+        }
+        return bool;
     }
 
     /** Verify the bearer token. Throws the SAME generic error for every failure. */

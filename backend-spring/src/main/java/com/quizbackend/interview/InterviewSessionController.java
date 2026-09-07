@@ -1,6 +1,8 @@
 package com.quizbackend.interview;
 
 import com.quizbackend.interview.dto.ActiveInterviewSessionDto;
+import com.quizbackend.interview.dto.AnswerSaveResponseDto;
+import com.quizbackend.interview.dto.FlagResponseDto;
 import com.quizbackend.security.responsepolicy.ResponsePolicy;
 import com.quizbackend.security.responsepolicy.ResponsePolicyContext;
 import com.quizbackend.web.error.ApiException;
@@ -9,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,8 +25,8 @@ import java.util.Map;
  * {@code interview-sessions.route.ts}: parses HTTP input, pulls the bearer
  * token, calls the service, selects the response policy, translates known
  * errors. No generation, scoring, token verification or persistence logic
- * lives here. Scoped to create + resume for this slice — there are
- * deliberately no answer/flag/submit/result routes yet.
+ * lives here. Scoped to create/resume/answer/flag for this slice — there
+ * are deliberately no submit/result routes yet.
  */
 @RestController
 @RequestMapping("/api/interview-sessions")
@@ -58,6 +61,41 @@ public class InterviewSessionController {
         try {
             String token = SessionToken.extractBearerToken(authorization);
             return service.resumeSession(sessionId, token);
+        } catch (SessionServiceException e) {
+            throw translate(e);
+        }
+    }
+
+    @PutMapping("/{sessionId}/answers/{questionId}")
+    public AnswerSaveResponseDto saveAnswer(
+            @PathVariable String sessionId,
+            @PathVariable String questionId,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody(required = false) Map<String, Object> body,
+            HttpServletRequest request) {
+        ResponsePolicyContext.set(request, ResponsePolicy.ACTIVE_ASSESSMENT);
+        try {
+            String token = SessionToken.extractBearerToken(authorization);
+            var saved = service.saveAnswer(sessionId, questionId, token, body == null ? Map.of() : body);
+            return new AnswerSaveResponseDto(true, saved.questionId(), saved.selectedOptionIds(),
+                    saved.answeredCount(), saved.questionCount());
+        } catch (SessionServiceException e) {
+            throw translate(e);
+        }
+    }
+
+    @PutMapping("/{sessionId}/review/{questionId}")
+    public FlagResponseDto setFlagged(
+            @PathVariable String sessionId,
+            @PathVariable String questionId,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody(required = false) Map<String, Object> body,
+            HttpServletRequest request) {
+        ResponsePolicyContext.set(request, ResponsePolicy.ACTIVE_ASSESSMENT);
+        try {
+            String token = SessionToken.extractBearerToken(authorization);
+            var result = service.setFlagged(sessionId, questionId, token, body == null ? Map.of() : body);
+            return new FlagResponseDto(result.questionId(), result.flagged());
         } catch (SessionServiceException e) {
             throw translate(e);
         }

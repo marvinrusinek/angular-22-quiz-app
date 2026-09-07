@@ -3,6 +3,7 @@ package com.quizbackend.interview;
 import com.quizbackend.interview.dto.ActiveInterviewSessionDto;
 import com.quizbackend.interview.dto.AnswerSaveResponseDto;
 import com.quizbackend.interview.dto.FlagResponseDto;
+import com.quizbackend.interview.dto.InterviewResultDto;
 import com.quizbackend.security.responsepolicy.ResponsePolicy;
 import com.quizbackend.security.responsepolicy.ResponsePolicyContext;
 import com.quizbackend.web.error.ApiException;
@@ -25,8 +26,12 @@ import java.util.Map;
  * {@code interview-sessions.route.ts}: parses HTTP input, pulls the bearer
  * token, calls the service, selects the response policy, translates known
  * errors. No generation, scoring, token verification or persistence logic
- * lives here. Scoped to create/resume/answer/flag for this slice — there
- * are deliberately no submit/result routes yet.
+ * lives here.
+ *
+ * <p>{@code submit}/{@code result} are the only two post-assessment routes
+ * Node actually has — confirmed against the live route file, which defines
+ * no separate "review" endpoint; review content is simply the {@code
+ * review[]} field of the SAME result response both routes return.
  */
 @RestController
 @RequestMapping("/api/interview-sessions")
@@ -96,6 +101,40 @@ public class InterviewSessionController {
             String token = SessionToken.extractBearerToken(authorization);
             var result = service.setFlagged(sessionId, questionId, token, body == null ? Map.of() : body);
             return new FlagResponseDto(result.questionId(), result.flagged());
+        } catch (SessionServiceException e) {
+            throw translate(e);
+        }
+    }
+
+    /**
+     * SUBMITTED_REVIEW is the only policy that permits {@code
+     * correctOptionIds}/{@code explanation} — set on these two routes ONLY;
+     * every active-assessment route above keeps rejecting both.
+     */
+    @PostMapping("/{sessionId}/submit")
+    public InterviewResultDto submit(
+            @PathVariable String sessionId,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody(required = false) Map<String, Object> body,
+            HttpServletRequest request) {
+        ResponsePolicyContext.set(request, ResponsePolicy.SUBMITTED_REVIEW);
+        try {
+            String token = SessionToken.extractBearerToken(authorization);
+            return service.submitSession(sessionId, token, body == null ? Map.of() : body);
+        } catch (SessionServiceException e) {
+            throw translate(e);
+        }
+    }
+
+    @GetMapping("/{sessionId}/result")
+    public InterviewResultDto result(
+            @PathVariable String sessionId,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            HttpServletRequest request) {
+        ResponsePolicyContext.set(request, ResponsePolicy.SUBMITTED_REVIEW);
+        try {
+            String token = SessionToken.extractBearerToken(authorization);
+            return service.getResult(sessionId, token);
         } catch (SessionServiceException e) {
             throw translate(e);
         }

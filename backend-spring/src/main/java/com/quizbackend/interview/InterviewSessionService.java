@@ -1,5 +1,6 @@
 package com.quizbackend.interview;
 
+import com.quizbackend.interview.InterviewSessionRepository.FinalizeSessionInput;
 import com.quizbackend.interview.InterviewSessionRepository.FlaggedState;
 import com.quizbackend.interview.InterviewSessionRepository.SavedAnswerState;
 import com.quizbackend.interview.InterviewSessionRepository.SessionAnswerRecord;
@@ -7,6 +8,8 @@ import com.quizbackend.interview.InterviewSessionRepository.SessionAuthenticatio
 import com.quizbackend.interview.InterviewSessionRepository.SetFlaggedInput;
 import com.quizbackend.interview.dto.ActiveInterviewAnswerDto;
 import com.quizbackend.interview.dto.ActiveInterviewSessionDto;
+import com.quizbackend.interview.dto.InterviewResultDto;
+import com.quizbackend.quiz.QuizRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,9 +24,9 @@ import java.util.function.LongSupplier;
 /**
  * Interview session orchestration — port of the Node reference's
  * {@code session.service.ts}: create/resume (Slice 3), answer save + Mark
- * for Review (Slice 4). Knows nothing about Spring MVC beyond plain values
- * in, plain values out, so the controller stays a thin adapter, mirroring
- * the Node router's own role.
+ * for Review (Slice 4), submit/result (Slice 5). Knows nothing about Spring
+ * MVC beyond plain values in, plain values out, so the controller stays a
+ * thin adapter, mirroring the Node router's own role.
  */
 @Service
 public class InterviewSessionService {
@@ -44,21 +47,23 @@ public class InterviewSessionService {
     private final AssessmentBuilder assessmentBuilder;
     private final AssessmentPresetBuilder presetBuilder;
     private final InterviewSessionRepository sessionRepository;
+    private final QuizRepository quizRepository;
     private final LongSupplier now;
     private final RandomSource random;
 
     @Autowired
     public InterviewSessionService(AssessmentBuilder assessmentBuilder, AssessmentPresetBuilder presetBuilder,
-            InterviewSessionRepository sessionRepository) {
-        this(assessmentBuilder, presetBuilder, sessionRepository, System::currentTimeMillis, AssessmentRandom.CRYPTO);
+            InterviewSessionRepository sessionRepository, QuizRepository quizRepository) {
+        this(assessmentBuilder, presetBuilder, sessionRepository, quizRepository, System::currentTimeMillis, AssessmentRandom.CRYPTO);
     }
 
     /** Test/advanced constructor — injects a deterministic clock and/or shuffle source. */
     public InterviewSessionService(AssessmentBuilder assessmentBuilder, AssessmentPresetBuilder presetBuilder,
-            InterviewSessionRepository sessionRepository, LongSupplier now, RandomSource random) {
+            InterviewSessionRepository sessionRepository, QuizRepository quizRepository, LongSupplier now, RandomSource random) {
         this.assessmentBuilder = assessmentBuilder;
         this.presetBuilder = presetBuilder;
         this.sessionRepository = sessionRepository;
+        this.quizRepository = quizRepository;
         this.now = now;
         this.random = random;
     }
@@ -141,6 +146,91 @@ public class InterviewSessionService {
         } catch (SessionRepositoryException e) {
             throw translateRepositoryError(e);
         }
+    }
+
+    /**
+     * Finalize the assessment. Idempotent: an already-submitted session
+     * returns its frozen result untouched, so a manual submit racing an
+     * expiry submit produces exactly ONE result. Works for active AND
+     * already-expired sessions — the client is never required to have
+     * submitted at the exact moment the countdown hit zero.
+     */
+    public InterviewResultDto submitSession(String sessionId, String rawToken, Map<String, Object> body) {
+        authenticate(sessionId, rawToken);
+        assertEmptySubmitBody(body);
+
+        try {
+            FrozenInterviewResult result = sessionRepository.finalizeSession(
+                    new FinalizeSessionInput(sessionId, now.getAsLong(), this::topicTitle));
+            return InterviewResultDtoMapper.toInterviewResultDto(result);
+        } catch (SessionRepositoryException e) {
+            throw translateRepositoryError(e);
+        }
+    }
+
+    /**
+     * The frozen result. DECISION (ported from Node): an expired-but-
+     * unfinalized session is FINALIZED here rather than requiring a prior
+     * {@code POST /submit} — a user whose tab closed at the deadline would
+     * otherwise be stuck with a result they can never retrieve. The
+     * transition is idempotent and produces the same frozen result the
+     * submit route would.
+     */
+    public InterviewResultDto getResult(String sessionId, String rawToken) {
+        authenticate(sessionId, rawToken);
+
+        SessionAuthenticationRecord auth = sessionRepository.getSessionAuthenticationRecord(sessionId)
+                .orElseThrow(SessionServiceException::unauthorized);
+
+        long nowMs = now.getAsLong();
+
+        if (auth.status() == SessionStatus.SUBMITTED) {
+            FrozenInterviewResult stored = sessionRepository.getSubmittedResult(sessionId)
+                    .orElseThrow(() -> new SessionServiceException(SessionServiceException.Code.INTERNAL, "Result could not be read"));
+            return InterviewResultDtoMapper.toInterviewResultDto(stored);
+        }
+
+        boolean deadlinePassed = auth.status() == SessionStatus.EXPIRED || auth.expiresAt() <= nowMs;
+        if (!deadlinePassed) {
+            // Still running — a result does not exist yet.
+            throw new SessionServiceException(SessionServiceException.Code.CONFLICT, "This assessment has not been submitted");
+        }
+
+        try {
+            FrozenInterviewResult result = sessionRepository.finalizeSession(
+                    new FinalizeSessionInput(sessionId, nowMs, this::topicTitle));
+            return InterviewResultDtoMapper.toInterviewResultDto(result);
+        } catch (SessionRepositoryException e) {
+            throw translateRepositoryError(e);
+        }
+    }
+
+    /**
+     * Topic display title, resolved from the CURRENT (mutable) quiz bank at
+     * finalization time and then frozen into the result forever — port of
+     * the Node reference's own {@code topicTitleFor}. Deliberately NOT the
+     * session's frozen question content: Node reads {@code
+     * quizRepository.getQuizById(topicId)?.milestone}, the live bank, at the
+     * moment of finalization — see {@code InterviewScoring}'s javadoc.
+     */
+    private String topicTitle(String topicId) {
+        return quizRepository.findByQuizIdAndStatus(topicId, "active")
+                .map(quiz -> quiz.getMilestone())
+                .orElse(topicId);
+    }
+
+    /**
+     * A submit body must be empty. Every value in a result is determined by
+     * the server, so a client claim about the score, the reason, the
+     * timestamps or the answers is rejected rather than ignored.
+     */
+    private void assertEmptySubmitBody(Map<String, Object> body) {
+        if (body == null || body.isEmpty()) {
+            return;
+        }
+        String firstKey = body.keySet().iterator().next();
+        throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST,
+                "Submit accepts no fields — \"" + firstKey + "\" is determined by the server");
     }
 
     /**

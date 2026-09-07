@@ -1,5 +1,6 @@
 package com.quizbackend.interview;
 
+import com.quizbackend.interview.InterviewSessionRepository.FinalizeSessionInput;
 import com.quizbackend.interview.InterviewSessionRepository.FlaggedState;
 import com.quizbackend.interview.InterviewSessionRepository.SaveAnswerInput;
 import com.quizbackend.interview.InterviewSessionRepository.SavedAnswerState;
@@ -7,6 +8,9 @@ import com.quizbackend.interview.InterviewSessionRepository.SessionAnswerRecord;
 import com.quizbackend.interview.InterviewSessionRepository.SessionAuthenticationRecord;
 import com.quizbackend.interview.InterviewSessionRepository.SetFlaggedInput;
 import com.quizbackend.interview.dto.ActiveInterviewSessionDto;
+import com.quizbackend.interview.dto.InterviewResultDto;
+import com.quizbackend.quiz.QuizRepository;
+import com.quizbackend.quiz.entity.QuizEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -44,11 +48,13 @@ class InterviewSessionServiceTest {
     private AssessmentPresetBuilder presetBuilder;
     @Mock
     private InterviewSessionRepository sessionRepository;
+    @Mock
+    private QuizRepository quizRepository;
 
     private long fixedNow = 1_000_000L;
 
     private InterviewSessionService service() {
-        return new InterviewSessionService(assessmentBuilder, presetBuilder, sessionRepository,
+        return new InterviewSessionService(assessmentBuilder, presetBuilder, sessionRepository, quizRepository,
                 () -> fixedNow, AssessmentRandom.seeded(1));
     }
 
@@ -682,5 +688,235 @@ class InterviewSessionServiceTest {
                 .isInstanceOf(SessionServiceException.class)
                 .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
                         .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+    }
+
+    // ── submitSession / getResult (Slice 5) ──────────────────────────────
+
+    private static FrozenInterviewResult sampleFrozenResult(String sessionId) {
+        FrozenReviewQuestion question = new FrozenReviewQuestion(
+                "signals:q:0", "signals", "What does this log?", "single",
+                List.of(new FrozenReviewOption(101, "0"), new FrozenReviewOption(102, "1")),
+                List.of(101), List.of(101), "Because signals are reactive.", false, null);
+        return new FrozenInterviewResult(
+                sessionId, "submitted", 1_700_000_000_000L, false,
+                1, 1, 0, 1, 0, 100,
+                1200, 600, 600,
+                new FrozenResultConfig("preset", "junior", null, List.of("signals"), 1),
+                new FrozenPerformance(List.of(new FrozenTopicBucket("signals", "Signals", 1, 0, 0, 1, 100))),
+                List.of(question));
+    }
+
+    @Test
+    void submitSessionRejectsAMissingToken() {
+        assertThatThrownBy(() -> service().submitSession("is_x", null, Map.of()))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.UNAUTHORIZED));
+        verify(sessionRepository, never()).finalizeSession(any());
+    }
+
+    @Test
+    void submitSessionRejectsAWrongToken() {
+        authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        String wrongToken = SessionToken.generateSessionIdentity().rawToken();
+
+        assertThatThrownBy(() -> service().submitSession("is_x", wrongToken, Map.of()))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.UNAUTHORIZED));
+        verify(sessionRepository, never()).finalizeSession(any());
+    }
+
+    @Test
+    void submitSessionRejectsANonEmptyBodyNamingTheOffendingField() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        Map<String, Object> body = new HashMap<>();
+        body.put("score", 100);
+
+        assertThatThrownBy(() -> service().submitSession("is_x", token, body))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST))
+                .hasMessageContaining("\"score\"");
+        verify(sessionRepository, never()).finalizeSession(any());
+    }
+
+    @Test
+    void submitSessionAcceptsAnEmptyBodyAndDelegatesToFinalize() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        ArgumentCaptor<FinalizeSessionInput> captor = ArgumentCaptor.forClass(FinalizeSessionInput.class);
+        when(sessionRepository.finalizeSession(captor.capture())).thenReturn(sampleFrozenResult("is_x"));
+
+        InterviewResultDto dto = service().submitSession("is_x", token, Map.of());
+
+        assertThat(dto.sessionId()).isEqualTo("is_x");
+        assertThat(dto.status()).isEqualTo("submitted");
+        assertThat(dto.total()).isEqualTo(1);
+        assertThat(dto.review()).hasSize(1);
+        assertThat(captor.getValue().sessionId()).isEqualTo("is_x");
+        assertThat(captor.getValue().now()).isEqualTo(fixedNow);
+    }
+
+    @Test
+    void submitSessionAcceptsANullBodyTheSameAsEmpty() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        when(sessionRepository.finalizeSession(any())).thenReturn(sampleFrozenResult("is_x"));
+
+        InterviewResultDto dto = service().submitSession("is_x", token, null);
+
+        assertThat(dto.sessionId()).isEqualTo("is_x");
+    }
+
+    @Test
+    void submitSessionTranslatesAnAlreadySubmittedRaceToConflict() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        when(sessionRepository.finalizeSession(any())).thenThrow(new SessionRepositoryException(
+                SessionRepositoryException.Category.SESSION_NOT_ACTIVE, "Session already submitted"));
+
+        assertThatThrownBy(() -> service().submitSession("is_x", token, Map.of()))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.CONFLICT));
+    }
+
+    @Test
+    void submitSessionTranslatesCorruptStoredDataToTheGenericInternalMessage() {
+        // Node quirk, preserved verbatim: CORRUPT_DATA/VALIDATION/etc. all
+        // fall through to the SAME generic "Answer could not be saved"
+        // message, even on submit — not a more specific "result" wording.
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        when(sessionRepository.finalizeSession(any())).thenThrow(new SessionRepositoryException(
+                SessionRepositoryException.Category.CORRUPT_DATA, "Session is_x has an invalid stored result"));
+
+        assertThatThrownBy(() -> service().submitSession("is_x", token, Map.of()))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.INTERNAL))
+                .hasMessage("Answer could not be saved");
+    }
+
+    @Test
+    void submitSessionResolvesTopicTitlesFromTheLiveQuizBankAtFinalizationTime() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        QuizEntity liveQuiz = new QuizEntity(1L, "signals", "Angular Signals (Renamed)", "s", "i", "junior", "[]", 0, "active");
+        when(quizRepository.findByQuizIdAndStatus("signals", "active")).thenReturn(Optional.of(liveQuiz));
+
+        ArgumentCaptor<FinalizeSessionInput> captor = ArgumentCaptor.forClass(FinalizeSessionInput.class);
+        when(sessionRepository.finalizeSession(captor.capture())).thenReturn(sampleFrozenResult("is_x"));
+
+        service().submitSession("is_x", token, Map.of());
+
+        // The service must hand the repository a resolver that reads the
+        // LIVE bank — proven by invoking it directly here, exactly as
+        // finalizeSession itself would during scoring.
+        assertThat(captor.getValue().topicTitleFor().resolve("signals")).isEqualTo("Angular Signals (Renamed)");
+    }
+
+    @Test
+    void submitSessionFallsBackToTheTopicIdWhenTheLiveQuizIsGoneOrRetired() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+        when(quizRepository.findByQuizIdAndStatus("signals", "active")).thenReturn(Optional.empty());
+
+        ArgumentCaptor<FinalizeSessionInput> captor = ArgumentCaptor.forClass(FinalizeSessionInput.class);
+        when(sessionRepository.finalizeSession(captor.capture())).thenReturn(sampleFrozenResult("is_x"));
+
+        service().submitSession("is_x", token, Map.of());
+
+        assertThat(captor.getValue().topicTitleFor().resolve("signals")).isEqualTo("signals");
+    }
+
+    // ── getResult ────────────────────────────────────────────────────────
+
+    @Test
+    void getResultRejectsAMissingToken() {
+        assertThatThrownBy(() -> service().getResult("is_x", null))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.UNAUTHORIZED));
+    }
+
+    @Test
+    void getResultRejectsAnUnknownSession() {
+        String token = SessionToken.generateSessionIdentity().rawToken();
+        when(sessionRepository.getSessionAuthenticationRecord("is_ghost")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service().getResult("is_ghost", token))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.UNAUTHORIZED));
+    }
+
+    @Test
+    void getResultOfASubmittedSessionReturnsTheStoredResultWithoutReFinalizing() {
+        String token = authenticatedSession("is_x", SessionStatus.SUBMITTED, fixedNow + 10_000);
+        when(sessionRepository.getSubmittedResult("is_x")).thenReturn(Optional.of(sampleFrozenResult("is_x")));
+
+        InterviewResultDto dto = service().getResult("is_x", token);
+
+        assertThat(dto.status()).isEqualTo("submitted");
+        verify(sessionRepository, never()).finalizeSession(any());
+    }
+
+    @Test
+    void getResultOfASubmittedSessionWithNoStoredResultIsAnInternalError() {
+        String token = authenticatedSession("is_x", SessionStatus.SUBMITTED, fixedNow + 10_000);
+        when(sessionRepository.getSubmittedResult("is_x")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service().getResult("is_x", token))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.INTERNAL))
+                .hasMessage("Result could not be read");
+    }
+
+    @Test
+    void getResultOfAStillRunningActiveSessionIsRejectedWithConflictAndNeverFinalizes() {
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow + 10_000);
+
+        assertThatThrownBy(() -> service().getResult("is_x", token))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.CONFLICT))
+                .hasMessage("This assessment has not been submitted");
+        verify(sessionRepository, never()).finalizeSession(any());
+    }
+
+    @Test
+    void getResultOfAnActiveSessionPastItsDeadlineAutoFinalizesEvenWithoutAPriorSubmit() {
+        // expiresAt == fixedNow: the deadline has JUST passed. Node's own
+        // boundary is `expiresAt <= now`, so this must auto-finalize, not 409.
+        String token = authenticatedSession("is_x", SessionStatus.ACTIVE, fixedNow);
+        ArgumentCaptor<FinalizeSessionInput> captor = ArgumentCaptor.forClass(FinalizeSessionInput.class);
+        when(sessionRepository.finalizeSession(captor.capture())).thenReturn(sampleFrozenResult("is_x"));
+
+        InterviewResultDto dto = service().getResult("is_x", token);
+
+        assertThat(dto.status()).isEqualTo("submitted");
+        assertThat(captor.getValue().now()).isEqualTo(fixedNow);
+    }
+
+    @Test
+    void getResultOfAnExpiredSessionAutoFinalizesRegardlessOfTheStoredDeadline() {
+        // status already EXPIRED (Slice 4's markExpiredIfDue already flipped
+        // it) with a deadline that is, incidentally, still in the future on
+        // the clock alone — the STATUS check must be sufficient on its own.
+        String token = authenticatedSession("is_x", SessionStatus.EXPIRED, fixedNow + 10_000);
+        when(sessionRepository.finalizeSession(any())).thenReturn(sampleFrozenResult("is_x"));
+
+        InterviewResultDto dto = service().getResult("is_x", token);
+
+        assertThat(dto.status()).isEqualTo("submitted");
+    }
+
+    @Test
+    void getResultTranslatesAFinalizeFailureTheSameWayAsSubmit() {
+        String token = authenticatedSession("is_x", SessionStatus.EXPIRED, fixedNow + 10_000);
+        when(sessionRepository.finalizeSession(any())).thenThrow(new SessionRepositoryException(
+                SessionRepositoryException.Category.SESSION_NOT_FOUND, "Session not found"));
+
+        assertThatThrownBy(() -> service().getResult("is_x", token))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.UNAUTHORIZED));
     }
 }

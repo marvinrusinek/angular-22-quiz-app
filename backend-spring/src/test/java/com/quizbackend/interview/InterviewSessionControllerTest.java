@@ -8,6 +8,11 @@ import com.quizbackend.interview.dto.ActiveInterviewOptionDto;
 import com.quizbackend.interview.dto.ActiveInterviewQuestionDto;
 import com.quizbackend.interview.dto.ActiveInterviewSessionDto;
 import com.quizbackend.interview.dto.CodeSnippetDto;
+import com.quizbackend.interview.dto.InterviewPerformanceBucketDto;
+import com.quizbackend.interview.dto.InterviewPerformanceDto;
+import com.quizbackend.interview.dto.InterviewResultDto;
+import com.quizbackend.interview.dto.InterviewReviewOptionDto;
+import com.quizbackend.interview.dto.InterviewReviewQuestionDto;
 import com.quizbackend.quiz.QuizRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -228,6 +233,138 @@ class InterviewSessionControllerTest {
                         .contentType("application/json").content("{\"flagged\":false}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("SESSION_EXPIRED"));
+    }
+
+    // ── POST .../submit & GET .../result — SUBMITTED_REVIEW policy ───────
+
+    private InterviewResultDto sampleResultDto() {
+        InterviewReviewQuestionDto review = new InterviewReviewQuestionDto(
+                "signals:q:0", "signals", "What does this log?", "single",
+                List.of(new InterviewReviewOptionDto(101, "0"), new InterviewReviewOptionDto(102, "1")),
+                List.of(101), List.of(101), "Because signals are reactive.", false, null);
+        InterviewPerformanceBucketDto bucket = new InterviewPerformanceBucketDto("signals", "Signals", 1, 0, 0, 1, 100);
+        ActiveInterviewConfigDto config = new ActiveInterviewConfigDto("preset", "junior", null, List.of("signals"), 1);
+        return new InterviewResultDto("is_abc123", "submitted", "2024-01-01T00:20:00.000Z", false,
+                1, 1, 0, 1, 0, 100, 1200, 600, 600,
+                config, new InterviewPerformanceDto(List.of(bucket)), List.of(review));
+    }
+
+    @Test
+    void submitReturns200WithTheFullResultAndAllowsReviewCorrectnessButNeverPerOptionIsCorrect() throws Exception {
+        when(service.submitSession(eq("is_abc123"), any(), anyMap())).thenReturn(sampleResultDto());
+
+        mockMvc.perform(post("/api/interview-sessions/is_abc123/submit")
+                        .header("Authorization", "Bearer " + "x".repeat(43))
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("submitted"))
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.correct").value(1))
+                // SUBMITTED_REVIEW's tightly-scoped widening: legal here.
+                .andExpect(jsonPath("$.review[0].correctOptionIds[0]").value(101))
+                .andExpect(jsonPath("$.review[0].explanation").value("Because signals are reactive."))
+                // Still banned even under SUBMITTED_REVIEW: per-option isCorrect,
+                // the answer key, and every backend internal.
+                .andExpect(jsonPath("$.review[0].options[0].isCorrect").doesNotExist())
+                .andExpect(jsonPath("$.review[0].isCorrect").doesNotExist())
+                .andExpect(jsonPath("$.review[0].answerKey").doesNotExist())
+                .andExpect(jsonPath("$.tokenHash").doesNotExist())
+                .andExpect(jsonPath("$.sessionToken").doesNotExist())
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"));
+    }
+
+    @Test
+    void submitWithoutAuthorizationReturns401() throws Exception {
+        when(service.submitSession(eq("is_abc123"), eq(null), anyMap()))
+                .thenThrow(SessionServiceException.unauthorized());
+
+        mockMvc.perform(post("/api/interview-sessions/is_abc123/submit")
+                        .contentType("application/json").content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void submitWithANonEmptyBodyReturns400NamingTheOffendingField() throws Exception {
+        when(service.submitSession(eq("is_abc123"), any(), anyMap()))
+                .thenThrow(new SessionServiceException(SessionServiceException.Code.BAD_REQUEST,
+                        "Submit accepts no fields — \"score\" is determined by the server"));
+
+        mockMvc.perform(post("/api/interview-sessions/is_abc123/submit")
+                        .header("Authorization", "Bearer " + "x".repeat(43))
+                        .contentType("application/json")
+                        .content("{\"score\":100}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.error.message").value("Submit accepts no fields — \"score\" is determined by the server"));
+    }
+
+    @Test
+    void submitOnAnAlreadyExpiredButNeverSubmittedSessionStillReturns200() throws Exception {
+        when(service.submitSession(eq("is_abc123"), any(), anyMap())).thenReturn(sampleResultDto());
+
+        mockMvc.perform(post("/api/interview-sessions/is_abc123/submit")
+                        .header("Authorization", "Bearer " + "x".repeat(43))
+                        .contentType("application/json").content("{}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void resultReturns200WithTheStoredResultAndCarriesNosniff() throws Exception {
+        when(service.getResult(eq("is_abc123"), any())).thenReturn(sampleResultDto());
+
+        mockMvc.perform(get("/api/interview-sessions/is_abc123/result")
+                        .header("Authorization", "Bearer " + "x".repeat(43)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.percentage").value(100))
+                .andExpect(jsonPath("$.performance.byTopic[0].topicId").value("signals"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"));
+    }
+
+    @Test
+    void resultWithoutAuthorizationReturns401() throws Exception {
+        when(service.getResult(eq("is_abc123"), eq(null))).thenThrow(SessionServiceException.unauthorized());
+
+        mockMvc.perform(get("/api/interview-sessions/is_abc123/result"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void resultOfAStillRunningSessionReturns409ConflictNotTheResultShape() throws Exception {
+        when(service.getResult(eq("is_abc123"), any())).thenThrow(
+                new SessionServiceException(SessionServiceException.Code.CONFLICT, "This assessment has not been submitted"));
+
+        mockMvc.perform(get("/api/interview-sessions/is_abc123/result")
+                        .header("Authorization", "Bearer " + "x".repeat(43)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.error.message").value("This assessment has not been submitted"));
+    }
+
+    @Test
+    void submitWithSyntacticallyBrokenJsonReturnsTheStandardMalformedBodyEnvelope() throws Exception {
+        mockMvc.perform(post("/api/interview-sessions/is_abc123/submit")
+                        .header("Authorization", "Bearer " + "x".repeat(43))
+                        .contentType("application/json")
+                        .content("{ not json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.error.message").value("Malformed JSON body"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"));
+        verify(service, never()).submitSession(any(), any(), anyMap());
+    }
+
+    @Test
+    void submitWithAJsonArrayInsteadOfAnObjectReturnsTheStandardMalformedBodyEnvelope() throws Exception {
+        mockMvc.perform(post("/api/interview-sessions/is_abc123/submit")
+                        .header("Authorization", "Bearer " + "x".repeat(43))
+                        .contentType("application/json")
+                        .content("[1,2,3]"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.error.message").value("Malformed JSON body"));
     }
 
     // ── malformed/structurally-wrong JSON — parity with the Node reference's

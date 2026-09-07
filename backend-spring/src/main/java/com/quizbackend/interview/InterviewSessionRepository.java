@@ -120,6 +120,29 @@ public class InterviewSessionRepository {
               FROM session_answers WHERE session_id = ? ORDER BY question_position
             """;
 
+    // ── submit / finalize (Slice 5) ─────────────────────────────────────
+
+    private static final String SELECT_FOR_FINALIZE = """
+            SELECT id, status, config_json, duration_seconds, created_at, expires_at, result_json
+              FROM interview_sessions WHERE id = ?
+            """;
+
+    /**
+     * Conditional UPDATE: fires only while the session is NOT already
+     * submitted. Two concurrent finalizations therefore cannot both write —
+     * the loser sees 0 rows affected and reads back the winner's frozen
+     * result. This is the exact compare-and-swap the Node reference relies
+     * on ({@code WHERE status <> 'submitted'} + rowCount), preserved here as
+     * the same conditional UPDATE rather than an application-level check.
+     */
+    private static final String WRITE_RESULT = """
+            UPDATE interview_sessions
+               SET status = 'submitted', submitted_at = ?, submitted_by_expiry = ?, result_json = ?
+             WHERE id = ? AND status <> 'submitted'
+            """;
+
+    private static final String SELECT_RESULT = "SELECT status, result_json FROM interview_sessions WHERE id = ?";
+
     /**
      * Guarded on {@code status = 'active'}, no time comparison — a literal
      * port of the Node reference's own separate {@code EXPIRE_NOW} constant
@@ -292,7 +315,17 @@ public class InterviewSessionRepository {
         if (session.isEmpty()) {
             return Optional.empty();
         }
+        return Optional.of(new InterviewSessionSnapshot(session.get(), loadQuestions(sessionId)));
+    }
 
+    /**
+     * Shared by {@link #getSessionSnapshot} and {@link #finalizeSession} —
+     * both need the full frozen question+option snapshot, in the same
+     * position/display-order-preserving shape. Extracted only to avoid
+     * duplicating this row-mapping twice; the query/mapping behavior itself
+     * is unchanged from Slice 3.
+     */
+    private List<SessionQuestionSnapshot> loadQuestions(String sessionId) {
         record OptionRow(int questionPosition, int optionId, String optionText, int displayOrder, boolean isCorrect) {
         }
         List<OptionRow> optionRows = jdbcTemplate.query(SELECT_OPTIONS, (rs, rowNum) -> new OptionRow(
@@ -305,7 +338,7 @@ public class InterviewSessionRepository {
                     .add(new SessionOptionSnapshot(row.optionId(), row.optionText(), row.displayOrder(), row.isCorrect()));
         }
 
-        List<SessionQuestionSnapshot> questions = jdbcTemplate.query(SELECT_QUESTIONS, (rs, rowNum) -> {
+        return jdbcTemplate.query(SELECT_QUESTIONS, (rs, rowNum) -> {
             int position = rs.getInt("position");
             String code = rs.getString("code");
             CandidateCodeSnippet snippet = code == null ? null
@@ -321,8 +354,6 @@ public class InterviewSessionRepository {
                     rs.getInt("flagged") == 1,
                     snippet);
         }, sessionId);
-
-        return Optional.of(new InterviewSessionSnapshot(session.get(), questions));
     }
 
     // ── answer/flag mutation (Slice 4) ──────────────────────────────────
@@ -544,5 +575,153 @@ public class InterviewSessionRepository {
             ids.add(value);
         }
         return ids;
+    }
+
+    // ── submit / finalize (Slice 5) ─────────────────────────────────────
+
+    public interface TopicTitleResolver {
+        String resolve(String topicId);
+    }
+
+    public record FinalizeSessionInput(String sessionId, long now, TopicTitleResolver topicTitleFor) {
+    }
+
+    private record FinalizeRow(String status, String configJson, int durationSeconds, long expiresAt, String resultJson) {
+    }
+
+    /**
+     * Score and close the session in ONE transaction — port of the Node
+     * reference's own {@code finalizeSession}. IDEMPOTENT: an already
+     * submitted session returns its stored result and is never rescored, so
+     * a manual submit racing an expiry-triggered finalize (see {@code
+     * InterviewSessionService#getResult}) yields exactly one result.
+     *
+     * <p>The actual compare-and-swap is the conditional {@link #WRITE_RESULT}
+     * UPDATE (guarded on {@code status <> 'submitted'}) plus its affected-row
+     * count — NOT an application-level "check then write". If two concurrent
+     * calls both pass the idempotent check (both see a non-submitted row),
+     * only ONE of the two subsequent UPDATEs can affect a row; the other
+     * gets 0 rows back and re-reads the winner's already-committed result.
+     * This is a database-enforced guarantee, preserved exactly rather than
+     * weakened into an in-memory check.
+     */
+    public FrozenInterviewResult finalizeSession(FinalizeSessionInput input) {
+        return transactionTemplate.execute(status -> doFinalizeSession(input));
+    }
+
+    private FrozenInterviewResult doFinalizeSession(FinalizeSessionInput input) {
+        List<FinalizeRow> rows = jdbcTemplate.query(SELECT_FOR_FINALIZE, (rs, rowNum) -> new FinalizeRow(
+                rs.getString("status"), rs.getString("config_json"), rs.getInt("duration_seconds"),
+                rs.getLong("expires_at"), rs.getString("result_json")), input.sessionId());
+        if (rows.isEmpty()) {
+            throw new SessionRepositoryException(SessionRepositoryException.Category.SESSION_NOT_FOUND, "Session not found");
+        }
+        FinalizeRow row = rows.get(0);
+
+        if ("submitted".equals(row.status())) {
+            if (row.resultJson() == null) {
+                throw new SessionRepositoryException(SessionRepositoryException.Category.CORRUPT_DATA,
+                        "Submitted session has no stored result");
+            }
+            return parseFrozenResult(row.resultJson(), input.sessionId());
+        }
+
+        InterviewSessionConfig config = parseConfig(row.configJson(), input.sessionId());
+        long expiresAt = row.expiresAt();
+        int durationSeconds = row.durationSeconds();
+
+        List<SessionQuestionSnapshot> questions = loadQuestions(input.sessionId());
+        List<SessionAnswerRecord> answerRecords = getAnswers(input.sessionId());
+        Map<Integer, List<Integer>> answersByPosition = new LinkedHashMap<>();
+        for (SessionAnswerRecord answer : answerRecords) {
+            answersByPosition.put(answer.position(), answer.selectedOptionIds());
+        }
+
+        InterviewScoring.ScoredInterview scored = InterviewScoring.scoreInterview(
+                questions, answersByPosition, input.topicTitleFor()::resolve);
+
+        // A deadline that has already passed means the attempt ended by
+        // EXPIRY, regardless of which call finalized it — including a
+        // session Slice 4 already flipped to 'expired'.
+        boolean submittedByExpiry = input.now() >= expiresAt || "expired".equals(row.status());
+        long submittedAt = Math.min(input.now(), expiresAt);
+
+        InterviewScoring.TimeUsed timing = InterviewScoring.computeTimeUsedSeconds(input.now(), expiresAt, durationSeconds);
+
+        FrozenResultConfig frozenConfig = new FrozenResultConfig(
+                config.presetId() != null ? "preset" : "custom",
+                config.presetId(), config.difficulty(), config.topicIds(), config.questionCount());
+
+        FrozenInterviewResult result = new FrozenInterviewResult(
+                input.sessionId(), "submitted", submittedAt, submittedByExpiry,
+                scored.total(), scored.answered(), scored.unanswered(), scored.correct(), scored.incorrect(),
+                scored.percentage(), durationSeconds, timing.timeUsedSeconds(), timing.timeRemainingSeconds(),
+                frozenConfig, new FrozenPerformance(scored.byTopic()), scored.review());
+
+        // Validate BEFORE writing: a result that fails its invariants must never become durable.
+        FrozenResultValidation.assertInvariants(result);
+
+        String resultJson = writeFrozenResultJson(result);
+        int rowsAffected = jdbcTemplate.update(WRITE_RESULT, submittedAt, submittedByExpiry ? 1 : 0, resultJson, input.sessionId());
+
+        if (rowsAffected == 0) {
+            // Someone else submitted between our read and our write — return theirs.
+            List<FinalizeRow> winner = jdbcTemplate.query(SELECT_RESULT, (rs, rowNum) -> new FinalizeRow(
+                    rs.getString("status"), null, 0, 0L, rs.getString("result_json")), input.sessionId());
+            String storedJson = winner.isEmpty() ? null : winner.get(0).resultJson();
+            if (storedJson == null) {
+                throw new SessionRepositoryException(SessionRepositoryException.Category.CORRUPT_DATA,
+                        "Concurrent finalization left no result");
+            }
+            return parseFrozenResult(storedJson, input.sessionId());
+        }
+
+        return result;
+    }
+
+    /** The frozen result, or empty when the session has not been submitted. */
+    public Optional<FrozenInterviewResult> getSubmittedResult(String sessionId) {
+        List<FinalizeRow> rows = jdbcTemplate.query(SELECT_RESULT, (rs, rowNum) -> new FinalizeRow(
+                rs.getString("status"), null, 0, 0L, rs.getString("result_json")), sessionId);
+        if (rows.isEmpty()) {
+            return Optional.empty();
+        }
+        FinalizeRow row = rows.get(0);
+        if (!"submitted".equals(row.status()) || row.resultJson() == null) {
+            return Optional.empty();
+        }
+        // Revalidated on every read — never regenerated.
+        return Optional.of(parseFrozenResult(row.resultJson(), sessionId));
+    }
+
+    private String writeFrozenResultJson(FrozenInterviewResult result) {
+        return objectMapper.writeValueAsString(result);
+    }
+
+    /**
+     * Parse a stored result. Storage is not trusted merely because this
+     * process wrote it — a malformed row fails loudly rather than being
+     * silently regenerated, which would rescore a historical attempt.
+     */
+    private FrozenInterviewResult parseFrozenResult(String raw, String sessionId) {
+        FrozenInterviewResult result;
+        try {
+            result = objectMapper.readValue(raw, FrozenInterviewResult.class);
+        } catch (RuntimeException e) {
+            throw new SessionRepositoryException(SessionRepositoryException.Category.CORRUPT_DATA,
+                    "Session " + sessionId + " has an unreadable stored result");
+        }
+        if (result == null || result.sessionId() == null || result.review() == null
+                || result.performance() == null || result.performance().byTopic() == null) {
+            throw new SessionRepositoryException(SessionRepositoryException.Category.CORRUPT_DATA,
+                    "Session " + sessionId + " has a malformed stored result");
+        }
+        try {
+            FrozenResultValidation.assertInvariants(result);
+        } catch (FrozenResultException e) {
+            throw new SessionRepositoryException(SessionRepositoryException.Category.CORRUPT_DATA,
+                    "Session " + sessionId + " has an invalid stored result: " + e.getMessage());
+        }
+        return result;
     }
 }

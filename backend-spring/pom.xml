@@ -46,9 +46,8 @@
 		<!-- Slice 2: minimum JPA/PostgreSQL infrastructure. Spring Data JPA
 		     (Hibernate) for entity mapping against the EXISTING Neon schema
 		     (ddl-auto=validate — never create/update), and the PostgreSQL JDBC
-		     driver itself. No Flyway/Liquibase/Testcontainers/Lombok/MapStruct —
-		     the existing schema is canonical and none of those are needed to
-		     read it. -->
+		     driver itself. No Flyway/Liquibase/Lombok/MapStruct — the existing
+		     schema is canonical and none of those are needed to read it. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -74,6 +73,37 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- Testcontainers hardening slice: a disposable real-PostgreSQL
+		     integration-test layer, so Interview persistence mapping (composite
+		     keys, generated columns, partial indexes — none of which H2 models
+		     faithfully) can be developed against genuine Postgres semantics
+		     instead of only against live Neon. TEST SCOPE ONLY — see the JAR
+		     hygiene check in the Testcontainers slice report for proof none of
+		     this reaches the production artifact. Versions are managed by the
+		     spring-boot-starter-parent BOM (spring-boot-dependencies imports
+		     org.testcontainers:testcontainers-bom:2.0.5), not pinned here.
+		     NOTE: Testcontainers 2.x renamed these artifacts from the widely
+		     documented Testcontainers 1.x coordinates (org.testcontainers:
+		     junit-jupiter / org.testcontainers:postgresql) to
+		     testcontainers-junit-jupiter / testcontainers-postgresql —
+		     confirmed against the actual resolved testcontainers-bom, not
+		     assumed from older documentation. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -81,6 +111,24 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<!-- Runs *IT.java classes at the integration-test/verify phases,
+			     NOT at test/package — so `mvnw.cmd test` and `mvnw.cmd clean
+			     package` stay fast and Docker-independent, and the disposable
+			     PostgreSQL Testcontainers suite only runs on an explicit
+			     `mvnw.cmd verify`. Version managed by spring-boot-starter-parent
+			     (pluginManagement), not pinned here. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

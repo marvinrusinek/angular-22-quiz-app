@@ -13,7 +13,7 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
   <img src="https://img.shields.io/badge/TypeScript-Enabled-blue" alt="TypeScript">
   <img src="https://img.shields.io/badge/RxJS-Reactive-purple" alt="RxJS">
   <img src="https://img.shields.io/badge/Signals-Integrated-orange" alt="Angular Signals">
-  <img src="https://img.shields.io/badge/Status-Production%20Ready-brightgreen" alt="Production Ready">
+  <img src="https://img.shields.io/badge/Status-Active%20Development-brightgreen" alt="Active Development">
 </p>
 
 <p align="center">
@@ -72,28 +72,26 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 
 <h2>🧭 Architecture Overview</h2>
 
-<p> The application follows a modular frontend/backend architecture. Angular container components orchestrate application flow, focused services encapsulate business logic, and Signals and RxJS keep the UI synchronized with user interactions. Both Topic Quiz and Interview Mode communicate with a Node/Express REST API backed by PostgreSQL, which serves as the authoritative data store for quiz content, assessment sessions, answers, and scoring. </p>
+<p>The application follows a modular frontend/backend architecture. Angular container components orchestrate application flow, focused services encapsulate business logic, and Signals and RxJS keep the UI synchronized with user interactions. Both Topic Quiz and Interview Mode communicate with a Node/Express REST API backed by PostgreSQL, which serves as the authoritative data store for quiz content, assessment sessions, answers, and scoring. </p>
 
-<p> The frontend combines <strong>Angular Signals</strong> for fine-grained reactive UI state with <strong>RxJS</strong> for asynchronous data flows, event coordination, and cross-component communication. Correctness-sensitive operations remain backend-authoritative so answer-bearing quiz data is not shipped with the Angular application. </p>
+<p>The frontend combines <strong>Angular Signals</strong> for fine-grained reactive UI state with <strong>RxJS</strong> for asynchronous data flows, event coordination, and cross-component communication. Correctness-sensitive operations remain backend-authoritative so answer-bearing quiz data is not shipped with the Angular application. </p>
 
 <h3>High-Level Flow</h3>
 
 <pre><code>
                         Angular 22 Frontend
-                                │
-               ┌────────────────┴────────────────┐
-               │                                 │
-          Topic Quizzes                    Interview Mode
-               │                                 │
-       Quiz API Services                 Interview API Services
-               │                                 │
-               └──────────────┬──────────────────┘
-                              │
-                           REST API
-                              │
-                       Node / Express
-                              │
-                         PostgreSQL
+                                 │
+                 ┌───────────────┴───────────────┐
+                 │                               │
+            Topic Quizzes                  Interview Mode
+                 │                               │
+          Node / Express                    Spring Boot
+                 │                               │
+                 │                       Spring Data JPA
+                 │                               │
+                 └───────────────┬───────────────┘
+                                 │
+                            PostgreSQL
 </code></pre>
 
 <hr>
@@ -196,4 +194,4 @@ npm install</code></pre>
 
 <h2>📄 License</h2>
 
-<p> Distributed under the <strong>MIT License</strong>. See the <a href="./LICENSE">LICENSE</a> file for more information. </p>
+<p>Distributed under the <strong>MIT License</strong>. See the <a href="./LICENSE">LICENSE</a> file for more information. </p>

@@ -103,7 +103,8 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 <li><strong>Reactive State:</strong> Angular Signals, RxJS</li>
 <li><strong>UI:</strong> Angular Material, SCSS</li>
 <li><strong>Forms:</strong> Reactive Forms, Signal Forms</li>
-<li><strong>Backend:</strong> Node.js, Express, REST API</li>
+<li><strong>Topic Quiz API:</strong> Node.js, Express</li>
+<li><strong>Interview API:</strong> Java, Spring Boot, Spring Data JPA</li>
 <li><strong>Database:</strong> PostgreSQL — authoritative quiz and interview data store</li>
 <li><strong>Security:</strong> Backend-authoritative correctness, strict CSP, fail-closed data access</li>
 <li><strong>Testing:</strong> Unit Testing, Playwright End-to-End Testing</li>

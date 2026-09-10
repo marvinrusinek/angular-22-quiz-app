@@ -25,14 +25,21 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -287,5 +294,258 @@ class TopicQuizServiceTest {
         var outcome = (ExpiredCheckOutcome) service().check(
                 "rxjs", receipt, "Which answer is correct?", List.of(), "1.2.3.4");
         assertThat(outcome.status()).isEqualTo("expired");
+    }
+
+    // ── question-bank caching ────────────────────────────────────────────
+
+    @Test
+    void firstCheckForAQuizLoadsCandidateQuestionsFromTheRepository() {
+        when(quizRepository.findByQuizIdAndStatus("rxjs", "active")).thenReturn(Optional.of(activeQuiz("rxjs", "beginner")));
+        when(questionRepository.findByQuizId("rxjs")).thenReturn(List.of(question("Which answer is correct?")));
+        String receipt = questionReceiptFor("rxjs", "Which answer is correct?", FIXED_NOW, FIXED_NOW + 30_000);
+
+        service().check("rxjs", receipt, "Which answer is correct?", List.of("A multicast observable"), "1.2.3.4");
+
+        verify(questionRepository, times(1)).findByQuizId("rxjs");
+    }
+
+    @Test
+    void subsequentChecksForTheSameQuizReuseTheCachedCandidateQuestionsRatherThanReloading() {
+        when(quizRepository.findByQuizIdAndStatus("rxjs", "active")).thenReturn(Optional.of(activeQuiz("rxjs", "beginner")));
+        when(questionRepository.findByQuizId("rxjs")).thenReturn(List.of(question("Which answer is correct?")));
+
+        TopicQuizService service = service();
+        for (int i = 0; i < 3; i++) {
+            String receipt = questionReceiptFor("rxjs", "Which answer is correct?", FIXED_NOW, FIXED_NOW + 30_000);
+            service.check("rxjs", receipt, "Which answer is correct?", List.of("A multicast observable"), "1.2.3.4");
+        }
+
+        // Three /check calls, but the repository's content query ran only once.
+        verify(questionRepository, times(1)).findByQuizId("rxjs");
+        // The active-quiz status check now has its own short-TTL cache (see
+        // the "active-status short-TTL caching" tests below) — all three
+        // calls land inside the same 10s window with no clock advance
+        // between them, so this also ran only once, not three times.
+        verify(quizRepository, times(1)).findByQuizIdAndStatus("rxjs", "active");
+    }
+
+    @Test
+    void differentQuizIdsGetSeparateCacheEntriesAndBothLoadIndependently() {
+        when(quizRepository.findByQuizIdAndStatus("rxjs", "active")).thenReturn(Optional.of(activeQuiz("rxjs", "beginner")));
+        when(quizRepository.findByQuizIdAndStatus("signals", "active")).thenReturn(Optional.of(activeQuiz("signals", "beginner")));
+        when(questionRepository.findByQuizId("rxjs")).thenReturn(List.of(question("RxJS question?")));
+        when(questionRepository.findByQuizId("signals")).thenReturn(List.of(question("Signals question?")));
+
+        TopicQuizService service = service();
+        String rxjsReceipt = questionReceiptFor("rxjs", "RxJS question?", FIXED_NOW, FIXED_NOW + 30_000);
+        String signalsReceipt = questionReceiptFor("signals", "Signals question?", FIXED_NOW, FIXED_NOW + 30_000);
+
+        service.check("rxjs", rxjsReceipt, "RxJS question?", List.of("A multicast observable"), "1.2.3.4");
+        service.check("signals", signalsReceipt, "Signals question?", List.of("A multicast observable"), "1.2.3.4");
+        service.check("rxjs", rxjsReceipt, "RxJS question?", List.of("A multicast observable"), "1.2.3.4");
+
+        verify(questionRepository, times(1)).findByQuizId("rxjs");
+        verify(questionRepository, times(1)).findByQuizId("signals");
+    }
+
+    @Test
+    void concurrentFirstChecksForTheSameQuizLoadTheRepositoryExactlyOnce() throws Exception {
+        when(quizRepository.findByQuizIdAndStatus("rxjs", "active")).thenReturn(Optional.of(activeQuiz("rxjs", "beginner")));
+        // A small artificial delay widens the race window so the assertion
+        // proves the concurrency guarantee rather than relying on timing luck.
+        when(questionRepository.findByQuizId("rxjs")).thenAnswer(invocation -> {
+            Thread.sleep(50);
+            return List.of(question("Which answer is correct?"));
+        });
+
+        TopicQuizService service = service();
+        int threadCount = 8;
+        ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+        CyclicBarrier barrier = new CyclicBarrier(threadCount);
+        try {
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < threadCount; i++) {
+                futures.add(pool.submit(() -> {
+                    try {
+                        barrier.await();
+                        String receipt = questionReceiptFor("rxjs", "Which answer is correct?", FIXED_NOW, FIXED_NOW + 30_000);
+                        service.check("rxjs", receipt, "Which answer is correct?", List.of("A multicast observable"), "1.2.3.4");
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }));
+            }
+            for (Future<?> future : futures) {
+                future.get(10, TimeUnit.SECONDS);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        verify(questionRepository, times(1)).findByQuizId("rxjs");
+    }
+
+    // ── active-status short-TTL caching ──────────────────────────────────
+    //
+    // Driven through getResources() rather than check(): it hits
+    // requireActiveQuiz() exactly like every other Topic Quiz method, needs
+    // no receipt chain, and its only other repository call
+    // (resourceRepository.findByQuizId) is irrelevant to what's being
+    // proven here.
+
+    private static final long ACTIVE_STATUS_TTL_MILLIS = 10_000L;
+
+    @Test
+    void initialActiveStatusLookupQueriesTheRepository() {
+        when(quizRepository.findByQuizIdAndStatus("rxjs", "active")).thenReturn(Optional.of(activeQuiz("rxjs", "beginner")));
+        when(resourceRepository.findByQuizId("rxjs")).thenReturn(List.of());
+
+        service().getResources("rxjs");
+
+        verify(quizRepository, times(1)).findByQuizIdAndStatus("rxjs", "active");
+    }
+
+    @Test
+    void activeStatusIsReusedForCallsWithinTheTtlWindow() {
+        when(quizRepository.findByQuizIdAndStatus("rxjs", "active")).thenReturn(Optional.of(activeQuiz("rxjs", "beginner")));
+        when(resourceRepository.findByQuizId("rxjs")).thenReturn(List.of());
+
+        TopicQuizService service = service();
+        service.getResources("rxjs");
+        clock[0] += ACTIVE_STATUS_TTL_MILLIS - 1;
+        service.getResources("rxjs");
+
+        verify(quizRepository, times(1)).findByQuizIdAndStatus("rxjs", "active");
+    }
+
+    @Test
+    void activeStatusRefreshesFromPostgresAfterTheTtlExpires() {
+        when(quizRepository.findByQuizIdAndStatus("rxjs", "active")).thenReturn(Optional.of(activeQuiz("rxjs", "beginner")));
+        when(resourceRepository.findByQuizId("rxjs")).thenReturn(List.of());
+
+        TopicQuizService service = service();
+        service.getResources("rxjs");
+        clock[0] += ACTIVE_STATUS_TTL_MILLIS;
+        service.getResources("rxjs");
+
+        verify(quizRepository, times(2)).findByQuizIdAndStatus("rxjs", "active");
+    }
+
+    @Test
+    void anActiveToRetiredTransitionBecomesVisibleNoLaterThanTheTtlBoundary() {
+        when(quizRepository.findByQuizIdAndStatus("rxjs", "active"))
+                .thenReturn(Optional.of(activeQuiz("rxjs", "beginner"))) // first lookup: active
+                .thenReturn(Optional.empty()); // retired by the time the TTL forces a refresh
+        when(resourceRepository.findByQuizId("rxjs")).thenReturn(List.of());
+
+        TopicQuizService service = service();
+        service.getResources("rxjs"); // active, cached for ACTIVE_STATUS_TTL_MILLIS
+        clock[0] += ACTIVE_STATUS_TTL_MILLIS;
+
+        assertThatThrownBy(() -> service.getResources("rxjs")).isInstanceOf(ApiException.class);
+        verify(quizRepository, times(2)).findByQuizIdAndStatus("rxjs", "active");
+    }
+
+    @Test
+    void aNegativeResultForAnUnknownOrRetiredQuizIsAlsoCachedRatherThanRequeryingEveryCall() {
+        when(quizRepository.findByQuizIdAndStatus("nope", "active")).thenReturn(Optional.empty());
+
+        TopicQuizService service = service();
+        assertThatThrownBy(() -> service.getResources("nope")).isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> service.getResources("nope")).isInstanceOf(ApiException.class);
+
+        // Existing rejection semantics unchanged (still NOT_FOUND both times)
+        // AND only one repository call for both — the negative verdict itself
+        // is what's cached, not merely skipped.
+        verify(quizRepository, times(1)).findByQuizIdAndStatus("nope", "active");
+    }
+
+    @Test
+    void differentQuizIdsHaveIndependentActiveStatusCacheEntries() {
+        when(quizRepository.findByQuizIdAndStatus("rxjs", "active")).thenReturn(Optional.of(activeQuiz("rxjs", "beginner")));
+        when(quizRepository.findByQuizIdAndStatus("signals", "active")).thenReturn(Optional.of(activeQuiz("signals", "beginner")));
+        when(resourceRepository.findByQuizId(any())).thenReturn(List.of());
+
+        TopicQuizService service = service();
+        service.getResources("rxjs");
+        service.getResources("signals");
+        service.getResources("rxjs");
+
+        verify(quizRepository, times(1)).findByQuizIdAndStatus("rxjs", "active");
+        verify(quizRepository, times(1)).findByQuizIdAndStatus("signals", "active");
+    }
+
+    @Test
+    void concurrentFirstActiveStatusLookupsForTheSameQuizQueryTheRepositoryExactlyOnce() throws Exception {
+        when(quizRepository.findByQuizIdAndStatus("rxjs", "active")).thenAnswer(invocation -> {
+            Thread.sleep(50);
+            return Optional.of(activeQuiz("rxjs", "beginner"));
+        });
+        when(resourceRepository.findByQuizId("rxjs")).thenReturn(List.of());
+
+        TopicQuizService service = service();
+        int threadCount = 8;
+        ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+        CyclicBarrier barrier = new CyclicBarrier(threadCount);
+        try {
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < threadCount; i++) {
+                futures.add(pool.submit(() -> {
+                    try {
+                        barrier.await();
+                        service.getResources("rxjs");
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }));
+            }
+            for (Future<?> future : futures) {
+                future.get(10, TimeUnit.SECONDS);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        verify(quizRepository, times(1)).findByQuizIdAndStatus("rxjs", "active");
+    }
+
+    @Test
+    void concurrentExpiredEntryRefreshesForTheSameQuizQueryTheRepositoryExactlyOnce() throws Exception {
+        when(quizRepository.findByQuizIdAndStatus("rxjs", "active"))
+                .thenReturn(Optional.of(activeQuiz("rxjs", "beginner"))) // first call: instant, populates the cache
+                .thenAnswer(invocation -> { // every call after that: slow, so the racers genuinely race the refresh
+                    Thread.sleep(50);
+                    return Optional.of(activeQuiz("rxjs", "beginner"));
+                });
+        when(resourceRepository.findByQuizId("rxjs")).thenReturn(List.of());
+
+        TopicQuizService service = service();
+        service.getResources("rxjs"); // populate; consumes the fast first stub
+        clock[0] += ACTIVE_STATUS_TTL_MILLIS; // force every racer below to see a stale entry
+
+        int threadCount = 8;
+        ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+        CyclicBarrier barrier = new CyclicBarrier(threadCount);
+        try {
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < threadCount; i++) {
+                futures.add(pool.submit(() -> {
+                    try {
+                        barrier.await();
+                        service.getResources("rxjs");
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }));
+            }
+            for (Future<?> future : futures) {
+                future.get(10, TimeUnit.SECONDS);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        // One populating call + exactly one refresh call, despite 8 racers.
+        verify(quizRepository, times(2)).findByQuizIdAndStatus("rxjs", "active");
     }
 }

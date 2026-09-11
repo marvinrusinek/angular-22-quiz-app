@@ -1,0 +1,28 @@
+# Build output / caches — the Docker build compiles from source itself.
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# VCS + editor metadata — irrelevant to the image, never needed at runtime.
+.git/
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+*.iml
+.classpath
+.factorypath
+.project
+.settings/
+
+# Secrets / local env — must never be baked into an image layer.
+.env
+.env.*
+*.pem
+*.p12
+*.jks
+
+# Logs and local test output — dev-only, not part of the deployable artifact.
+*.log
+logs/
+test-output/
+HELP.md

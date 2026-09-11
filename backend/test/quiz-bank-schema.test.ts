@@ -81,7 +81,7 @@ describe('migration 002 applies alongside 001', () => {
 
   it('is idempotent — a second run applies nothing', async () => {
     const db = fromPool(createTestPool().pool, 'pg-mem');
-    expect(await migrate(db, { now: CLOCK })).toEqual([1, 2, 3, 4, 5]);
+    expect(await migrate(db, { now: CLOCK })).toEqual([1, 2, 3, 4, 5, 6]);
     expect(await migrate(db, { now: CLOCK })).toEqual([]);
   });
 });

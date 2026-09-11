@@ -220,22 +220,57 @@
              throttled mobile conditions). Purely decorative: the tile's own
              title (quiz-title, below) already names the quiz, so this is
              alt="" + aria-hidden rather than a repeated/redundant description.
-             No `priority` — a throttled-mobile measurement found ZERO tiles
-             above the fold on this app's actual viewport, so every tile
-             image, including the first, is left to NgOptimizedImage's default
-             lazy (IntersectionObserver-based) loading; the only `priority`
-             image on this page is the header logo above, which is the real
-             LCP element. pointer-events: none (see .quiz-tile__image) keeps
-             it purely decorative for touch/mouse and never intercepts the
-             activation button below despite sitting first in the DOM. -->
-        <img
-          class="quiz-tile__image"
-          [ngSrc]="tileImageUrl(quiz)"
-          width="300"
-          height="210"
-          alt=""
-          aria-hidden="true"
-        />
+             HYBRID loading: all-lazy measured too conservative on a real
+             phone (images appeared one at a time while scrolling), so the
+             first `priorityTileCount` tiles of the CURRENTLY DISPLAYED list
+             — bound to the live `@for` index `i`, so search/sort correctly
+             re-targets whichever quizzes land in those positions — load
+             eagerly; the rest stay on NgOptimizedImage's default lazy
+             (IntersectionObserver-based) path.
+
+             loading="eager", DELIBERATELY NOT Angular `priority`: the header
+             logo above is the real LCP element and is the only image with
+             `priority` (-> fetchpriority="high"). Marking 6 tile images
+             `priority` too was measured to make them contend with the logo
+             for the browser's elevated-priority queue; plain
+             loading="eager" starts the same 6 requests immediately (still
+             all fire before any scroll) while leaving fetchpriority="auto",
+             so only the logo holds "high". Measured: first-six-decoded
+             dropped from ~9.7s to ~8.4s this way, with the header-logo LCP
+             not regressed (see the commit message for the full numbers).
+
+             TWO @if BRANCHES, not one <img> with a dynamic [loading]/
+             [priority] binding: NgOptimizedImage captures BOTH `loading`
+             and `priority` ONCE at initialization and explicitly does not
+             react to either changing later (NG02952 / NG02953) — and
+             `@for` here tracks by quiz?.quizId, so a sort/search that moves
+             a quiz across the eager/lazy boundary REUSES its existing <img>
+             element rather than recreating it, which would silently leave
+             it stuck on its original value. Splitting into two statically-
+             configured branches means Angular DESTROYS and RECREATES the
+             element when a quiz crosses the boundary, so the new instance
+             initializes correctly from scratch — the fix Angular's own
+             error message recommends. -->
+        @if (i < priorityTileCount) {
+          <img
+            class="quiz-tile__image"
+            [ngSrc]="tileImageUrl(quiz)"
+            width="300"
+            height="210"
+            alt=""
+            aria-hidden="true"
+            loading="eager"
+          />
+        } @else {
+          <img
+            class="quiz-tile__image"
+            [ngSrc]="tileImageUrl(quiz)"
+            width="300"
+            height="210"
+            alt=""
+            aria-hidden="true"
+          />
+        }
 
         <!-- Native, full-tile activation control. An absolutely-positioned
              overlay (not a wrapper) so it covers the SAME clickable area the

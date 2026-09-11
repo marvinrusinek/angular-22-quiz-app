@@ -462,6 +462,31 @@ export class QuizSelectionComponent implements OnInit {
    * untrusted/rejected value degrades to the same local placeholder
    * Introduction's hero already uses, rather than omitting the image.
    */
+  /**
+   * How many of the first CURRENTLY-DISPLAYED tiles load eagerly.
+   *
+   * All-lazy (0) measured too conservative on a real phone: images appeared
+   * one at a time while scrolling, because native lazy-loading only starts
+   * fetching a tile as it nears the viewport rather than having a few ready
+   * in advance. This is a hybrid: the first N tiles of `displayedQuizzes()`
+   * (bound to the live `@for` index, so search/sort automatically re-target
+   * whichever quizzes land in those positions) load eagerly; the rest stay
+   * on NgOptimizedImage's default lazy path. N=6 chosen from a three-way
+   * cold-cache mobile comparison (0 / 3 / 6) — see the commit message.
+   *
+   * EAGER, DELIBERATELY NOT ANGULAR `priority`: a second comparison (this
+   * hybrid's `priority` vs. plain `loading="eager"`, both against the SAME
+   * N=6) found `priority` marks all 6 tiles `fetchpriority="high"`,
+   * contending with the header logo — the actual LCP element — for the
+   * browser's elevated-priority fetch queue. `loading="eager"` starts the
+   * same 6 requests immediately (still all fire before any scroll) but
+   * leaves `fetchpriority="auto"`, so only the logo holds "high". Measured:
+   * first-six-decoded dropped from ~9.7s to ~8.4s with `loading="eager"`,
+   * and header-logo LCP was not worse (8096ms vs. 8396ms) — see the commit
+   * message for the full numbers.
+   */
+  readonly priorityTileCount = 6;
+
   tileImageUrl(quiz: Quiz): string {
     this.metadataApi.imageByQuiz();   // track the signal so tiles restyle on load
     const image = this.safeImageUrl(

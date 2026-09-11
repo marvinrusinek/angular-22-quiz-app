@@ -322,45 +322,92 @@ describe('QuizSelectionComponent — tile keyboard accessibility', () => {
 
 /**
  * Tile-image loading regression coverage for the CSS-background -> real
- * <img>/NgOptimizedImage conversion.
+ * <img>/NgOptimizedImage conversion, and its later HYBRID revision.
  *
- * ROOT DEFECT this guards against: a live-production, throttled-mobile
+ * ROOT DEFECT #1 this guards against: a live-production, throttled-mobile
  * measurement found all 20 tile CSS background-images firing within an 83ms
  * window regardless of scroll position — a CSS background has no
- * lazy-loading hook. The fix (tileImageUrl() + a real <img ngSrc>) must NOT
- * quietly regress into eagerly prioritizing tiles either — this app's own
- * mobile viewport puts ZERO tiles above the fold, so every tile image,
- * including the first, must stay on NgOptimizedImage's default lazy
- * (IntersectionObserver-based) path. Only the header logo (a separate,
- * already-existing `priority` image) is the real LCP element.
+ * lazy-loading hook.
+ *
+ * ROOT DEFECT #2 (found on a REAL phone after the all-lazy fix shipped):
+ * all-lazy was too conservative — images appeared one at a time while
+ * scrolling. A three-way cold-cache mobile comparison (0 / 3 / 6 eager
+ * tiles) showed N=3 still left `first-6-decoded` timing out (only 3 of the
+ * first 6 were eager) while N=6 resolved it (~9.7s vs. never) with no
+ * material header-logo LCP regression. A FOURTH comparison then found
+ * `loading="eager"` (fetchpriority stays "auto") beats Angular `priority`
+ * (fetchpriority="high") at the same N=6: the 6 tiles no longer contend
+ * with the header logo — the only `priority`/"high" image and the real LCP
+ * element — for the browser's elevated-priority queue, dropping
+ * first-six-decoded further to ~8.4s with no LCP regression — see the
+ * commit message for the full numbers.
+ *
+ * `priorityTileCount` is the resulting hybrid: the first N tiles of
+ * whatever is CURRENTLY DISPLAYED (bound to the live `@for` index, so
+ * search/sort correctly re-targets) load eagerly; the rest stay lazy.
  */
 describe('QuizSelectionComponent — tile image loading (NgOptimizedImage conversion)', () => {
   let router: { navigate: jest.Mock };
 
-  const quizIds = ['create-first-app', 'dependency-injection', 'performance'];
+  // 9 quizzes so priorityTileCount's default (6) has both a priority side
+  // (indices 0-5) and a lazy side (6-8) to assert against in the same fixture.
+  const quizIds = [
+    'typescript', 'create-first-app', 'templates', 'dependency-injection',
+    'component-tree', 'router', 'material', 'forms', 'performance'
+  ];
   const difficultyMap = new Map<string, string | null>([
+    ['typescript', 'beginner'],
     ['create-first-app', 'beginner'],
+    ['templates', 'beginner'],
     ['dependency-injection', 'intermediate'],
+    ['component-tree', 'intermediate'],
+    ['router', 'intermediate'],
+    ['material', 'intermediate'],
+    ['forms', 'intermediate'],
     ['performance', 'advanced']
   ]);
   const milestoneMap = new Map<string, string>([
+    ['typescript', 'TypeScript'],
     ['create-first-app', 'Create Your First App'],
+    ['templates', 'Templates'],
     ['dependency-injection', 'Dependency Injection'],
+    ['component-tree', 'Component Trees'],
+    ['router', 'Angular Router'],
+    ['material', 'Angular Material'],
+    ['forms', 'Angular Forms'],
     ['performance', 'Performance']
   ]);
   const summaryMap = new Map<string, string>([
+    ['typescript', 'Types make JS safer.'],
     ['create-first-app', 'Get started with Angular.'],
+    ['templates', 'Expressive templates.'],
     ['dependency-injection', 'Learn DI.'],
+    ['component-tree', 'A tree of components.'],
+    ['router', 'Navigate between views.'],
+    ['material', 'Material Design components.'],
+    ['forms', 'Template-driven and reactive forms.'],
     ['performance', 'Optimize your app.']
   ]);
   const questionCountMap = new Map<string, number | null>([
+    ['typescript', 10],
     ['create-first-app', 5],
+    ['templates', 10],
     ['dependency-injection', 7],
+    ['component-tree', 7],
+    ['router', 7],
+    ['material', 7],
+    ['forms', 11],
     ['performance', 9]
   ]);
   const imageMap = new Map<string, string>([
+    ['typescript', 'assets/images/typescript.webp'],
     ['create-first-app', 'assets/images/create-first-app.webp'],
+    ['templates', 'assets/images/templates.webp'],
     ['dependency-injection', 'assets/images/dependency-injection.webp'],
+    ['component-tree', 'assets/images/component-tree.webp'],
+    ['router', 'assets/images/router.webp'],
+    ['material', 'assets/images/material.webp'],
+    ['forms', 'assets/images/forms.webp'],
     ['performance', 'assets/images/performance.svg']
   ]);
   const factsMap = new Map<string, readonly string[]>();
@@ -429,19 +476,26 @@ describe('QuizSelectionComponent — tile image loading (NgOptimizedImage conver
     expect(tile.style.backgroundImage).toBeFalsy();
   });
 
-  it('NO tile image is marked priority — every tile, including the first, stays on default lazy loading', () => {
-    const { fixture } = render();
+  it('exactly the first priorityTileCount tiles are loading="eager" (fetchpriority stays "auto"); the rest stay lazy', () => {
+    const { fixture, comp } = render();
     const imgs = tileImages(fixture);
 
     expect(imgs.length).toBe(quizIds.length);
-    for (const img of imgs) {
-      // NgOptimizedImage's `priority` input renders as fetchpriority="high"
-      // and omits `loading`; its default (no `priority`) renders
-      // loading="lazy". Asserting BOTH directions closes off either failure
-      // mode — a stray priority AND a missing lazy default.
+    expect(comp.priorityTileCount).toBe(6);
+
+    imgs.forEach((img, i) => {
+      // Deliberately loading="eager", NOT Angular `priority` — measured to
+      // free the header logo (the only `priority`/fetchpriority="high"
+      // image on the page) from contending with 6 tile fetches for the
+      // browser's elevated-priority queue. No tile should ever read
+      // fetchpriority="high" — that would mean `priority` crept back in.
       expect(img.getAttribute('fetchpriority')).not.toBe('high');
-      expect(img.getAttribute('loading')).toBe('lazy');
-    }
+      if (i < comp.priorityTileCount) {
+        expect(img.getAttribute('loading')).toBe('eager');
+      } else {
+        expect(img.getAttribute('loading')).toBe('lazy');
+      }
+    });
   });
 
   it('tile images are purely decorative: alt="" and aria-hidden, never a repeated quiz title', () => {
@@ -503,6 +557,48 @@ describe('QuizSelectionComponent — tile image loading (NgOptimizedImage conver
       const expected = imageMap.get(order[i])!;
       const actual = imgs[i].getAttribute('ngSrc') ?? imgs[i].src;
       expect(actual).toContain(expected.split('/').pop()!);
+    }
+  });
+
+  it('eager loading follows the CURRENT DISPLAYED POSITION after a sort, not the original quiz identity', () => {
+    const { fixture, comp } = render();
+
+    // Whichever quiz sorts into position 0 pre-sort was NOT necessarily
+    // eager (e.g. 'performance' starts last, index 8, lazy). After sorting
+    // it to the front, it must become eager — this is a property of the
+    // SLOT, not of a particular quizId.
+    comp.sortDifficulty.set('desc'); // advanced first -> 'performance' moves to index 0
+    comp.sortAlpha.set('az');
+    fixture.detectChanges();
+
+    const order = comp.displayedQuizzes().map((q) => q.quizId);
+    expect(order[0]).toBe('performance');
+
+    const imgs = tileImages(fixture);
+    imgs.forEach((img, i) => {
+      const expectedEager = i < comp.priorityTileCount;
+      expect(img.getAttribute('loading') === 'eager').toBe(expectedEager);
+      expect(img.getAttribute('fetchpriority')).not.toBe('high');
+    });
+  });
+
+  it('eager loading follows the CURRENT DISPLAYED POSITION after a search narrows the list', () => {
+    const { fixture, comp } = render();
+
+    // Narrow to fewer results than priorityTileCount — every remaining tile
+    // should be eager (all positions are < 6), none should be stranded
+    // on lazy just because of its ORIGINAL, pre-filter index.
+    comp.searchTerm.set('a'); // matches several milestones containing "a"
+    fixture.detectChanges();
+
+    const order = comp.displayedQuizzes().map((q) => q.quizId);
+    expect(order.length).toBeGreaterThan(0);
+    expect(order.length).toBeLessThanOrEqual(6);
+
+    const imgs = tileImages(fixture);
+    for (const img of imgs) {
+      expect(img.getAttribute('loading')).toBe('eager');
+      expect(img.getAttribute('fetchpriority')).not.toBe('high');
     }
   });
 });

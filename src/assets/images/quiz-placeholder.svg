@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 270" role="img" aria-label="Quiz image placeholder">
+  <rect width="400" height="270" fill="#fafafa"/>
+  <g fill="none" stroke="#1e88e5" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.35">
+    <rect x="130" y="65" width="140" height="110" rx="10"/>
+    <circle cx="164" cy="98" r="12"/>
+    <path d="M130 155l35-35 25 22 20-24 60 62"/>
+  </g>
+</svg>

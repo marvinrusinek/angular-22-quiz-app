@@ -30,9 +30,11 @@
       <img
         mat-card-image
         class="quiz-topic-image"
-        [src]="introImgSig() || 'assets/default-image.jpg'"
+        [ngSrc]="introImgSig() || 'assets/images/quiz-placeholder.svg'"
         alt="Quiz topic image"
-        loading="lazy"
+        width="400"
+        height="270"
+        priority
       />
 
       <div class="quiz-meta">

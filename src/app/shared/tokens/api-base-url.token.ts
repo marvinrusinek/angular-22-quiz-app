@@ -27,11 +27,11 @@ import { InjectionToken, isDevMode, type Provider } from '@angular/core';
  */
 export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL', {
   providedIn: 'root',
-  factory: () => normalizeBaseUrl(resolveApiBaseUrl())
+  factory: () => normalizeBaseUrl(resolveApiBaseUrl()),
 });
 
 /** Local backend during `ng serve`. */
-export const DEV_API_BASE_URL = 'http://localhost:3000/api';
+export const DEV_API_BASE_URL = 'http://localhost:8080/api';
 
 /**
  * Production backend origin. Deliberately EMPTY until the backend is hosted:
@@ -66,7 +66,7 @@ export function isApiConfigured(
  *
  * `isDevMode()` alone is not enough to decide which API to call. A dev BUILD
  * can be served from somewhere that is not localhost — StackBlitz is the case
- * that matters here — and there `http://localhost:3000` resolves to whatever
+ * that matters here — and there `http://localhost:8080` resolves to whatever
  * happens to be on the viewer's machine, usually nothing. Only a page actually
  * loaded from localhost should talk to a local backend.
  */
@@ -109,6 +109,6 @@ export function normalizeBaseUrl(url: string): string {
 export function provideApiBaseUrl(url?: string): Provider {
   return {
     provide: API_BASE_URL,
-    useFactory: () => normalizeBaseUrl(url ?? resolveApiBaseUrl())
+    useFactory: () => normalizeBaseUrl(url ?? resolveApiBaseUrl()),
   };
 }

@@ -3,6 +3,7 @@ import {
   InterviewBuilderRequestError
 } from './interview-builder-request.mapper';
 import {
+  DEV_API_BASE_URL,
   isApiConfigured,
   normalizeBaseUrl,
   PROD_API_BASE_URL,
@@ -95,7 +96,7 @@ describe('custom mapping', () => {
 describe('API configuration resolver', () => {
   it('development is configured and resolves the local URL', () => {
     expect(isApiConfigured(true)).toBe(true);
-    expect(resolveApiBaseUrl(true)).toBe('http://localhost:3000/api');
+    expect(resolveApiBaseUrl(true)).toBe(DEV_API_BASE_URL);
   });
 
   /**

@@ -72,3 +72,83 @@ services:
       # interview.
       - key: DATABASE_URL
         sync: false
+
+  # Spring Boot migration target for the same Interview API. Runs ALONGSIDE
+  # interview-api (Node), not in place of it — Node remains the production
+  # backend and rollback target until Angular's production API URL is
+  # deliberately switched over in a separate, later step. autoDeploy is OFF:
+  # this service is created and later promoted only by an explicit operator
+  # action in the Render dashboard, never by a push to main.
+  - type: web
+    name: interview-api-spring
+    runtime: docker
+    dockerfilePath: ./backend-spring/Dockerfile
+    # Same monorepo pattern as interview-api above: the build context is
+    # scoped to backend-spring/ only, not the whole repo.
+    dockerContext: ./backend-spring
+    plan: free
+    # Same region as interview-api AND the Neon project itself — both
+    # services reach the SAME Neon database.
+    region: oregon
+    autoDeploy: false
+    # /actuator/health/readiness (Spring Boot Actuator), not /api/health:
+    # only the readiness group actually pings the DataSource, so Render only
+    # marks this service healthy when Neon is genuinely reachable — see the
+    # deployment plan for why /api/health (liveness-only, Node parity) is
+    # the wrong choice here.
+    healthCheckPath: /actuator/health/readiness
+
+    envVars:
+      # Render supplies PORT; server.port=${PORT:8080} in application.properties
+      # reads it. Do not hard-code it here.
+
+      # EXACT origin allowed to call this API — scheme + host only, no path
+      # (an HTTP Origin header never carries a path, so NOT
+      # https://marvinrusinek.github.io/angular-22-quiz-app/). Spring's CORS
+      # filter rejects a wildcard outright, the same fail-closed posture as
+      # Node's ALLOWED_ORIGINS above.
+      #
+      # The StackBlitz preview origin does NOT need an entry here: unlike
+      # Node (which requires the literal, session-hash-bearing origin kept
+      # in sync in render.yaml above, and goes stale when StackBlitz
+      # regenerates it), Spring has its own built-in StackBlitz
+      # preview-origin matcher (com.quizbackend.web.cors.StackBlitzPreviewOrigin)
+      # that recognizes the pattern regardless of session hash.
+      - key: ALLOWED_ORIGINS
+        value: https://marvinrusinek.github.io
+
+      # The SAME Neon database interview-api already uses. Set all three in
+      # the Render dashboard, NOT here — never copy credentials into this
+      # committed file. sync: false makes Render prompt for each value.
+      #
+      # SPRING_DATASOURCE_URL is a CLEAN JDBC URL only — scheme, host, port,
+      # database and query params, with NO embedded username/password (unlike
+      # Node's single DATABASE_URL above, which embeds both):
+      #   jdbc:postgresql://<pooled-host>/<database>?sslmode=require
+      # Credentials go ONLY in SPRING_DATASOURCE_USERNAME and
+      # SPRING_DATASOURCE_PASSWORD below, kept separate from the URL itself —
+      # Spring Boot's own datasource properties are structured this way, and
+      # DataSourceProperties/Hikari would reject or mishandle a URL carrying
+      # embedded credentials in JDBC form. Use the SAME pooled Neon host
+      # ("-pooler") as DATABASE_URL above, with ?sslmode=require appended (see
+      # application.properties' SSL comment for why). Spring has no
+      # migration-authoring capability of its own (ddl-auto=validate only) —
+      # this service must only ever be pointed at a Neon database whose
+      # schema Node's migrations have already brought fully up to date.
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+
+      # HMAC signing secret for Topic Quiz attempt/question receipts. MUST be
+      # the SAME VALUE as Node's TOPIC_QUIZ_RECEIPT_SECRET in the interview-api
+      # service above — NOT a distinct per-service secret. A receipt issued by
+      # one runtime must verify on the other during cutover and, if needed,
+      # rollback; a mismatched secret would make every in-flight Topic Quiz
+      # receipt invalid the moment traffic crossed runtimes. Still at least 32
+      # characters (the app refuses to start otherwise) and still never this
+      # file — copy the exact same value Node's dashboard entry already holds.
+      - key: TOPIC_QUIZ_RECEIPT_SECRET
+        sync: false

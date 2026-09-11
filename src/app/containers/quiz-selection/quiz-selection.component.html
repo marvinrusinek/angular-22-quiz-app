@@ -213,8 +213,30 @@
         [@slideLeftToRight]="animationStateSig()"
         (@slideLeftToRight.done)="animationDoneHandler()"
         routerLinkActive="active"
-        [ngStyle]="getQuizTileStyles(quiz)"
       >
+        <!-- Real, lazy-loadable tile artwork — replaces a CSS background-image,
+             which has no lazy-loading hook and fired all 20 requests at once
+             regardless of scroll position (measured on live production under
+             throttled mobile conditions). Purely decorative: the tile's own
+             title (quiz-title, below) already names the quiz, so this is
+             alt="" + aria-hidden rather than a repeated/redundant description.
+             No `priority` — a throttled-mobile measurement found ZERO tiles
+             above the fold on this app's actual viewport, so every tile
+             image, including the first, is left to NgOptimizedImage's default
+             lazy (IntersectionObserver-based) loading; the only `priority`
+             image on this page is the header logo above, which is the real
+             LCP element. pointer-events: none (see .quiz-tile__image) keeps
+             it purely decorative for touch/mouse and never intercepts the
+             activation button below despite sitting first in the DOM. -->
+        <img
+          class="quiz-tile__image"
+          [ngSrc]="tileImageUrl(quiz)"
+          width="300"
+          height="210"
+          alt=""
+          aria-hidden="true"
+        />
+
         <!-- Native, full-tile activation control. An absolutely-positioned
              overlay (not a wrapper) so it covers the SAME clickable area the
              tile always has, without requiring the flex/layout of the visible

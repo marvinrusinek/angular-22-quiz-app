@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, OnInit,
   signal, ViewEncapsulation } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { NgClass, NgOptimizedImage, NgStyle, TitleCasePipe } from '@angular/common';
+import { NgClass, NgOptimizedImage, TitleCasePipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,7 +18,6 @@ import { AnimationState } from '../../shared/models/AnimationState.type';
 import { Quiz, QuizDifficulty } from '../../shared/models/Quiz.model';
 import { AlphaDirection, DifficultyDirection } from '../../shared/models/QuizSort.type';
 import { QuizSelectionParams } from '../../shared/models/QuizSelectionParams.model';
-import { QuizTileStyles } from '../../shared/models/QuizTileStyles.model';
 
 import { QuizService } from '../../shared/services/data/quiz.service';
 import { AchievementService } from '../../shared/services/achievements/achievement.service';
@@ -57,7 +56,6 @@ import { swallow } from '../../shared/utils/error-logging';
   standalone: true,
   imports: [
     NgClass,
-    NgStyle,
     TitleCasePipe,
     RouterModule,
     MatCardModule,
@@ -445,21 +443,31 @@ export class QuizSelectionComponent implements OnInit {
     return QuizSelectionComponent.SAFE_IMAGE_URL.test(value) ? value : null;
   }
 
-  getQuizTileStyles(quiz: Quiz): QuizTileStyles {
-    // API-FIRST. `/quizzes` is the authority for tile imagery; the bundled value
-    // is a transitional fallback that keeps tiles from going blank while a cold
-    // backend answers. Both carry identical URLs today, so the swap is invisible.
-    // The fallback goes with the asset in S7b-2.
+  /**
+   * Tile artwork URL for a real, lazy-loadable `<img ngSrc>` — replaces the
+   * old `getQuizTileStyles()` CSS `background-image` approach (removed once
+   * this was confirmed as its only remaining consumer). A CSS background has
+   * no native lazy-loading hook: a live-production, throttled-mobile
+   * measurement showed all 20 tile backgrounds firing within an 83ms window
+   * regardless of scroll position, contending for bandwidth even though zero
+   * tiles are above the fold on a typical mobile viewport. A real `<img>`
+   * lets the browser defer everything but the actual first visible row.
+   *
+   * API-FIRST. `/quizzes` is the authority for tile imagery; the bundled
+   * value is a transitional fallback that keeps tiles from going blank while
+   * a cold backend answers. Both carry identical URLs today, so the swap is
+   * invisible. The fallback goes with the asset in S7b-2.
+   *
+   * Never returns null: `ngSrc` is a required NgOptimizedImage input, so an
+   * untrusted/rejected value degrades to the same local placeholder
+   * Introduction's hero already uses, rather than omitting the image.
+   */
+  tileImageUrl(quiz: Quiz): string {
     this.metadataApi.imageByQuiz();   // track the signal so tiles restyle on load
     const image = this.safeImageUrl(
       this.metadataApi.imageFor(quiz?.quizId) || quiz?.image
     );
-    return {
-      background: image
-        ? `url("${image}") no-repeat center 10px`
-        : 'none no-repeat center 10px',
-      'background-size': '300px 210px'
-    };
+    return image ?? 'assets/images/quiz-placeholder.svg';
   }
 
   getLinkClass(quiz: Quiz): string[] {

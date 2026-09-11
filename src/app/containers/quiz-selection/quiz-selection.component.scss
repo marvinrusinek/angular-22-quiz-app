@@ -336,6 +336,31 @@
         }
       }
 
+      // Real <img> replacing the old CSS background-image (see the template
+      // comment). Positioned to occupy the EXACT same box the background used
+      // to (center-aligned, 10px from the top, 300x210) so the swap is
+      // pixel-for-pixel invisible. object-fit: fill replicates
+      // `background-size: 300px 210px`'s own non-uniform stretch — the CSS
+      // background never preserved aspect ratio either, so this is not a new
+      // distortion, just the same one via a different mechanism. z-index is
+      // deliberately NOT set: this stays behind both .quiz-tile__activate
+      // (explicit z-index: 1) and the normal-flow text content below it,
+      // which — per standard CSS stacking rules — paints above a positioned
+      // element at the default stacking level regardless of DOM order, the
+      // same way the text already painted above a CSS background. Purely
+      // decorative and never interactive: pointer-events: none so it can
+      // never intercept a click/tap/long-press meant for the tile beneath it.
+      .quiz-tile__image {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 300px;
+        height: 210px;
+        object-fit: fill;
+        pointer-events: none;
+      }
+
       // Flex column so the difficulty badge can be pinned to the bottom of every
       // tile (via margin-top:auto) and line up across the row, regardless of how
       // long each summary is.
@@ -642,8 +667,10 @@
         min-height: 375px !important;
         padding-bottom: 8px !important;
         margin: 0 !important;
-        background-size: 300px 210px !important;
-        background-position: center 10px !important;
+        // .quiz-tile__image (a real <img>, not a background) needs no
+        // mobile-specific override here — its base rule already positions it
+        // identically (center, 10px from top, 300x210) on every breakpoint,
+        // matching what this background-size/-position pair used to force.
 
         .quiz-info {
           margin: 230px 0 0 5px !important;

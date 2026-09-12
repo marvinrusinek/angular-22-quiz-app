@@ -1,0 +1,92 @@
+name: Backend Spring CI
+
+# First workflow in this repo (no prior .github/workflows to follow), scoped
+# to backend-spring only — the Angular frontend, Node backend, Render, and
+# Neon are untouched by this file and have no CI here yet.
+#
+# Two jobs, `docker-build` gated on `verify` passing first: `mvnw -B verify`
+# runs both the ordinary unit tests (Surefire) AND the disposable-PostgreSQL
+# Testcontainers integration suite (Failsafe, *PostgresIT classes bound to
+# the integration-test/verify phases — see pom.xml). Every one of those
+# containers is spun up fresh per test class with a random host port and
+# torn down at the end of that class, so two concurrent runs of this
+# workflow (e.g. two PRs) never share a database or a fixed port — each
+# runs on its own isolated GitHub-hosted runner with its own Docker daemon.
+# Nothing here needs Neon, a production credential, or a repository secret:
+# application-test.properties excludes datasource autoconfiguration entirely
+# for ordinary tests, and every *PostgresIT class supplies its own
+# synthetic, non-production values via @DynamicPropertySource.
+#
+# The `docker-build` job proves backend-spring/Dockerfile still builds a
+# runnable, non-root production image; it never pushes anywhere, matching
+# this migration's current status (not wired into any Render service yet).
+on:
+  push:
+    paths:
+      - "backend-spring/**"
+      - ".github/workflows/backend-spring-ci.yml"
+  pull_request:
+    paths:
+      - "backend-spring/**"
+      - ".github/workflows/backend-spring-ci.yml"
+  # Path filters above don't apply to a manual run, so this always works
+  # regardless of what changed.
+  workflow_dispatch: {}
+
+# Least privilege: this workflow only reads the repository and never
+# authenticates to a registry, comments on a PR, or writes any other
+# repository resource.
+permissions:
+  contents: read
+
+# A second push to the same branch/PR while a run is still going supersedes
+# it instead of running alongside it — belt-and-suspenders on top of the
+# per-class container isolation above, since only one run per ref is ever
+# in flight at a time.
+concurrency:
+  group: backend-spring-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: backend-spring
+
+jobs:
+  verify:
+    name: mvnw verify (unit + Testcontainers integration tests)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4.5.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          # Caches ~/.m2/repository, keyed on every pom.xml in the repo —
+          # the built-in mechanism, so no separate actions/cache step.
+          cache: maven
+
+      # Tracked in git as non-executable (100644); the wrapper script itself
+      # is unmodified, only the runtime bit is set for this ephemeral checkout.
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
+      - name: mvnw -B verify
+        run: ./mvnw -B verify
+
+  docker-build:
+    name: Docker image build (backend-spring/Dockerfile, not pushed)
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      # Build only, from this job's own working-directory context — the
+      # Dockerfile's COPY paths (.mvn/, mvnw, pom.xml, src) are relative to
+      # backend-spring/. No registry login, no push, no tag beyond a local
+      # CI-only one; the image never leaves this runner.
+      - name: Build production image
+        run: docker build -t backend-spring-ci:${{ github.sha }} .

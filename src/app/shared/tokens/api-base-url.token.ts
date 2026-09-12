@@ -34,18 +34,20 @@ export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL', {
 export const DEV_API_BASE_URL = 'http://localhost:8080/api';
 
 /**
- * Production backend origin. Deliberately EMPTY until the backend is hosted:
- * a placeholder domain would silently ship a build that looks configured and
- * fails at runtime.
+ * Production backend origin.
  *
- * While it is empty, Interview Mode fails closed with a clear message and the
- * rest of the app — Topic Quizzes, Practice, history — is unaffected.
+ * Cut over from the Node service (`interview-api-c842`) to the verified
+ * Spring service during the observation window. Node's origin stays in the
+ * CSP `connect-src` (see index.html) as the rollback target — reverting is
+ * a one-line change back to the Node URL below, not a CSP edit, since Node's
+ * origin is still allow-listed.
  *
- * When the host is chosen, set this AND add the origin to the CSP
- * `connect-src` directive in index.html. Setting only one of the two leaves
- * every request blocked by the browser before it is sent.
+ * Changing this value ALONE is not enough: the new origin must also be in
+ * the CSP `connect-src` directive in index.html, or every request is
+ * blocked by the browser before it is sent, with nothing in the network tab
+ * to explain why.
  */
-export const PROD_API_BASE_URL = 'https://interview-api-c842.onrender.com/api';
+export const PROD_API_BASE_URL = 'https://interview-api-spring.onrender.com/api';
 
 /**
  * Whether the API is configured for the current build.

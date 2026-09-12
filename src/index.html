@@ -38,10 +38,18 @@
          origins below are what `ng serve` talks to, and they are inert anywhere
          else (a page can only reach a backend the visitor is running locally).
 
-         The Render origin and PROD_API_BASE_URL in api-base-url.token.ts are
-         ONE setting in two files: change either and you must change the other.
-         Missing this half fails closed but SILENTLY — the browser blocks the
-         request before it is sent, so there is nothing in the network tab. -->
+         The active origin here and PROD_API_BASE_URL in api-base-url.token.ts
+         are ONE setting in two files: change either and you must change the
+         other. Missing this half fails closed but SILENTLY — the browser
+         blocks the request before it is sent, so there is nothing in the
+         network tab.
+
+         Spring cutover (observation window): interview-api-spring is now the
+         PROD_API_BASE_URL target. interview-api-c842 (Node) stays listed here
+         too, deliberately NOT removed yet — it is the rollback target, and
+         rollback must not also require editing this policy. Once the
+         observation window closes with no rollback, remove the Node origin
+         in a follow-up change. -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
       script-src 'self';
@@ -49,7 +57,7 @@
       font-src 'self' data: https://fonts.gstatic.com https://raw.githubusercontent.com;
       img-src 'self' data: https://raw.githubusercontent.com;
       media-src 'self' https://cdn.jsdelivr.net;
-      connect-src 'self' https://cdn.jsdelivr.net https://interview-api-c842.onrender.com http://localhost:8080 http://127.0.0.1:8080;
+      connect-src 'self' https://cdn.jsdelivr.net https://interview-api-spring.onrender.com https://interview-api-c842.onrender.com http://localhost:8080 http://127.0.0.1:8080;
       worker-src 'self';
       manifest-src 'self';
       object-src 'none';

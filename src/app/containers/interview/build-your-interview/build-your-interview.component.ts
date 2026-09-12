@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
   OnInit,
   signal,
@@ -26,7 +27,7 @@ import { AssessmentIntegrityService } from '../../../shared/services/features/in
 import { buildInterviewSessionRequest } from '../../../shared/services/interview/interview-builder-request.mapper';
 import { isApiConfigured } from '../../../shared/tokens/api-base-url.token';
 import type { CreateInterviewSessionRequest } from '../../../shared/models/api/interview-api.dto';
-import { QuizStartSpinnerService } from '../../../shared/services/ui/quiz-start-spinner.service';
+import { QuizStartSpinnerHandle, QuizStartSpinnerService } from '../../../shared/services/ui/quiz-start-spinner.service';
 import { swallow } from '../../../shared/utils/error-logging';
 import {
   findInterviewPreset,
@@ -106,6 +107,26 @@ export class BuildYourInterviewComponent implements OnInit {
   readonly createError = this._createError.asReadonly();
   private readonly spinner = inject(QuizStartSpinnerService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+
+  // The in-flight start attempt's OWN handle, retained immediately once
+  // showForStart() is reached and cleared once that attempt completes
+  // normally. The destroy hook cancels THIS handle specifically — never the
+  // shared service globally — so destroying this component can never affect
+  // some OTHER component's newer, still-active attempt on the same overlay.
+  private currentSpinnerAttempt: QuizStartSpinnerHandle | null = null;
+
+  constructor() {
+    // Defensive safety net: if this component is destroyed while
+    // startInterview()'s async flow is still pending (e.g. the user
+    // navigated away some other way during a slow cold-backend create),
+    // the overlay must not be left stuck. forceCancel() bypasses the
+    // minimum-duration floor and is scoped to THIS attempt's handle: a no-op
+    // if it never got assigned (createSession failed first), already
+    // completed (currentSpinnerAttempt is null), or was superseded by a
+    // newer attempt (forceCancel() checks generation ownership itself).
+    this.destroyRef.onDestroy(() => this.currentSpinnerAttempt?.forceCancel());
+  }
 
   readonly catalogLoading = this.catalog.loading;
   readonly catalogUnavailable = this.catalog.unavailable;
@@ -434,6 +455,11 @@ export class BuildYourInterviewComponent implements OnInit {
     this._createError.set(null);
     this.stashTimerOverride();
 
+    // Declared here (not inside the try) so `finally` can reach it — stays
+    // null if createSession() itself throws, since showForStart() is only
+    // ever called once a session actually exists.
+    let spinnerHandle: QuizStartSpinnerHandle | null = null;
+
     try {
       const created = await firstValueFrom(this.api.createSession(request));
 
@@ -442,13 +468,26 @@ export class BuildYourInterviewComponent implements OnInit {
       this.backendSession.activateCreatedSession(created.session, created.sessionToken);
       this.integrity.reset();
 
-      await this.spinner.showForStart($localize`Preparing Interview…`);
+      spinnerHandle = this.spinner.showForStart($localize`Preparing Interview…`);
+      // Retained immediately so the destroy hook can cancel exactly THIS
+      // attempt — not reached at all if createSession() above threw first.
+      this.currentSpinnerAttempt = spinnerHandle;
+      await spinnerHandle.minimumElapsed;
       // The session id is NOT secret; the token stays in sessionStorage.
       await this.router.navigate(['/interview/session', created.session.sessionId]);
     } catch (err: unknown) {
       const error = err instanceof InterviewApiError ? err : new InterviewApiError('UNKNOWN', 0);
       this._createError.set(error.userMessage);
     } finally {
+      // QuizStartSpinnerService no longer self-hides on a fixed timer (see
+      // its own doc comment) — every caller of showForStart() must now
+      // explicitly hide() its OWN handle once its own work is done. A null
+      // handle means showForStart() was never reached (createSession threw
+      // before we got that far), so there is nothing to hide — and nothing
+      // for the destroy hook to cancel either, independent of when/whether
+      // the handle was ever assigned.
+      spinnerHandle?.hide();
+      this.currentSpinnerAttempt = null;
       this.creating = false;
       this._isCreating.set(false);
     }

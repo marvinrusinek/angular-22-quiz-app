@@ -123,7 +123,16 @@ function render(): ComponentFixture<BuildYourInterviewComponent> {
           }
         }
       },
-      { provide: QuizStartSpinnerService, useValue: { showForStart: async () => void 0 } }
+      {
+        provide: QuizStartSpinnerService,
+        useValue: {
+          showForStart: () => ({
+            minimumElapsed: Promise.resolve(),
+            hide: () => void 0,
+            forceCancel: () => void 0
+          })
+        }
+      }
     ]
   });
   const fixture = TestBed.createComponent(BuildYourInterviewComponent);

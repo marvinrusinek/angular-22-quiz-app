@@ -88,7 +88,18 @@ describe('BuildYourInterviewComponent', () => {
   beforeEach(async () => {
     setQuizDataCache(CATALOG, []);
     router = { navigate: jest.fn().mockResolvedValue(true) };
-    spinner = { showForStart: jest.fn().mockResolvedValue(undefined) };
+    // showForStart() returns a per-attempt handle (not a bare Promise, and
+    // not a service-level method the component calls directly) — see
+    // QuizStartSpinnerService's own doc comment for why (stale-attempt
+    // protection). forceCancel lives on the HANDLE; the component's destroy
+    // hook calls it via its own retained currentSpinnerAttempt reference.
+    spinner = {
+      showForStart: jest.fn(() => ({
+        minimumElapsed: Promise.resolve(),
+        hide: jest.fn(),
+        forceCancel: jest.fn()
+      }))
+    };
 
     await TestBed.configureTestingModule({
       imports: [BuildYourInterviewComponent],
@@ -364,6 +375,119 @@ describe('BuildYourInterviewComponent', () => {
 });
 
 /**
+ * Concurrency/lifecycle audit: BuildYourInterviewComponent had NO destroy-time
+ * cleanup at all for the spinner it shows. If the user navigated away (or the
+ * component was otherwise destroyed) while startInterview()'s async flow was
+ * still pending AFTER the overlay was shown — e.g. router.navigate() itself
+ * hangs, or the whole navigation is superseded some other way — the GLOBAL
+ * overlay would stay visible on whatever page the user landed on next. This
+ * suite drives the REAL QuizStartSpinnerService (not a stub) to prove the
+ * fix: a destroyRef.onDestroy() safety net now force-hides it.
+ *
+ * Deliberately placed here (right after the main describe block) rather than
+ * at the end of the file: the LAST describe block below
+ * ("production with NO configured API origin") deliberately exercises a real
+ * fail-closed error path in ngOnInit whose rejection settles on a delayed
+ * macrotask — with nothing after it, that has nowhere to surface; placed
+ * after it, it intermittently gets misattributed to an unrelated later test.
+ */
+describe('BuildYourInterviewComponent — spinner cleanup on destroy (concurrency audit)', () => {
+  let fixture: ComponentFixture<BuildYourInterviewComponent>;
+  let component: BuildYourInterviewComponent;
+  let spinner: QuizStartSpinnerService;
+  let resolveNavigate: (() => void) | null;
+
+  beforeEach(async () => {
+    jest.useFakeTimers();
+    setQuizDataCache(CATALOG, []);
+    resolveNavigate = null;
+
+    await TestBed.configureTestingModule({
+      imports: [BuildYourInterviewComponent],
+      providers: [
+        {
+          provide: InterviewApiService,
+          useValue: {
+            getQuizMetadata: () => of(toMetadata(CATALOG)),
+            createSession: jest.fn(() => of(CREATED)) // resolves immediately
+          }
+        },
+        {
+          // Never resolves within the test — startInterview() stays
+          // suspended here, with the overlay already shown, until destroy.
+          provide: Router,
+          useValue: { navigate: jest.fn(() => new Promise<boolean>((resolve) => { resolveNavigate = () => resolve(true); })) }
+        },
+        // The REAL service — this suite exists specifically to prove ITS
+        // destroy-triggered behavior, unlike the describe blocks above.
+        QuizStartSpinnerService,
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'http://test.local/api' }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(BuildYourInterviewComponent);
+    component = fixture.componentInstance;
+    spinner = TestBed.inject(QuizStartSpinnerService);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+    setQuizDataCache([], []);
+  });
+
+  it('destruction while startInterview() is pending (overlay already shown) does not leave the GLOBAL overlay stuck', async () => {
+    component.setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true); // pool 20, count 20 → valid
+
+    const started = component.startInterview();
+
+    // Let createSession + showForStart() + the minimum duration all settle —
+    // the overlay is now genuinely visible, and startInterview() is paused
+    // at `await this.router.navigate(...)`, which never resolves on its own.
+    await jest.advanceTimersByTimeAsync(1650);
+    expect(spinner.visible()).toBe(true);
+
+    fixture.destroy(); // triggers this component's DestroyRef.onDestroy
+    expect(spinner.visible()).toBe(false);
+
+    // Let the still-pending navigate() resolve so the promise chain settles
+    // cleanly and doesn't leak into the next test.
+    resolveNavigate?.();
+    await started;
+    expect(spinner.visible()).toBe(false); // stays hidden — startInterview()'s own hide() is now a no-op too
+  });
+
+  it('a createSession failure (before showForStart() is ever reached) still clears state cleanly, with nothing to hide/cancel', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    jest.spyOn(api, 'createSession').mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
+
+    component.setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    await component.startInterview();
+
+    // The overlay was never shown at all — this must NOT depend on a handle
+    // having been assigned late, or on any hide()/forceCancel() call.
+    expect(spinner.visible()).toBe(false);
+    expect(component.isCreating()).toBe(false);
+    expect(component.createError()).toBeTruthy();
+
+    // Destroying the component now (currentSpinnerAttempt is still null,
+    // since showForStart() was never reached) must not throw.
+    expect(() => fixture.destroy()).not.toThrow();
+    expect(spinner.visible()).toBe(false);
+  });
+});
+
+/**
  * REGRESSION (live site, 2026-08-03): on GitHub Pages the /interview route
  * rendered NOTHING. `resolveApiBaseUrl` threw when production had no
  * configured origin, and because it runs inside an injection factory, this
@@ -384,7 +508,16 @@ describe('BuildYourInterviewComponent — production with NO configured API orig
         // Unconfigured origin: the real service is used, so every call fails
         // closed exactly as it would in an unconfigured production build.
         { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } },
-        { provide: QuizStartSpinnerService, useValue: { showForStart: jest.fn().mockResolvedValue(undefined) } },
+        {
+          provide: QuizStartSpinnerService,
+          useValue: {
+            showForStart: jest.fn(() => ({
+              minimumElapsed: Promise.resolve(),
+              hide: jest.fn(),
+              forceCancel: jest.fn()
+            }))
+          }
+        },
         provideHttpClient(),
         provideHttpClientTesting(),
         // Exactly what an unconfigured production build resolves to.
@@ -440,3 +573,4 @@ describe('BuildYourInterviewComponent — production with NO configured API orig
     http.expectNone(() => true);
   });
 });
+

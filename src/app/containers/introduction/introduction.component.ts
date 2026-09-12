@@ -25,7 +25,7 @@ import { QuizService } from '../../shared/services/data/quiz.service';
 import { QuizShuffleService } from '../../shared/services/flow/quiz-shuffle.service';
 import { SelectedOptionService } from '../../shared/services/state/selectedoption.service';
 import { TimerService } from '../../shared/services/features/timer/timer.service';
-import { QuizStartSpinnerService } from '../../shared/services/ui/quiz-start-spinner.service';
+import { QuizStartSpinnerHandle, QuizStartSpinnerService } from '../../shared/services/ui/quiz-start-spinner.service';
 import { swallow } from '../../shared/utils/error-logging';
 
 /** The Introduction page's quiz preferences, as a typed Signal Forms model. */
@@ -100,11 +100,28 @@ export class IntroductionComponent implements OnInit {
   });
   readonly introImgSig = signal('');
 
+  // The in-flight start attempt's OWN handle, retained immediately after
+  // showForStart() and cleared once that attempt completes normally. The
+  // destroy hook below cancels THIS handle specifically — never the shared
+  // service globally — so destroying this component can never affect some
+  // OTHER component's newer, still-active attempt on the same overlay.
+  private currentSpinnerAttempt: QuizStartSpinnerHandle | null = null;
+
   constructor() {
 
     // Mirror the toggle into QuizService whenever it changes. The write path is
     // now onSlideToggleChange() alone; this effect only propagates.
     effect(() => this.quizService.setCheckedShuffle(this.isChecked()));
+
+    // Defensive safety net: if this component is destroyed while a start
+    // attempt is still in flight (e.g. the user navigated away some other
+    // way during a slow cold-backend fetch), the overlay must not be left
+    // stuck. forceCancel() (not hide()) bypasses the minimum-duration floor
+    // — a destroyed component has no polished transition left to protect —
+    // and is scoped to THIS attempt's handle: a no-op if it has already
+    // completed (currentSpinnerAttempt is null) or been superseded by a
+    // newer attempt (forceCancel() checks generation ownership itself).
+    this.destroyRef.onDestroy(() => this.currentSpinnerAttempt?.forceCancel());
   }
 
   ngOnInit(): void {
@@ -122,14 +139,25 @@ export class IntroductionComponent implements OnInit {
   }
 
   async onStartQuiz(quizId?: string): Promise<void> {
+    // Guards against duplicate Start requests: a second click while one is
+    // already in flight is a no-op rather than a second fetch/navigation.
     if (this.isStartingQuiz()) return;
 
     this.isStartingQuiz.set(true);
 
-    // Play the "starting the quiz" spinner over the INTRO. We await it before
-    // navigating so Q1 (and its timer) doesn't start behind the overlay — the
-    // spinner completes a full rotation, then fades out into the fresh Q1.
-    const spinnerHold = this.startSpinner.showForStart();
+    // Play the "starting the quiz" spinner over the INTRO. The returned
+    // handle is scoped to THIS attempt: minimumElapsed resolves after the
+    // minimum rotation (1600ms) but does NOT hide the overlay by itself —
+    // spinner.hide() below does that, once the real work AND that minimum
+    // have both completed. On a cold backend this keeps the overlay up for
+    // the genuine wait instead of it vanishing early while the fetch is
+    // still silently in flight. Because the handle is generation-stamped, a
+    // late finally-block hide() from an attempt superseded by a NEWER one
+    // (e.g. this component was destroyed and a different start flow began)
+    // can never prematurely hide that newer attempt's overlay. Retained
+    // immediately so the destroy hook can cancel exactly THIS attempt.
+    const spinner = this.startSpinner.showForStart();
+    this.currentSpinnerAttempt = spinner;
 
     try {
       const targetQuizId = this.resolveTargetQuizId(quizId);
@@ -147,12 +175,21 @@ export class IntroductionComponent implements OnInit {
 
       await this.prepareAndSetCurrentQuiz(activeQuiz, targetQuizId);
 
-      // Wait out the spinner's full rotation over the intro, THEN navigate so the
-      // Q1 timer only starts as the overlay fades away.
-      await spinnerHold;
+      // Wait out the spinner's minimum rotation over the intro (already
+      // elapsed if the fetch above took longer than that), THEN navigate so
+      // the Q1 timer only starts once the overlay is ready to fade away.
+      await spinner.minimumElapsed;
 
       await this.navigateToFirstQuestion(targetQuizId);
     } finally {
+      // Runs on every exit — success, an early return (unresolved quiz id or
+      // quiz), or navigation failure — so the overlay and the in-flight flag
+      // never outlive the attempt they belong to. hide() is idempotent, and
+      // scoped to THIS attempt's generation.
+      spinner.hide();
+      // Clear the retained handle now that this attempt has completed
+      // normally — the destroy hook has nothing left to cancel for it.
+      this.currentSpinnerAttempt = null;
       this.isStartingQuiz.set(false);
     }
   }

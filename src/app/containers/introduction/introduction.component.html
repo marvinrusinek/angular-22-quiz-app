@@ -86,21 +86,46 @@
           <ng-container i18n>Shuffle questions and answers</ng-container>
         </mat-slide-toggle>
 
-        <button
-          type="button"
-          mat-raised-button
-          color="primary"
-          class="btn btn-outline-primary start-btn"
-          [disabled]="isStartingQuiz()"
-          (click)="onStartQuiz(quiz.quizId)"
-          aria-label="Start the Quiz"
-        i18n-aria-label
-        >
-          <span i18n class="start-btn-content">
-            <strong>Start the Quiz!</strong>&nbsp;
-            <mat-icon>play_arrow</mat-icon>
-          </span>
-        </button>
+        @if (startFailed()) {
+          <p class="start-error" role="alert">
+            @if (startTimedOut()) {
+              <span i18n>The server is still waking up. Please try again in a moment.</span>
+            } @else {
+              <span i18n>Couldn't reach the quiz service. Please check your connection and try again.</span>
+            }
+          </p>
+          <button
+            type="button"
+            mat-raised-button
+            color="primary"
+            class="btn btn-outline-primary start-btn"
+            [disabled]="isStartingQuiz()"
+            (click)="onStartQuiz(quiz.quizId)"
+            aria-label="Retry starting the quiz"
+          i18n-aria-label
+          >
+            <span i18n class="start-btn-content">
+              <strong>Retry</strong>&nbsp;
+              <mat-icon>refresh</mat-icon>
+            </span>
+          </button>
+        } @else {
+          <button
+            type="button"
+            mat-raised-button
+            color="primary"
+            class="btn btn-outline-primary start-btn"
+            [disabled]="isStartingQuiz()"
+            (click)="onStartQuiz(quiz.quizId)"
+            aria-label="Start the Quiz"
+          i18n-aria-label
+          >
+            <span i18n class="start-btn-content">
+              <strong>Start the Quiz!</strong>&nbsp;
+              <mat-icon>play_arrow</mat-icon>
+            </span>
+          </button>
+        }
       </form>
     </mat-card-actions>
   </mat-card>

@@ -296,3 +296,13 @@ mat-card-actions {
     &.difficulty-advanced { color: vars.$fire-red; }
   }
 }
+
+// A recoverable "couldn't load the quiz" state, not an app crash — same
+// weight as the difficulty-advanced accent already used on this page.
+.start-error {
+  margin: 0 0 8px;
+  max-width: 420px;
+  color: vars.$fire-red;
+  font-size: 13px;
+  font-weight: 600;
+}

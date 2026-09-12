@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { of, Subject } from 'rxjs';
+import { of, ReplaySubject, Subject } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { IntroductionComponent } from './introduction.component';
@@ -232,7 +232,7 @@ describe('IntroductionComponent — instant first paint from seeded metadata (St
  * (not a stub) so the two are exercised together, the way production does.
  */
 describe('IntroductionComponent — Start Quiz spinner lifecycle (cold-start fix)', () => {
-  let prepareQuizSession$: Subject<QuizQuestion[]>;
+  let prepareQuizSession$: ReplaySubject<QuizQuestion[]>;
   let quizDataService: {
     clearQuizQuestionCache: jest.Mock;
     setSelectedQuiz: jest.Mock;
@@ -259,8 +259,13 @@ describe('IntroductionComponent — Start Quiz spinner lifecycle (cold-start fix
     facts: []
   };
 
+  // A real (non-empty) result — prepareAndSetCurrentQuiz treats an EMPTY
+  // array as the failure signal (see its own doc comment), so every test
+  // representing a genuine SUCCESS must resolve with at least one question.
+  const FAKE_QUESTIONS = [{ questionText: 'Q1', options: [] }] as unknown as QuizQuestion[];
+
   function configureTestBed(): void {
-    prepareQuizSession$ = new Subject<QuizQuestion[]>();
+    prepareQuizSession$ = new ReplaySubject<QuizQuestion[]>(1);
     quizDataService = {
       clearQuizQuestionCache: jest.fn(),
       setSelectedQuiz: jest.fn(),
@@ -363,7 +368,7 @@ describe('IntroductionComponent — Start Quiz spinner lifecycle (cold-start fix
     const started = component.onStartQuiz('typescript');
 
     // Resolve the "fetch" almost immediately — far under the 1600ms floor.
-    prepareQuizSession$.next([]);
+    prepareQuizSession$.next(FAKE_QUESTIONS);
     prepareQuizSession$.complete();
     await Promise.resolve();
     await Promise.resolve();
@@ -386,7 +391,7 @@ describe('IntroductionComponent — Start Quiz spinner lifecycle (cold-start fix
     expect(spinner.visible()).toBe(true); // must still be up — this is the fixed bug
 
     // Now the cold backend finally answers.
-    prepareQuizSession$.next([]);
+    prepareQuizSession$.next(FAKE_QUESTIONS);
     prepareQuizSession$.complete();
     await started;
 
@@ -394,7 +399,7 @@ describe('IntroductionComponent — Start Quiz spinner lifecycle (cold-start fix
     expect(quizNavigationService.resetUIAndNavigate).toHaveBeenCalledTimes(1);
   });
 
-  it('request failure: spinner still clears (existing silent-fallback behavior preserved, no crash)', async () => {
+  it('request failure (thrown error): spinner clears, Retry is shown, and navigation is NOT attempted (no duplicate fetch)', async () => {
     const started = component.onStartQuiz('typescript');
 
     prepareQuizSession$.error(new Error('cold backend timed out'));
@@ -403,9 +408,53 @@ describe('IntroductionComponent — Start Quiz spinner lifecycle (cold-start fix
 
     expect(spinner.visible()).toBe(false);
     // prepareAndSetCurrentQuiz's own catch falls back to the already-known
-    // quiz rather than rethrowing — start still completes, exactly as before.
+    // quiz for display purposes, but reports failure so onStartQuiz stops
+    // here — it must NOT proceed to navigateToFirstQuestion, which is what
+    // used to silently re-issue a second real fetch via ensureSessionQuestions.
     expect(quizDataService.setCurrentQuiz).toHaveBeenCalledWith(ACTIVE_QUIZ);
-    expect(quizNavigationService.resetUIAndNavigate).toHaveBeenCalledTimes(1);
+    expect(quizNavigationService.resetUIAndNavigate).not.toHaveBeenCalled();
+    expect(quizNavigationService.ensureSessionQuestions).not.toHaveBeenCalled();
+    expect(component.startFailed()).toBe(true);
+    expect(component.isStartingQuiz()).toBe(false);
+  });
+
+  it('request "succeeds" with an empty question array (the same failure signal QuizDataService.prepareQuizSession resolves to on a caught fetch error): treated identically to a thrown error', async () => {
+    const started = component.onStartQuiz('typescript');
+
+    prepareQuizSession$.next([]); // empty, not an error — matches prepareQuizSession's own catchError(() => of([]))
+    prepareQuizSession$.complete();
+    await jest.advanceTimersByTimeAsync(1600);
+    await started;
+
+    expect(spinner.visible()).toBe(false);
+    expect(quizNavigationService.resetUIAndNavigate).not.toHaveBeenCalled();
+    expect(component.startFailed()).toBe(true);
+  });
+
+  it('a Retry click after a failure clears the failed state and completes normally on success', async () => {
+    const started = component.onStartQuiz('typescript');
+    prepareQuizSession$.error(new Error('cold backend timed out'));
+    await jest.advanceTimersByTimeAsync(1600);
+    await started;
+    expect(component.startFailed()).toBe(true);
+    expect(quizNavigationService.resetUIAndNavigate).not.toHaveBeenCalled();
+
+    // Retry: same button, same handler ("Retry" calls onStartQuiz() exactly
+    // like "Start the Quiz!" does), a fresh Subject standing in for the
+    // backend now actually responding.
+    prepareQuizSession$ = new ReplaySubject<QuizQuestion[]>(1);
+    quizDataService.prepareQuizSession.mockImplementation(() => prepareQuizSession$.asObservable());
+
+    const retried = component.onStartQuiz('typescript');
+    expect(component.startFailed()).toBe(false); // cleared immediately on the new attempt
+
+    prepareQuizSession$.next(FAKE_QUESTIONS); // this time the backend genuinely answers
+    prepareQuizSession$.complete();
+    await jest.advanceTimersByTimeAsync(1600);
+    await retried;
+
+    expect(component.startFailed()).toBe(false);
+    expect(quizNavigationService.resetUIAndNavigate).toHaveBeenCalledTimes(1); // the retry completed the start
   });
 
   it('navigation failure/cancellation: spinner still clears', async () => {
@@ -413,7 +462,7 @@ describe('IntroductionComponent — Start Quiz spinner lifecycle (cold-start fix
     routerNavigate.mockResolvedValue(false);
 
     const started = component.onStartQuiz('typescript');
-    prepareQuizSession$.next([]);
+    prepareQuizSession$.next(FAKE_QUESTIONS);
     prepareQuizSession$.complete();
     await jest.advanceTimersByTimeAsync(1600);
     await started;
@@ -426,7 +475,7 @@ describe('IntroductionComponent — Start Quiz spinner lifecycle (cold-start fix
     const first = component.onStartQuiz('typescript');
     const second = component.onStartQuiz('typescript'); // no-op: isStartingQuiz() guard
 
-    prepareQuizSession$.next([]);
+    prepareQuizSession$.next(FAKE_QUESTIONS);
     prepareQuizSession$.complete();
     await jest.advanceTimersByTimeAsync(1600);
     await Promise.all([first, second]);
@@ -443,5 +492,278 @@ describe('IntroductionComponent — Start Quiz spinner lifecycle (cold-start fix
     fixture.destroy(); // triggers this component's DestroyRef.onDestroy
 
     expect(spinner.visible()).toBe(false);
+  });
+});
+
+/**
+ * Bounded 45s client-side timeout on the Start-Quiz question-loading
+ * operation. A hung `/questions` request (observed directly against the real
+ * production Spring/Render backend for 2+ minutes) previously left the
+ * spinner and the isStartingQuiz() guard stuck forever — no error, no
+ * Retry, nothing the user could act on. `prepareAndSetCurrentQuiz` now pipes
+ * `prepareQuizSession(...)` through `timeout(45_000)` and returns a distinct
+ * 'timeout' outcome so the UI can show "server is still waking up" instead
+ * of the generic unreachable-service message.
+ *
+ * Per explicit product clarification, Retry does NOT always have to issue a
+ * fresh HTTP request: TopicQuizQuestionsService's cache multicasts via
+ * `shareReplay({ refCount: false })`, so if the real request is STILL in
+ * flight when the user retries, Retry should safely reuse it; only once the
+ * request has actually failed (and the cache entry evicted) should Retry
+ * create a new one. These specs model that distinction at the
+ * QuizDataService.prepareQuizSession boundary: reusing the SAME mock source
+ * across the retry represents "still in flight, reused"; swapping in a NEW
+ * mock source after erroring the old one represents "failed, evicted, fresh
+ * request".
+ */
+describe('IntroductionComponent — bounded 45s Start Quiz timeout', () => {
+  let prepareQuizSession$: ReplaySubject<QuizQuestion[]>;
+  let quizDataService: {
+    clearQuizQuestionCache: jest.Mock;
+    setSelectedQuiz: jest.Mock;
+    setCurrentQuiz: jest.Mock;
+    prepareQuizSession: jest.Mock;
+  };
+  let quizNavigationService: {
+    resolveEffectiveQuizId: jest.Mock;
+    ensureSessionQuestions: jest.Mock;
+    tryResolveQuestion: jest.Mock;
+    resetUIAndNavigate: jest.Mock;
+  };
+  let routerNavigate: jest.Mock;
+  let spinner: QuizStartSpinnerService;
+  let component: IntroductionComponent;
+  let fixture: ReturnType<typeof TestBed.createComponent<IntroductionComponent>>;
+
+  const ACTIVE_QUIZ: Quiz = {
+    quizId: 'typescript',
+    milestone: 'TypeScript',
+    summary: '',
+    image: '',
+    difficulty: 'beginner' as QuizDifficulty,
+    facts: []
+  };
+
+  const FAKE_QUESTIONS = [{ questionText: 'Q1', options: [] }] as unknown as QuizQuestion[];
+
+  function configureTestBed(): void {
+    prepareQuizSession$ = new ReplaySubject<QuizQuestion[]>(1);
+    quizDataService = {
+      clearQuizQuestionCache: jest.fn(),
+      setSelectedQuiz: jest.fn(),
+      setCurrentQuiz: jest.fn(),
+      prepareQuizSession: jest.fn(() => prepareQuizSession$.asObservable())
+    };
+    quizNavigationService = {
+      resolveEffectiveQuizId: jest.fn((override?: string) => override ?? 'typescript'),
+      ensureSessionQuestions: jest.fn().mockResolvedValue(undefined),
+      tryResolveQuestion: jest.fn().mockResolvedValue(null),
+      resetUIAndNavigate: jest.fn().mockResolvedValue(true)
+    };
+    routerNavigate = jest.fn().mockResolvedValue(true);
+
+    TestBed.configureTestingModule({
+      imports: [IntroductionComponent],
+      providers: [
+        { provide: QuizDotStatusService, useValue: { clearAllMaps: jest.fn() } },
+        {
+          provide: TopicQuizMetadataService,
+          useValue: {
+            load: jest.fn(() => of([])),
+            questionCountByQuiz: signal(new Map()),
+            milestoneByQuiz: signal(new Map()),
+            difficultyByQuiz: signal(new Map()),
+            imageByQuiz: signal(new Map()),
+            factsByQuiz: signal(new Map()),
+            milestoneFor: (id: string) => id,
+            imageFor: () => '',
+            factsFor: () => []
+          }
+        },
+        { provide: QuizDataService, useValue: quizDataService },
+        { provide: QuizNavigationService, useValue: quizNavigationService },
+        {
+          provide: QuizPersistenceService,
+          useValue: {
+            clearClickConfirmedDotStatus: jest.fn(),
+            clearAllPersistedDotStatus: jest.fn(),
+            clearAllForFreshStart: jest.fn()
+          }
+        },
+        {
+          provide: QuizService,
+          useValue: {
+            clearStoredCorrectAnswersText: jest.fn(),
+            setCheckedShuffle: jest.fn(),
+            resetQuizSessionState: jest.fn(),
+            startNewAttempt: jest.fn(),
+            resetScore: jest.fn(),
+            questionCorrectness: { clear: jest.fn() },
+            selectedOptionsMap: { clear: jest.fn() },
+            userAnswers: [],
+            answers: [],
+            setSelectedQuiz: jest.fn(),
+            setActiveQuiz: jest.fn(),
+            setQuizId: jest.fn(),
+            setCurrentQuestionIndex: jest.fn()
+          }
+        },
+        { provide: QuizShuffleService, useValue: { clear: jest.fn() } },
+        {
+          provide: SelectedOptionService,
+          useValue: {
+            clearAllSelectionsForQuiz: jest.fn(),
+            clearRefreshBackup: jest.fn(),
+            clickConfirmedDotStatus: { clear: jest.fn() },
+            lastClickedCorrectByQuestion: { clear: jest.fn() }
+          }
+        },
+        { provide: TimerService, useValue: { timePerQuestion: 30 } },
+        QuizStartSpinnerService,
+        { provide: ActivatedRoute, useValue: { params: of({ quizId: 'typescript' }) } },
+        { provide: Router, useValue: { navigate: routerNavigate } }
+      ]
+    });
+
+    fixture = TestBed.createComponent(IntroductionComponent);
+    component = fixture.componentInstance;
+    spinner = TestBed.inject(QuizStartSpinnerService);
+    fixture.detectChanges();
+    component.selectedQuiz.set(ACTIVE_QUIZ);
+  }
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    configureTestBed();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('success just under the 45s boundary still completes normally — the timeout never fires', async () => {
+    const started = component.onStartQuiz('typescript');
+
+    await jest.advanceTimersByTimeAsync(44_000);
+    prepareQuizSession$.next(FAKE_QUESTIONS);
+    prepareQuizSession$.complete();
+    await jest.advanceTimersByTimeAsync(1600); // let the (already-elapsed) spinner minimum settle
+    await started;
+
+    expect(component.startFailed()).toBe(false);
+    expect(component.startTimedOut()).toBe(false);
+    expect(spinner.visible()).toBe(false);
+    expect(quizNavigationService.resetUIAndNavigate).toHaveBeenCalledTimes(1);
+  });
+
+  it('a request that never responds within 45s hits the bounded timeout: Retry is shown with the "still waking up" state, not the generic error', async () => {
+    const started = component.onStartQuiz('typescript');
+
+    await jest.advanceTimersByTimeAsync(45_000);
+    await started;
+
+    expect(component.startFailed()).toBe(true);
+    expect(component.startTimedOut()).toBe(true);
+    expect(spinner.visible()).toBe(false);
+    expect(quizNavigationService.resetUIAndNavigate).not.toHaveBeenCalled();
+    expect(quizNavigationService.ensureSessionQuestions).not.toHaveBeenCalled();
+  });
+
+  it('a late response arriving on the original source AFTER the 45s timeout already fired is ignored', async () => {
+    const started = component.onStartQuiz('typescript');
+
+    await jest.advanceTimersByTimeAsync(45_000);
+    await started;
+    expect(component.startFailed()).toBe(true);
+    expect(component.startTimedOut()).toBe(true);
+
+    // The real backend eventually answers anyway, on the SAME (already
+    // timed-out, from this component's perspective) source.
+    prepareQuizSession$.next(FAKE_QUESTIONS);
+    prepareQuizSession$.complete();
+    await jest.advanceTimersByTimeAsync(1600);
+
+    expect(component.startFailed()).toBe(true); // unchanged — the outcome already settled
+    expect(component.startTimedOut()).toBe(true);
+    expect(spinner.visible()).toBe(false); // did not reopen
+    expect(quizNavigationService.resetUIAndNavigate).not.toHaveBeenCalled();
+  });
+
+  it('Retry after a timeout, while the original request is STILL in flight, safely reuses it instead of racing a second concurrent request', async () => {
+    const started = component.onStartQuiz('typescript');
+    await jest.advanceTimersByTimeAsync(45_000);
+    await started;
+    expect(component.startTimedOut()).toBe(true);
+
+    // Retry — the cache entry was never evicted (the real request never
+    // failed; only this component's own bounded wait gave up), so
+    // QuizDataService/TopicQuizQuestionsService's shareReplay({refCount:false})
+    // would hand back the SAME still-in-flight source. Modeled here by NOT
+    // changing quizDataService.prepareQuizSession's implementation.
+    const retried = component.onStartQuiz('typescript');
+    expect(component.startFailed()).toBe(false); // cleared immediately on retry
+
+    // The one real, still-in-flight request finally answers.
+    prepareQuizSession$.next(FAKE_QUESTIONS);
+    prepareQuizSession$.complete();
+    await jest.advanceTimersByTimeAsync(1600);
+    await retried;
+
+    expect(component.startFailed()).toBe(false);
+    expect(component.startTimedOut()).toBe(false);
+    expect(quizNavigationService.resetUIAndNavigate).toHaveBeenCalledTimes(1); // exactly one successful start
+    expect(quizDataService.prepareQuizSession).toHaveBeenCalledTimes(2); // one call per attempt — same underlying source both times
+  });
+
+  it('Retry after a timeout, once the original request has since FAILED and its cache entry was evicted, issues exactly one fresh request', async () => {
+    const started = component.onStartQuiz('typescript');
+    await jest.advanceTimersByTimeAsync(45_000);
+    await started;
+    expect(component.startTimedOut()).toBe(true);
+
+    // The original request eventually fails for real; TopicQuizQuestionsService's
+    // own catchError deletes the cache entry (see its doc comment) — modeled
+    // here by erroring the original source.
+    prepareQuizSession$.error(new Error('cold backend eventually failed'));
+
+    // Retry — a fresh cache entry means a fresh Observable this time.
+    const freshSource = new ReplaySubject<QuizQuestion[]>(1);
+    quizDataService.prepareQuizSession.mockImplementation(() => freshSource.asObservable());
+
+    const retried = component.onStartQuiz('typescript');
+    expect(component.startFailed()).toBe(false);
+
+    freshSource.next(FAKE_QUESTIONS);
+    freshSource.complete();
+    await jest.advanceTimersByTimeAsync(1600);
+    await retried;
+
+    expect(component.startFailed()).toBe(false);
+    expect(component.startTimedOut()).toBe(false);
+    expect(quizNavigationService.resetUIAndNavigate).toHaveBeenCalledTimes(1);
+    expect(quizDataService.prepareQuizSession).toHaveBeenCalledTimes(2); // exactly one fresh call on retry
+  });
+
+  it('duplicate clicks while the 45s timeout is still pending create only one request', async () => {
+    const first = component.onStartQuiz('typescript');
+    const second = component.onStartQuiz('typescript'); // no-op: isStartingQuiz() guard
+
+    await jest.advanceTimersByTimeAsync(45_000);
+    await Promise.all([first, second]);
+
+    expect(quizDataService.prepareQuizSession).toHaveBeenCalledTimes(1);
+    expect(component.startTimedOut()).toBe(true);
+  });
+
+  it('destruction while the 45s timeout is still pending clears the spinner immediately; the timeout later firing is a harmless no-op', async () => {
+    void component.onStartQuiz('typescript');
+    expect(spinner.visible()).toBe(true);
+
+    fixture.destroy();
+    expect(spinner.visible()).toBe(false);
+
+    // Let the bounded timeout actually fire after destruction — must not
+    // throw or surface as an unhandled rejection.
+    await jest.advanceTimersByTimeAsync(45_000);
   });
 });

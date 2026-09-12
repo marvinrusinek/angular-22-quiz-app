@@ -10,8 +10,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleChange, MatSlideToggleModule }
   from '@angular/material/slide-toggle';
-import { EMPTY, firstValueFrom } from 'rxjs';
-import { catchError, map, switchMap, tap } from 'rxjs/operators';
+import { EMPTY, firstValueFrom, TimeoutError } from 'rxjs';
+import { catchError, map, switchMap, tap, timeout } from 'rxjs/operators';
 
 import { Quiz, QuizDifficulty } from '../../shared/models/Quiz.model';
 import { QuizQuestion } from '../../shared/models/QuizQuestion.model';
@@ -50,6 +50,28 @@ export interface QuizPreferencesModel {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class IntroductionComponent implements OnInit {
+  /**
+   * Bounded timeout for the Start-Quiz question-loading operation ONLY —
+   * chosen from MEASURED Spring/Neon cold-start behavior, not a guess:
+   *
+   *   - A fully cold Render container took 55.7s, and on a separate
+   *     occasion 124.7s, to answer even a bare health check (direct curl
+   *     timing).
+   *   - Neon's own compute wake alone (container already warm) measured
+   *     10.2s-13.1s across several real cold-question-fetch runs.
+   *   - render.yaml's own, pre-existing comment already estimates "roughly
+   *     30-60 seconds" for this app's cold start.
+   *
+   * 45s sits inside that documented 30-60s range: generous enough that a
+   * typical cold start still succeeds without ever showing the timeout
+   * state, but bounded enough that a genuinely stuck request surfaces a
+   * concrete "still waking up" + Retry affordance well before the
+   * multi-minute worst case observed directly, rather than leaving the
+   * user staring at a spinner indefinitely. Warm requests (any environment,
+   * any backend) are unaffected — this is far beyond any normal response.
+   */
+  private static readonly QUESTION_LOAD_TIMEOUT_MS = 45_000;
+
   // ── injects ─────────────────────────────────────────────────────
   private readonly dotStatusService = inject(QuizDotStatusService);
   private readonly metadataApi = inject(TopicQuizMetadataService);
@@ -85,6 +107,22 @@ export class IntroductionComponent implements OnInit {
   /** The toggle's state, read straight off the field. */
   readonly isChecked = computed(() => this.preferencesForm.shouldShuffleOptions().value());
   readonly isStartingQuiz = signal(false);
+  /**
+   * True after a Start attempt genuinely failed to load real question
+   * content (the backend never returned a usable question set) — renders a
+   * Retry affordance instead of silently navigating into a broken, empty
+   * quiz. Cleared at the start of every new attempt (including a retry).
+   */
+  private readonly _startFailed = signal(false);
+  readonly startFailed = this._startFailed.asReadonly();
+  /**
+   * True specifically when the question-loading operation hit its own
+   * bounded timeout (below) rather than a definite error — renders the
+   * "server is still waking up" message instead of the generic
+   * unreachable-service one. Cleared alongside `_startFailed`.
+   */
+  private readonly _startTimedOut = signal(false);
+  readonly startTimedOut = this._startTimedOut.asReadonly();
   readonly questionCountSig = signal(0);
   readonly questionLabelSig = computed(() =>
     this.questionCountSig() === 1 ? 'question' : 'questions'
@@ -144,6 +182,9 @@ export class IntroductionComponent implements OnInit {
     if (this.isStartingQuiz()) return;
 
     this.isStartingQuiz.set(true);
+    // Clear any previous failure/timeout state — this is a fresh attempt (or a retry).
+    this._startFailed.set(false);
+    this._startTimedOut.set(false);
 
     // Play the "starting the quiz" spinner over the INTRO. The returned
     // handle is scoped to THIS attempt: minimumElapsed resolves after the
@@ -173,7 +214,24 @@ export class IntroductionComponent implements OnInit {
 
       this.resetQuizForFreshStart(targetQuizId);
 
-      await this.prepareAndSetCurrentQuiz(activeQuiz, targetQuizId);
+      const outcome = await this.prepareAndSetCurrentQuiz(activeQuiz, targetQuizId);
+      if (outcome !== 'success') {
+        // Genuine backend failure, an empty result (which for a real quiz
+        // means the same thing), or the bounded timeout firing: do NOT
+        // blindly proceed to navigateToFirstQuestion. That path's own
+        // ensureSessionQuestions (and, again, resetUIAndNavigate's internal
+        // call to it) would silently re-issue the SAME real HTTP request a
+        // second and third time — exactly the duplicate-request pattern
+        // that, against a struggling backend, turned one slow attempt into
+        // a multi-minute apparent hang with no way for the user to know or
+        // act, and no way for a genuinely hung request to ever surface a
+        // failure at all. One click means ONE logical load attempt, bounded
+        // in time; a real failure or a timeout surfaces here, immediately,
+        // as a Retry action instead.
+        this._startFailed.set(true);
+        this._startTimedOut.set(outcome === 'timeout');
+        return;
+      }
 
       // Wait out the spinner's minimum rotation over the intro (already
       // elapsed if the fetch above took longer than that), THEN navigate so
@@ -345,23 +403,53 @@ export class IntroductionComponent implements OnInit {
     this.quizPersistence.clearAllForFreshStart(targetQuizId);
   }
 
-  // Prepare the quiz session (which produces shuffled questions) and
-  // commit the resulting quiz to the data service. Falls back to the
-  // un-shuffled quiz if preparation fails.
+  // Prepare the quiz session (which produces shuffled questions) and commit
+  // the resulting quiz to the data service. Returns which of three outcomes
+  // actually occurred, so the caller can distinguish a bounded timeout (show
+  // "still waking up") from any other failure (show the generic message).
+  //
+  // QuizDataService.prepareQuizSession's own API-fetch branch resolves to an
+  // EMPTY array on failure rather than throwing (its trailing catchError
+  // recovers with `of([])` — see its own doc comment: "the next attempt
+  // re-requests"), so the `catch` block below is a defensive fallback for a
+  // genuinely thrown error; an empty array is the MORE LIKELY failure
+  // signal in practice and is checked explicitly. A real quiz's metadata
+  // (questionCountSig, already shown on this very page) is never zero, so
+  // an empty result here always means the fetch didn't actually succeed —
+  // never a legitimate "this quiz has no questions" state.
+  //
+  // The `timeout()` operator bounds ONLY this operation — see
+  // QUESTION_LOAD_TIMEOUT_MS's own doc comment for the measured reasoning
+  // behind 45s. It unsubscribes from `prepareQuizSession`'s Observable when
+  // it fires, but the UNDERLYING real HTTP call is not necessarily
+  // cancelled: TopicQuizQuestionsService's cache multicasts via
+  // `shareReplay({ refCount: false })`, so the real request — and any OTHER
+  // consumer sharing it — keeps running regardless of how many downstream
+  // subscribers stop listening. That is intentional and harmless: once this
+  // method's own `firstValueFrom` has rejected with a TimeoutError, that
+  // Promise is permanently settled, so a value arriving on the shared
+  // source afterward can never retroactively change this outcome — a late
+  // response after a timeout is inherently ignored, not specially handled.
   private async prepareAndSetCurrentQuiz(
     activeQuiz: Quiz,
     targetQuizId: string
-  ): Promise<void> {
+  ): Promise<'success' | 'timeout' | 'error'> {
     try {
       const preparedQuestions = (await firstValueFrom(
-        this.quizDataService.prepareQuizSession(targetQuizId),
+        this.quizDataService.prepareQuizSession(targetQuizId).pipe(
+          timeout(IntroductionComponent.QUESTION_LOAD_TIMEOUT_MS)
+        ),
       )) as QuizQuestion[];
-      this.quizDataService.setCurrentQuiz({
-        ...activeQuiz,
-        questions: preparedQuestions ?? activeQuiz.questions
-      });
-    } catch {
+
+      if (!Array.isArray(preparedQuestions) || preparedQuestions.length === 0) {
+        return 'error';
+      }
+
+      this.quizDataService.setCurrentQuiz({ ...activeQuiz, questions: preparedQuestions });
+      return 'success';
+    } catch (err: unknown) {
       this.quizDataService.setCurrentQuiz(activeQuiz);
+      return err instanceof TimeoutError ? 'timeout' : 'error';
     }
   }
 

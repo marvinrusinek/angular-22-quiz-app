@@ -2,12 +2,13 @@ import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 
-import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '../tokens/api-base-url.token';
 import { swallow } from '../utils/error-logging';
 
 /**
  * Centralized, DEV-ONLY diagnostic logging for requests to this app's own
- * backend API (`API_BASE_URL`).
+ * backend APIs — Node/Topic Quiz (`API_BASE_URL`) and Spring/Interview Mode
+ * (`INTERVIEW_API_BASE_URL`).
  *
  * ── What this deliberately does NOT do ─────────────────────────────
  *
@@ -22,7 +23,9 @@ import { swallow } from '../utils/error-logging';
  * consumer gets — it only OBSERVES a failure long enough to log sanitized,
  * non-sensitive context, then rethrows the EXACT SAME error object so every
  * existing `.pipe(catchError(...))` downstream keeps working exactly as
- * before.
+ * before. It never retries against the OTHER configured base either — a
+ * request that fails against Node is never silently reattempted against
+ * Spring, or vice versa.
  *
  * ── What is safe to log, and what never is ──────────────────────────
  *
@@ -35,11 +38,15 @@ import { swallow } from '../utils/error-logging';
  */
 export const apiErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const apiBaseUrl = inject(API_BASE_URL);
+  const interviewApiBaseUrl = inject(INTERVIEW_API_BASE_URL);
 
-  // Only requests to THIS app's own backend API are observed. An empty
-  // apiBaseUrl (API not configured for this build) must never match every
-  // request via an empty-string prefix.
-  if (!apiBaseUrl || !req.url.startsWith(apiBaseUrl)) {
+  // Only requests to one of THIS app's own backend APIs are observed. An
+  // empty base (that API not configured for this build) must never match
+  // every request via an empty-string prefix.
+  const matchedBase = [apiBaseUrl, interviewApiBaseUrl].find(
+    (base) => base && req.url.startsWith(base)
+  );
+  if (!matchedBase) {
     return next(req);
   }
 
@@ -48,7 +55,7 @@ export const apiErrorInterceptor: HttpInterceptorFn = (req, next) => {
       if (error instanceof HttpErrorResponse) {
         swallow('apiErrorInterceptor', {
           method: req.method,
-          path: requestPath(req.url, apiBaseUrl),
+          path: requestPath(req.url, matchedBase),
           status: error.status,
           classification: classifyStatus(error.status)
         });
@@ -60,7 +67,7 @@ export const apiErrorInterceptor: HttpInterceptorFn = (req, next) => {
   );
 };
 
-/** Strip the base URL and any query string; query params may carry sensitive values. */
+/** Strip the matched base URL and any query string; query params may carry sensitive values. */
 function requestPath(url: string, apiBaseUrl: string): string {
   const withoutBase = url.startsWith(apiBaseUrl) ? url.slice(apiBaseUrl.length) : url;
   return withoutBase.split('?')[0];

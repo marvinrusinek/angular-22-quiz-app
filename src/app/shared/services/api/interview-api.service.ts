@@ -3,7 +3,7 @@ import { inject, Service } from '@angular/core';
 import { catchError, map, type Observable } from 'rxjs';
 import { throwError } from 'rxjs';
 
-import { API_BASE_URL } from '../../tokens/api-base-url.token';
+import { INTERVIEW_API_BASE_URL } from '../../tokens/api-base-url.token';
 import type {
   ActiveInterviewSessionDto,
   CreateInterviewSessionRequest,
@@ -12,8 +12,7 @@ import type {
   SaveInterviewAnswerResponse,
   SetReviewFlagRequest,
   SetReviewFlagResponse,
-  QuizMetadataDto,
-  QuizMetadataListDto
+  QuizMetadataDto
 } from '../../models/api/interview-api.dto';
 import type {
   InterviewResultViewModel,
@@ -21,9 +20,18 @@ import type {
 } from '../../models/interview/interview-view-models';
 import { InterviewApiError, toInterviewApiError } from './interview-api.errors';
 import { toResultViewModel, toSessionViewModel } from './interview-api.mappers';
+import { TopicQuizMetadataService } from './topic-quiz-metadata.service';
 
 /**
- * The ONLY place Interview HTTP calls are made.
+ * The ONLY place Interview SESSION-LIFECYCLE HTTP calls are made — create,
+ * resume, answer, mark-for-review, submit, result. Every one of those
+ * resolves `INTERVIEW_API_BASE_URL` (Spring), and this service injects
+ * ONLY that one token — never `API_BASE_URL` (Node) too, since holding both
+ * in one service is exactly the kind of thing that makes accidental
+ * cross-routing easy. `getQuizMetadata()` below is the one exception: it
+ * delegates entirely to the Node-owned `TopicQuizMetadataService` rather
+ * than making its own Spring request, so this class never needs a second
+ * base URL of its own.
  *
  * Responsibilities are deliberately narrow: build the request, attach the
  * bearer token to session-scoped calls, map the response, map the error. It
@@ -44,15 +52,18 @@ export interface CreatedInterviewSession {
 @Service()
 export class InterviewApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = inject(API_BASE_URL);
+  private readonly baseUrl = inject(INTERVIEW_API_BASE_URL);
+  private readonly topicQuizMetadata = inject(TopicQuizMetadataService);
 
   /**
-   * True when a backend origin is configured for this build.
+   * True when a Spring origin is configured for this build.
    *
-   * With no origin, `baseUrl` is '' and every URL below would collapse to a
-   * RELATIVE path — the request would hit the static site host and return its
-   * index.html, which is far worse than failing. Callers check
-   * `isApiConfigured()` first; this is the backstop for anything that does not.
+   * With no origin, `baseUrl` is '' and every session-lifecycle URL below
+   * would collapse to a RELATIVE path — the request would hit the static
+   * site host and return its index.html, which is far worse than failing.
+   * Callers check `isInterviewApiConfigured()` first; this is the backstop
+   * for anything that does not. `getQuizMetadata()` below has no equivalent
+   * guard — it never touches this base URL at all.
    */
   private get configured(): boolean {
     return this.baseUrl.trim().length > 0;
@@ -67,15 +78,17 @@ export class InterviewApiService {
    * questions each topic holds. No questions, options, correctness or
    * explanations — the endpoint does not serve them and the builder does not
    * need them.
+   *
+   * Delegates entirely to the Node-owned `TopicQuizMetadataService` rather
+   * than issuing its own request against Spring: this is the SAME
+   * `GET /quizzes` metadata Topic Quiz itself reads, so Node stays the one
+   * owner instead of a second, duplicate implementation existing on Spring.
+   * `TopicQuizMetadataService.load()` shares one in-flight/replayed request
+   * across every caller, so calling it here never adds a second real HTTP
+   * request beyond whatever Topic Quiz's own pages already trigger.
    */
   getQuizMetadata(): Observable<readonly QuizMetadataDto[]> {
-    if (!this.configured) return this.notConfigured();
-    return this.http
-      .get<QuizMetadataListDto>(`${this.baseUrl}/quizzes`)
-      .pipe(
-        map((dto) => dto.quizzes ?? []),
-        catchError((err: unknown) => throwError(() => toInterviewApiError(err)))
-      );
+    return this.topicQuizMetadata.load().pipe(map((entries) => entries.map(toQuizMetadataDto)));
   }
 
   createSession(request: CreateInterviewSessionRequest): Observable<CreatedInterviewSession> {
@@ -175,4 +188,38 @@ export class InterviewApiService {
   private auth(token: string): HttpHeaders {
     return new HttpHeaders({ Authorization: `Bearer ${token}` });
   }
+}
+
+/**
+ * Adapt one `TopicQuizMetadataService` entry to this service's public
+ * `QuizMetadataDto` contract.
+ *
+ * The two shapes differ only in strictness: `TopicQuizMetadataService`'s
+ * entry type is unexported and treats every field but `quizId` as optional or
+ * nullable (it is read field-by-field into per-quiz maps, so a missing value
+ * just means "not set yet"), while `QuizMetadataDto` — the builder's existing
+ * public contract — declares `milestone`/`summary`/`image`/`difficulty`/
+ * `questionCount` as required. `InterviewCatalogService`, the sole consumer,
+ * never reads `summary` or `image` and already falls back to `quizId` for a
+ * blank `milestone`, so defaulting a missing value to '' / 0 here changes
+ * nothing observable — it only satisfies the stricter type.
+ */
+function toQuizMetadataDto(entry: {
+  readonly quizId: string;
+  readonly milestone?: string;
+  readonly summary?: string;
+  readonly image?: string;
+  readonly difficulty?: string | null;
+  readonly facts?: readonly string[];
+  readonly questionCount?: number | null;
+}): QuizMetadataDto {
+  return {
+    quizId: entry.quizId,
+    milestone: entry.milestone ?? '',
+    summary: entry.summary ?? '',
+    image: entry.image ?? '',
+    difficulty: entry.difficulty ?? '',
+    facts: entry.facts,
+    questionCount: entry.questionCount ?? 0,
+  };
 }

@@ -2,28 +2,36 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
+import { of } from 'rxjs';
+
 import { InterviewApiService } from './interview-api.service';
 import { InterviewApiError } from './interview-api.errors';
-import { API_BASE_URL } from '../../tokens/api-base-url.token';
+import { TopicQuizMetadataService } from './topic-quiz-metadata.service';
+import { INTERVIEW_API_BASE_URL } from '../../tokens/api-base-url.token';
 import type {
   ActiveInterviewSessionDto,
   InterviewResultDto
 } from '../../models/api/interview-api.dto';
 
-const BASE = 'http://localhost:3000/api';
+// A Spring origin, deliberately distinct from Node's own test base — proves
+// session-lifecycle calls resolve INTERVIEW_API_BASE_URL and never Node's.
+const BASE = 'http://localhost:8080/api';
 const TOKEN = 'a'.repeat(43);
 const SESSION = 'is_abc123';
 
 let api: InterviewApiService;
 let http: HttpTestingController;
+let topicQuizMetadataLoad: jest.Mock;
 
 beforeEach(() => {
   TestBed.resetTestingModule();
+  topicQuizMetadataLoad = jest.fn(() => of([]));
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: API_BASE_URL, useValue: BASE },
+      { provide: INTERVIEW_API_BASE_URL, useValue: BASE },
+      { provide: TopicQuizMetadataService, useValue: { load: topicQuizMetadataLoad } },
       InterviewApiService
     ]
   });
@@ -64,6 +72,33 @@ function activeDto(overrides: Partial<ActiveInterviewSessionDto> = {}): ActiveIn
     ...overrides
   };
 }
+
+describe('getQuizMetadata delegates to TopicQuizMetadataService', () => {
+  it('returns the adapted entries, and issues NO request against the Spring base', () => {
+    topicQuizMetadataLoad.mockReturnValue(of([
+      { quizId: 'rxjs', milestone: 'RxJS', difficulty: 'intermediate', questionCount: 12 },
+      { quizId: 'signals' } // only quizId — every other field is optional upstream
+    ]));
+
+    let result: readonly { quizId: string }[] = [];
+    api.getQuizMetadata().subscribe((quizzes) => { result = quizzes; });
+
+    expect(topicQuizMetadataLoad).toHaveBeenCalledTimes(1);
+    expect(result).toEqual([
+      { quizId: 'rxjs', milestone: 'RxJS', summary: '', image: '', difficulty: 'intermediate', facts: undefined, questionCount: 12 },
+      { quizId: 'signals', milestone: '', summary: '', image: '', difficulty: '', facts: undefined, questionCount: 0 }
+    ]);
+    // The one HttpTestingController instance is shared by the whole module —
+    // no /quizzes (or any other) request was ever issued against BASE.
+    http.expectNone(() => true);
+  });
+
+  it('never resolves INTERVIEW_API_BASE_URL for metadata — delegation is total', () => {
+    api.getQuizMetadata().subscribe();
+    expect(topicQuizMetadataLoad).toHaveBeenCalledTimes(1);
+    http.expectNone(`${BASE}/quizzes`);
+  });
+});
 
 describe('createSession', () => {
   it('POSTs a PRESET request with only the preset id', () => {

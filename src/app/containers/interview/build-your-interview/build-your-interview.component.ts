@@ -25,7 +25,7 @@ import { InterviewCatalogService } from '../../../shared/services/interview/inte
 import { BackendInterviewSessionService } from '../../../shared/services/interview/backend-interview-session.service';
 import { AssessmentIntegrityService } from '../../../shared/services/features/interview/assessment-integrity.service';
 import { buildInterviewSessionRequest } from '../../../shared/services/interview/interview-builder-request.mapper';
-import { isApiConfigured } from '../../../shared/tokens/api-base-url.token';
+import { isInterviewApiConfigured } from '../../../shared/tokens/api-base-url.token';
 import type { CreateInterviewSessionRequest } from '../../../shared/models/api/interview-api.dto';
 import { QuizStartSpinnerHandle, QuizStartSpinnerService } from '../../../shared/services/ui/quiz-start-spinner.service';
 import { swallow } from '../../../shared/utils/error-logging';
@@ -432,7 +432,7 @@ export class BuildYourInterviewComponent implements OnInit {
     }
 
     // Fail CLOSED when the production API origin has not been configured.
-    if (!isApiConfigured()) {
+    if (!isInterviewApiConfigured()) {
       this._createError.set($localize`Interview Mode is not configured for this environment.`);
       return;
     }

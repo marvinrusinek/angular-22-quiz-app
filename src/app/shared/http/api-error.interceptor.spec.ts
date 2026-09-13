@@ -3,10 +3,11 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
-import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '../tokens/api-base-url.token';
 import { apiErrorInterceptor } from './api-error.interceptor';
 
 const BASE = 'http://api.test/api';
+const INTERVIEW_BASE = 'http://interview-api.test/api';
 const NON_API_URL = 'https://cdn.example.com/some-asset.json';
 
 describe('apiErrorInterceptor', () => {
@@ -19,7 +20,8 @@ describe('apiErrorInterceptor', () => {
       providers: [
         provideHttpClient(withInterceptors([apiErrorInterceptor])),
         provideHttpClientTesting(),
-        { provide: API_BASE_URL, useValue: BASE }
+        { provide: API_BASE_URL, useValue: BASE },
+        { provide: INTERVIEW_API_BASE_URL, useValue: INTERVIEW_BASE }
       ]
     });
     http = TestBed.inject(HttpClient);
@@ -56,10 +58,22 @@ describe('apiErrorInterceptor', () => {
     }
   });
 
-  it('does not touch a non-API request at all (different origin than API_BASE_URL)', async () => {
+  it('does not touch a non-API request at all (different origin than either configured base)', async () => {
     const promise = firstValueFrom(http.get(NON_API_URL));
     backend.expectOne(NON_API_URL).flush({ ok: true });
     expect(await promise).toEqual({ ok: true });
+  });
+
+  it('also recognizes a request to the Interview/Spring base, and rethrows unchanged', async () => {
+    const promise = firstValueFrom(http.get(`${INTERVIEW_BASE}/interview-sessions/is_1`));
+    const req = backend.expectOne(`${INTERVIEW_BASE}/interview-sessions/is_1`);
+    req.flush({ message: 'not found' }, { status: 404, statusText: 'Not Found' });
+
+    await expect(promise).rejects.toBeInstanceOf(HttpErrorResponse);
+    await promise.catch((err: HttpErrorResponse) => {
+      expect(err.status).toBe(404);
+      expect(err.error).toEqual({ message: 'not found' });
+    });
   });
 
   it('never logs the request body, response body, or query string — only method/path/status/classification', async () => {

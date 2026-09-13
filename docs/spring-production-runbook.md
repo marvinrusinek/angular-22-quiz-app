@@ -35,7 +35,7 @@ documentation only.
   by `npm run deploy`), so an ordinary ahead/behind commit count against
   `main` is not a meaningful measure of staleness — what matters is which
   `main` commit it was built from, which is the fact above.
-- **Current `main`**: contains a **global** Spring base-url change
+- **Current committed `main`**: contains a **global** Spring base-url change
   (`PROD_API_BASE_URL = 'https://interview-api-spring.onrender.com/api'`,
   from commit `feat(api): cut production frontend over to Spring`) that
   routes **every** API consumer — Topic Quiz and Interview Mode alike — to
@@ -43,16 +43,40 @@ documentation only.
   deployed to `gh-pages` as-is.** The routing audit below confirms every
   current API-calling service injects the same single `API_BASE_URL` token
   (`src/app/shared/tokens/api-base-url.token.ts`) — there is no per-feature
-  split in the code today, only this one global value.
-- **Intended target** (not yet implemented — documentation only, no Angular
-  routing changes have been made): **permanent split routing** — Topic Quiz
-  traffic to Node, Interview Mode session lifecycle to Spring, both reading
-  the same Neon database. Implementing this requires introducing some
-  mechanism (a second token, or per-service configuration) so
+  split in the *committed* code, only this one global value. (See the
+  Intended-target bullet below: the split now exists in the local working
+  tree, uncommitted as of this writing.)
+- **Intended target — IMPLEMENTED IN CODE, NOT YET DEPLOYED**: **permanent
+  split routing** — Topic Quiz traffic to Node, Interview Mode session
+  lifecycle to Spring, both reading the same Neon database. The mechanism
+  is two separate `InjectionToken`s in
+  `src/app/shared/tokens/api-base-url.token.ts`: `API_BASE_URL` (Node —
+  `PROD_API_BASE_URL` / `DEV_API_BASE_URL`, port 3000 locally) and
+  `INTERVIEW_API_BASE_URL` (Spring — `INTERVIEW_PROD_API_BASE_URL` /
+  `INTERVIEW_DEV_API_BASE_URL`, port 8080 locally), both registered in
+  `main.ts` via `provideApiBaseUrl()` / `provideInterviewApiBaseUrl()`.
   `TopicQuizMetadataService`/`TopicQuizQuestionsService`/the Topic-Quiz
-  verdict services keep resolving to Node while `InterviewApiService`
-  resolves to Spring — that mechanism does not exist yet; no such file is
-  named here because none has been built or reviewed.
+  verdict services and `PracticeVerdictService` keep injecting `API_BASE_URL`
+  exactly as before; `InterviewApiService` injects **only**
+  `INTERVIEW_API_BASE_URL` for its session-lifecycle calls (create, resume,
+  answer, mark-for-review, submit, result) and never injects `API_BASE_URL`
+  at all — its `getQuizMetadata()` instead delegates to the Node-owned
+  `TopicQuizMetadataService.load()` (see the ambiguous-case resolution
+  below), so the one service that talks to Spring never holds a second base
+  URL of its own. `apiErrorInterceptor` recognizes requests to either
+  configured base. The CSP `connect-src` in `src/index.html` lists both
+  production origins and both local dev ports
+  (`localhost`/`127.0.0.1:3000` for Node, `:8080` for Spring).
+  Verified so far: the full Jest suite (2653 tests, including new coverage
+  for token resolution on both bases, metadata delegation issuing no Spring
+  request, and the interceptor recognizing both bases), a clean
+  `ng build --configuration=production`, `npm run verify:artifact` (PASS),
+  and direct inspection of the compiled production bundle confirming the two
+  base-URL constants and two distinct injection tokens never cross-wire.
+  **Not yet verified**: a live browser session with both backends actually
+  running side by side, and this change is **not yet committed, pushed, or
+  deployed** — `gh-pages` still serves the current committed `main` (see
+  below).
 
 ### Routing inventory (evidence-based, traced from the actual Angular services)
 
@@ -373,15 +397,17 @@ nothing to roll back for a feature that never left it.** It also does not
 mean touching Render service configuration, Neon, or backend code — Node
 has been running the whole time.
 
-1. **Once split routing exists**, rolling back Interview Mode means
-   changing whatever mechanism resolves `InterviewApiService`'s base URL
-   back to Node's origin. That mechanism is **not yet implemented** — the
-   routing audit above confirms every consumer currently shares one global
-   `API_BASE_URL` token, with no second, Interview-specific token or
-   equivalent split-configuration file to name here. This document will be
-   updated with the exact file(s) once that implementation exists and has
-   been reviewed — inventing a filename now would describe code that
-   doesn't exist.
+1. **Once split routing is committed and deployed**, rolling back Interview
+   Mode means changing `INTERVIEW_PROD_API_BASE_URL` in
+   `src/app/shared/tokens/api-base-url.token.ts` (or the `url` argument
+   passed to `provideInterviewApiBaseUrl()` in `main.ts`) back to Node's
+   origin — `INTERVIEW_API_BASE_URL` is a separate token from `API_BASE_URL`
+   by construction, so this is the **only** constant that needs to change;
+   Node's own `PROD_API_BASE_URL` and every Topic-Quiz-adjacent service are
+   untouched by definition. As of this writing that mechanism exists in the
+   local working tree but is **not yet committed, pushed, or deployed** —
+   the routing audit above still describes the *committed* `main`, which has
+   no split at all yet.
 2. **Keep both origins in the CSP `connect-src`** in `src/index.html`
    permanently while this architecture is in use (§1) — both
    `https://interview-api-spring.onrender.com` and

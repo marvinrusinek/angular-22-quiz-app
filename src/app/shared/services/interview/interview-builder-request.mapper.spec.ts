@@ -3,11 +3,11 @@ import {
   InterviewBuilderRequestError
 } from './interview-builder-request.mapper';
 import {
-  DEV_API_BASE_URL,
-  isApiConfigured,
+  INTERVIEW_DEV_API_BASE_URL,
+  isInterviewApiConfigured,
   normalizeBaseUrl,
-  PROD_API_BASE_URL,
-  resolveApiBaseUrl
+  INTERVIEW_PROD_API_BASE_URL,
+  resolveInterviewApiBaseUrl
 } from '../../tokens/api-base-url.token';
 
 const custom = {
@@ -95,22 +95,22 @@ describe('custom mapping', () => {
 
 describe('API configuration resolver', () => {
   it('development is configured and resolves the local URL', () => {
-    expect(isApiConfigured(true)).toBe(true);
-    expect(resolveApiBaseUrl(true)).toBe(DEV_API_BASE_URL);
+    expect(isInterviewApiConfigured(true)).toBe(true);
+    expect(resolveInterviewApiBaseUrl(true)).toBe(INTERVIEW_DEV_API_BASE_URL);
   });
 
   /**
    * Resolution must be TOTAL: it runs in an injection factory, and throwing
    * here took down every component injecting InterviewApiService — the
    * /interview route rendered nothing at all on GitHub Pages. The fail-closed
-   * decision belongs to isApiConfigured() at the call site.
+   * decision belongs to isInterviewApiConfigured() at the call site.
    */
-  it('production resolves the configured origin, and isApiConfigured tracks it', () => {
+  it('production resolves the configured origin, and isInterviewApiConfigured tracks it', () => {
     // Written against the constant, so it holds whether or not a host is
     // currently configured — the RELATIONSHIP is what matters.
-    expect(() => resolveApiBaseUrl(false)).not.toThrow();
-    expect(resolveApiBaseUrl(false)).toBe(PROD_API_BASE_URL);
-    expect(isApiConfigured(false)).toBe(PROD_API_BASE_URL.trim().length > 0);
+    expect(() => resolveInterviewApiBaseUrl(false)).not.toThrow();
+    expect(resolveInterviewApiBaseUrl(false)).toBe(INTERVIEW_PROD_API_BASE_URL);
+    expect(isInterviewApiConfigured(false)).toBe(INTERVIEW_PROD_API_BASE_URL.trim().length > 0);
   });
 
   it('normalizes trailing slashes deterministically', () => {

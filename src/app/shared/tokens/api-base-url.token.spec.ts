@@ -2,16 +2,24 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 
+import { of } from 'rxjs';
+
 import {
   API_BASE_URL,
   DEV_API_BASE_URL,
-  isApiConfigured,
+  INTERVIEW_API_BASE_URL,
+  INTERVIEW_DEV_API_BASE_URL,
+  INTERVIEW_PROD_API_BASE_URL,
+  isInterviewApiConfigured,
   normalizeBaseUrl,
   PROD_API_BASE_URL,
   provideApiBaseUrl,
-  resolveApiBaseUrl
+  provideInterviewApiBaseUrl,
+  resolveApiBaseUrl,
+  resolveInterviewApiBaseUrl
 } from './api-base-url.token';
 import { InterviewApiService } from '../services/api/interview-api.service';
+import { TopicQuizMetadataService } from '../services/api/topic-quiz-metadata.service';
 
 /**
  * REGRESSION: `resolveApiBaseUrl` used to THROW when production had no
@@ -42,13 +50,13 @@ describe('resolveApiBaseUrl never throws', () => {
   });
 });
 
-describe('isApiConfigured', () => {
+describe('isInterviewApiConfigured', () => {
   it('is always true in development', () => {
-    expect(isApiConfigured(true)).toBe(true);
+    expect(isInterviewApiConfigured(true)).toBe(true);
   });
 
-  it('follows PROD_API_BASE_URL in production', () => {
-    expect(isApiConfigured(false)).toBe(PROD_API_BASE_URL.trim().length > 0);
+  it('follows INTERVIEW_PROD_API_BASE_URL in production', () => {
+    expect(isInterviewApiConfigured(false)).toBe(INTERVIEW_PROD_API_BASE_URL.trim().length > 0);
   });
 });
 
@@ -60,7 +68,7 @@ describe('normalizeBaseUrl', () => {
   });
 });
 
-describe('InterviewApiService with NO configured origin', () => {
+describe('InterviewApiService with NO configured Spring origin', () => {
   let api: InterviewApiService;
   let http: HttpTestingController;
 
@@ -70,7 +78,11 @@ describe('InterviewApiService with NO configured origin', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideApiBaseUrl(''),
+        provideInterviewApiBaseUrl(''),
+        // Node's own base stays configured — an unconfigured Spring origin
+        // must not affect getQuizMetadata()'s delegation to Node.
+        provideApiBaseUrl('http://node.test/api'),
+        { provide: TopicQuizMetadataService, useValue: { load: () => of([]) } },
         InterviewApiService
       ]
     });
@@ -105,6 +117,14 @@ describe('InterviewApiService with NO configured origin', () => {
     expect(code).toBe('BACKEND_UNAVAILABLE');
     http.expectNone(() => true);   // nothing left the app
   });
+
+  it('getQuizMetadata still succeeds — delegation never depends on INTERVIEW_API_BASE_URL', (done) => {
+    api.getQuizMetadata().subscribe((quizzes) => {
+      expect(quizzes).toEqual([]);
+      done();
+    });
+    http.expectNone(() => true);
+  });
 });
 
 /**
@@ -138,12 +158,12 @@ describe('API selection follows the serving origin', () => {
     expect(resolveApiBaseUrl(false, 'marvinrusinek.github.io')).toBe(PROD_API_BASE_URL);
   });
 
-  it('isApiConfigured agrees with whatever was resolved', () => {
+  it('isInterviewApiConfigured agrees with whatever resolveInterviewApiBaseUrl resolved', () => {
     for (const [devMode, hostname] of [
       [true, 'localhost'], [true, 'x.stackblitz.io'], [false, 'marvinrusinek.github.io']
     ] as Array<[boolean, string]>) {
-      expect(isApiConfigured(devMode, hostname))
-        .toBe(resolveApiBaseUrl(devMode, hostname).trim().length > 0);
+      expect(isInterviewApiConfigured(devMode, hostname))
+        .toBe(resolveInterviewApiBaseUrl(devMode, hostname).trim().length > 0);
     }
   });
 
@@ -157,5 +177,61 @@ describe('API selection follows the serving origin', () => {
     // that default and is covered by the isLocalHost check itself.
     expect(resolveApiBaseUrl(true, '')).toBe(PROD_API_BASE_URL);
     expect(resolveApiBaseUrl(true, 'example.com')).toBe(PROD_API_BASE_URL);
+  });
+});
+
+/**
+ * Mirrors the block above for the Interview/Spring token — SEPARATE from
+ * Node's, resolved independently, and never falling back to the other base.
+ */
+describe('Interview API selection follows the serving origin', () => {
+  it.each([
+    ['localhost', 'localhost'],
+    ['loopback IPv4', '127.0.0.1'],
+    ['loopback IPv6', '[::1]']
+  ])('a dev build on %s uses the LOCAL Spring backend', (_label, hostname) => {
+    expect(resolveInterviewApiBaseUrl(true, hostname)).toBe(INTERVIEW_DEV_API_BASE_URL);
+  });
+
+  it.each([
+    ['StackBlitz webcontainer', 'abc123.local-credentialless.webcontainer-api.io'],
+    ['StackBlitz project', 'angular-quiz.stackblitz.io'],
+    ['GitHub Pages', 'marvinrusinek.github.io']
+  ])('a dev build served from %s uses the HOSTED Spring API', (_label, hostname) => {
+    expect(resolveInterviewApiBaseUrl(true, hostname)).toBe(INTERVIEW_PROD_API_BASE_URL);
+  });
+
+  it('a production build always uses the hosted Spring API, even on localhost', () => {
+    expect(resolveInterviewApiBaseUrl(false, 'localhost')).toBe(INTERVIEW_PROD_API_BASE_URL);
+    expect(resolveInterviewApiBaseUrl(false, 'marvinrusinek.github.io')).toBe(INTERVIEW_PROD_API_BASE_URL);
+  });
+
+  it('an unknown hostname does not fall back to localhost', () => {
+    expect(resolveInterviewApiBaseUrl(true, '')).toBe(INTERVIEW_PROD_API_BASE_URL);
+    expect(resolveInterviewApiBaseUrl(true, 'example.com')).toBe(INTERVIEW_PROD_API_BASE_URL);
+  });
+
+  it('Node and Interview bases resolve to DIFFERENT dev ports and DIFFERENT production origins', () => {
+    // The two backends are permanently separate — this is the one test that
+    // would fail if either token's resolver were accidentally aliased to the
+    // other's constants.
+    expect(DEV_API_BASE_URL).not.toBe(INTERVIEW_DEV_API_BASE_URL);
+    expect(PROD_API_BASE_URL).not.toBe(INTERVIEW_PROD_API_BASE_URL);
+    expect(resolveApiBaseUrl(true, 'localhost')).toBe('http://localhost:3000/api');
+    expect(resolveInterviewApiBaseUrl(true, 'localhost')).toBe('http://localhost:8080/api');
+  });
+});
+
+describe('bootstrap provider tokens resolve independently', () => {
+  it('provideApiBaseUrl and provideInterviewApiBaseUrl register SEPARATE tokens', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideApiBaseUrl('http://node.test/api'),
+        provideInterviewApiBaseUrl('http://spring.test/api')
+      ]
+    });
+    expect(TestBed.inject(API_BASE_URL)).toBe('http://node.test/api');
+    expect(TestBed.inject(INTERVIEW_API_BASE_URL)).toBe('http://spring.test/api');
   });
 });

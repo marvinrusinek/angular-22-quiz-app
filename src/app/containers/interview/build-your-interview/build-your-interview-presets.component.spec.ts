@@ -6,7 +6,7 @@ import { signal } from '@angular/core';
 
 import { of } from 'rxjs';
 
-import { API_BASE_URL } from '../../../shared/tokens/api-base-url.token';
+import { INTERVIEW_API_BASE_URL } from '../../../shared/tokens/api-base-url.token';
 import { InterviewApiService } from '../../../shared/services/api/interview-api.service';
 
 import { BuildYourInterviewComponent } from './build-your-interview.component';
@@ -82,7 +82,7 @@ function render(): ComponentFixture<BuildYourInterviewComponent> {
       // Stage 9C: the builder now creates the session through the API.
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: API_BASE_URL, useValue: 'http://test.local/api' },
+      { provide: INTERVIEW_API_BASE_URL, useValue: 'http://test.local/api' },
       { provide: InterviewApiService, useValue: { createSession } },
       /**
        * Topic metadata comes from the BACKEND now. These tests are about preset

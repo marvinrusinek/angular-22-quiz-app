@@ -17,7 +17,7 @@ import { AnswerComponent } from './app/components/question/answer/answer-compone
 import { ANSWER_COMPONENT } from './app/shared/tokens/answer-component.token';
 import { PwaUpdateService } from './app/shared/services/pwa-update.service';
 import { GlobalErrorHandler, installGlobalErrorLogging } from './app/shared/utils/error-logging';
-import { provideApiBaseUrl } from './app/shared/tokens/api-base-url.token';
+import { provideApiBaseUrl, provideInterviewApiBaseUrl } from './app/shared/tokens/api-base-url.token';
 import { apiErrorInterceptor } from './app/shared/http/api-error.interceptor';
 import { provideApiTopicQuizVerdictAdapter } from './app/shared/services/features/verdict/verdict-adapter';
 import { InterviewSessionReferenceStorage } from './app/shared/services/interview/interview-session-reference.storage';
@@ -38,9 +38,11 @@ bootstrapApplication(AppComponent, {
     // hydrate from. Angular 22 warns about exactly that combination (NG0505),
     // and the provider did nothing for us, so it is gone rather than silenced.
     provideHttpClient(withFetch(), withInterceptors([apiErrorInterceptor])),
-    // Base URL for the private quiz API. Provided centrally so no service or
-    // component hard-codes a host.
+    // Base URLs for this app's two permanent backends. Provided centrally so
+    // no service or component hard-codes a host. Node/Topic Quiz and
+    // Spring/Interview Mode are separate tokens — see api-base-url.token.ts.
     provideApiBaseUrl(),
+    provideInterviewApiBaseUrl(),
     // Topic Quiz correctness comes from POST /check, not from option.correct.
     // The token defaults to the LOCAL adapter so the unit suite needs no HTTP
     // mock; the running application opts into the API here, and there is no

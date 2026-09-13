@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 
-import { API_BASE_URL } from '../../../shared/tokens/api-base-url.token';
+import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '../../../shared/tokens/api-base-url.token';
 import { of, throwError } from 'rxjs';
 
 import { InterviewApiService } from '../../../shared/services/api/interview-api.service';
@@ -116,7 +116,7 @@ describe('BuildYourInterviewComponent', () => {
         // Stage 9C: the builder now creates the session through the API.
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: API_BASE_URL, useValue: 'http://test.local/api' }
+        { provide: INTERVIEW_API_BASE_URL, useValue: 'http://test.local/api' }
       ]
     }).compileComponents();
 
@@ -423,7 +423,7 @@ describe('BuildYourInterviewComponent — spinner cleanup on destroy (concurrenc
         QuizStartSpinnerService,
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: API_BASE_URL, useValue: 'http://test.local/api' }
+        { provide: INTERVIEW_API_BASE_URL, useValue: 'http://test.local/api' }
       ]
     }).compileComponents();
 
@@ -520,8 +520,14 @@ describe('BuildYourInterviewComponent — production with NO configured API orig
         },
         provideHttpClient(),
         provideHttpClientTesting(),
-        // Exactly what an unconfigured production build resolves to.
-        { provide: API_BASE_URL, useValue: '' }
+        // Node (catalogue metadata) has no "configured" guard by design —
+        // it is always assumed configured — so it needs a stable, real-ish
+        // base URL here; the tests below drive its /quizzes call to an
+        // empty result through HttpTestingController instead. Spring
+        // (session creation) IS unconfigured, exactly as production
+        // resolves with no origin set.
+        { provide: API_BASE_URL, useValue: 'http://node.test/api' },
+        { provide: INTERVIEW_API_BASE_URL, useValue: '' }
       ]
     }).compileComponents();
 
@@ -530,6 +536,17 @@ describe('BuildYourInterviewComponent — production with NO configured API orig
   });
 
   afterEach(() => setQuizDataCache([], []));
+
+  /**
+   * Node's catalogue metadata call has no fail-closed guard (Node is always
+   * assumed configured), so the empty-catalogue state these tests need is
+   * driven by an actual empty `/quizzes` response, not by an unconfigured
+   * origin — the ORIGINAL synchronous "not configured" short-circuit only
+   * ever applied to `getQuizMetadata()`'s now-removed direct Spring call.
+   */
+  function flushEmptyCatalog(http: HttpTestingController): void {
+    http.expectOne((r) => r.url.endsWith('/quizzes')).flush({ quizzes: [] });
+  }
 
   it('RENDERS — the page must not die because the API is unconfigured', () => {
     const el = fixture.nativeElement as HTMLElement;
@@ -541,6 +558,9 @@ describe('BuildYourInterviewComponent — production with NO configured API orig
 
   it('shows a backend-unavailable state for topics, and offers a retry', async () => {
     const component = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    await Promise.resolve();
+    flushEmptyCatalog(http);
     await Promise.resolve();
     component.setDifficulty('beginner');
     fixture.detectChanges();
@@ -559,6 +579,8 @@ describe('BuildYourInterviewComponent — production with NO configured API orig
   it('cannot start an interview while the catalogue is unavailable', async () => {
     const component = fixture.componentInstance;
     const http = TestBed.inject(HttpTestingController);
+    await Promise.resolve();
+    flushEmptyCatalog(http);
     await Promise.resolve();
 
     component.setDifficulty('beginner');

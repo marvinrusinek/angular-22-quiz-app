@@ -91,11 +91,21 @@ services:
     # services reach the SAME Neon database.
     region: oregon
     autoDeploy: false
-    # /actuator/health/readiness (Spring Boot Actuator), not /api/health:
-    # only the readiness group actually pings the DataSource, so Render only
-    # marks this service healthy when Neon is genuinely reachable — see the
-    # deployment plan for why /api/health (liveness-only, Node parity) is
-    # the wrong choice here.
+    # /actuator/health/readiness (Spring Boot Actuator). AUDITED and
+    # EMPIRICALLY VERIFIED (disposable-Postgres outage test, see
+    # docs/spring-production-runbook.md): this group currently contains
+    # ONLY `readinessState` (Spring's own application-lifecycle signal). It
+    # does NOT test PostgreSQL availability — a real database outage was
+    # confirmed to leave this endpoint at 200/UP throughout. Database
+    # reachability is proven by a successful database-backed request such as
+    # `GET /api/quizzes`, not by this endpoint.
+    #
+    # `db` is deliberately NOT included in this group. HikariCP's observed/
+    # default connection wait is ~30s, while Render's own health-check
+    # request times out at 5s — wiring `db` in as-is would make ordinary,
+    # transient Neon free-tier wake latency look identical to a hard
+    # failure to Render, risking unnecessary removal from rotation or a
+    # restart of an otherwise-healthy instance.
     healthCheckPath: /actuator/health/readiness
 
     envVars:

@@ -109,4 +109,15 @@ public class ApiExceptionHandler {
         ApiException ex = ApiException.badRequest("Invalid submission");
         return ResponseEntity.status(ex.getStatus()).body(ApiErrorBody.of(ex));
     }
+
+    // Deliberately NO @ExceptionHandler(Exception.class) here. A prior
+    // attempt at one was proven (ApiExceptionHandlerHttpSemanticsTest) to
+    // mask genuine framework 4xx responses into 500 — DispatcherServlet's
+    // own routing/media-type exceptions (NoResourceFoundException,
+    // HttpRequestMethodNotSupportedException, HttpMediaTypeNotSupportedException)
+    // are ordinary Exceptions with no more specific handler in THIS class, so
+    // a bare Exception.class catch-all here claims them too. The narrow,
+    // route-scoped fix for an unexpected exception escaping ONE known route
+    // lives in that route's own controller method instead — see
+    // InterviewSessionController#create's own try/catch.
 }

@@ -1,5 +1,8 @@
 package com.quizbackend.interview;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.quizbackend.interview.InterviewSessionRepository.FlaggedState;
 import com.quizbackend.interview.InterviewSessionRepository.SavedAnswerState;
 import com.quizbackend.interview.dto.ActiveInterviewAnswerDto;
@@ -16,6 +19,7 @@ import com.quizbackend.interview.dto.InterviewReviewQuestionDto;
 import com.quizbackend.quiz.QuizRepository;
 import com.quizbackend.quiz.QuizResourceRepository;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -25,6 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
@@ -136,6 +141,82 @@ class InterviewSessionControllerTest {
         mockMvc.perform(post("/api/interview-sessions").contentType("application/json").content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
+    }
+
+    /**
+     * REGRESSION: an exception that is NOT a {@code SessionServiceException}
+     * (or any of the other explicitly-typed exceptions {@link
+     * com.quizbackend.web.error.ApiExceptionHandler} enumerates) used to have
+     * no handler at all, so it fell through to Spring Boot's own default
+     * error page — {@code {timestamp, status, error, path}} — leaking
+     * whatever the raw exception's message happened to be and giving the
+     * client an inconsistent envelope shape from every other failure this API
+     * returns. Node's own reference ({@code error-handler.ts}) always falls
+     * back to the SAME generic {@code {error:{code,message}}} body for
+     * anything unexpected; this proves Spring now does too.
+     */
+    @Test
+    void anUnexpectedExceptionNeverLeaksSpringsDefaultErrorPageOrItsOwnMessage() throws Exception {
+        when(service.createSession(anyMap()))
+                .thenThrow(new RuntimeException("some internal detail that must never reach the client"));
+
+        mockMvc.perform(post("/api/interview-sessions")
+                        .contentType("application/json")
+                        .content("{\"mode\":\"preset\",\"presetId\":\"junior\"}"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error.code").value("INTERNAL"))
+                .andExpect(jsonPath("$.error.message").value("Internal server error"))
+                // Spring Boot's default error body carries these fields instead of `error` — their
+                // absence proves this response went through the app's own envelope, not the default one.
+                .andExpect(jsonPath("$.timestamp").doesNotExist())
+                .andExpect(jsonPath("$.path").doesNotExist())
+                .andExpect(jsonPath("$.trace").doesNotExist());
+    }
+
+    /**
+     * REGRESSION / SAFETY: the diagnostic log line {@code create()} writes
+     * for an unexpected exception must never include the exception's own
+     * {@code getMessage()} — a real exception from this route's call chain
+     * (a JDBC constraint violation, for one) can carry a Postgres error
+     * DETAIL clause quoting the actual offending column VALUE, which for
+     * this table could be a token hash, an attempt id, or session config
+     * content. This plants an exception whose message is deliberately built
+     * to look like exactly that kind of leak, and proves the log captures
+     * only the class name and a stack LOCATION — never the message text —
+     * while the stack location itself (this test's own line number) still
+     * comes through, so the diagnostic stays USEFUL.
+     */
+    @Test
+    void theUnexpectedExceptionLogNeverIncludesTheExceptionsOwnMessage() throws Exception {
+        Logger controllerLogger = (Logger) LoggerFactory.getLogger(InterviewSessionController.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        controllerLogger.addAppender(appender);
+
+        String sensitiveLookingMessage = "duplicate key value violates unique constraint "
+                + "\"interview_sessions_token_hash_key\" Detail: Key (token_hash)=(abc123secrethash) already exists. "
+                + "Authorization: Bearer eyFAKE.token.value";
+        try {
+            when(service.createSession(anyMap())).thenThrow(new IllegalStateException(sensitiveLookingMessage));
+
+            mockMvc.perform(post("/api/interview-sessions")
+                            .contentType("application/json")
+                            .content("{\"mode\":\"preset\",\"presetId\":\"junior\"}"))
+                    .andExpect(status().isInternalServerError());
+        } finally {
+            controllerLogger.detachAppender(appender);
+        }
+
+        assertThat(appender.list).isNotEmpty();
+        String logged = appender.list.stream().map(ILoggingEvent::getFormattedMessage)
+                .reduce("", (a, b) -> a + " " + b);
+
+        assertThat(logged).doesNotContain(sensitiveLookingMessage);
+        assertThat(logged).doesNotContain("abc123secrethash");
+        assertThat(logged).doesNotContain("Bearer eyFAKE.token.value");
+        // Still USEFUL: the exception's class and a concrete stack location are present.
+        assertThat(logged).contains("IllegalStateException");
+        assertThat(logged).contains("InterviewSessionService#createSession");
     }
 
     // ── PUT .../answers/{questionId} ────────────────────────────────────

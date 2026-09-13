@@ -8,6 +8,8 @@ import com.quizbackend.security.responsepolicy.ResponsePolicy;
 import com.quizbackend.security.responsepolicy.ResponsePolicyContext;
 import com.quizbackend.web.error.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,6 +39,8 @@ import java.util.Map;
 @RequestMapping("/api/interview-sessions")
 public class InterviewSessionController {
 
+    private static final Logger log = LoggerFactory.getLogger(InterviewSessionController.class);
+
     private final InterviewSessionService service;
 
     public InterviewSessionController(InterviewSessionService service) {
@@ -54,7 +58,37 @@ public class InterviewSessionController {
             return service.createSession(body == null ? Map.of() : body);
         } catch (SessionServiceException e) {
             throw translate(e);
+        } catch (Exception e) {
+            // Scoped to THIS route only — unlike a global @ExceptionHandler,
+            // this cannot intercept routing/media-type/binding/CORS/filter
+            // exceptions, since those never reach inside this try block (see
+            // ApiExceptionHandler's own comment on why a global catch-all was
+            // reverted). Diagnostic only: class names + stack LOCATIONS for
+            // the whole cause chain, never a message — a message could carry
+            // Postgres constraint-violation DETAIL (bound column values) or
+            // other request-derived content. The client sees only the fixed,
+            // generic envelope every other error on this API already uses.
+            log.error("Unexpected exception creating an interview session: {}", causeChainSummary(e));
+            throw ApiException.internal("Internal server error");
         }
+    }
+
+    /** Class + top stack frame for the exception and every cause beneath it — never {@code getMessage()}. */
+    private static String causeChainSummary(Throwable t) {
+        StringBuilder chain = new StringBuilder();
+        Throwable current = t;
+        while (current != null) {
+            if (!chain.isEmpty()) {
+                chain.append(" <- ");
+            }
+            StackTraceElement[] trace = current.getStackTrace();
+            String location = trace.length > 0
+                    ? trace[0].getClassName() + "#" + trace[0].getMethodName() + ":" + trace[0].getLineNumber()
+                    : "unknown location";
+            chain.append(current.getClass().getName()).append(" at ").append(location);
+            current = current.getCause();
+        }
+        return chain.toString();
     }
 
     @GetMapping("/{sessionId}")

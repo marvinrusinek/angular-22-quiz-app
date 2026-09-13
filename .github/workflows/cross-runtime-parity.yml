@@ -24,6 +24,11 @@ on:
       - "backend-spring/**"
       - "scripts/parity/**"
       - "package.json"
+      # A root lockfile-only change (e.g. a dependency resync) must also
+      # re-verify the harness still installs and runs — this exact gap
+      # let one such fix commit go out without ever triggering this
+      # workflow at all.
+      - "package-lock.json"
       # Already covered by backend/** above — listed explicitly too so the
       # fixture's own relevance to this workflow is self-documenting.
       - "backend/test/helpers/synthetic-quiz-bank.json"
@@ -34,6 +39,11 @@ on:
       - "backend-spring/**"
       - "scripts/parity/**"
       - "package.json"
+      # A root lockfile-only change (e.g. a dependency resync) must also
+      # re-verify the harness still installs and runs — this exact gap
+      # let one such fix commit go out without ever triggering this
+      # workflow at all.
+      - "package-lock.json"
       # Already covered by backend/** above — listed explicitly too so the
       # fixture's own relevance to this workflow is self-documenting.
       - "backend/test/helpers/synthetic-quiz-bank.json"

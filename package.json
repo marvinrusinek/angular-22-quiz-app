@@ -14,7 +14,8 @@
     "dev:api": "npm --prefix backend run dev",
     "test:e2e-support": "jest --config jest.e2e-support.config.js",
     "verify:artifact": "node scripts/verify-no-bank-in-artifact.js",
-    "verify:artifact:selftest": "node scripts/verify-no-bank-in-artifact.test.js"
+    "verify:artifact:selftest": "node scripts/verify-no-bank-in-artifact.test.js",
+    "test:parity": "node scripts/parity/run.js"
   },
   "dependencies": {
     "@angular/animations": "22.1.0",

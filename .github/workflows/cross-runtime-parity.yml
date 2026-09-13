@@ -1,0 +1,96 @@
+name: Cross-Runtime Parity (Node vs Spring)
+
+# Automates what used to be a manual compatibility check: proves the Node
+# and Spring backends agree on metadata, Topic Quiz receipts/answer-checks,
+# Interview Mode session lifecycle, and HTTP/security behavior — while Node
+# remains the production rollback service this migration is measured
+# against (scripts/parity/run.js). A drift between the two here is a real
+# regression risk BEFORE any cutover decision, not after.
+#
+# Deliberately a SEPARATE workflow from backend-spring-ci.yml: this job needs
+# BOTH toolchains (Node + Java) and touches backend/** as well as
+# backend-spring/**, and must not change that workflow's own trigger scope
+# or jobs — its `verify`/`docker-build` jobs are untouched by this file.
+#
+# Fully self-contained, like backend-spring-ci.yml: the disposable Postgres
+# is a locally-built image (never pushed), every port is dynamically
+# allocated, and the shared "receipt secret" + database credentials are
+# synthetic constants baked into scripts/parity/run.js — no repository
+# secret, and no Neon/production endpoint is ever touched.
+on:
+  push:
+    paths:
+      - "backend/**"
+      - "backend-spring/**"
+      - "scripts/parity/**"
+      - "package.json"
+      # Already covered by backend/** above — listed explicitly too so the
+      # fixture's own relevance to this workflow is self-documenting.
+      - "backend/test/helpers/synthetic-quiz-bank.json"
+      - ".github/workflows/cross-runtime-parity.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - "backend-spring/**"
+      - "scripts/parity/**"
+      - "package.json"
+      # Already covered by backend/** above — listed explicitly too so the
+      # fixture's own relevance to this workflow is self-documenting.
+      - "backend/test/helpers/synthetic-quiz-bank.json"
+      - ".github/workflows/cross-runtime-parity.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cross-runtime-parity-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  parity:
+    name: Node/Spring contract parity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Node
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+          # Two separate npm projects (root + backend/), each with its own
+          # lockfile — setup-node's cache only auto-detects the root one by
+          # default, so both are listed explicitly.
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4.5.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      # scripts/parity/run.js owns everything from here: builds the
+      # disposable SSL Postgres image (docker/postgres-ssl.Dockerfile, always
+      # rebuilt — never assumes a cached layer exists), runs
+      # `./mvnw -B clean -DskipTests package` itself to produce a FRESH
+      # Spring jar (never reuses one from a prior step or a stale target/),
+      # seeds the shared database from the existing synthetic quiz-bank
+      # fixture, starts both backends from that fresh jar / this job's own
+      # `npm ci`-installed backend/node_modules, runs every scenario, and
+      # tears everything down (containers + processes) in a `finally` block
+      # even on failure. Nothing here depends on anything left over from a
+      # previous run on this or any other runner.
+      - name: Run cross-runtime parity suite
+        run: npm run test:parity

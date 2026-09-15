@@ -21,6 +21,7 @@ import {
 } from '../../../shared/models/AssessmentConfig.model';
 
 import { InterviewApiService } from '../../../shared/services/api/interview-api.service';
+import type { CreatedInterviewSession } from '../../../shared/services/api/interview-api.service';
 import { InterviewApiError } from '../../../shared/services/api/interview-api.errors';
 import { InterviewCatalogService } from '../../../shared/services/interview/interview-catalog.service';
 import { BackendInterviewSessionService } from '../../../shared/services/interview/backend-interview-session.service';
@@ -207,6 +208,18 @@ export class BuildYourInterviewComponent implements OnInit {
    */
   private static readonly COLD_START_MESSAGE = $localize`The interview service is still waking up. Please try again.`;
 
+  /**
+   * Shown ONLY during the brief window between the first attempt's
+   * cold-start-retryable failure and the automatic second attempt's own
+   * settling — see {@link createWithOneAutomaticRetry}. Deliberately never
+   * paired with {@code createRetryable() === true}: a manual Retry button
+   * has no place while an automatic recovery of the SAME logical attempt is
+   * already in flight. Distinct wording from {@link COLD_START_MESSAGE} so
+   * the two states ("still recovering on your behalf" vs. "recovery failed,
+   * your move") never read as identical to the user.
+   */
+  private static readonly COLD_START_RETRYING_MESSAGE = $localize`The interview service is still waking up. Retrying…`;
+
   /** True while the backend session is being created and navigation is pending. */
   readonly isCreating = this._isCreating.asReadonly();
   /** Safe, user-facing message. Never a raw backend message. */
@@ -222,6 +235,17 @@ export class BuildYourInterviewComponent implements OnInit {
   // some OTHER component's newer, still-active attempt on the same overlay.
   private currentSpinnerAttempt: QuizStartSpinnerHandle | null = null;
 
+  /**
+   * Set once, in {@link DestroyRef#onDestroy}. Checked immediately before
+   * {@link createWithOneAutomaticRetry} fires its OWN (second) request, so a
+   * component destroyed in the gap between the first attempt's failure and
+   * the automatic retry starting never sends that retry at all — "cancel any
+   * pending retry" for a retry that has no timer/subscription of its own to
+   * unsubscribe (it is a plain awaited `fetch`, not an RxJS stream held
+   * open). Never reset — a destroyed component is never reused.
+   */
+  private destroyed = false;
+
   constructor() {
     // Defensive safety net: if this component is destroyed while
     // startInterview()'s async flow is still pending (e.g. the user
@@ -231,7 +255,10 @@ export class BuildYourInterviewComponent implements OnInit {
     // if it never got assigned (createSession failed first), already
     // completed (currentSpinnerAttempt is null), or was superseded by a
     // newer attempt (forceCancel() checks generation ownership itself).
-    this.destroyRef.onDestroy(() => this.currentSpinnerAttempt?.forceCancel());
+    this.destroyRef.onDestroy(() => {
+      this.destroyed = true;
+      this.currentSpinnerAttempt?.forceCancel();
+    });
   }
 
   readonly catalogLoading = this.catalog.loading;
@@ -639,7 +666,11 @@ export class BuildYourInterviewComponent implements OnInit {
     // restorePendingCreateIfAny()'s own doc comment.
     this.persistPendingCreate(this.pendingIdempotencyKey, this.pendingRequest);
 
-    await this.attemptCreateSession();
+    // ONE bounded automatic retry is offered ONLY on a fresh click — a
+    // MANUAL retryInterview() below never chains a further automatic one on
+    // top of itself, which is what keeps this a single bounded recovery
+    // rather than a loop.
+    await this.attemptCreateSession(/* allowAutomaticRetry */ true);
   }
 
   /**
@@ -652,10 +683,10 @@ export class BuildYourInterviewComponent implements OnInit {
   async retryInterview(): Promise<void> {
     if (this.creating) return;
     if (!this.pendingIdempotencyKey || !this.pendingRequest) return;
-    await this.attemptCreateSession();
+    await this.attemptCreateSession(/* allowAutomaticRetry */ false);
   }
 
-  private async attemptCreateSession(): Promise<void> {
+  private async attemptCreateSession(allowAutomaticRetry: boolean): Promise<void> {
     const idempotencyKey = this.pendingIdempotencyKey;
     const request = this.pendingRequest;
     if (!idempotencyKey || !request) return; // unreachable via the public entry points above
@@ -674,14 +705,17 @@ export class BuildYourInterviewComponent implements OnInit {
     let spinnerHandle: QuizStartSpinnerHandle | null = null;
 
     try {
-      const created = await firstValueFrom(
-        this.api.createSession(request, idempotencyKey).pipe(timeout(BuildYourInterviewComponent.SESSION_CREATE_TIMEOUT_MS))
-      );
+      const created = await this.createWithOneAutomaticRetry(request, idempotencyKey, allowAutomaticRetry);
 
-      // This attempt is now resolved — nothing left to retry.
+      // This attempt is now resolved — nothing left to retry. Explicit even
+      // though navigation (below) will normally unmount this component
+      // anyway: a stale "Retrying…"/error string must never survive a
+      // success, independent of how the template happens to react to it.
       this.pendingIdempotencyKey = null;
       this.pendingRequest = null;
       this.clearPersistedPendingCreate();
+      this._createError.set(null);
+      this._createRetryable.set(false);
 
       // Only NOW is the previous session reference replaced — a failed create
       // must never destroy a still-valid session the user could resume.
@@ -706,8 +740,12 @@ export class BuildYourInterviewComponent implements OnInit {
       // which turns out to be true. Both get the SAME specific wording,
       // deliberately more actionable than the generic BACKEND_UNAVAILABLE
       // message every OTHER retryable failure (500, 503, a network drop)
-      // still shows. pendingIdempotencyKey/pendingRequest are deliberately
-      // left set in every retryable branch below so Retry reuses them.
+      // still shows. This is reached either when automatic retry was not
+      // attempted (not allowed, already used, or a non-cold-start error) or
+      // when the automatic retry ITSELF also failed — either way it is the
+      // FINAL outcome of this attempt, so pendingIdempotencyKey/pendingRequest
+      // are deliberately left set in every retryable branch below so a
+      // MANUAL Retry can reuse them.
       if (err instanceof TimeoutError || error.status === 504) {
         this._createRetryable.set(true);
         this._createError.set(BuildYourInterviewComponent.COLD_START_MESSAGE);
@@ -740,6 +778,60 @@ export class BuildYourInterviewComponent implements OnInit {
       this.creating = false;
       this._isCreating.set(false);
     }
+  }
+
+  /**
+   * Sends the create request and, ONLY when `allowAutomaticRetry` is true
+   * (a fresh Start Assessment click — never a manual retryInterview()),
+   * automatically sends exactly ONE more attempt with the EXACT SAME
+   * idempotency key and request if the first attempt fails with a
+   * cold-start-retryable signal. Never recursive and contains no loop: at
+   * most two `sendCreateRequest` calls can ever happen per invocation of
+   * this method, a bound visible directly in its control flow rather than
+   * enforced by a counter.
+   *
+   * Deliberately narrow about WHAT triggers the automatic retry — only a
+   * client-side {@link TimeoutError} or a genuine HTTP 504, the two
+   * confirmed cold-start signals (see {@link isColdStartRetryable}) — not
+   * every {@code retryable} InterviewApiError (BACKEND_UNAVAILABLE/UNKNOWN
+   * also cover a plain network drop or an unrelated 500, neither of which
+   * this task's evidence supports auto-retrying).
+   */
+  private async createWithOneAutomaticRetry(
+    request: CreateInterviewSessionRequest,
+    idempotencyKey: string,
+    allowAutomaticRetry: boolean
+  ): Promise<CreatedInterviewSession> {
+    try {
+      return await this.sendCreateRequest(request, idempotencyKey);
+    } catch (firstAttemptError: unknown) {
+      if (!allowAutomaticRetry || this.destroyed || !this.isColdStartRetryable(firstAttemptError)) {
+        throw firstAttemptError;
+      }
+      // A DISTINCT message from COLD_START_MESSAGE, and deliberately WITHOUT
+      // createRetryable(true) — a manual Retry button has no place while an
+      // automatic recovery of this SAME logical attempt is already in
+      // flight. this.creating is already true (set by the caller before
+      // this method was ever invoked), so a duplicate click during this
+      // window is still rejected the same way it would be during the first
+      // attempt.
+      this._createError.set(BuildYourInterviewComponent.COLD_START_RETRYING_MESSAGE);
+      return await this.sendCreateRequest(request, idempotencyKey);
+    }
+  }
+
+  private sendCreateRequest(
+    request: CreateInterviewSessionRequest,
+    idempotencyKey: string
+  ): Promise<CreatedInterviewSession> {
+    return firstValueFrom(
+      this.api.createSession(request, idempotencyKey).pipe(timeout(BuildYourInterviewComponent.SESSION_CREATE_TIMEOUT_MS))
+    );
+  }
+
+  /** The two CONFIRMED cold-start signals — see createWithOneAutomaticRetry's own doc comment for why this stays narrow. */
+  private isColdStartRetryable(err: unknown): boolean {
+    return err instanceof TimeoutError || (err instanceof InterviewApiError && err.status === 504);
   }
 
   // Test-only hook: carry a `?interviewSeconds=` override into the session (via

@@ -401,7 +401,16 @@ describe('BuildYourInterviewComponent', () => {
     expect(createSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('retryInterview() reuses the SAME idempotency key as the failed attempt it retries', async () => {
+  // ── one bounded automatic retry (single click, cold-start recovery) ──
+
+  /**
+   * The headline behavior this whole mechanism exists for: a SINGLE user
+   * click recovers automatically from a cold-start 504 — no manual Retry
+   * click needed. Both POSTs must be byte-identical apart from nothing
+   * (same body, same key), proving this is one logical attempt replayed
+   * once, not two independent attempts.
+   */
+  it('a single Start click automatically recovers from a first HTTP 504 — two POSTs, same key/body, one navigation, no manual click', async () => {
     const api = TestBed.inject(InterviewApiService);
     const createSpy = jest.spyOn(api, 'createSession')
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
@@ -411,75 +420,89 @@ describe('BuildYourInterviewComponent', () => {
     component.toggleTopic('ts', true);
     component.toggleTopic('templates', true);
 
-    await component.startInterview();
-    expect(createSpy).toHaveBeenCalledTimes(1);
-    expect(component.createError()).toBeTruthy();
-    expect(component.createRetryable()).toBe(true);
+    await component.startInterview(); // ONE call site, no retryInterview() involved
 
-    const firstKey = createSpy.mock.calls[0][1];
-    expect(firstKey).toMatch(UUID_RE);
-
-    // Retry clears the stale error at the START of the new attempt, and does
-    // not mint a new logical attempt — same key, same request.
-    await component.retryInterview();
     expect(createSpy).toHaveBeenCalledTimes(2);
-    const secondKey = createSpy.mock.calls[1][1];
+    const [firstBody, firstKey] = createSpy.mock.calls[0];
+    const [secondBody, secondKey] = createSpy.mock.calls[1];
+    expect(firstKey).toMatch(UUID_RE);
     expect(secondKey).toBe(firstKey);
-    expect(createSpy.mock.calls[1][0]).toEqual(createSpy.mock.calls[0][0]);
+    expect(secondBody).toEqual(firstBody);
 
-    // The retry succeeded — error clears and there is nothing left pending.
-    expect(component.createError()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledTimes(1);
     expect(router.navigate).toHaveBeenCalledWith(['/interview/session', 'is_test_1']);
-
-    await component.retryInterview();
-    expect(createSpy).toHaveBeenCalledTimes(2); // no-op: nothing pending anymore
+    expect(component.createError()).toBeNull();
+    expect(component.createRetryable()).toBe(false);
   });
 
-  it('a client-side timeout on a cold backend clears the spinner and shows the "still waking up" message, offering Retry', async () => {
+  /** Same guarantees, but the FIRST attempt fails via the client-side RxJS TimeoutError rather than a server-returned 504. */
+  it('a single Start click automatically recovers from a first client-side timeout — two POSTs, same key/body, one navigation', async () => {
     jest.useFakeTimers();
     try {
       const api = TestBed.inject(InterviewApiService);
-      // Simulate a request Render/Spring never answers within the bound: an
-      // observable that never emits, wrapped by the component's own
-      // timeout() operator.
-      jest.spyOn(api, 'createSession').mockReturnValue(new Observable<never>());
+      const createSpy = jest.spyOn(api, 'createSession')
+        .mockReturnValueOnce(new Observable<never>()) // never emits — exhausts SESSION_CREATE_TIMEOUT_MS
+        .mockReturnValueOnce(of(CREATED));
 
       setDifficulty('beginner');
       component.toggleTopic('ts', true);
       component.toggleTopic('templates', true);
 
       const started = component.startInterview();
-      // Let the guard/spinner-show microtasks settle, then exhaust the
-      // component's own 60s bound.
       await Promise.resolve();
       expect(component.isCreating()).toBe(true);
 
-      await jest.advanceTimersByTimeAsync(60_000);
+      await jest.advanceTimersByTimeAsync(60_000); // first attempt times out; automatic retry fires and resolves immediately
       await started;
 
-      expect(component.isCreating()).toBe(false);
-      expect(spinner.showForStart).not.toHaveBeenCalled(); // never reached — the create never resolved
-      expect(component.createError()).toContain('still waking up');
-      expect(component.createRetryable()).toBe(true);
-      expect(router.navigate).not.toHaveBeenCalled();
+      expect(createSpy).toHaveBeenCalledTimes(2);
+      const [firstBody, firstKey] = createSpy.mock.calls[0];
+      const [secondBody, secondKey] = createSpy.mock.calls[1];
+      expect(secondKey).toBe(firstKey);
+      expect(secondBody).toEqual(firstBody);
+
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      expect(router.navigate).toHaveBeenCalledWith(['/interview/session', 'is_test_1']);
+      expect(component.createError()).toBeNull();
     } finally {
       jest.useRealTimers();
     }
   });
 
   /**
-   * A genuine HTTP 504 (the server DID respond, just with a gateway-timeout
-   * status) is a DIFFERENT code path from the client-side RxJS TimeoutError
-   * above — it never reaches the `timeout()` operator at all, since a
-   * response (even an error one) arrived within the 60s bound. Both signals
-   * mean the same thing to the user, though, so both now show the SAME
-   * specific "still waking up" wording — not the generic BACKEND_UNAVAILABLE
-   * message every OTHER retryable failure (500, 503, a dropped connection)
-   * still shows.
+   * The automatic retry is bounded to exactly ONE extra attempt — a second
+   * cold-start failure must NOT trigger a third POST. The UI settles into
+   * the same final state the pre-automatic-retry design used for a single
+   * failure: spinner cleared, manual Retry offered, nothing navigated.
    */
-  it('a genuine HTTP 504 response shows the SAME "still waking up" message as a client-side timeout, and is retryable with the same key', async () => {
+  it('two consecutive HTTP 504s: exactly two automatic POSTs total, then the spinner clears and manual Retry is offered', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    const createSpy = jest.spyOn(api, 'createSession').mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504))
+    );
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    await component.startInterview();
+
+    expect(createSpy).toHaveBeenCalledTimes(2); // the automatic retry, and NO third attempt
+    expect(component.isCreating()).toBe(false);
+    expect(component.createError()).toContain('still waking up');
+    expect(component.createRetryable()).toBe(true); // manual Retry now offered
+    expect(router.navigate).not.toHaveBeenCalled();
+
+    const [, firstKey] = createSpy.mock.calls[0];
+    const [, secondKey] = createSpy.mock.calls[1];
+    expect(secondKey).toBe(firstKey);
+  });
+
+  /** Manual Retry, invoked only after BOTH automatic attempts already failed, still reuses the exact same key/request — and itself makes no further automatic attempt. */
+  it('manual Retry after both automatic attempts fail reuses the same key/request and does not itself chain another automatic retry', async () => {
     const api = TestBed.inject(InterviewApiService);
     const createSpy = jest.spyOn(api, 'createSession')
+      .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
       .mockReturnValueOnce(of(CREATED));
 
@@ -488,17 +511,124 @@ describe('BuildYourInterviewComponent', () => {
     component.toggleTopic('templates', true);
 
     await component.startInterview();
-
-    expect(component.createRetryable()).toBe(true);
-    expect(component.createError()).toContain('still waking up');
-    expect(component.createError()).not.toContain('Cannot reach the interview service');
-
-    const firstKey = createSpy.mock.calls[0][1];
-    await component.retryInterview();
     expect(createSpy).toHaveBeenCalledTimes(2);
-    expect(createSpy.mock.calls[1][1]).toBe(firstKey);
-    expect(component.createError()).toBeNull();
+    const originalKey = createSpy.mock.calls[0][1];
+    const originalBody = createSpy.mock.calls[0][0];
+
+    await component.retryInterview();
+    expect(createSpy).toHaveBeenCalledTimes(3); // exactly one more call — retryInterview() never auto-chains
+    expect(createSpy.mock.calls[2][1]).toBe(originalKey);
+    expect(createSpy.mock.calls[2][0]).toEqual(originalBody);
     expect(router.navigate).toHaveBeenCalledWith(['/interview/session', 'is_test_1']);
+  });
+
+  it('a 401 (UNAUTHORIZED) receives no automatic retry', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    const createSpy = jest.spyOn(api, 'createSession').mockReturnValue(
+      throwError(() => new InterviewApiError('UNAUTHORIZED', 401))
+    );
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    await component.startInterview();
+
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    expect(component.createRetryable()).toBe(false);
+    await component.retryInterview();
+    expect(createSpy).toHaveBeenCalledTimes(1); // nothing pending — no-op
+  });
+
+  it('a same-key/different-request CONFLICT receives no automatic retry', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    const createSpy = jest.spyOn(api, 'createSession').mockReturnValue(
+      throwError(() => new InterviewApiError('CONFLICT', 409))
+    );
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    await component.startInterview();
+
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    expect(component.createRetryable()).toBe(false);
+    await component.retryInterview();
+    expect(createSpy).toHaveBeenCalledTimes(1); // nothing pending — no-op
+  });
+
+  /** A duplicate click DURING the automatic-retry window (between the first failure and the second attempt settling) must still be a no-op. */
+  it('a duplicate Start click during the automatic-retry window remains a no-op', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    let resolveSecond!: () => void;
+    const createSpy = jest.spyOn(api, 'createSession')
+      .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
+      .mockReturnValueOnce(new Observable((subscriber) => {
+        resolveSecond = () => { subscriber.next(CREATED); subscriber.complete(); };
+      }));
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    const started = component.startInterview();
+    // Give the first attempt's rejection + automatic-retry kickoff a chance to run.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(component.isCreating()).toBe(true);
+    expect(createSpy).toHaveBeenCalledTimes(2); // already inside the automatic retry's own in-flight request
+
+    // A duplicate click WHILE the automatic retry is still pending.
+    await component.startInterview();
+    expect(createSpy).toHaveBeenCalledTimes(2); // guarded by `this.creating` — no third call
+
+    resolveSecond();
+    await started;
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+  });
+
+  /** Destruction in the GAP between the first failure and the automatic retry's own request must prevent that retry from ever firing. */
+  it('destroying the component before the automatic retry fires prevents that retry entirely', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    let rejectFirst!: (err: unknown) => void;
+    const createSpy = jest.spyOn(api, 'createSession')
+      .mockReturnValueOnce(new Observable((subscriber) => {
+        rejectFirst = (err) => subscriber.error(err);
+      }));
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    const started = component.startInterview();
+    await Promise.resolve();
+    expect(createSpy).toHaveBeenCalledTimes(1);
+
+    fixture.destroy(); // destroyed BEFORE the first attempt has even failed yet
+    rejectFirst(new InterviewApiError('BACKEND_UNAVAILABLE', 504));
+    await started;
+
+    expect(createSpy).toHaveBeenCalledTimes(1); // the automatic retry never fired
+  });
+
+  it('no sensitive value (idempotency key, token, Authorization header text) ever appears in the rendered error message', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    const createSpy = jest.spyOn(api, 'createSession').mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504))
+    );
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    await component.startInterview();
+
+    const usedKey = createSpy.mock.calls[0][1] as string;
+    const rendered = component.createError() ?? '';
+    expect(rendered).not.toContain(usedKey);
+    expect(rendered.toLowerCase()).not.toContain('bearer');
+    expect(rendered.toLowerCase()).not.toContain('token');
   });
 
   it('a non-504 5xx (e.g. 503) stays on the generic BACKEND_UNAVAILABLE message, not the cold-start wording', async () => {
@@ -699,6 +829,37 @@ describe('BuildYourInterviewComponent — spinner cleanup on destroy (concurrenc
     // Destroying the component now (currentSpinnerAttempt is still null,
     // since showForStart() was never reached) must not throw.
     expect(() => fixture.destroy()).not.toThrow();
+    expect(spinner.visible()).toBe(false);
+  });
+
+  /**
+   * Success reached via the AUTOMATIC retry (not the first attempt) must
+   * still wire currentSpinnerAttempt exactly like a first-attempt success
+   * does — proving the retry path doesn't bypass the same destroy-cleanup
+   * guarantee the rest of this describe block already established.
+   */
+  it('destroying the component while it is showing the overlay from an AUTOMATIC-retry success hides only that overlay', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    jest.spyOn(api, 'createSession')
+      .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
+      .mockReturnValueOnce(of(CREATED));
+
+    component.setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    const started = component.startInterview();
+    // Let the 504 rejection, the automatic retry, its resolution, and
+    // showForStart() all settle — startInterview() is now paused at
+    // `await this.router.navigate(...)`, which never resolves on its own.
+    await jest.advanceTimersByTimeAsync(1650);
+    expect(spinner.visible()).toBe(true);
+
+    fixture.destroy();
+    expect(spinner.visible()).toBe(false);
+
+    resolveNavigate?.();
+    await started;
     expect(spinner.visible()).toBe(false);
   });
 });

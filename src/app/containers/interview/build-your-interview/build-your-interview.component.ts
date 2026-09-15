@@ -9,7 +9,8 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, TimeoutError } from 'rxjs';
+import { timeout } from 'rxjs/operators';
 import { form, minLength, required, requiredError, validate } from '@angular/forms/signals';
 import { Router } from '@angular/router';
 
@@ -42,6 +43,59 @@ import {
   INTERVIEW_TOPIC_OTHER_CATEGORY
 } from './interview-topic-categories';
 import { InterviewCertificateCalloutComponent } from '../../../components/interview/interview-certificate-callout/interview-certificate-callout.component';
+
+/**
+ * sessionStorage key for a PENDING (not yet confirmed) session-create
+ * attempt — narrowly scoped to this one recovery flow, and always cleared
+ * explicitly rather than left to accumulate (see
+ * {@link BuildYourInterviewComponent#clearPersistedPendingCreate}). Holds
+ * ONLY the idempotency key and the exact request that went with it — NEVER
+ * a session token: an idempotency key identifies the client's OWN creation
+ * attempt, not a credential (see migration
+ * 007_interview_session_idempotency.sql's own doc comment), so persisting it
+ * across a reload carries none of the risk a stored token would.
+ */
+const PENDING_CREATE_STORAGE_KEY = 'interviewPendingCreate:v1';
+
+/**
+ * How long a persisted pending attempt stays eligible for recovery. A
+ * reload while a create request is in flight ABORTS that browser request —
+ * the server may still be processing (or may already have committed) it
+ * regardless — so this window has to comfortably outlast how long that
+ * server-side work could plausibly still be running: generous relative to
+ * both the in-page create timeout (SESSION_CREATE_TIMEOUT_MS, 60s) and
+ * Render's own measured cold-start range (up to ~125s for a bare health
+ * check — see introduction.component.ts's own doc comment). Long enough
+ * that a genuinely still-processing cold start has time to land or fail
+ * before this record goes stale; short enough that a months-old key is
+ * never silently reused.
+ */
+const PENDING_CREATE_TTL_MS = 10 * 60_000;
+
+interface PendingCreateRecord {
+  readonly idempotencyKey: string;
+  readonly request: CreateInterviewSessionRequest;
+  readonly expiresAtMs: number;
+}
+
+/** Defensive: sessionStorage content is never trusted merely because this component wrote it. */
+function isStoredCreateRequest(value: unknown): value is CreateInterviewSessionRequest {
+  if (!value || typeof value !== 'object') return false;
+  const mode = (value as { mode?: unknown }).mode;
+  if (mode === 'preset') {
+    return typeof (value as { presetId?: unknown }).presetId === 'string';
+  }
+  if (mode === 'custom') {
+    const candidate = value as { difficulty?: unknown; topicIds?: unknown; questionCount?: unknown };
+    return (
+      typeof candidate.difficulty === 'string' &&
+      Array.isArray(candidate.topicIds) &&
+      candidate.topicIds.every((id) => typeof id === 'string') &&
+      typeof candidate.questionCount === 'number'
+    );
+  }
+  return false;
+}
 
 interface TopicOption {
   id: string;
@@ -100,6 +154,58 @@ export class BuildYourInterviewComponent implements OnInit {
   private creating = false;
   private readonly _isCreating = signal(false);
   private readonly _createError = signal<string | null>(null);
+  /**
+   * True specifically when the LAST attempt failed in a way a Retry could
+   * plausibly resolve (a cold-start timeout, or {@code BACKEND_UNAVAILABLE}/
+   * {@code UNKNOWN} — see {@link InterviewApiError.retryable}) — renders the
+   * Retry action. A non-retryable failure (e.g. a genuine 400) has nothing a
+   * repeat of the SAME request could fix; only the ordinary Start button
+   * (which always begins a fresh logical attempt) offers a way forward.
+   */
+  private readonly _createRetryable = signal(false);
+  readonly createRetryable = this._createRetryable.asReadonly();
+
+  /**
+   * The current logical start attempt's own identity — a fresh
+   * {@code crypto.randomUUID()} minted by {@link startInterview}, and the
+   * EXACT request that went with it. {@link retryInterview} reuses BOTH,
+   * unchanged, for every retry of this same attempt; a fresh click of Start
+   * Assessment always replaces both with a new pair. Cleared the moment an
+   * attempt resolves (success, or a non-retryable failure) — there is
+   * nothing left to retry once neither is populated, and
+   * {@link retryInterview} is a no-op if called anyway.
+   */
+  private pendingIdempotencyKey: string | null = null;
+  private pendingRequest: CreateInterviewSessionRequest | null = null;
+
+  /**
+   * Bounded timeout for Interview SESSION CREATION only — independently
+   * justified from (not copied from) Introduction's own 45s question-load
+   * timeout, though grounded in the SAME measured Spring/Neon cold-start
+   * data (render.yaml's own "roughly 30-60 seconds" estimate; a fully cold
+   * Render container measured 55.7s-124.7s to answer even a bare health
+   * check — see introduction.component.ts's own doc comment for the full
+   * measurement). Session creation does MORE backend work than a read-only
+   * question fetch — selection plus persistence — though the batched-insert
+   * performance fix already reduced that work to roughly 6-8s warm. 60s
+   * gives that real work about 15s of headroom on top of Introduction's own
+   * 45s allowance for the wake itself, while still bounding the wait to a
+   * concrete, user-visible ceiling rather than leaving a cold request
+   * hanging indefinitely with only "Preparing…" as feedback.
+   */
+  private static readonly SESSION_CREATE_TIMEOUT_MS = 60_000;
+
+  /**
+   * Shown for EITHER of the two cold-start signals {@code
+   * attemptCreateSession} can observe — a client-side {@code TimeoutError}
+   * (SESSION_CREATE_TIMEOUT_MS exhausted with no response at all) or a
+   * genuine HTTP 504 (a response arrived, and it was a gateway timeout) —
+   * since both mean the same thing to the user: the backend is cold, the
+   * request may or may not have committed, and retrying with the same key is
+   * the correct next step. One shared string so the two branches can never
+   * drift apart in wording.
+   */
+  private static readonly COLD_START_MESSAGE = $localize`The interview service is still waking up. Please try again.`;
 
   /** True while the backend session is being created and navigation is pending. */
   readonly isCreating = this._isCreating.asReadonly();
@@ -370,6 +476,78 @@ export class BuildYourInterviewComponent implements OnInit {
     // bank — offering topics the server cannot build from would be worse than
     // saying it is unreachable.
     void this.catalog.load();
+    this.restorePendingCreateIfAny();
+  }
+
+  /**
+   * A page reload aborts any create request that was still in flight — the
+   * browser drops it, but the SERVER may already have committed it (or may
+   * still be processing it). If a not-yet-expired pending attempt survived
+   * the reload in sessionStorage, restore it so Retry can check — WITHOUT
+   * ever auto-firing a network request on the user's behalf: silently
+   * retrying on page load could surprise a user who reloaded for an
+   * unrelated reason, and the app's own convention (see the create-session
+   * doc comments below) is that only an explicit Retry click issues a
+   * request.
+   */
+  private restorePendingCreateIfAny(): void {
+    const pending = this.loadPersistedPendingCreate();
+    if (!pending) return;
+    this.pendingIdempotencyKey = pending.idempotencyKey;
+    this.pendingRequest = pending.request;
+    this._createRetryable.set(true);
+    this._createError.set(
+      $localize`Your last attempt to start this interview may not have finished. Retry to check whether it went through.`
+    );
+  }
+
+  private persistPendingCreate(idempotencyKey: string, request: CreateInterviewSessionRequest): void {
+    try {
+      const record: PendingCreateRecord = { idempotencyKey, request, expiresAtMs: Date.now() + PENDING_CREATE_TTL_MS };
+      sessionStorage.setItem(PENDING_CREATE_STORAGE_KEY, JSON.stringify(record));
+    } catch (err) {
+      swallow('build-your-interview#persistPendingCreate', err);
+    }
+  }
+
+  /**
+   * Explicit cleanup — called the moment a pending attempt is RESOLVED
+   * (success, or a non-retryable failure with nothing left to retry). A
+   * stale record must never outlive the attempt it describes, independent
+   * of the TTL safety net in {@link loadPersistedPendingCreate}.
+   */
+  private clearPersistedPendingCreate(): void {
+    try {
+      sessionStorage.removeItem(PENDING_CREATE_STORAGE_KEY);
+    } catch (err) {
+      swallow('build-your-interview#clearPersistedPendingCreate', err);
+    }
+  }
+
+  private loadPersistedPendingCreate(): PendingCreateRecord | null {
+    try {
+      const raw = sessionStorage.getItem(PENDING_CREATE_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<PendingCreateRecord> | null;
+      if (
+        !parsed ||
+        typeof parsed.idempotencyKey !== 'string' || parsed.idempotencyKey.length === 0 ||
+        typeof parsed.expiresAtMs !== 'number' ||
+        !isStoredCreateRequest(parsed.request)
+      ) {
+        this.clearPersistedPendingCreate();
+        return null;
+      }
+      if (Date.now() >= parsed.expiresAtMs) {
+        this.clearPersistedPendingCreate();
+        return null;
+      }
+      return { idempotencyKey: parsed.idempotencyKey, request: parsed.request, expiresAtMs: parsed.expiresAtMs };
+    } catch (err) {
+      swallow('build-your-interview#loadPersistedPendingCreate', err);
+      this.clearPersistedPendingCreate();
+      return null;
+    }
   }
 
   /** Retry after a backend outage. */
@@ -450,9 +628,44 @@ export class BuildYourInterviewComponent implements OnInit {
       return;
     }
 
+    // A FRESH click of Start Assessment always begins a NEW logical attempt —
+    // a new idempotency key, and THIS exact request cached for any retry of
+    // it. This is the only place either is ever (re)assigned to a non-null
+    // pair; retryInterview() below reuses them unchanged.
+    this.pendingIdempotencyKey = crypto.randomUUID();
+    this.pendingRequest = request;
+    // Persisted so a reload during the request that follows can recover this
+    // exact attempt rather than silently losing track of it — see
+    // restorePendingCreateIfAny()'s own doc comment.
+    this.persistPendingCreate(this.pendingIdempotencyKey, this.pendingRequest);
+
+    await this.attemptCreateSession();
+  }
+
+  /**
+   * Retry the LAST attempt Start Assessment made — same idempotency key,
+   * same request, never a new logical attempt. A no-op if there is nothing
+   * pending (already succeeded, or the last failure was non-retryable and
+   * therefore never left anything to retry) or if a request is already in
+   * flight.
+   */
+  async retryInterview(): Promise<void> {
+    if (this.creating) return;
+    if (!this.pendingIdempotencyKey || !this.pendingRequest) return;
+    await this.attemptCreateSession();
+  }
+
+  private async attemptCreateSession(): Promise<void> {
+    const idempotencyKey = this.pendingIdempotencyKey;
+    const request = this.pendingRequest;
+    if (!idempotencyKey || !request) return; // unreachable via the public entry points above
+
     this.creating = true;
     this._isCreating.set(true);
+    // Cleared at the START of every attempt, including a retry — a stale
+    // message must never survive into the next attempt's own pending state.
     this._createError.set(null);
+    this._createRetryable.set(false);
     this.stashTimerOverride();
 
     // Declared here (not inside the try) so `finally` can reach it — stays
@@ -461,7 +674,14 @@ export class BuildYourInterviewComponent implements OnInit {
     let spinnerHandle: QuizStartSpinnerHandle | null = null;
 
     try {
-      const created = await firstValueFrom(this.api.createSession(request));
+      const created = await firstValueFrom(
+        this.api.createSession(request, idempotencyKey).pipe(timeout(BuildYourInterviewComponent.SESSION_CREATE_TIMEOUT_MS))
+      );
+
+      // This attempt is now resolved — nothing left to retry.
+      this.pendingIdempotencyKey = null;
+      this.pendingRequest = null;
+      this.clearPersistedPendingCreate();
 
       // Only NOW is the previous session reference replaced — a failed create
       // must never destroy a still-valid session the user could resume.
@@ -477,7 +697,36 @@ export class BuildYourInterviewComponent implements OnInit {
       await this.router.navigate(['/interview/session', created.session.sessionId]);
     } catch (err: unknown) {
       const error = err instanceof InterviewApiError ? err : new InterviewApiError('UNKNOWN', 0);
-      this._createError.set(error.userMessage);
+      // A client-side TimeoutError (the in-page bound expired with NO
+      // response at all) and a genuine HTTP 504 (a response DID arrive — a
+      // gateway-timeout status) are two different signals reaching the same
+      // conclusion: the backend is cold, and the request may or may not have
+      // committed — see InterviewSessionRepository#mintAdditionalToken's own
+      // doc comment for why retrying with the SAME key is safe regardless of
+      // which turns out to be true. Both get the SAME specific wording,
+      // deliberately more actionable than the generic BACKEND_UNAVAILABLE
+      // message every OTHER retryable failure (500, 503, a network drop)
+      // still shows. pendingIdempotencyKey/pendingRequest are deliberately
+      // left set in every retryable branch below so Retry reuses them.
+      if (err instanceof TimeoutError || error.status === 504) {
+        this._createRetryable.set(true);
+        this._createError.set(BuildYourInterviewComponent.COLD_START_MESSAGE);
+      } else {
+        this._createError.set(error.userMessage);
+        if (error.retryable) {
+          // BACKEND_UNAVAILABLE/UNKNOWN — same reasoning as the timeout
+          // branch above; keep the pending pair for Retry.
+          this._createRetryable.set(true);
+        } else {
+          // A non-retryable failure (e.g. BAD_REQUEST) would just fail again
+          // identically — nothing to retry. Clearing the pending pair means
+          // the only way forward is Start Assessment, which always mints a
+          // genuinely new attempt rather than silently reusing this one.
+          this.pendingIdempotencyKey = null;
+          this.pendingRequest = null;
+          this.clearPersistedPendingCreate();
+        }
+      }
     } finally {
       // QuizStartSpinnerService no longer self-hides on a fixed timer (see
       // its own doc comment) — every caller of showForStart() must now

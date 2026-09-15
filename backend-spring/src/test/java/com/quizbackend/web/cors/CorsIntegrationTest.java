@@ -193,6 +193,23 @@ class CorsIntegrationTest {
     }
 
     /**
+     * Caught by a real-browser acceptance test, not by any unit/integration
+     * test: HttpClientTestingModule (Jest) and a raw HTTP client (the
+     * cross-runtime parity suite) both bypass actual browser CORS
+     * enforcement, so an ALLOWED_HEADERS omission here is invisible to
+     * either — only a genuine preflight, real-browser-enforced rejection
+     * surfaces it. Without this entry the Idempotency-Key header (and the
+     * whole cold-start idempotent-retry mechanism built on it) would never
+     * reach Spring from any real browser at all.
+     */
+    @Test
+    void preflightAdvertisesIdempotencyKeyForSessionCreation() throws Exception {
+        preflight("/api/interview-sessions", GH_PAGES, "POST", "idempotency-key, content-type")
+                .andExpect(status().is2xxSuccessful())
+                .andExpect(allowedHeadersContain("idempotency-key"));
+    }
+
+    /**
      * DOCUMENTED DIVERGENCE from Node: Node's {@code cors} middleware
      * returns its FULL static {@code allowedHeaders} array on every
      * preflight regardless of what {@code Access-Control-Request-Headers}

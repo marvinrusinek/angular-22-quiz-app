@@ -142,6 +142,20 @@ describe('createSession', () => {
     http.expectOne(`${BASE}/interview-sessions`).flush(activeDto());
   });
 
+  it('attaches the Idempotency-Key header when a key is supplied', () => {
+    api.createSession({ mode: 'preset', presetId: 'junior' }, 'idem-key-123').subscribe();
+    const req = http.expectOne(`${BASE}/interview-sessions`);
+    expect(req.request.headers.get('Idempotency-Key')).toBe('idem-key-123');
+    req.flush(activeDto());
+  });
+
+  it('sends NO Idempotency-Key header when none is supplied', () => {
+    api.createSession({ mode: 'preset', presetId: 'junior' }).subscribe();
+    const req = http.expectOne(`${BASE}/interview-sessions`);
+    expect(req.request.headers.has('Idempotency-Key')).toBe(false);
+    req.flush(activeDto());
+  });
+
   it('fails when the response omits a token', (done) => {
     const { sessionToken, ...withoutToken } = activeDto();
     void sessionToken;

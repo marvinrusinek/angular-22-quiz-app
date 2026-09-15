@@ -43,11 +43,23 @@ public class ApiCorsConfigurationSource implements CorsConfigurationSource {
      * Named individually rather than widened to a wildcard: these are the
      * only custom headers the API accepts. Advertised on EVERY preflight
      * regardless of what was actually requested — a static list, not a
-     * reflection of {@code Access-Control-Request-Headers} — exactly
-     * matching Node's own static {@code allowedHeaders} array.
+     * reflection of {@code Access-Control-Request-Headers}.
+     *
+     * {@code Idempotency-Key} has NO Node equivalent to mirror — unlike
+     * every other entry here, it is Spring-only (Node never owns Interview
+     * session creation, the one endpoint that reads it). Its omission was
+     * caught by a real-browser acceptance test: a custom request header
+     * makes {@code POST /interview-sessions} non-simple, so the browser
+     * sends a CORS PREFLIGHT first, and Chromium/Firefox both refuse the
+     * real request outright (not merely strip the header) when the
+     * preflight's {@code Access-Control-Allow-Headers} doesn't name it —
+     * the request never leaves the browser at all, exactly the same failure
+     * mode {@code X-Attempt-Receipt}/{@code X-Question-Receipt}'s own Node
+     * history (see {@code backend/src/app.ts}'s matching comment) already
+     * documents for a missing entry here.
      */
     private static final List<String> ALLOWED_HEADERS = List.of(
-            "Content-Type", "Authorization", "X-Attempt-Receipt", "X-Question-Receipt");
+            "Content-Type", "Authorization", "X-Attempt-Receipt", "X-Question-Receipt", "Idempotency-Key");
 
     private static final List<String> ALLOWED_METHODS = List.of("GET", "POST", "PUT", "OPTIONS");
 

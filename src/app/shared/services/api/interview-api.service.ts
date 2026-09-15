@@ -91,10 +91,24 @@ export class InterviewApiService {
     return this.topicQuizMetadata.load().pipe(map((entries) => entries.map(toQuizMetadataDto)));
   }
 
-  createSession(request: CreateInterviewSessionRequest): Observable<CreatedInterviewSession> {
+  /**
+   * `idempotencyKey`, when supplied, is sent as the `Idempotency-Key` header
+   * — the server treats a repeated request carrying the SAME key (a retry of
+   * the same logical start attempt, e.g. after a cold-start gateway
+   * timeout) as "did this already commit?" rather than minting a second
+   * session. See {@code BuildYourInterviewComponent#startInterview} for the
+   * client-side half of this: one key is generated per logical attempt and
+   * reused across that attempt's own retries only, never across two
+   * genuinely different attempts.
+   */
+  createSession(
+    request: CreateInterviewSessionRequest,
+    idempotencyKey?: string
+  ): Observable<CreatedInterviewSession> {
     if (!this.configured) return this.notConfigured();
+    const headers = idempotencyKey ? new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) : undefined;
     return this.http
-      .post<ActiveInterviewSessionDto>(`${this.baseUrl}/interview-sessions`, request)
+      .post<ActiveInterviewSessionDto>(`${this.baseUrl}/interview-sessions`, request, { headers })
       .pipe(
         map((dto) => {
           if (!dto.sessionToken) {

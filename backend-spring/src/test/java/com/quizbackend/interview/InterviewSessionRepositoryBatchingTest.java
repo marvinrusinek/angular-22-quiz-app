@@ -17,6 +17,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * PERFORMANCE REGRESSION: proves {@link InterviewSessionRepository#createSessionSnapshot}
@@ -53,7 +54,7 @@ class InterviewSessionRepositoryBatchingTest {
                     null));
         }
         InterviewSessionConfig config = new InterviewSessionConfig("mixed", List.of("topic"), questionCount, null, null);
-        return new CreateSessionInput("is_test", "hash", "ia_test", config, 1200, 1000L, 2000L, questions);
+        return new CreateSessionInput("is_test", "hash", "ia_test", config, 1200, 1000L, 2000L, questions, null, null);
     }
 
     @ParameterizedTest
@@ -64,10 +65,17 @@ class InterviewSessionRepositoryBatchingTest {
         InterviewSessionRepository repository =
                 new InterviewSessionRepository(jdbcTemplate, JsonMapper.builder().build(), transactionManager);
 
+        // Mockito's default for an unstubbed int-returning method is 0, which
+        // this repository now reads as "ON CONFLICT DO NOTHING skipped the
+        // insert" (see INSERT_SESSION's own doc comment) — stub a genuine
+        // 1-row insert so this test exercises the ordinary success path.
+        when(jdbcTemplate.update(anyString(), any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(1);
+
         repository.createSessionSnapshot(inputWithQuestions(questionCount));
 
-        // Exactly one JDBC call for the session row itself...
-        verify(jdbcTemplate, times(1)).update(anyString(), any(), any(), any(), any(), any(), any(), any());
+        // Exactly one JDBC call for the session row itself (7 columns + the
+        // idempotency key/hash pair added for cold-start-safe retries)...
+        verify(jdbcTemplate, times(1)).update(anyString(), any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         // ...and exactly TWO batchUpdate calls total (questions, then options)
         // — never N individual question inserts or 2N individual option

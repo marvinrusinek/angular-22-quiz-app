@@ -31,6 +31,10 @@ public final class SessionToken {
     public record SessionIdentity(String sessionId, String attemptId, String rawToken, String tokenHash) {
     }
 
+    /** A fresh {@code (rawToken, tokenHash)} pair only — no session/attempt id. Used to ROTATE an existing session's token. */
+    public record TokenPair(String rawToken, String tokenHash) {
+    }
+
     private static String base64Url(byte[] bytes) {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
@@ -64,6 +68,18 @@ public final class SessionToken {
                 "ia_" + base64Url(attemptIdBytes),
                 rawToken,
                 hashToken(rawToken));
+    }
+
+    /**
+     * A fresh bearer token for an EXISTING session — see {@link TokenPair}.
+     * Independent CSPRNG draw from {@link #generateSessionIdentity()}'s own
+     * token bytes; the two are never derived from one another.
+     */
+    public static TokenPair generateTokenPair() {
+        byte[] tokenBytes = new byte[TOKEN_BYTES];
+        SECURE_RANDOM.nextBytes(tokenBytes);
+        String rawToken = base64Url(tokenBytes);
+        return new TokenPair(rawToken, hashToken(rawToken));
     }
 
     /** Cheap structural check before any database work. */

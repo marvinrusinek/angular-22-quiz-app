@@ -25,6 +25,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -53,9 +55,22 @@ class InterviewSessionServiceTest {
 
     private long fixedNow = 1_000_000L;
 
+    /**
+     * A REAL rate limiter, not a mock — its logic is simple/deterministic
+     * enough (a token bucket) that a real instance is both easier to use
+     * correctly (no NPE-prone unstubbed Verdict) and lets tests exhaust it
+     * directly (see the excessive-replay test below) rather than mocking a
+     * specific denial. A fresh instance per {@link #service()} call means no
+     * bucket state leaks between tests.
+     */
     private InterviewSessionService service() {
         return new InterviewSessionService(assessmentBuilder, presetBuilder, sessionRepository, quizRepository,
-                () -> fixedNow, AssessmentRandom.seeded(1));
+                () -> fixedNow, AssessmentRandom.seeded(1), new IdempotencyReplayRateLimiter());
+    }
+
+    /** Matches production's own {@code InterviewSessionService#hashIdempotencyKey}. */
+    private static String hashKey(String rawKey) {
+        return SessionToken.hashToken(rawKey);
     }
 
     private GeneratedInterviewSnapshot samplePresetSnapshot() {
@@ -112,6 +127,281 @@ class InterviewSessionServiceTest {
         // leak. Confirmed here by exhaustively listing what IS present.
         assertThat(dto.questions().get(0).options()).extracting("optionId", "text")
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(101, "0"), org.assertj.core.groups.Tuple.tuple(102, "1"));
+    }
+
+    // ── createSession idempotency (Idempotency-Key) ─────────────────────
+
+    private Map<String, Object> presetRequest() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("mode", "preset");
+        request.put("presetId", "junior");
+        return request;
+    }
+
+    @Test
+    void createSessionWithAnIdempotencyKeyPersistsOnlyItsHashAlongsideTheSession() {
+        when(presetBuilder.buildPresetAssessment(any(), any())).thenReturn(samplePresetSnapshot());
+        ArgumentCaptor<CreateSessionInput> captor = ArgumentCaptor.forClass(CreateSessionInput.class);
+        lenient().when(sessionRepository.findByIdempotencyKeyHash(hashKey("client-key-1"))).thenReturn(Optional.empty());
+        stubSuccessfulPersistence(samplePresetSnapshot());
+
+        service().createSession(presetRequest(), "client-key-1");
+
+        verify(sessionRepository).createSessionSnapshot(captor.capture());
+        // The RAW key must never reach persistence — only its hash. An
+        // idempotency key is credential-equivalent (migration 007's own doc
+        // comment), so this is the same one-way-hash-only discipline bearer
+        // tokens already get.
+        assertThat(captor.getValue().idempotencyKeyHash()).isEqualTo(hashKey("client-key-1"));
+        assertThat(captor.getValue().idempotencyKeyHash()).isNotEqualTo("client-key-1").hasSize(64);
+        assertThat(captor.getValue().idempotencyRequestHash()).hasSize(64); // SHA-256 hex
+    }
+
+    @Test
+    void createSessionWithATooLongIdempotencyKeyIsRejected() {
+        String tooLong = "k".repeat(201);
+        assertThatThrownBy(() -> service().createSession(presetRequest(), tooLong))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+        verify(sessionRepository, never()).createSessionSnapshot(any());
+    }
+
+    @Test
+    void createSessionWithAnIdempotencyKeyContainingAControlCharacterIsRejected() {
+        assertThatThrownBy(() -> service().createSession(presetRequest(), "bad\nkey"))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+        verify(sessionRepository, never()).createSessionSnapshot(any());
+    }
+
+    @Test
+    void createSessionWithABlankIdempotencyKeyIsTreatedAsNoKeyAtAll() {
+        when(presetBuilder.buildPresetAssessment(any(), any())).thenReturn(samplePresetSnapshot());
+        ArgumentCaptor<CreateSessionInput> captor = ArgumentCaptor.forClass(CreateSessionInput.class);
+        stubSuccessfulPersistence(samplePresetSnapshot());
+
+        service().createSession(presetRequest(), "   ");
+
+        verify(sessionRepository).createSessionSnapshot(captor.capture());
+        assertThat(captor.getValue().idempotencyKeyHash()).isNull();
+        assertThat(captor.getValue().idempotencyRequestHash()).isNull();
+        verify(sessionRepository, never()).findByIdempotencyKeyHash(any());
+    }
+
+    @Test
+    void createSessionRetryWithTheSameKeyAndSameRequestReturnsTheExistingSessionWithAnAdditionalToken() {
+        String requestHash = service().hashRequest(presetRequest());
+        when(sessionRepository.findByIdempotencyKeyHash(hashKey("retry-key")))
+                .thenReturn(Optional.of(new InterviewSessionRepository.IdempotencyLookup("is_existing", requestHash, fixedNow - 5000)));
+        when(sessionRepository.mintAdditionalToken("is_existing", fixedNow))
+                .thenReturn(new SessionToken.TokenPair("fresh-raw-token", "fresh-token-hash"));
+
+        InterviewSessionRecord existingRecord = new InterviewSessionRecord(
+                "is_existing", "stale-hash", SessionStatus.ACTIVE,
+                new InterviewSessionConfig("mixed", List.of("signals"), 1, "junior", "Junior Angular Developer"),
+                1200, fixedNow - 5000, fixedNow + 1_200_000L, null, false, "ia_existing");
+        List<SessionQuestionSnapshot> existingQuestions = List.of(new SessionQuestionSnapshot(
+                0, "signals:q:0", "signals", "What does this log?", "single", "Because signals are reactive.",
+                List.of(new SessionOptionSnapshot(101, "0", 0, true), new SessionOptionSnapshot(102, "1", 1, false)),
+                false, null));
+        when(sessionRepository.getSessionSnapshot("is_existing"))
+                .thenReturn(Optional.of(new InterviewSessionSnapshot(existingRecord, existingQuestions)));
+
+        ActiveInterviewSessionDto dto = service().createSession(presetRequest(), "retry-key");
+
+        assertThat(dto.sessionId()).isEqualTo("is_existing");
+        assertThat(dto.sessionToken()).isEqualTo("fresh-raw-token");
+        // No new session was minted — this IS the idempotent-return path.
+        verify(sessionRepository, never()).createSessionSnapshot(any());
+        verify(presetBuilder, never()).buildPresetAssessment(any(), any());
+    }
+
+    @Test
+    void createSessionRetryWithTheSameKeyButADifferentRequestFailsSafelyWithConflict() {
+        // The key was first used for a DIFFERENT request — its stored hash
+        // will never match this request's, by construction of the test.
+        when(sessionRepository.findByIdempotencyKeyHash(hashKey("reused-key")))
+                .thenReturn(Optional.of(new InterviewSessionRepository.IdempotencyLookup("is_other", "a-completely-different-hash", fixedNow - 5000)));
+
+        assertThatThrownBy(() -> service().createSession(presetRequest(), "reused-key"))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.CONFLICT));
+
+        verify(sessionRepository, never()).createSessionSnapshot(any());
+        verify(sessionRepository, never()).mintAdditionalToken(any(), anyLong());
+    }
+
+    @Test
+    void createSessionConcurrentRaceLossConvergesOnTheWinningSessionInsteadOfFailing() {
+        when(presetBuilder.buildPresetAssessment(any(), any())).thenReturn(samplePresetSnapshot());
+        String requestHash = service().hashRequest(presetRequest());
+
+        // First lookup (before the insert attempt) finds nothing; the INSERT
+        // then loses the database's own uniqueness race to a concurrent
+        // request, and the SECOND lookup (after the race) finds the winner.
+        when(sessionRepository.findByIdempotencyKeyHash(hashKey("race-key")))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(new InterviewSessionRepository.IdempotencyLookup("is_winner", requestHash, fixedNow - 5000)));
+        when(sessionRepository.createSessionSnapshot(any()))
+                .thenThrow(new SessionRepositoryException(SessionRepositoryException.Category.IDEMPOTENCY_KEY_RACE, "raced"));
+        when(sessionRepository.mintAdditionalToken("is_winner", fixedNow))
+                .thenReturn(new SessionToken.TokenPair("winner-raw-token", "winner-token-hash"));
+
+        InterviewSessionRecord winnerRecord = new InterviewSessionRecord(
+                "is_winner", "stale-hash", SessionStatus.ACTIVE,
+                new InterviewSessionConfig("mixed", List.of("signals"), 1, "junior", "Junior Angular Developer"),
+                1200, fixedNow - 5000, fixedNow + 1_200_000L, null, false, "ia_winner");
+        List<SessionQuestionSnapshot> winnerQuestions = List.of(new SessionQuestionSnapshot(
+                0, "signals:q:0", "signals", "What does this log?", "single", "Because signals are reactive.",
+                List.of(new SessionOptionSnapshot(101, "0", 0, true), new SessionOptionSnapshot(102, "1", 1, false)),
+                false, null));
+        when(sessionRepository.getSessionSnapshot("is_winner"))
+                .thenReturn(Optional.of(new InterviewSessionSnapshot(winnerRecord, winnerQuestions)));
+
+        ActiveInterviewSessionDto dto = service().createSession(presetRequest(), "race-key");
+
+        assertThat(dto.sessionId()).isEqualTo("is_winner");
+        assertThat(dto.sessionToken()).isEqualTo("winner-raw-token");
+    }
+
+    // ── replay lifecycle: bounded window, bounded row growth, rate limiting ──
+
+    /**
+     * A key found but past REPLAY_WINDOW_MS is TERMINAL for that key — no
+     * token is minted, and the failure is BAD_REQUEST (retrying the identical
+     * request cannot help; only a genuinely new attempt, with a new key,
+     * could). Proves the credential-equivalent key cannot be replayed
+     * indefinitely — see migration 007's own doc comment.
+     */
+    @Test
+    void createSessionRetryWithAnExpiredKeyIsRejectedWithoutMintingAToken() {
+        String requestHash = service().hashRequest(presetRequest());
+        // 31 minutes old — one minute past the 30-minute REPLAY_WINDOW_MS.
+        long expiredCreatedAt = fixedNow - (31 * 60_000L);
+        when(sessionRepository.findByIdempotencyKeyHash(hashKey("stale-key")))
+                .thenReturn(Optional.of(new InterviewSessionRepository.IdempotencyLookup("is_stale", requestHash, expiredCreatedAt)));
+
+        assertThatThrownBy(() -> service().createSession(presetRequest(), "stale-key"))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+
+        verify(sessionRepository, never()).mintAdditionalToken(any(), anyLong());
+        verify(sessionRepository, never()).createSessionSnapshot(any());
+    }
+
+    /** One minute UNDER the window boundary must still succeed — the check is a strict ">", not "&gt;=". */
+    @Test
+    void createSessionRetryOneMinuteUnderTheReplayWindowStillSucceeds() {
+        String requestHash = service().hashRequest(presetRequest());
+        long justUnderWindow = fixedNow - (29 * 60_000L);
+        when(sessionRepository.findByIdempotencyKeyHash(hashKey("still-fresh-key")))
+                .thenReturn(Optional.of(new InterviewSessionRepository.IdempotencyLookup("is_fresh", requestHash, justUnderWindow)));
+        when(sessionRepository.mintAdditionalToken("is_fresh", fixedNow))
+                .thenReturn(new SessionToken.TokenPair("fresh-raw-token", "fresh-token-hash"));
+        InterviewSessionRecord record = new InterviewSessionRecord(
+                "is_fresh", "stale-hash", SessionStatus.ACTIVE,
+                new InterviewSessionConfig("mixed", List.of("signals"), 1, "junior", "Junior Angular Developer"),
+                1200, justUnderWindow, fixedNow + 1_200_000L, null, false, "ia_fresh");
+        when(sessionRepository.getSessionSnapshot("is_fresh"))
+                .thenReturn(Optional.of(new InterviewSessionSnapshot(record, List.of())));
+
+        ActiveInterviewSessionDto dto = service().createSession(presetRequest(), "still-fresh-key");
+
+        assertThat(dto.sessionId()).isEqualTo("is_fresh");
+    }
+
+    /**
+     * MAX_EXTRA_TOKENS_PER_SESSION is a hard, permanent ceiling — once
+     * reached, further replay is TERMINAL (BAD_REQUEST), the same as an
+     * expired key: retrying cannot help, since the cap never goes back down.
+     * Proves interview_session_extra_tokens cannot grow without bound even
+     * from a key that is still well within its replay window.
+     */
+    @Test
+    void createSessionRetryPastTheExtraTokenCapIsRejectedWithoutMintingAnotherToken() {
+        String requestHash = service().hashRequest(presetRequest());
+        when(sessionRepository.findByIdempotencyKeyHash(hashKey("hammered-key")))
+                .thenReturn(Optional.of(new InterviewSessionRepository.IdempotencyLookup("is_hammered", requestHash, fixedNow - 5000)));
+        when(sessionRepository.countExtraTokens("is_hammered")).thenReturn(5); // == MAX_EXTRA_TOKENS_PER_SESSION
+
+        assertThatThrownBy(() -> service().createSession(presetRequest(), "hammered-key"))
+                .isInstanceOf(SessionServiceException.class)
+                .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
+                        .isEqualTo(SessionServiceException.Code.BAD_REQUEST));
+
+        verify(sessionRepository, never()).mintAdditionalToken(any(), anyLong());
+    }
+
+    /** Below the cap, replay proceeds normally — the cap must not fire early. */
+    @Test
+    void createSessionRetryOneBelowTheExtraTokenCapStillSucceeds() {
+        String requestHash = service().hashRequest(presetRequest());
+        when(sessionRepository.findByIdempotencyKeyHash(hashKey("almost-hammered-key")))
+                .thenReturn(Optional.of(new InterviewSessionRepository.IdempotencyLookup("is_almost", requestHash, fixedNow - 5000)));
+        when(sessionRepository.countExtraTokens("is_almost")).thenReturn(4); // one under the cap
+        when(sessionRepository.mintAdditionalToken("is_almost", fixedNow))
+                .thenReturn(new SessionToken.TokenPair("raw-token", "token-hash"));
+        InterviewSessionRecord record = new InterviewSessionRecord(
+                "is_almost", "stale-hash", SessionStatus.ACTIVE,
+                new InterviewSessionConfig("mixed", List.of("signals"), 1, "junior", "Junior Angular Developer"),
+                1200, fixedNow - 5000, fixedNow + 1_200_000L, null, false, "ia_almost");
+        when(sessionRepository.getSessionSnapshot("is_almost"))
+                .thenReturn(Optional.of(new InterviewSessionSnapshot(record, List.of())));
+
+        ActiveInterviewSessionDto dto = service().createSession(presetRequest(), "almost-hammered-key");
+
+        assertThat(dto.sessionId()).isEqualTo("is_almost");
+    }
+
+    /**
+     * EXCESSIVE REPEATED REPLAY, velocity-bounded: the rate limiter's
+     * capacity is exhausted well before the extra-token cap could ever be —
+     * a REAL {@link IdempotencyReplayRateLimiter} (not a mock) is exhausted
+     * by genuinely calling {@code createSession} repeatedly with the SAME
+     * key, proving the limiter (not merely the cap) is actually wired into
+     * this path. Denial is TRANSIENT (429/RateLimitedException with a
+     * positive retryAfterSeconds), unlike the two TERMINAL cases above.
+     */
+    @Test
+    void repeatedReplayOfTheSameKeyIsEventuallyRateLimited() {
+        String requestHash = service().hashRequest(presetRequest());
+        when(sessionRepository.findByIdempotencyKeyHash(hashKey("hot-key")))
+                .thenReturn(Optional.of(new InterviewSessionRepository.IdempotencyLookup("is_hot", requestHash, fixedNow - 5000)));
+        when(sessionRepository.mintAdditionalToken(eq("is_hot"), anyLong()))
+                .thenReturn(new SessionToken.TokenPair("raw-token", "token-hash"));
+        InterviewSessionRecord record = new InterviewSessionRecord(
+                "is_hot", "stale-hash", SessionStatus.ACTIVE,
+                new InterviewSessionConfig("mixed", List.of("signals"), 1, "junior", "Junior Angular Developer"),
+                1200, fixedNow - 5000, fixedNow + 1_200_000L, null, false, "ia_hot");
+        when(sessionRepository.getSessionSnapshot("is_hot"))
+                .thenReturn(Optional.of(new InterviewSessionSnapshot(record, List.of())));
+
+        // ONE service/limiter instance reused across every call in this test
+        // — service() would otherwise hand back a fresh, un-exhausted
+        // limiter each time.
+        InterviewSessionService sharedService = new InterviewSessionService(
+                assessmentBuilder, presetBuilder, sessionRepository, quizRepository,
+                () -> fixedNow, AssessmentRandom.seeded(1), new IdempotencyReplayRateLimiter());
+
+        int allowed = 0;
+        Exception denial = null;
+        for (int i = 0; i < 8; i++) { // capacity is 5 — 8 attempts must exhaust it
+            try {
+                sharedService.createSession(presetRequest(), "hot-key");
+                allowed++;
+            } catch (com.quizbackend.quiz.ratelimit.RateLimitedException e) {
+                denial = e;
+                break;
+            }
+        }
+
+        assertThat(allowed).isEqualTo(5);
+        assertThat(denial).isInstanceOf(com.quizbackend.quiz.ratelimit.RateLimitedException.class);
+        assertThat(((com.quizbackend.quiz.ratelimit.RateLimitedException) denial).getRetryAfterSeconds()).isPositive();
     }
 
     @Test
@@ -300,6 +590,34 @@ class InterviewSessionServiceTest {
                 .isInstanceOf(SessionServiceException.class)
                 .satisfies(ex -> assertThat(((SessionServiceException) ex).getCode())
                         .isEqualTo(SessionServiceException.Code.UNAUTHORIZED));
+    }
+
+    /**
+     * A token minted by {@link InterviewSessionRepository#mintAdditionalToken}
+     * for a concurrent-race/idempotent-retry response is a DIFFERENT bearer
+     * token from the session's primary one, so authenticate() must accept it
+     * too — not only the primary token_hash — for every other endpoint
+     * (resume, answer, submit, etc.) to actually be usable by whichever
+     * caller received it.
+     */
+    @Test
+    void resumeAcceptsATokenThatWasMintedAsAnAdditionalCredentialForTheSameSession() {
+        SessionToken.SessionIdentity identity = SessionToken.generateSessionIdentity();
+        when(sessionRepository.getSessionAuthenticationRecord("is_x"))
+                .thenReturn(Optional.of(new SessionAuthenticationRecord("is_x", identity.tokenHash(), SessionStatus.ACTIVE, fixedNow + 10_000)));
+
+        String extraRawToken = SessionToken.generateSessionIdentity().rawToken();
+        when(sessionRepository.hasExtraToken("is_x", SessionToken.hashToken(extraRawToken))).thenReturn(true);
+
+        InterviewSessionConfig config = new InterviewSessionConfig("mixed", List.of("signals"), 1, "junior", "Junior Angular Developer");
+        InterviewSessionRecord record = new InterviewSessionRecord("is_x", identity.tokenHash(), SessionStatus.ACTIVE,
+                config, 1200, fixedNow - 500, fixedNow + 10_000, null, false, "ia_x");
+        when(sessionRepository.getSessionSnapshot("is_x"))
+                .thenReturn(Optional.of(new InterviewSessionSnapshot(record, List.of())));
+
+        // Does not throw — the presented token is neither the primary token
+        // nor gibberish, it is a genuinely separate valid credential.
+        service().resumeSession("is_x", extraRawToken);
     }
 
     @Test

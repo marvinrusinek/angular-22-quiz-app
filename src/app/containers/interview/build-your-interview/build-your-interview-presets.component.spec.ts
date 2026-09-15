@@ -35,6 +35,7 @@ const SYNTHETIC_CATALOG = ((quizData as { quizzes?: unknown[] }).quizzes ?? quiz
  * applies, because the builder does not read the local quiz bank.
  */
 let catalogQuizzes: Quiz[] = SYNTHETIC_CATALOG;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const asTopic = (quiz: Quiz) => ({
   id: quiz.quizId,
   name: quiz.milestone,
@@ -240,7 +241,10 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
 
     // Stage 9C: the preset goes to the BACKEND as just its id.
     expect(createSession).toHaveBeenCalledTimes(1);
-    expect(createSession).toHaveBeenCalledWith({ mode: 'preset', presetId: 'mid-level' });
+    expect(createSession).toHaveBeenCalledWith(
+      { mode: 'preset', presetId: 'mid-level' },
+      expect.stringMatching(UUID_RE)
+    );
   });
 
   // REGRESSION: the Start button bound to startDisabled(), which only describes
@@ -279,7 +283,10 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
     await fixture.whenStable();
 
     expect(createSession).toHaveBeenCalledTimes(1);
-    expect(createSession).toHaveBeenCalledWith({ mode: 'preset', presetId: 'junior' });
+    expect(createSession).toHaveBeenCalledWith(
+      { mode: 'preset', presetId: 'junior' },
+      expect.stringMatching(UUID_RE)
+    );
   });
 
   it('keeps the real Start button DISABLED when a preset cannot be filled', () => {
@@ -332,10 +339,13 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
     await comp.startInterview();
     // Custom now sends exactly the four permitted fields to the backend.
     expect(createSession).toHaveBeenCalledTimes(1);
-    expect(createSession).toHaveBeenCalledWith({
-      mode: 'custom', difficulty: 'beginner',
-      topicIds: ['typescript', 'templates'], questionCount: 10
-    });
+    expect(createSession).toHaveBeenCalledWith(
+      {
+        mode: 'custom', difficulty: 'beginner',
+        topicIds: ['typescript', 'templates'], questionCount: 10
+      },
+      expect.stringMatching(UUID_RE)
+    );
   });
 
   it('every preset is startable against the real question bank', () => {

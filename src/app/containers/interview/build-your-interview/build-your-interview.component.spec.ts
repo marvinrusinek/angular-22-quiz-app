@@ -5,7 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router } from '@angular/router';
 
 import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '../../../shared/tokens/api-base-url.token';
-import { of, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 
 import { InterviewApiService } from '../../../shared/services/api/interview-api.service';
 import { InterviewApiError } from '../../../shared/services/api/interview-api.errors';
@@ -70,6 +70,8 @@ function makeQuiz(quizId: string, difficulty: QuizDifficulty, n: number): Quiz {
   }));
   return { quizId, milestone: quizId.toUpperCase(), summary: '', image: '', difficulty, questions };
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CATALOG: Quiz[] = [
   makeQuiz('ts', 'beginner', 10),
@@ -295,12 +297,15 @@ describe('BuildYourInterviewComponent', () => {
     await component.startInterview();
 
     expect(createSpy).toHaveBeenCalledTimes(1);
-    expect(createSpy).toHaveBeenCalledWith({
-      mode: 'custom',
-      difficulty: 'beginner',
-      topicIds: ['ts', 'templates'],
-      questionCount: 20
-    });
+    expect(createSpy).toHaveBeenCalledWith(
+      {
+        mode: 'custom',
+        difficulty: 'beginner',
+        topicIds: ['ts', 'templates'],
+        questionCount: 20
+      },
+      expect.stringMatching(UUID_RE)
+    );
 
     // NO local generation: the legacy pipeline is gone, and the builder must
     // never fall back to generating an assessment in the browser.
@@ -371,6 +376,217 @@ describe('BuildYourInterviewComponent', () => {
     }
     // The old answer-bearing key is never written.
     expect(sessionStorage.getItem('interviewSession')).toBeNull();
+  });
+
+  // ── cold-start idempotency / retry ───────────────────────────────
+
+  it('a non-retryable BAD_REQUEST is not treated as a cold start: no Retry offered, nothing left to retry', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    const createSpy = jest.spyOn(api, 'createSession').mockReturnValue(
+      throwError(() => new InterviewApiError('BAD_REQUEST', 400))
+    );
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    await component.startInterview();
+
+    expect(component.createError()).toBeTruthy();
+    expect(component.createRetryable()).toBe(false);
+    expect(createSpy).toHaveBeenCalledTimes(1);
+
+    // Nothing pending — retryInterview() is a no-op and issues no NEW request.
+    await component.retryInterview();
+    expect(createSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('retryInterview() reuses the SAME idempotency key as the failed attempt it retries', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    const createSpy = jest.spyOn(api, 'createSession')
+      .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
+      .mockReturnValueOnce(of(CREATED));
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    await component.startInterview();
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    expect(component.createError()).toBeTruthy();
+    expect(component.createRetryable()).toBe(true);
+
+    const firstKey = createSpy.mock.calls[0][1];
+    expect(firstKey).toMatch(UUID_RE);
+
+    // Retry clears the stale error at the START of the new attempt, and does
+    // not mint a new logical attempt — same key, same request.
+    await component.retryInterview();
+    expect(createSpy).toHaveBeenCalledTimes(2);
+    const secondKey = createSpy.mock.calls[1][1];
+    expect(secondKey).toBe(firstKey);
+    expect(createSpy.mock.calls[1][0]).toEqual(createSpy.mock.calls[0][0]);
+
+    // The retry succeeded — error clears and there is nothing left pending.
+    expect(component.createError()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/interview/session', 'is_test_1']);
+
+    await component.retryInterview();
+    expect(createSpy).toHaveBeenCalledTimes(2); // no-op: nothing pending anymore
+  });
+
+  it('a client-side timeout on a cold backend clears the spinner and shows the "still waking up" message, offering Retry', async () => {
+    jest.useFakeTimers();
+    try {
+      const api = TestBed.inject(InterviewApiService);
+      // Simulate a request Render/Spring never answers within the bound: an
+      // observable that never emits, wrapped by the component's own
+      // timeout() operator.
+      jest.spyOn(api, 'createSession').mockReturnValue(new Observable<never>());
+
+      setDifficulty('beginner');
+      component.toggleTopic('ts', true);
+      component.toggleTopic('templates', true);
+
+      const started = component.startInterview();
+      // Let the guard/spinner-show microtasks settle, then exhaust the
+      // component's own 60s bound.
+      await Promise.resolve();
+      expect(component.isCreating()).toBe(true);
+
+      await jest.advanceTimersByTimeAsync(60_000);
+      await started;
+
+      expect(component.isCreating()).toBe(false);
+      expect(spinner.showForStart).not.toHaveBeenCalled(); // never reached — the create never resolved
+      expect(component.createError()).toContain('still waking up');
+      expect(component.createRetryable()).toBe(true);
+      expect(router.navigate).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  /**
+   * A genuine HTTP 504 (the server DID respond, just with a gateway-timeout
+   * status) is a DIFFERENT code path from the client-side RxJS TimeoutError
+   * above — it never reaches the `timeout()` operator at all, since a
+   * response (even an error one) arrived within the 60s bound. Both signals
+   * mean the same thing to the user, though, so both now show the SAME
+   * specific "still waking up" wording — not the generic BACKEND_UNAVAILABLE
+   * message every OTHER retryable failure (500, 503, a dropped connection)
+   * still shows.
+   */
+  it('a genuine HTTP 504 response shows the SAME "still waking up" message as a client-side timeout, and is retryable with the same key', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    const createSpy = jest.spyOn(api, 'createSession')
+      .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
+      .mockReturnValueOnce(of(CREATED));
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    await component.startInterview();
+
+    expect(component.createRetryable()).toBe(true);
+    expect(component.createError()).toContain('still waking up');
+    expect(component.createError()).not.toContain('Cannot reach the interview service');
+
+    const firstKey = createSpy.mock.calls[0][1];
+    await component.retryInterview();
+    expect(createSpy).toHaveBeenCalledTimes(2);
+    expect(createSpy.mock.calls[1][1]).toBe(firstKey);
+    expect(component.createError()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/interview/session', 'is_test_1']);
+  });
+
+  it('a non-504 5xx (e.g. 503) stays on the generic BACKEND_UNAVAILABLE message, not the cold-start wording', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    jest.spyOn(api, 'createSession').mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 503))
+    );
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    await component.startInterview();
+
+    expect(component.createRetryable()).toBe(true);
+    expect(component.createError()).not.toContain('still waking up');
+    expect(component.createError()).toContain('Cannot reach the interview service');
+  });
+
+  // ── reload recovery (persisted pending create) ───────────────────
+
+  it('persists the pending idempotency key + request (never a token) while a create is outstanding, and clears it on success', async () => {
+    sessionStorage.removeItem('interviewPendingCreate:v1');
+    const api = TestBed.inject(InterviewApiService);
+    jest.spyOn(api, 'createSession').mockReturnValue(of(CREATED));
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    const started = component.startInterview();
+    // Inspect storage WHILE the request is still pending (before awaiting).
+    const raw = sessionStorage.getItem('interviewPendingCreate:v1');
+    expect(raw).not.toBeNull();
+    const parsed = JSON.parse(raw!);
+    expect(parsed.idempotencyKey).toMatch(UUID_RE);
+    expect(parsed.request).toEqual({
+      mode: 'custom', difficulty: 'beginner', topicIds: ['ts', 'templates'], questionCount: 20
+    });
+    expect(raw).not.toContain('sessionToken');
+    expect(raw).not.toContain(CREATED.sessionToken);
+
+    await started;
+    // Resolved successfully — nothing left pending.
+    expect(sessionStorage.getItem('interviewPendingCreate:v1')).toBeNull();
+  });
+
+  it('restores a persisted pending attempt on init and lets Retry reuse its exact key/request, never auto-firing a request', async () => {
+    const persistedKey = '11111111-2222-3333-4444-555555555555';
+    const persistedRequest = { mode: 'custom' as const, difficulty: 'beginner', topicIds: ['ts', 'templates'], questionCount: 20 };
+    sessionStorage.setItem('interviewPendingCreate:v1', JSON.stringify({
+      idempotencyKey: persistedKey, request: persistedRequest, expiresAtMs: Date.now() + 60_000
+    }));
+
+    // A FRESH component instance — simulating a reload.
+    const freshFixture = TestBed.createComponent(BuildYourInterviewComponent);
+    const freshComponent = freshFixture.componentInstance;
+    freshFixture.detectChanges();
+
+    expect(freshComponent.createRetryable()).toBe(true);
+    expect(freshComponent.createError()).toContain('may not have finished');
+
+    const api = TestBed.inject(InterviewApiService);
+    const createSpy = jest.spyOn(api, 'createSession').mockReturnValue(of(CREATED));
+    // No request was fired merely by restoring/rendering the recovered state.
+    expect(createSpy).not.toHaveBeenCalled();
+
+    await freshComponent.retryInterview();
+    expect(createSpy).toHaveBeenCalledWith(persistedRequest, persistedKey);
+    sessionStorage.removeItem('interviewPendingCreate:v1');
+  });
+
+  it('ignores and clears an EXPIRED persisted pending attempt', async () => {
+    sessionStorage.setItem('interviewPendingCreate:v1', JSON.stringify({
+      idempotencyKey: 'stale-key',
+      request: { mode: 'custom', difficulty: 'beginner', topicIds: ['ts'], questionCount: 10 },
+      expiresAtMs: Date.now() - 1_000 // already expired
+    }));
+
+    const freshFixture = TestBed.createComponent(
+      (await import('./build-your-interview.component')).BuildYourInterviewComponent
+    );
+    const freshComponent = freshFixture.componentInstance;
+    freshFixture.detectChanges();
+
+    expect(freshComponent.createRetryable()).toBe(false);
+    expect(freshComponent.createError()).toBeNull();
+    expect(sessionStorage.getItem('interviewPendingCreate:v1')).toBeNull();
   });
 });
 

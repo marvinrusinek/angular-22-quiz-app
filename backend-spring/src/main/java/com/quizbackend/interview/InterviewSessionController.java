@@ -50,14 +50,25 @@ public class InterviewSessionController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ActiveInterviewSessionDto create(
-            @RequestBody(required = false) Map<String, Object> body, HttpServletRequest request) {
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            HttpServletRequest request) {
         // SESSION_CREATED is ACTIVE_ASSESSMENT plus a token exemption scoped
         // to THIS route. The global ban stays intact, so resume cannot leak it.
         ResponsePolicyContext.set(request, ResponsePolicy.SESSION_CREATED);
         try {
-            return service.createSession(body == null ? Map.of() : body);
+            return service.createSession(body == null ? Map.of() : body, idempotencyKey);
         } catch (SessionServiceException e) {
             throw translate(e);
+        } catch (com.quizbackend.quiz.ratelimit.RateLimitedException e) {
+            // MUST be rethrown, not caught by the generic Exception branch
+            // below: that branch exists to turn an unexpected exception into
+            // a fixed 500, and would otherwise mask this into one — exactly
+            // the class of bug ApiExceptionHandlerHttpSemanticsTest exists to
+            // catch. RateLimitedException has its own global @ExceptionHandler
+            // (ApiExceptionHandler#handleRateLimited, 429 + Retry-After) that
+            // this rethrow lets Spring's normal dispatch reach.
+            throw e;
         } catch (Exception e) {
             // Scoped to THIS route only — unlike a global @ExceptionHandler,
             // this cannot intercept routing/media-type/binding/CORS/filter

@@ -251,7 +251,14 @@
       </button>
 
       @if (createError(); as error) {
-        <p class="builder-error" role="alert">{{ error }}</p>
+        <p class="builder-error" role="alert">
+          <span>{{ error }}</span>
+          @if (createRetryable()) {
+            <button type="button" class="link-btn" (click)="retryInterview()" i18n>
+              Retry
+            </button>
+          }
+        </p>
       }
     </div>
   </form>

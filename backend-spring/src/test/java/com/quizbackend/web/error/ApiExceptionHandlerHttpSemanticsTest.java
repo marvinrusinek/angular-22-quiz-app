@@ -143,7 +143,7 @@ class ApiExceptionHandlerHttpSemanticsTest {
 
     @Test
     void anExistingNamedDomainExceptionKeepsItsOwnCodeStatusAndMessage() throws Exception {
-        when(service.createSession(org.mockito.ArgumentMatchers.anyMap()))
+        when(service.createSession(org.mockito.ArgumentMatchers.anyMap(), org.mockito.ArgumentMatchers.any()))
                 .thenThrow(new SessionServiceException(SessionServiceException.Code.BAD_REQUEST,
                         "mode must be \"preset\" or \"custom\""));
 

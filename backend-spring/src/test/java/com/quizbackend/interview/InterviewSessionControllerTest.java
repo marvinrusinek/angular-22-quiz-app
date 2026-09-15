@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -87,7 +88,7 @@ class InterviewSessionControllerTest {
 
     @Test
     void createReturns201WithASessionTokenAndNoCorrectnessOrExplanation() throws Exception {
-        when(service.createSession(anyMap())).thenReturn(sampleDto("raw-token-abc"));
+        when(service.createSession(anyMap(), any())).thenReturn(sampleDto("raw-token-abc"));
 
         mockMvc.perform(post("/api/interview-sessions")
                         .contentType("application/json")
@@ -98,6 +99,56 @@ class InterviewSessionControllerTest {
                 .andExpect(jsonPath("$.questions[0].explanation").doesNotExist())
                 .andExpect(jsonPath("$.questions[0].options[0].isCorrect").doesNotExist())
                 .andExpect(jsonPath("$.questions[0].options[0].correct").doesNotExist());
+    }
+
+    @Test
+    void createThreadsTheIdempotencyKeyHeaderThroughToTheService() throws Exception {
+        when(service.createSession(anyMap(), eq("client-generated-key-123"))).thenReturn(sampleDto("raw-token-abc"));
+
+        mockMvc.perform(post("/api/interview-sessions")
+                        .contentType("application/json")
+                        .header("Idempotency-Key", "client-generated-key-123")
+                        .content("{\"mode\":\"preset\",\"presetId\":\"junior\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sessionToken").value("raw-token-abc"));
+
+        verify(service).createSession(anyMap(), eq("client-generated-key-123"));
+    }
+
+    @Test
+    void createWithNoIdempotencyKeyHeaderPassesNullThrough() throws Exception {
+        when(service.createSession(anyMap(), isNull())).thenReturn(sampleDto("raw-token-abc"));
+
+        mockMvc.perform(post("/api/interview-sessions")
+                        .contentType("application/json")
+                        .content("{\"mode\":\"preset\",\"presetId\":\"junior\"}"))
+                .andExpect(status().isCreated());
+
+        verify(service).createSession(anyMap(), isNull());
+    }
+
+    /**
+     * REGRESSION: {@code create()}'s route-scoped {@code catch (Exception e)}
+     * exists to turn a genuinely UNEXPECTED exception into a fixed 500 (see
+     * its own comment) — it must NOT also swallow a {@link
+     * com.quizbackend.quiz.ratelimit.RateLimitedException} the service layer
+     * throws on purpose (idempotency-key replay throttling), which has its
+     * OWN global handler (429 + Retry-After). Exactly the class of bug
+     * {@code ApiExceptionHandlerHttpSemanticsTest} exists to catch, applied
+     * to a second exception type sharing this same route.
+     */
+    @Test
+    void aRateLimitedIdempotencyReplayIsNotMaskedIntoA500() throws Exception {
+        when(service.createSession(anyMap(), eq("hot-key")))
+                .thenThrow(new com.quizbackend.quiz.ratelimit.RateLimitedException(30));
+
+        mockMvc.perform(post("/api/interview-sessions")
+                        .contentType("application/json")
+                        .header("Idempotency-Key", "hot-key")
+                        .content("{\"mode\":\"preset\",\"presetId\":\"junior\"}"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "30"))
+                .andExpect(jsonPath("$.error.code").value("RATE_LIMITED"));
     }
 
     @Test
@@ -113,7 +164,7 @@ class InterviewSessionControllerTest {
 
     @Test
     void resumeWithoutAnAuthorizationHeaderReturns401WithTheGenericErrorBody() throws Exception {
-        when(service.resumeSession(eq("is_abc123"), eq(null)))
+        when(service.resumeSession(eq("is_abc123"), isNull()))
                 .thenThrow(SessionServiceException.unauthorized());
 
         mockMvc.perform(get("/api/interview-sessions/is_abc123"))
@@ -135,7 +186,7 @@ class InterviewSessionControllerTest {
 
     @Test
     void createWithAMissingModeReturns400() throws Exception {
-        when(service.createSession(anyMap()))
+        when(service.createSession(anyMap(), any()))
                 .thenThrow(new SessionServiceException(SessionServiceException.Code.BAD_REQUEST, "mode must be \"preset\" or \"custom\""));
 
         mockMvc.perform(post("/api/interview-sessions").contentType("application/json").content("{}"))
@@ -157,7 +208,7 @@ class InterviewSessionControllerTest {
      */
     @Test
     void anUnexpectedExceptionNeverLeaksSpringsDefaultErrorPageOrItsOwnMessage() throws Exception {
-        when(service.createSession(anyMap()))
+        when(service.createSession(anyMap(), any()))
                 .thenThrow(new RuntimeException("some internal detail that must never reach the client"));
 
         mockMvc.perform(post("/api/interview-sessions")
@@ -197,7 +248,7 @@ class InterviewSessionControllerTest {
                 + "\"interview_sessions_token_hash_key\" Detail: Key (token_hash)=(abc123secrethash) already exists. "
                 + "Authorization: Bearer eyFAKE.token.value";
         try {
-            when(service.createSession(anyMap())).thenThrow(new IllegalStateException(sensitiveLookingMessage));
+            when(service.createSession(anyMap(), any())).thenThrow(new IllegalStateException(sensitiveLookingMessage));
 
             mockMvc.perform(post("/api/interview-sessions")
                             .contentType("application/json")
@@ -244,7 +295,7 @@ class InterviewSessionControllerTest {
 
     @Test
     void saveAnswerWithoutAuthorizationReturns401() throws Exception {
-        when(service.saveAnswer(eq("is_abc123"), eq("signals:q:0"), eq(null), anyMap()))
+        when(service.saveAnswer(eq("is_abc123"), eq("signals:q:0"), isNull(), anyMap()))
                 .thenThrow(SessionServiceException.unauthorized());
 
         mockMvc.perform(put("/api/interview-sessions/is_abc123/answers/signals:q:0")
@@ -298,7 +349,7 @@ class InterviewSessionControllerTest {
 
     @Test
     void setFlaggedWithoutAuthorizationReturns401() throws Exception {
-        when(service.setFlagged(eq("is_abc123"), eq("signals:q:0"), eq(null), anyMap()))
+        when(service.setFlagged(eq("is_abc123"), eq("signals:q:0"), isNull(), anyMap()))
                 .thenThrow(SessionServiceException.unauthorized());
 
         mockMvc.perform(put("/api/interview-sessions/is_abc123/review/signals:q:0")
@@ -360,7 +411,7 @@ class InterviewSessionControllerTest {
 
     @Test
     void submitWithoutAuthorizationReturns401() throws Exception {
-        when(service.submitSession(eq("is_abc123"), eq(null), anyMap()))
+        when(service.submitSession(eq("is_abc123"), isNull(), anyMap()))
                 .thenThrow(SessionServiceException.unauthorized());
 
         mockMvc.perform(post("/api/interview-sessions/is_abc123/submit")
@@ -408,7 +459,7 @@ class InterviewSessionControllerTest {
 
     @Test
     void resultWithoutAuthorizationReturns401() throws Exception {
-        when(service.getResult(eq("is_abc123"), eq(null))).thenThrow(SessionServiceException.unauthorized());
+        when(service.getResult(eq("is_abc123"), isNull())).thenThrow(SessionServiceException.unauthorized());
 
         mockMvc.perform(get("/api/interview-sessions/is_abc123/result"))
                 .andExpect(status().isUnauthorized())
@@ -480,7 +531,7 @@ class InterviewSessionControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"))
                 .andExpect(jsonPath("$.error.message").value("Malformed JSON body"));
-        verify(service, never()).createSession(anyMap());
+        verify(service, never()).createSession(anyMap(), any());
     }
 
     @Test

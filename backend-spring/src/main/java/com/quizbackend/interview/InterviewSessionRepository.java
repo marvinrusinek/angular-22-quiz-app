@@ -38,12 +38,55 @@ import java.util.Set;
 @Repository
 public class InterviewSessionRepository {
 
+    /**
+     * {@code ON CONFLICT (idempotency_key_hash) DO NOTHING} is deliberate,
+     * not merely defensive: PostgreSQL aborts the WHOLE transaction the
+     * instant any statement raises an error (SQLSTATE 25P02 on anything
+     * issued afterward, even a plain SELECT, until a ROLLBACK), so catching
+     * a {@code DuplicateKeyException} here and then querying to figure out
+     * WHICH constraint fired — as an earlier version of this statement did —
+     * cannot work: that follow-up query itself would fail on the now-aborted
+     * connection. Targeting the {@code idempotency_key_hash} unique
+     * constraint specifically means a losing concurrent racer affects ZERO
+     * rows and throws NOTHING, leaving the transaction perfectly healthy to
+     * look up the winner afterward (see {@code createSessionSnapshot}'s
+     * 0-rows check). A genuine {@code id} primary-key collision is a
+     * DIFFERENT constraint, untouched by this clause, and still raises
+     * normally.
+     */
     private static final String INSERT_SESSION = """
             INSERT INTO interview_sessions
               (id, token_hash, status, config_json, duration_seconds,
-               created_at, expires_at, submitted_at, submitted_by_expiry, result_json, attempt_id)
-            VALUES (?, ?, 'active', ?, ?, ?, ?, NULL, 0, NULL, ?)
+               created_at, expires_at, submitted_at, submitted_by_expiry, result_json, attempt_id,
+               idempotency_key_hash, idempotency_request_hash)
+            VALUES (?, ?, 'active', ?, ?, ?, ?, NULL, 0, NULL, ?, ?, ?)
+            ON CONFLICT (idempotency_key_hash) DO NOTHING
             """;
+
+    /** {@code created_at} is read too — {@code InterviewSessionService}'s REPLAY_WINDOW_MS check needs it. */
+    private static final String SELECT_IDEMPOTENCY_LOOKUP =
+            "SELECT id, idempotency_request_hash, created_at FROM interview_sessions WHERE idempotency_key_hash = ?";
+
+    /** Bounds {@code interview_session_extra_tokens} growth — see MAX_EXTRA_TOKENS_PER_SESSION. */
+    private static final String COUNT_EXTRA_TOKENS =
+            "SELECT COUNT(*) FROM interview_session_extra_tokens WHERE session_id = ?";
+
+    /**
+     * {@code ON CONFLICT ... DO NOTHING} for the same reason as {@code
+     * INSERT_SESSION} above: an (astronomically unlikely) hash collision with
+     * an existing row must not abort the transaction. See
+     * {@link #mintAdditionalToken} and interview_session_extra_tokens'
+     * migration doc comment for why this INSERTS rather than overwrites any
+     * single column.
+     */
+    private static final String INSERT_EXTRA_TOKEN = """
+            INSERT INTO interview_session_extra_tokens (session_id, token_hash, created_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT (token_hash) DO NOTHING
+            """;
+
+    private static final String EXISTS_EXTRA_TOKEN =
+            "SELECT COUNT(*) FROM interview_session_extra_tokens WHERE session_id = ? AND token_hash = ?";
 
     private static final String INSERT_QUESTION = """
             INSERT INTO session_questions
@@ -251,8 +294,19 @@ public class InterviewSessionRepository {
         String configJson = toConfigJson(input.config());
 
         try {
-            jdbcTemplate.update(INSERT_SESSION, input.id(), input.tokenHash(), configJson,
-                    input.durationSeconds(), input.createdAt(), input.expiresAt(), input.attemptId());
+            int rowsInserted = jdbcTemplate.update(INSERT_SESSION, input.id(), input.tokenHash(), configJson,
+                    input.durationSeconds(), input.createdAt(), input.expiresAt(), input.attemptId(),
+                    input.idempotencyKeyHash(), input.idempotencyRequestHash());
+
+            if (rowsInserted == 0) {
+                // ON CONFLICT (idempotency_key_hash) DO NOTHING silently
+                // skipped this insert — a concurrent request already
+                // committed under this exact key. No exception, transaction
+                // still healthy; the caller resolves this by reading back
+                // the winner.
+                throw new SessionRepositoryException(SessionRepositoryException.Category.IDEMPOTENCY_KEY_RACE,
+                        "A session already exists for this idempotency key");
+            }
 
             List<Object[]> questionBatch = new ArrayList<>(input.questions().size());
             List<Object[]> optionBatch = new ArrayList<>();
@@ -275,6 +329,10 @@ public class InterviewSessionRepository {
             jdbcTemplate.batchUpdate(INSERT_QUESTION, questionBatch);
             jdbcTemplate.batchUpdate(INSERT_OPTION, optionBatch);
         } catch (DuplicateKeyException e) {
+            // The idempotency_key constraint can no longer reach here — see
+            // INSERT_SESSION's own doc comment for why ON CONFLICT handles
+            // that case without ever throwing. Only the (astronomically
+            // unlikely) random session/attempt id collision remains.
             throw new SessionRepositoryException(SessionRepositoryException.Category.CONSTRAINT,
                     "Session violates a uniqueness constraint");
         }
@@ -315,6 +373,56 @@ public class InterviewSessionRepository {
                         "Question positions must be contiguous from zero");
             }
         }
+    }
+
+    /** {@code createdAt} is the session's own creation time — also the idempotency key's issuance time (see migration 007). */
+    public record IdempotencyLookup(String sessionId, String requestHash, long createdAt) {
+    }
+
+    /**
+     * The session (if any) already committed under this idempotency key's
+     * hash, plus the request hash it was created with and when. Takes the
+     * HASH, never the raw key — {@link InterviewSessionService} computes it
+     * once via {@code hashIdempotencyKey} and never lets the raw value reach
+     * this layer, a query log, or anywhere else it could be persisted.
+     */
+    public Optional<IdempotencyLookup> findByIdempotencyKeyHash(String idempotencyKeyHash) {
+        List<IdempotencyLookup> rows = jdbcTemplate.query(SELECT_IDEMPOTENCY_LOOKUP,
+                (rs, rowNum) -> new IdempotencyLookup(
+                        rs.getString("id"), rs.getString("idempotency_request_hash"), rs.getLong("created_at")),
+                idempotencyKeyHash);
+        return rows.stream().findFirst();
+    }
+
+    /** How many additional tokens have already been minted for this session — see MAX_EXTRA_TOKENS_PER_SESSION. */
+    public int countExtraTokens(String sessionId) {
+        Integer count = jdbcTemplate.queryForObject(COUNT_EXTRA_TOKENS, Integer.class, sessionId);
+        return count == null ? 0 : count;
+    }
+
+    /**
+     * Mint a FRESH bearer token for an existing session, valid ALONGSIDE
+     * (never instead of) {@code interview_sessions.token_hash} and every
+     * other token already minted for it — see
+     * interview_session_extra_tokens' own migration doc comment for why
+     * overwriting a single stored hash ("rotation") is unsafe here: two
+     * requests resolving the SAME idempotency key can both be genuinely live
+     * callers each waiting on their own response, and invalidating one to
+     * satisfy the other would strand whichever response arrives second.
+     * {@link InterviewSessionService#authenticate} checks this table only
+     * when the primary token does not match, so the common case (a caller
+     * using ITS session's one and only token) pays no extra query.
+     */
+    public SessionToken.TokenPair mintAdditionalToken(String sessionId, long now) {
+        SessionToken.TokenPair pair = SessionToken.generateTokenPair();
+        jdbcTemplate.update(INSERT_EXTRA_TOKEN, sessionId, pair.tokenHash(), now);
+        return pair;
+    }
+
+    /** Whether {@code tokenHash} is a token {@link #mintAdditionalToken} issued for this session. */
+    public boolean hasExtraToken(String sessionId, String tokenHash) {
+        Integer count = jdbcTemplate.queryForObject(EXISTS_EXTRA_TOKEN, Integer.class, sessionId, tokenHash);
+        return count != null && count > 0;
     }
 
     public Optional<InterviewSessionRecord> getSessionById(String sessionId) {

@@ -10,14 +10,20 @@ import com.quizbackend.interview.dto.ActiveInterviewAnswerDto;
 import com.quizbackend.interview.dto.ActiveInterviewSessionDto;
 import com.quizbackend.interview.dto.InterviewResultDto;
 import com.quizbackend.quiz.QuizRepository;
+import com.quizbackend.quiz.ratelimit.RateLimitedException;
+import com.quizbackend.quiz.ratelimit.TokenBucketRateLimiter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.LongSupplier;
 
@@ -43,6 +49,34 @@ public class InterviewSessionService {
     private static final int MAX_STRING_LENGTH = 100;
     private static final int MAX_IDENTITY_ATTEMPTS = 3;
     private static final int MAX_SELECTED_OPTIONS = 32;
+    /** Comfortably above a UUID (36 chars); bounds header/column size, not a security control. */
+    private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 200;
+
+    /**
+     * How long a committed idempotency key remains REPLAYABLE (findable, and
+     * capable of minting an additional token) after the session it belongs
+     * to was created. An idempotency key is credential-equivalent (see
+     * migration 007's own doc comment) — an indefinite replay window would
+     * let a captured key mint working tokens forever. 30 minutes is
+     * comfortably longer than every legitimate replay path this app has: the
+     * client's own 60s in-page create timeout
+     * ({@code BuildYourInterviewComponent.SESSION_CREATE_TIMEOUT_MS}) and its
+     * 10-minute reload-recovery window ({@code PENDING_CREATE_TTL_MS}), so no
+     * genuine retry is ever rejected — while still bounding how long a
+     * captured key stays useful to anyone else.
+     */
+    private static final long REPLAY_WINDOW_MS = 30 * 60_000L;
+
+    /**
+     * How many ADDITIONAL tokens {@link #tryReturnExisting} may ever mint for
+     * one session. Independent of, and a hard backstop under, {@code
+     * idempotencyReplayRateLimiter} — the limiter bounds how FAST replay
+     * happens, this bounds how MANY tokens can ever exist for one session
+     * regardless of timing (see interview_session_extra_tokens' own
+     * migration doc comment on why unlimited growth here is unacceptable
+     * even though each individual token is only ever handed to one caller).
+     */
+    private static final int MAX_EXTRA_TOKENS_PER_SESSION = 5;
 
     private final AssessmentBuilder assessmentBuilder;
     private final AssessmentPresetBuilder presetBuilder;
@@ -50,30 +84,91 @@ public class InterviewSessionService {
     private final QuizRepository quizRepository;
     private final LongSupplier now;
     private final RandomSource random;
+    private final IdempotencyReplayRateLimiter idempotencyReplayRateLimiter;
 
     @Autowired
     public InterviewSessionService(AssessmentBuilder assessmentBuilder, AssessmentPresetBuilder presetBuilder,
-            InterviewSessionRepository sessionRepository, QuizRepository quizRepository) {
-        this(assessmentBuilder, presetBuilder, sessionRepository, quizRepository, System::currentTimeMillis, AssessmentRandom.CRYPTO);
+            InterviewSessionRepository sessionRepository, QuizRepository quizRepository,
+            IdempotencyReplayRateLimiter idempotencyReplayRateLimiter) {
+        this(assessmentBuilder, presetBuilder, sessionRepository, quizRepository, System::currentTimeMillis,
+                AssessmentRandom.CRYPTO, idempotencyReplayRateLimiter);
     }
 
     /** Test/advanced constructor — injects a deterministic clock and/or shuffle source. */
     public InterviewSessionService(AssessmentBuilder assessmentBuilder, AssessmentPresetBuilder presetBuilder,
-            InterviewSessionRepository sessionRepository, QuizRepository quizRepository, LongSupplier now, RandomSource random) {
+            InterviewSessionRepository sessionRepository, QuizRepository quizRepository, LongSupplier now, RandomSource random,
+            IdempotencyReplayRateLimiter idempotencyReplayRateLimiter) {
         this.assessmentBuilder = assessmentBuilder;
         this.presetBuilder = presetBuilder;
         this.sessionRepository = sessionRepository;
         this.quizRepository = quizRepository;
         this.now = now;
         this.random = random;
+        this.idempotencyReplayRateLimiter = idempotencyReplayRateLimiter;
     }
 
+    /** Overload preserved for any caller with no idempotency key to offer — identical to {@code createSession(request, null)}. */
     public ActiveInterviewSessionDto createSession(Map<String, Object> request) {
-        GeneratedInterviewSnapshot snapshot = resolveAssessment(validateRequest(request));
+        return createSession(request, null);
+    }
+
+    /**
+     * Create a session. {@code rawIdempotencyKey} is the client's OPTIONAL,
+     * self-generated key for this logical start attempt (the {@code
+     * Idempotency-Key} header) — see {@code docs/spring-production-runbook.md}
+     * for the full design. A null/absent key preserves the exact pre-existing
+     * behavior (always mint a new session) for backward compatibility with
+     * any caller that does not send one.
+     *
+     * <p>When a key IS present:
+     * <ol>
+     *   <li>If a session already exists for this key, this is a RETRY of an
+     *       already-committed attempt (the client's own request, or a
+     *       response it never received) — return that session, not a new
+     *       one. Its request must match the ORIGINAL request's fingerprint,
+     *       or the key is being reused for something materially different
+     *       and the call fails safely (CONFLICT) instead of returning an
+     *       unrelated session.</li>
+     *   <li>Otherwise, create normally, but persist the key + fingerprint
+     *       alongside the session so a LATER retry (or a concurrent racer)
+     *       can find it. A concurrent racer that loses the database's own
+     *       uniqueness check falls back to step 1 rather than erroring.</li>
+     * </ol>
+     */
+    public ActiveInterviewSessionDto createSession(Map<String, Object> request, String rawIdempotencyKey) {
+        Map<String, Object> validated = validateRequest(request);
+        String idempotencyKey = normalizeIdempotencyKey(rawIdempotencyKey);
+        // Hashed IMMEDIATELY and never referenced again by this method — every
+        // call below this line passes idempotencyKeyHash, never
+        // idempotencyKey/rawIdempotencyKey/request's raw header value. An
+        // idempotency key is credential-equivalent (see migration 007's own
+        // doc comment), so it gets the SAME one-way-hash-only discipline this
+        // codebase already applies to bearer tokens.
+        String idempotencyKeyHash = idempotencyKey == null ? null : hashIdempotencyKey(idempotencyKey);
+        String requestHash = idempotencyKeyHash == null ? null : hashRequest(validated);
+
+        if (idempotencyKeyHash != null) {
+            Optional<ActiveInterviewSessionDto> existing = tryReturnExisting(idempotencyKeyHash, requestHash);
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
+
+        GeneratedInterviewSnapshot snapshot = resolveAssessment(validated);
         long createdAt = now.getAsLong();
         long expiresAt = createdAt + snapshot.durationSeconds() * 1000L;
 
-        SessionToken.SessionIdentity identity = persistWithIdentityRetry(snapshot, createdAt, expiresAt);
+        SessionToken.SessionIdentity identity;
+        try {
+            identity = persistWithIdentityRetry(snapshot, createdAt, expiresAt, idempotencyKeyHash, requestHash);
+        } catch (IdempotencyKeyRaceException race) {
+            // A concurrent request committed first under this exact key while
+            // we were generating/inserting ours — resolve it the same way a
+            // sequential retry would, by reading back the winner.
+            return tryReturnExisting(idempotencyKeyHash, requestHash)
+                    .orElseThrow(() -> new SessionServiceException(
+                            SessionServiceException.Code.INTERNAL, "Session could not be created"));
+        }
 
         InterviewSessionSnapshot stored = sessionRepository.getSessionSnapshot(identity.sessionId())
                 .orElseThrow(() -> new SessionServiceException(
@@ -81,6 +176,151 @@ public class InterviewSessionService {
 
         return InterviewSessionDtoMapper.toActiveSessionDto(new InterviewSessionDtoMapper.ActiveSessionParams(
                 stored.session(), stored.questions(), List.of(), createdAt, identity.rawToken()));
+    }
+
+    /**
+     * An idempotency key's INSERT lost the database's own uniqueness race —
+     * internal control-flow signal only, never leaves this class.
+     */
+    private static final class IdempotencyKeyRaceException extends RuntimeException {
+    }
+
+    /**
+     * Resolve an idempotency key's HASH against an already-committed session,
+     * or report empty when none exists yet (the caller should create one).
+     * Never called with anything but a hash — see {@code createSession}'s own
+     * comment on why the raw key never reaches this far.
+     *
+     * <p>A request-hash MISMATCH fails closed (CONFLICT) rather than ever
+     * returning a session the current request didn't ask for. A key found
+     * but past its {@link #REPLAY_WINDOW_MS} or its session's {@link
+     * #MAX_EXTRA_TOKENS_PER_SESSION} cap fails closed too (BAD_REQUEST) —
+     * both are TERMINAL for this key: retrying the identical request cannot
+     * help, only a genuinely new attempt (a new key) can. A rate-limit denial
+     * is the one TRANSIENT case (429, {@code Retry-After}) — see {@code
+     * idempotencyReplayRateLimiter}'s own doc comment.
+     */
+    private Optional<ActiveInterviewSessionDto> tryReturnExisting(String idempotencyKeyHash, String requestHash) {
+        Optional<InterviewSessionRepository.IdempotencyLookup> found =
+                sessionRepository.findByIdempotencyKeyHash(idempotencyKeyHash);
+        if (found.isEmpty()) {
+            // A brand-new key, never a replay — NOT rate-limited or counted
+            // against any cap. Only an ACTUAL replay (found below) consumes
+            // either.
+            return Optional.empty();
+        }
+        InterviewSessionRepository.IdempotencyLookup lookup = found.get();
+        if (!lookup.requestHash().equals(requestHash)) {
+            throw new SessionServiceException(SessionServiceException.Code.CONFLICT,
+                    "This idempotency key was already used for a different request");
+        }
+
+        if (now.getAsLong() - lookup.createdAt() > REPLAY_WINDOW_MS) {
+            throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST,
+                    "This request has expired. Please start a new attempt.");
+        }
+
+        TokenBucketRateLimiter.Verdict verdict = idempotencyReplayRateLimiter.tryConsume(idempotencyKeyHash);
+        if (!verdict.allowed()) {
+            throw new RateLimitedException(verdict.retryAfterSeconds());
+        }
+
+        if (sessionRepository.countExtraTokens(lookup.sessionId()) >= MAX_EXTRA_TOKENS_PER_SESSION) {
+            throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST,
+                    "This request has been retried too many times. Please start a new attempt.");
+        }
+
+        // An ADDITIONAL, independently-valid token — see
+        // InterviewSessionRepository#mintAdditionalToken's own doc comment
+        // for why this never invalidates the session's original token (or
+        // any other additional token already minted for it): whichever
+        // caller(s) resolving this same idempotency key are genuinely live,
+        // every one of their responses must keep working.
+        SessionToken.TokenPair extra = sessionRepository.mintAdditionalToken(lookup.sessionId(), now.getAsLong());
+
+        InterviewSessionSnapshot stored = sessionRepository.getSessionSnapshot(lookup.sessionId())
+                .orElseThrow(() -> new SessionServiceException(
+                        SessionServiceException.Code.INTERNAL, "Session could not be read back"));
+
+        return Optional.of(InterviewSessionDtoMapper.toActiveSessionDto(new InterviewSessionDtoMapper.ActiveSessionParams(
+                stored.session(), stored.questions(), List.of(), stored.session().createdAt(), extra.rawToken())));
+    }
+
+    /**
+     * SHA-256 hex of the client's raw idempotency key — the ONLY form ever
+     * persisted, queried by, rate-limited by, or logged (an idempotency key
+     * is credential-equivalent; see migration 007's own doc comment). Reuses
+     * {@link SessionToken#hashToken}: the algorithm is identical (SHA-256 hex
+     * of a UTF-8 string) even though this value is not a bearer token — a
+     * second, differently-named implementation of the exact same three lines
+     * would only invite the two to drift.
+     */
+    private static String hashIdempotencyKey(String rawIdempotencyKey) {
+        return SessionToken.hashToken(rawIdempotencyKey);
+    }
+
+    /** Trim/validate the client's key; blank or absent means "no idempotency requested". */
+    private String normalizeIdempotencyKey(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String trimmed = raw.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        if (trimmed.length() > MAX_IDEMPOTENCY_KEY_LENGTH) {
+            throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST,
+                    "Idempotency-Key is too long");
+        }
+        for (int i = 0; i < trimmed.length(); i++) {
+            char c = trimmed.charAt(i);
+            // Printable ASCII only — a header value can't carry control
+            // characters anyway, but this keeps the STORED value equally
+            // constrained regardless of how it arrived.
+            if (c < 0x20 || c > 0x7E) {
+                throw new SessionServiceException(SessionServiceException.Code.BAD_REQUEST,
+                        "Idempotency-Key contains an invalid character");
+            }
+        }
+        return trimmed;
+    }
+
+    /**
+     * SHA-256 hex of the VALIDATED request's meaningful fields, canonically
+     * ordered — a retry of the exact same logical attempt always sends the
+     * exact same fields, so this matches trivially; anything else is treated
+     * as a materially different request. Never includes anything server-
+     * generated (no ids, no timestamps) — only what the client itself chose.
+     */
+    // Package-private (not private) so the test suite can compute the SAME
+    // hash a real request would, to stub a matching findByIdempotencyKey
+    // lookup — the alternative (duplicating this exact algorithm inside the
+    // test) is worse: two independently-maintained copies could drift.
+    String hashRequest(Map<String, Object> validated) {
+        StringBuilder canonical = new StringBuilder();
+        canonical.append("mode=").append(validated.get("mode"));
+        canonical.append(";presetId=").append(validated.get("presetId"));
+        canonical.append(";difficulty=").append(validated.get("difficulty"));
+        Object topicIds = validated.get("topicIds");
+        canonical.append(";topicIds=");
+        if (topicIds instanceof List<?> list) {
+            canonical.append(list);
+        } else {
+            canonical.append(topicIds);
+        }
+        canonical.append(";questionCount=").append(validated.get("questionCount"));
+
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(canonical.toString().getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(hash.length * 2);
+            for (byte b : hash) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 must be available", e);
+        }
     }
 
     public ActiveInterviewSessionDto resumeSession(String sessionId, String rawToken) {
@@ -345,16 +585,30 @@ public class InterviewSessionService {
         return bool;
     }
 
-    /** Verify the bearer token. Throws the SAME generic error for every failure. */
+    /**
+     * Verify the bearer token. Throws the SAME generic error for every
+     * failure. Checks the session's PRIMARY token first (the common case —
+     * every session has exactly one caller using its one and only token, so
+     * this is the only query that case ever pays), falling back to any
+     * ADDITIONAL token {@link InterviewSessionRepository#mintAdditionalToken}
+     * issued for an idempotent-retry/concurrent-race response — see its own
+     * doc comment for why more than one token can be valid for a session at
+     * once.
+     */
     private void authenticate(String sessionId, String rawToken) {
         if (rawToken == null) {
             throw SessionServiceException.unauthorized();
         }
         SessionAuthenticationRecord auth = sessionRepository.getSessionAuthenticationRecord(sessionId)
                 .orElseThrow(SessionServiceException::unauthorized);
-        if (!SessionToken.tokenMatches(rawToken, auth.tokenHash())) {
-            throw SessionServiceException.unauthorized();
+        if (SessionToken.tokenMatches(rawToken, auth.tokenHash())) {
+            return;
         }
+        if (SessionToken.isWellFormedToken(rawToken)
+                && sessionRepository.hasExtraToken(sessionId, SessionToken.hashToken(rawToken))) {
+            return;
+        }
+        throw SessionServiceException.unauthorized();
     }
 
     private Map<String, Object> validateRequest(Map<String, Object> request) {
@@ -455,15 +709,24 @@ public class InterviewSessionService {
      * again.
      */
     private SessionToken.SessionIdentity persistWithIdentityRetry(
-            GeneratedInterviewSnapshot snapshot, long createdAt, long expiresAt) {
+            GeneratedInterviewSnapshot snapshot, long createdAt, long expiresAt,
+            String idempotencyKeyHash, String idempotencyRequestHash) {
         for (int attempt = 1; attempt <= MAX_IDENTITY_ATTEMPTS; attempt++) {
             SessionToken.SessionIdentity identity = SessionToken.generateSessionIdentity();
-            CreateSessionInput input = toCreateInput(snapshot, identity, createdAt, expiresAt);
+            CreateSessionInput input = toCreateInput(snapshot, identity, createdAt, expiresAt,
+                    idempotencyKeyHash, idempotencyRequestHash);
 
             try {
                 sessionRepository.createSessionSnapshot(input);
                 return identity;
             } catch (SessionRepositoryException e) {
+                if (e.getCategory() == SessionRepositoryException.Category.IDEMPOTENCY_KEY_RACE) {
+                    // Not a session/attempt id collision — a concurrent racer
+                    // already won under this exact key. Retrying with a new
+                    // random identity would never resolve that; the caller
+                    // must read back the winner instead.
+                    throw new IdempotencyKeyRaceException();
+                }
                 boolean collided = e.getCategory() == SessionRepositoryException.Category.CONSTRAINT
                         && e.getMessage() != null && e.getMessage().toLowerCase(java.util.Locale.ROOT).contains("uniqueness");
                 if (!collided || attempt == MAX_IDENTITY_ATTEMPTS) {
@@ -476,13 +739,15 @@ public class InterviewSessionService {
     }
 
     private CreateSessionInput toCreateInput(GeneratedInterviewSnapshot snapshot,
-            SessionToken.SessionIdentity identity, long createdAt, long expiresAt) {
+            SessionToken.SessionIdentity identity, long createdAt, long expiresAt,
+            String idempotencyKeyHash, String idempotencyRequestHash) {
         InterviewBuildConfig cfg = snapshot.config();
         InterviewSessionConfig config = new InterviewSessionConfig(
                 cfg.difficulty(), cfg.topicIds(), cfg.questionCount(), cfg.presetId(), cfg.presetName());
 
         return new CreateSessionInput(
                 identity.sessionId(), identity.tokenHash(), identity.attemptId(),
-                config, snapshot.durationSeconds(), createdAt, expiresAt, snapshot.questions());
+                config, snapshot.durationSeconds(), createdAt, expiresAt, snapshot.questions(),
+                idempotencyKeyHash, idempotencyRequestHash);
     }
 }

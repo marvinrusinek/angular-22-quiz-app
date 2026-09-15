@@ -18,6 +18,15 @@ public record CreateSessionInput(
         int durationSeconds,
         long createdAt,
         long expiresAt,
-        List<GeneratedQuestionSnapshot> questions
+        List<GeneratedQuestionSnapshot> questions,
+        /**
+         * SHA-256 hex of the client-generated request-idempotency key
+         * (never the raw key — an idempotency key is credential-equivalent,
+         * see migration 007's own doc comment), or null when the caller
+         * sent none.
+         */
+        String idempotencyKeyHash,
+        /** SHA-256 hex of the validated creation request; non-null iff idempotencyKeyHash is. */
+        String idempotencyRequestHash
 ) {
 }

@@ -60,7 +60,7 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 
 <h2>✨ Core Features</h2>
 
-<p><strong>Topic Quizzes</strong> — Single- and multiple-answer questions, timers, shuffling, immediate feedback, explanations, and detailed review.</p>
+<p><strong>Topic Quizzes</strong> — Single- and multiple-answer questions, code-snippet questions, timers, shuffling, immediate feedback, explanations, and detailed review.</p>
 <p><strong>Interview Mode</strong> — Configurable mixed-topic assessments with difficulty-based presets, timed sessions, deferred feedback, session persistence, and backend scoring.</p>
 <p><strong>Interview Analytics</strong> — Results, history, performance trends, and topic-level performance.</p>
 <p><strong>Weak Areas Practice</strong> — Analyzes previous quiz performance to identify weaker topics and generate targeted practice opportunities.</p>

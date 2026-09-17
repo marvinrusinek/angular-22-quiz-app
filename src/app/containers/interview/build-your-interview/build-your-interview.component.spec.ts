@@ -110,7 +110,8 @@ describe('BuildYourInterviewComponent', () => {
           provide: InterviewApiService,
           useValue: {
             getQuizMetadata: () => of(toMetadata(CATALOG)),
-            createSession: jest.fn(() => of(CREATED))
+            createSession: jest.fn(() => of(CREATED)),
+            warmUp: jest.fn(() => of(undefined))
           }
         },
         { provide: Router, useValue: router },
@@ -470,12 +471,47 @@ describe('BuildYourInterviewComponent', () => {
   });
 
   /**
-   * The automatic retry is bounded to exactly ONE extra attempt — a second
-   * cold-start failure must NOT trigger a third POST. The UI settles into
-   * the same final state the pre-automatic-retry design used for a single
-   * failure: spinner cleared, manual Retry offered, nothing navigated.
+   * The SECOND automatic retry — the specific gap production evidence
+   * exposed: a real cold Render/Neon stack exceeded the prior single-retry
+   * design's combined 120s budget, then the VERY NEXT request (Spring now
+   * warm) succeeded in ~4s. This proves that "very next request" is now
+   * folded into the SAME one-click attempt as a bounded third try.
    */
-  it('two consecutive HTTP 504s: exactly two automatic POSTs total, then the spinner clears and manual Retry is offered', async () => {
+  it('first two attempts time out/504, retry 2 succeeds — exactly three POSTs, identical body/key, no second user click, one navigation', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    const createSpy = jest.spyOn(api, 'createSession')
+      .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
+      .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
+      .mockReturnValueOnce(of(CREATED));
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    await component.startInterview(); // the ONLY call — no retryInterview() anywhere in this test
+
+    expect(createSpy).toHaveBeenCalledTimes(3);
+    const [bodies, keys] = [createSpy.mock.calls.map((c) => c[0]), createSpy.mock.calls.map((c) => c[1])];
+    expect(keys[0]).toMatch(UUID_RE);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).toBe(keys[0]);
+    expect(bodies[1]).toEqual(bodies[0]);
+    expect(bodies[2]).toEqual(bodies[0]);
+
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/interview/session', 'is_test_1']);
+    expect(component.createError()).toBeNull();
+    expect(component.createRetryable()).toBe(false);
+  });
+
+  /**
+   * The automatic sequence is bounded to exactly THREE total attempts (the
+   * initial request plus two automatic retries) — a fourth cold-start
+   * failure must NOT trigger a fourth automatic POST. The UI settles into
+   * the safe final state: spinner cleared, manual Retry offered, nothing
+   * navigated.
+   */
+  it('all three attempts fail: exactly three POSTs, spinner clears, manual Retry appears, no navigation', async () => {
     const api = TestBed.inject(InterviewApiService);
     const createSpy = jest.spyOn(api, 'createSession').mockReturnValue(
       throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504))
@@ -487,21 +523,22 @@ describe('BuildYourInterviewComponent', () => {
 
     await component.startInterview();
 
-    expect(createSpy).toHaveBeenCalledTimes(2); // the automatic retry, and NO third attempt
+    expect(createSpy).toHaveBeenCalledTimes(3); // the two automatic retries, and NO fourth attempt
     expect(component.isCreating()).toBe(false);
     expect(component.createError()).toContain('still waking up');
     expect(component.createRetryable()).toBe(true); // manual Retry now offered
     expect(router.navigate).not.toHaveBeenCalled();
 
-    const [, firstKey] = createSpy.mock.calls[0];
-    const [, secondKey] = createSpy.mock.calls[1];
-    expect(secondKey).toBe(firstKey);
+    const keys = createSpy.mock.calls.map((c) => c[1]);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).toBe(keys[0]);
   });
 
-  /** Manual Retry, invoked only after BOTH automatic attempts already failed, still reuses the exact same key/request — and itself makes no further automatic attempt. */
-  it('manual Retry after both automatic attempts fail reuses the same key/request and does not itself chain another automatic retry', async () => {
+  /** Manual Retry, invoked only after ALL THREE attempts already failed, still reuses the exact same key/request — and itself makes no further automatic attempt (one manual request per click). */
+  it('manual Retry after all three attempts fail reuses the same key/request and does not itself chain another automatic retry', async () => {
     const api = TestBed.inject(InterviewApiService);
     const createSpy = jest.spyOn(api, 'createSession')
+      .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
       .mockReturnValueOnce(of(CREATED));
@@ -511,14 +548,14 @@ describe('BuildYourInterviewComponent', () => {
     component.toggleTopic('templates', true);
 
     await component.startInterview();
-    expect(createSpy).toHaveBeenCalledTimes(2);
+    expect(createSpy).toHaveBeenCalledTimes(3);
     const originalKey = createSpy.mock.calls[0][1];
     const originalBody = createSpy.mock.calls[0][0];
 
     await component.retryInterview();
-    expect(createSpy).toHaveBeenCalledTimes(3); // exactly one more call — retryInterview() never auto-chains
-    expect(createSpy.mock.calls[2][1]).toBe(originalKey);
-    expect(createSpy.mock.calls[2][0]).toEqual(originalBody);
+    expect(createSpy).toHaveBeenCalledTimes(4); // exactly one more call — retryInterview() never auto-chains
+    expect(createSpy.mock.calls[3][1]).toBe(originalKey);
+    expect(createSpy.mock.calls[3][0]).toEqual(originalBody);
     expect(router.navigate).toHaveBeenCalledWith(['/interview/session', 'is_test_1']);
   });
 
@@ -588,8 +625,8 @@ describe('BuildYourInterviewComponent', () => {
     expect(router.navigate).toHaveBeenCalledTimes(1);
   });
 
-  /** Destruction in the GAP between the first failure and the automatic retry's own request must prevent that retry from ever firing. */
-  it('destroying the component before the automatic retry fires prevents that retry entirely', async () => {
+  /** Destruction in the GAP between the first failure and retry 1's own request must prevent retry 1 (and therefore retry 2) from ever firing. */
+  it('destroying the component before retry 1 fires prevents any further retry', async () => {
     const api = TestBed.inject(InterviewApiService);
     let rejectFirst!: (err: unknown) => void;
     const createSpy = jest.spyOn(api, 'createSession')
@@ -609,7 +646,57 @@ describe('BuildYourInterviewComponent', () => {
     rejectFirst(new InterviewApiError('BACKEND_UNAVAILABLE', 504));
     await started;
 
-    expect(createSpy).toHaveBeenCalledTimes(1); // the automatic retry never fired
+    expect(createSpy).toHaveBeenCalledTimes(1); // retry 1 never fired
+  });
+
+  /** Destruction in the GAP between retry 1's failure and retry 2's own request must prevent retry 2 specifically — retry 1 already having fired is unaffected. */
+  it('destroying the component between retry 1 and retry 2 prevents retry 2', async () => {
+    const api = TestBed.inject(InterviewApiService);
+    let rejectSecond!: (err: unknown) => void;
+    const createSpy = jest.spyOn(api, 'createSession')
+      .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504))) // attempt 1 fails immediately
+      .mockReturnValueOnce(new Observable((subscriber) => {
+        rejectSecond = (err) => subscriber.error(err); // retry 1 — held open until we control it
+      }));
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    const started = component.startInterview();
+    // Let attempt 1 reject and retry 1's own request actually start.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(createSpy).toHaveBeenCalledTimes(2); // attempt 1 + retry 1, both already fired
+
+    fixture.destroy(); // destroyed WHILE retry 1 is still in flight, before it has failed
+    rejectSecond(new InterviewApiError('BACKEND_UNAVAILABLE', 504));
+    await started;
+
+    expect(createSpy).toHaveBeenCalledTimes(2); // retry 2 never fired
+  });
+
+  /**
+   * Navigation must never depend on a `visibilitychange` event — the tab
+   * stays foregrounded/visible for the entire flow in real usage, and this
+   * proves the component never even LISTENS for that event, let alone
+   * requires it to fire before routing.
+   */
+  it('navigates without any visibilitychange listener ever being registered', async () => {
+    const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
+    const api = TestBed.inject(InterviewApiService);
+    jest.spyOn(api, 'createSession').mockReturnValue(of(CREATED));
+
+    setDifficulty('beginner');
+    component.toggleTopic('ts', true);
+    component.toggleTopic('templates', true);
+
+    await component.startInterview();
+
+    expect(router.navigate).toHaveBeenCalledWith(['/interview/session', 'is_test_1']);
+    const visibilityListenerCalls = addEventListenerSpy.mock.calls.filter((c) => c[0] === 'visibilitychange');
+    expect(visibilityListenerCalls).toHaveLength(0);
+    addEventListenerSpy.mockRestore();
   });
 
   it('no sensitive value (idempotency key, token, Authorization header text) ever appears in the rendered error message', async () => {
@@ -721,6 +808,124 @@ describe('BuildYourInterviewComponent', () => {
 });
 
 /**
+ * Spring warm-up (Phase 2): a REAL {@link InterviewApiService} and REAL
+ * HttpClient (via HttpTestingController) — unlike the main describe block
+ * above, which mocks InterviewApiService entirely — so these tests can
+ * observe the ACTUAL HTTP requests this component fires on init: one to
+ * Node (topic metadata) and one to Spring (the warm-up ping), independently
+ * and via their real distinct base URLs.
+ */
+describe('BuildYourInterviewComponent — Spring warm-up (Phase 2)', () => {
+  let fixture: ComponentFixture<BuildYourInterviewComponent>;
+  let httpMock: HttpTestingController;
+
+  beforeEach(async () => {
+    setQuizDataCache(CATALOG, []);
+    await TestBed.configureTestingModule({
+      imports: [BuildYourInterviewComponent],
+      providers: [
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } },
+        { provide: QuizStartSpinnerService, useValue: { showForStart: jest.fn() } },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'http://node.test/api' },
+        { provide: INTERVIEW_API_BASE_URL, useValue: 'http://spring.test/api' }
+      ]
+    }).compileComponents();
+
+    httpMock = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(BuildYourInterviewComponent);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+    setQuizDataCache([], []);
+  });
+
+  it('sends at most one Spring health warm-up per Builder lifecycle', () => {
+    fixture.detectChanges(); // ngOnInit
+
+    const healthReqs = httpMock.match((req) => req.url === 'http://spring.test/api/health');
+    expect(healthReqs).toHaveLength(1);
+    expect(healthReqs[0].request.method).toBe('GET');
+    healthReqs[0].flush({ status: 'UP' });
+
+    // Node's own topic-metadata request is unrelated — flush it too so
+    // httpMock.verify() in afterEach doesn't fail on an outstanding request.
+    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+  });
+
+  it('fires the warm-up independently of Node metadata loading — both are outstanding at once, neither gates the other', () => {
+    fixture.detectChanges();
+
+    // Both requests exist SIMULTANEOUSLY, before either has been flushed —
+    // proof neither is sequenced behind the other.
+    const healthReq = httpMock.expectOne((req) => req.url === 'http://spring.test/api/health');
+    const metadataReq = httpMock.expectOne((req) => req.url === 'http://node.test/api/quizzes');
+
+    // Resolve Node's FIRST — the warm-up must not have been required for it to proceed.
+    metadataReq.flush({ quizzes: [] });
+    expect(fixture.componentInstance.catalogUnavailable()).toBe(false); // empty, not unavailable — no assertion needed beyond "didn't throw"
+
+    // The warm-up can resolve (or fail) afterward with no effect on anything already rendered.
+    healthReq.flush({ status: 'UP' });
+  });
+
+  it('a warm-up failure never blocks anything or displays an error', () => {
+    fixture.detectChanges();
+
+    const healthReq = httpMock.expectOne((req) => req.url === 'http://spring.test/api/health');
+    healthReq.error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' });
+
+    // Nothing observable changed — no error signal exists for warm-up at
+    // all, and the rest of the component is unaffected.
+    expect(fixture.componentInstance.createError()).toBeNull();
+
+    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+  });
+
+  it('destroying the component before the warm-up resolves is safe (no error, no leak)', () => {
+    fixture.detectChanges();
+    const healthReq = httpMock.expectOne((req) => req.url === 'http://spring.test/api/health');
+
+    // takeUntilDestroyed unsubscribes on destroy, which HttpClient propagates
+    // into actually CANCELLING the in-flight request — the strongest possible
+    // form of "safe": nothing is left running at all, let alone able to throw
+    // or observably affect the (now gone) component afterward.
+    expect(() => fixture.destroy()).not.toThrow();
+    expect(healthReq.cancelled).toBe(true);
+
+    // Node's own metadata request is unrelated to the warm-up and was never
+    // subject to takeUntilDestroyed here, so it must NOT be cancelled by the
+    // same destroy.
+    const metadataReq = httpMock.expectOne((req) => req.url === 'http://node.test/api/quizzes');
+    expect(metadataReq.cancelled).toBe(false);
+    metadataReq.flush({ quizzes: [] }); // satisfy httpMock.verify() in afterEach
+  });
+
+  it('the warm-up never goes to Node', () => {
+    fixture.detectChanges();
+    const nodeHealthAttempts = httpMock.match((req) => req.url === 'http://node.test/api/health');
+    expect(nodeHealthAttempts).toHaveLength(0);
+
+    httpMock.expectOne((req) => req.url === 'http://spring.test/api/health').flush({ status: 'UP' });
+    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+  });
+
+  it('the warm-up carries no Authorization header, no idempotency key, and no body', () => {
+    fixture.detectChanges();
+    const healthReq = httpMock.expectOne((req) => req.url === 'http://spring.test/api/health');
+
+    expect(healthReq.request.headers.has('Authorization')).toBe(false);
+    expect(healthReq.request.headers.has('Idempotency-Key')).toBe(false);
+    expect(healthReq.request.body).toBeNull();
+
+    healthReq.flush({ status: 'UP' });
+    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+  });
+});
+
+/**
  * Concurrency/lifecycle audit: BuildYourInterviewComponent had NO destroy-time
  * cleanup at all for the spinner it shows. If the user navigated away (or the
  * component was otherwise destroyed) while startInterview()'s async flow was
@@ -755,7 +960,8 @@ describe('BuildYourInterviewComponent — spinner cleanup on destroy (concurrenc
           provide: InterviewApiService,
           useValue: {
             getQuizMetadata: () => of(toMetadata(CATALOG)),
-            createSession: jest.fn(() => of(CREATED)) // resolves immediately
+            createSession: jest.fn(() => of(CREATED)), // resolves immediately
+            warmUp: jest.fn(() => of(undefined))
           }
         },
         {
@@ -924,6 +1130,14 @@ describe('BuildYourInterviewComponent — production with NO configured API orig
   function flushEmptyCatalog(http: HttpTestingController): void {
     http.expectOne((r) => r.url.endsWith('/quizzes')).flush({ quizzes: [] });
   }
+
+  it('skips the Spring warm-up safely when Interview API configuration is unavailable', () => {
+    const http = TestBed.inject(HttpTestingController);
+    // No request to any /health path — the guard in warmUpSpring() returns
+    // before InterviewApiService.warmUp() is ever called.
+    http.expectNone((req) => req.url.includes('/health'));
+    http.match((req) => req.url.endsWith('/quizzes')).forEach((r) => r.flush({ quizzes: [] }));
+  });
 
   it('RENDERS — the page must not die because the API is unconfigured', () => {
     const el = fixture.nativeElement as HTMLElement;

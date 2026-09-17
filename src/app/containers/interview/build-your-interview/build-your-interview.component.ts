@@ -9,6 +9,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstValueFrom, TimeoutError } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 import { form, minLength, required, requiredError, validate } from '@angular/forms/signals';
@@ -209,16 +210,35 @@ export class BuildYourInterviewComponent implements OnInit {
   private static readonly COLD_START_MESSAGE = $localize`The interview service is still waking up. Please try again.`;
 
   /**
-   * Shown ONLY during the brief window between the first attempt's
-   * cold-start-retryable failure and the automatic second attempt's own
-   * settling — see {@link createWithOneAutomaticRetry}. Deliberately never
-   * paired with {@code createRetryable() === true}: a manual Retry button
-   * has no place while an automatic recovery of the SAME logical attempt is
-   * already in flight. Distinct wording from {@link COLD_START_MESSAGE} so
-   * the two states ("still recovering on your behalf" vs. "recovery failed,
-   * your move") never read as identical to the user.
+   * Shown during the brief window between one attempt's cold-start-retryable
+   * failure and the NEXT automatic attempt's own settling — see {@link
+   * createWithAutomaticRetries}. Deliberately never paired with {@code
+   * createRetryable() === true}: a manual Retry button has no place while an
+   * automatic recovery of the SAME logical attempt is already in flight.
+   * Distinct wording from {@link COLD_START_MESSAGE} so the two states
+   * ("still recovering on your behalf" vs. "recovery failed, your move")
+   * never read as identical to the user. Reused unchanged for BOTH automatic
+   * retries — the user does not need an attempt counter, only to know
+   * recovery is still in progress.
    */
   private static readonly COLD_START_RETRYING_MESSAGE = $localize`The interview service is still waking up. Retrying…`;
+
+  /**
+   * Total create attempts a fresh Start Assessment click may make: the
+   * initial request plus up to TWO automatic retries. Chosen from the
+   * production evidence this task's own diagnosis is built on — a real
+   * Render/Neon cold start observed on {@code interview-api-spring
+   * .onrender.com} exceeded the PRIOR single-automatic-retry design's
+   * combined 120s budget (two consecutive 60s client-side timeouts), while
+   * the very next request afterward (Spring now warm) succeeded in ~4s. A
+   * third bounded attempt closes exactly that observed gap without becoming
+   * an open-ended retry loop — MAX_CREATE_ATTEMPTS is a fixed compile-time
+   * constant, never a counter that can be pushed higher at runtime. A
+   * MANUAL retryInterview() always uses exactly 1 (see
+   * {@link createWithAutomaticRetries}'s own `allowAutomaticRetry` handling),
+   * never chaining a further automatic sequence on top of itself.
+   */
+  private static readonly MAX_CREATE_ATTEMPTS = 3;
 
   /** True while the backend session is being created and navigation is pending. */
   readonly isCreating = this._isCreating.asReadonly();
@@ -237,12 +257,12 @@ export class BuildYourInterviewComponent implements OnInit {
 
   /**
    * Set once, in {@link DestroyRef#onDestroy}. Checked immediately before
-   * {@link createWithOneAutomaticRetry} fires its OWN (second) request, so a
-   * component destroyed in the gap between the first attempt's failure and
-   * the automatic retry starting never sends that retry at all — "cancel any
-   * pending retry" for a retry that has no timer/subscription of its own to
-   * unsubscribe (it is a plain awaited `fetch`, not an RxJS stream held
-   * open). Never reset — a destroyed component is never reused.
+   * {@link createWithAutomaticRetries} fires EITHER of its automatic
+   * retries, so a component destroyed in the gap between one attempt's
+   * failure and the NEXT one starting never sends that next attempt at all
+   * — "cancel any pending retry" for a retry that has no timer/subscription
+   * of its own to unsubscribe (it is a plain awaited `fetch`, not an RxJS
+   * stream held open). Never reset — a destroyed component is never reused.
    */
   private destroyed = false;
 
@@ -417,12 +437,30 @@ export class BuildYourInterviewComponent implements OnInit {
     return !capacity || capacity.usable < capacity.required;
   });
 
+  /**
+   * BUG FIXED HERE: while the catalog is still loading, every topic's
+   * question count reads as 0 (nothing has arrived yet), which made this
+   * computed report "Only 0 of the 25 questions this preset needs are
+   * available" for the ENTIRE cold-start window (measured ~12s on the
+   * Render free tier — see InterviewCatalogService's own doc comment) even
+   * though capacity is simply UNKNOWN, not actually insufficient. Returning
+   * '' while loading — the template shows a neutral "Checking topic
+   * availability…" message instead (see presetCapacityUnknown below) — is
+   * exactly the "avoid rendering ... as though loading were complete" fix:
+   * the Start button correctly stays disabled the whole time regardless
+   * (see presetStartDisabled, unaffected by this), only the MISLEADING
+   * error text is suppressed until capacity is actually knowable.
+   */
   readonly presetInvalidReason = computed(() => {
+    if (this.catalog.loading()) return '';
     const capacity = this.presetCapacity();
     if (!capacity || capacity.usable >= capacity.required) return '';
     return `Only ${capacity.usable} of the ${capacity.required} questions this preset needs are available. ` +
       'Choose another preset or build a Custom interview.';
   });
+
+  /** True while a preset is selected but its real capacity cannot be known yet — see presetInvalidReason's own doc comment. */
+  readonly presetCapacityUnknown = computed(() => this.selectedPreset() !== undefined && this.catalog.loading());
 
   /**
    * Whether the Start button is disabled, for WHICHEVER mode is active. The
@@ -504,6 +542,30 @@ export class BuildYourInterviewComponent implements OnInit {
     // saying it is unreachable.
     void this.catalog.load();
     this.restorePendingCreateIfAny();
+    this.warmUpSpring();
+  }
+
+  /**
+   * Best-effort, NON-BLOCKING Spring wake-up — fired at most ONCE per
+   * Builder lifecycle, entirely in PARALLEL with the catalog load above:
+   * neither awaits nor gates the other, and this one is never surfaced to
+   * the user in any way (no loading flag, no error text, no effect on
+   * `startDisabled()`/`presetStartDisabled()`). Its only purpose is to give
+   * Spring's free-tier container a head start before the user's eventual
+   * Start Assessment click — see InterviewApiService#warmUp's own doc
+   * comment for why this proves nothing about Neon/PostgreSQL readiness,
+   * and docs/spring-production-runbook.md for the full picture (Node,
+   * Spring and Neon can each independently be cold).
+   *
+   * `takeUntilDestroyed` unsubscribes on destroy — a component destroyed
+   * before this resolves neither leaks the subscription nor does anything
+   * observable once torn down (the empty `subscribe()` has no next/error/
+   * complete handler to run late). No poll, no interval, no keep-alive: one
+   * GET, once, ever, per component instance.
+   */
+  private warmUpSpring(): void {
+    if (!isInterviewApiConfigured()) return;
+    this.api.warmUp().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
 
   /**
@@ -705,7 +767,7 @@ export class BuildYourInterviewComponent implements OnInit {
     let spinnerHandle: QuizStartSpinnerHandle | null = null;
 
     try {
-      const created = await this.createWithOneAutomaticRetry(request, idempotencyKey, allowAutomaticRetry);
+      const created = await this.createWithAutomaticRetries(request, idempotencyKey, allowAutomaticRetry);
 
       // This attempt is now resolved — nothing left to retry. Explicit even
       // though navigation (below) will normally unmount this component
@@ -783,41 +845,66 @@ export class BuildYourInterviewComponent implements OnInit {
   /**
    * Sends the create request and, ONLY when `allowAutomaticRetry` is true
    * (a fresh Start Assessment click — never a manual retryInterview()),
-   * automatically sends exactly ONE more attempt with the EXACT SAME
-   * idempotency key and request if the first attempt fails with a
-   * cold-start-retryable signal. Never recursive and contains no loop: at
-   * most two `sendCreateRequest` calls can ever happen per invocation of
-   * this method, a bound visible directly in its control flow rather than
-   * enforced by a counter.
+   * automatically sends up to {@link MAX_CREATE_ATTEMPTS} total attempts
+   * (currently 3: the initial request plus two automatic retries) with the
+   * EXACT SAME idempotency key and request, as long as each failure is a
+   * cold-start-retryable signal. Never recursive (never calls
+   * `startInterview()` or itself) and BOUNDED by a fixed loop over a fixed
+   * constant — not an unbounded/open-ended retry loop: the iteration count
+   * is capped at compile time, and every iteration that isn't the last
+   * either returns a success or rethrows immediately on a non-retryable or
+   * final-attempt failure.
    *
-   * Deliberately narrow about WHAT triggers the automatic retry — only a
+   * Deliberately narrow about WHAT triggers an automatic retry — only a
    * client-side {@link TimeoutError} or a genuine HTTP 504, the two
    * confirmed cold-start signals (see {@link isColdStartRetryable}) — not
    * every {@code retryable} InterviewApiError (BACKEND_UNAVAILABLE/UNKNOWN
    * also cover a plain network drop or an unrelated 500, neither of which
    * this task's evidence supports auto-retrying).
    */
-  private async createWithOneAutomaticRetry(
+  private async createWithAutomaticRetries(
     request: CreateInterviewSessionRequest,
     idempotencyKey: string,
     allowAutomaticRetry: boolean
   ): Promise<CreatedInterviewSession> {
-    try {
-      return await this.sendCreateRequest(request, idempotencyKey);
-    } catch (firstAttemptError: unknown) {
-      if (!allowAutomaticRetry || this.destroyed || !this.isColdStartRetryable(firstAttemptError)) {
-        throw firstAttemptError;
+    const maxAttempts = allowAutomaticRetry ? BuildYourInterviewComponent.MAX_CREATE_ATTEMPTS : 1;
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (attempt > 1) {
+        // A component destroyed in the gap between the previous attempt's
+        // failure and this one starting must never have this retry fire —
+        // "cancel any pending retry" for a retry that has no
+        // timer/subscription of its own to unsubscribe (it is a plain
+        // awaited fetch, not an RxJS stream held open).
+        if (this.destroyed) throw lastError;
+        // A DISTINCT message from COLD_START_MESSAGE, and deliberately
+        // WITHOUT createRetryable(true) — a manual Retry button has no
+        // place while an automatic recovery of this SAME logical attempt is
+        // already in flight. this.creating is already true (set by the
+        // caller before this method was ever invoked), so a duplicate click
+        // during this window is still rejected the same way it would be
+        // during the first attempt.
+        this._createError.set(BuildYourInterviewComponent.COLD_START_RETRYING_MESSAGE);
       }
-      // A DISTINCT message from COLD_START_MESSAGE, and deliberately WITHOUT
-      // createRetryable(true) — a manual Retry button has no place while an
-      // automatic recovery of this SAME logical attempt is already in
-      // flight. this.creating is already true (set by the caller before
-      // this method was ever invoked), so a duplicate click during this
-      // window is still rejected the same way it would be during the first
-      // attempt.
-      this._createError.set(BuildYourInterviewComponent.COLD_START_RETRYING_MESSAGE);
-      return await this.sendCreateRequest(request, idempotencyKey);
+
+      try {
+        return await this.sendCreateRequest(request, idempotencyKey);
+      } catch (err: unknown) {
+        lastError = err;
+        if (attempt === maxAttempts || !this.isColdStartRetryable(err)) {
+          throw err;
+        }
+        // else: fall through to the next iteration, one more bounded attempt.
+      }
     }
+    // Unreachable — the loop above always either returns or throws on its
+    // LAST iteration — but TypeScript's control-flow analysis cannot see
+    // that through a `for` loop, so this satisfies "all code paths must
+    // return a value" without changing behavior. `lastError` is always
+    // assigned by the time this line could execute (only reachable after at
+    // least one failed iteration).
+    throw lastError;
   }
 
   private sendCreateRequest(
@@ -829,7 +916,7 @@ export class BuildYourInterviewComponent implements OnInit {
     );
   }
 
-  /** The two CONFIRMED cold-start signals — see createWithOneAutomaticRetry's own doc comment for why this stays narrow. */
+  /** The two CONFIRMED cold-start signals — see createWithAutomaticRetries's own doc comment for why this stays narrow. */
   private isColdStartRetryable(err: unknown): boolean {
     return err instanceof TimeoutError || (err instanceof InterviewApiError && err.status === 504);
   }

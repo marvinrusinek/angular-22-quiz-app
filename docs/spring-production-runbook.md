@@ -338,6 +338,70 @@ connection timeout, or an empty body is the first sign of an issue — see §8.
   This applies to Node for Topic Quiz cold starts and to Spring for
   Interview Mode cold starts independently.
 
+### Interview creation's bounded automatic-retry recovery (verified 2026-09-15/16)
+
+Client-side commits `e10e1499` (idempotency/replay) and `90414f68` (one
+automatic retry) proved insufficient against a genuinely cold Render/Neon
+stack, and a further fix (this task) extended the design and added a
+Builder-side warm-up. The facts below are what was directly observed —
+**observations, not an SLA**, and Render's own free-tier behavior can vary
+run to run.
+
+- **Render free-tier Spring instances can sleep**, and **Node and Spring
+  wake independently of each other** — one being warm says nothing about
+  the other. **Neon's own database compute can ALSO require a separate
+  wake** even once its container is warm (see the 10.2s–13.1s Neon-only
+  figure above) — three independent things that can each be cold at once,
+  not one.
+- **`/api/health` wakes the CONTAINER; it proves nothing about PostgreSQL
+  connectivity** — this was already true of Spring's readiness endpoint
+  (§4 above) and is equally true of a plain `/api/health` ping used as a
+  warm-up. A 200 from `/api/health` is evidence the process is answering
+  HTTP, never evidence the database is reachable.
+- **The Interview Builder now fires one best-effort `/api/health` ping to
+  Spring on open**, in parallel with Node's own topic-metadata load,
+  purely to give Spring's container a head start before the user's
+  eventual Start Assessment click. It is NOT a readiness guarantee: it
+  never blocks rendering, never gates form validity or the Start button,
+  never surfaces a failure, is sent at most once per Builder page life,
+  and is cancelled (via the request's own subscription teardown) if the
+  Builder is left before it resolves. Whether it measurably shortens the
+  FIRST real cold-start request has not been isolated from ordinary
+  variance in Render's own boot time — treat it as a plausible small
+  head start, not a proven fix in its own right.
+- **A real production observation, 2026-09-15**: after an overnight idle,
+  one click on Start Assessment produced a POST that reached Spring's own
+  60-second client-side timeout, an automatic same-key retry that ALSO
+  reached that 60-second timeout (120s combined — worse than this
+  document's own previously-measured ~125s extreme, which was for a bare
+  health check, not a full session-creation write), after which the UI
+  correctly fell back to its safe final state (spinner cleared, manual
+  Retry offered, zero stuck/contradictory state, zero requests to Node).
+  The VERY NEXT request — Spring now warm from those two attempts —
+  succeeded in **~4 seconds**. That specific gap (a real cold start
+  exceeding a two-attempt budget, immediately followed by a fast warm
+  response) is what motivated extending the design to **three total
+  attempts** (the initial request plus two automatic retries, still one
+  logical attempt, one idempotency key, one immutable request) — closing
+  exactly the observed gap without turning the retry into an open-ended
+  loop.
+- **A final manual Retry state always remains** after all bounded
+  automatic attempts fail. No networked application — this one included —
+  can guarantee success during a genuine, extended provider outage; the
+  bounded automatic sequence exists to absorb the OBSERVED ordinary
+  cold-start range, not to eliminate every possible failure mode.
+- **Do not add periodic keep-alive traffic** (a cron hitting `/api/health`
+  every N minutes to prevent the free tier from ever sleeping) as a "fix"
+  for any of the above. It works against Render's own free-tier billing
+  model, does not address Neon's independent wake cost, and papers over
+  the cold-start path this document's own verification checklist (§5)
+  and the one-click recovery design both depend on actually being
+  exercised and correct. **The only fully reliable way to eliminate
+  container spin-down is an always-on (paid) Render plan** — the
+  free-tier design in this codebase is built to recover from the
+  OBSERVED cold-start range without a second user click, not to make
+  cold starts stop happening.
+
 ---
 
 ## 5. Production verification checklist

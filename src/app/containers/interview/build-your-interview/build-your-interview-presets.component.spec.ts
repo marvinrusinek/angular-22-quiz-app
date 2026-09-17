@@ -69,7 +69,15 @@ const CREATED = {
   }
 };
 
-function render(): ComponentFixture<BuildYourInterviewComponent> {
+/**
+ * `catalogLoading` lets ONE test simulate the cold-Node-metadata window
+ * (Phase 1's own diagnosed root cause) without needing a real async
+ * HttpTestingController round trip in this file's otherwise-synchronous
+ * render() helper — see the "Checking topic availability…" test below,
+ * which is the regression test for the false-negative capacity message
+ * this task's audit found.
+ */
+function render(catalogLoading = false): ComponentFixture<BuildYourInterviewComponent> {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [BuildYourInterviewComponent],
@@ -84,7 +92,7 @@ function render(): ComponentFixture<BuildYourInterviewComponent> {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: INTERVIEW_API_BASE_URL, useValue: 'http://test.local/api' },
-      { provide: InterviewApiService, useValue: { createSession } },
+      { provide: InterviewApiService, useValue: { createSession, warmUp: () => of(undefined) } },
       /**
        * Topic metadata comes from the BACKEND now. These tests are about preset
        * behaviour, not catalogue loading, so the catalogue is provided already
@@ -94,26 +102,29 @@ function render(): ComponentFixture<BuildYourInterviewComponent> {
       {
         provide: InterviewCatalogService,
         useValue: {
-          topics: () => catalogQuizzes.map(asTopic),
-          loading: signal(false),
+          // While "loading", capacity reads as zero everywhere — exactly
+          // like the real service before its first response arrives — so
+          // this single flag exercises the same code path a genuinely cold
+          // Node request would.
+          topics: () => (catalogLoading ? [] : catalogQuizzes.map(asTopic)),
+          loading: signal(catalogLoading),
           unavailable: signal(false),
           load: async () => void 0,
           reload: async () => void 0,
           topicsFor: (difficulty: string | null) => {
-            if (!difficulty) return [];
+            if (!difficulty || catalogLoading) return [];
             return catalogQuizzes
               .filter((quiz) => difficulty === 'mixed' || quiz.difficulty === difficulty)
               .map(asTopic);
           },
           availableQuestions: (ids: readonly string[]) =>
-            SYNTHETIC_CATALOG
+            catalogLoading ? 0 : SYNTHETIC_CATALOG
               .filter((quiz) => ids.includes(quiz.quizId))
               .reduce((sum, quiz) => sum + (quiz.questions?.length ?? 0), 0),
           questionsByDifficulty: (ids: readonly string[]) => {
+            const byDifficulty: Record<string, number> = { beginner: 0, intermediate: 0, advanced: 0 };
+            if (catalogLoading) return byDifficulty;
             const counted = new Set<string>();
-            const byDifficulty: Record<string, number> = {
-              beginner: 0, intermediate: 0, advanced: 0
-            };
             for (const quiz of catalogQuizzes) {
               if (!ids.includes(quiz.quizId) || counted.has(quiz.quizId)) continue;
               counted.add(quiz.quizId);
@@ -371,5 +382,29 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
     const reason = fixture.componentInstance.presetInvalidReason();
     expect(reason).toContain('25');                      // required
     expect(reason).toMatch(/Only \d+ of the 25/);        // available vs required
+  });
+
+  /**
+   * REGRESSION for the false-negative this task's Phase 1 audit found: while
+   * the catalog is still loading (a genuine cold Node request, NOT a
+   * duplicate fetch — see InterviewCatalogService's own doc comment for the
+   * measured ~12s cold-start cost), every topic's question count reads as
+   * zero, which previously made presetInvalidReason() claim "Only 0 of the
+   * 25 questions ... are available" — a capacity claim that was simply
+   * UNKNOWN, not actually insufficient. The Start button correctly stays
+   * disabled throughout regardless (capacity genuinely cannot be confirmed
+   * yet); only the MISLEADING error text is what this fix suppresses.
+   */
+  it('shows a neutral loading message instead of a false "not enough questions" error while the catalog is still loading', () => {
+    const fixture = render(/* catalogLoading */ true);
+    fixture.componentInstance.selectPreset('senior');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.presetStartDisabled()).toBe(true); // still correctly disabled — capacity unknown
+    expect(fixture.componentInstance.presetInvalidReason()).toBe(''); // NOT "Only 0 of the 25..."
+
+    const preview = fixture.nativeElement.querySelector('.preset-preview') as HTMLElement;
+    expect(text(preview)).toContain('Checking topic availability');
+    expect(text(preview)).not.toContain('Only 0');
   });
 });

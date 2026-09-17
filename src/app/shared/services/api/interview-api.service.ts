@@ -1,7 +1,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { catchError, map, type Observable } from 'rxjs';
-import { throwError } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { INTERVIEW_API_BASE_URL } from '../../tokens/api-base-url.token';
 import type {
@@ -120,6 +120,29 @@ export class InterviewApiService {
         }),
         catchError((err: unknown) => throwError(() => toInterviewApiError(err)))
       );
+  }
+
+  /**
+   * Best-effort Spring wake-up ping — {@code GET /api/health}, fired once
+   * from the Interview Builder in parallel with Node's own topic-metadata
+   * load (see {@code BuildYourInterviewComponent#warmUpSpring} for the full
+   * reasoning). NEVER errors and NEVER carries anything sensitive: no
+   * Authorization header, no idempotency key, no request body — a plain,
+   * anonymous liveness probe, exactly like any other caller of this public
+   * endpoint. A failed/slow/unreachable ping resolves to `undefined`
+   * silently, indistinguishable from one that never ran, because nothing
+   * downstream may ever treat this as a readiness signal:
+   * {@code /api/health} wakes Spring's free-tier CONTAINER but proves
+   * NOTHING about PostgreSQL/Neon connectivity (Spring's own readiness
+   * check does not verify the database either — see
+   * docs/spring-production-runbook.md).
+   */
+  warmUp(): Observable<void> {
+    if (!this.configured) return of(undefined);
+    return this.http.get(`${this.baseUrl}/health`).pipe(
+      map(() => undefined),
+      catchError(() => of(undefined))
+    );
   }
 
   resumeSession(sessionId: string, token: string): Observable<InterviewSessionViewModel> {

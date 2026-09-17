@@ -77,7 +77,11 @@
             {{ presetTopicNames().join(', ') }}
           </p>
 
-          @if (presetInvalidReason()) {
+          @if (presetCapacityUnknown()) {
+            <p class="builder-hint" role="status" aria-live="polite" i18n>
+              Checking topic availability&hellip;
+            </p>
+          } @else if (presetInvalidReason()) {
             <p class="preview-invalid" role="status" aria-live="polite">
               {{ presetInvalidReason() }}
             </p>

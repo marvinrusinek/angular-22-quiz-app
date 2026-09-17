@@ -169,6 +169,50 @@ describe('createSession', () => {
   });
 });
 
+describe('warmUp', () => {
+  it('sends a plain GET to /health on the Spring base URL, with no credentials or body', () => {
+    api.warmUp().subscribe();
+    const req = http.expectOne(`${BASE}/health`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.has('Authorization')).toBe(false);
+    expect(req.request.headers.has('Idempotency-Key')).toBe(false);
+    expect(req.request.body).toBeNull();
+    req.flush({ status: 'UP' });
+  });
+
+  it('never errors — a failed request resolves silently to undefined', (done) => {
+    api.warmUp().subscribe({
+      next: (value) => {
+        expect(value).toBeUndefined();
+        done();
+      },
+      error: () => done(new Error('warmUp() must never error'))
+    });
+    http.expectOne(`${BASE}/health`).flush('down', { status: 503, statusText: 'Service Unavailable' });
+  });
+
+  it('resolves silently to undefined when Interview API is not configured — no request at all', (done) => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: INTERVIEW_API_BASE_URL, useValue: '' },
+        { provide: TopicQuizMetadataService, useValue: { load: jest.fn(() => of([])) } },
+        InterviewApiService
+      ]
+    });
+    const unconfiguredApi = TestBed.inject(InterviewApiService);
+    const unconfiguredHttp = TestBed.inject(HttpTestingController);
+
+    unconfiguredApi.warmUp().subscribe((value) => {
+      expect(value).toBeUndefined();
+      unconfiguredHttp.expectNone(() => true);
+      done();
+    });
+  });
+});
+
 describe('session-scoped calls attach the bearer token', () => {
   it('resume', () => {
     api.resumeSession(SESSION, TOKEN).subscribe();

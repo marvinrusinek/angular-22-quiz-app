@@ -27,7 +27,6 @@
          CSS. This is a known, accepted limitation — it does not permit scripts.
 
          The remote hosts below are exactly what the app loads today:
-           fonts.googleapis.com / gstatic  → Material Icons @import (app.component.scss)
            raw.githubusercontent.com       → 9 legacy quiz tile images + result images,
                                              and the Scoreboard/Calligraphy @font-face
                                              files declared in _variables.scss
@@ -55,8 +54,8 @@
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
       script-src 'self';
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      font-src 'self' data: https://fonts.gstatic.com https://raw.githubusercontent.com;
+      style-src 'self' 'unsafe-inline';
+      font-src 'self' data: https://raw.githubusercontent.com;
       img-src 'self' data: https://raw.githubusercontent.com;
       media-src 'self' https://cdn.jsdelivr.net;
       connect-src 'self' https://cdn.jsdelivr.net https://interview-api-spring.onrender.com https://interview-api-c842.onrender.com http://localhost:8080 http://127.0.0.1:8080 http://localhost:3000 http://127.0.0.1:3000;
@@ -103,9 +102,9 @@
     <link rel="preload" href="https://cdn.jsdelivr.net/gh/marvinrusinek/angular-22-quiz-app@main/src/assets/sounds/incorrect.mp3" as="fetch" crossorigin="">
 
     <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles-FNTZW4Z3.css"></head>
+  <link rel="stylesheet" href="styles-WHFXJECO.css"></head>
   <body>
     <codelab-root></codelab-root>
     <noscript>Please enable JavaScript to continue using this application.</noscript>
-  <script src="polyfills-Q3J2IDWG.js" type="module"></script><script src="main-5X4SRCUI.js" type="module"></script></body>
+  <script src="polyfills-Q3J2IDWG.js" type="module"></script><script src="main-QLQ66YVC.js" type="module"></script></body>
 </html>

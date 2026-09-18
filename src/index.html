@@ -27,7 +27,6 @@
          CSS. This is a known, accepted limitation — it does not permit scripts.
 
          The remote hosts below are exactly what the app loads today:
-           fonts.googleapis.com / gstatic  → Material Icons @import (app.component.scss)
            raw.githubusercontent.com       → 9 legacy quiz tile images + result images,
                                              and the Scoreboard/Calligraphy @font-face
                                              files declared in _variables.scss
@@ -55,8 +54,8 @@
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
       script-src 'self';
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      font-src 'self' data: https://fonts.gstatic.com https://raw.githubusercontent.com;
+      style-src 'self' 'unsafe-inline';
+      font-src 'self' data: https://raw.githubusercontent.com;
       img-src 'self' data: https://raw.githubusercontent.com;
       media-src 'self' https://cdn.jsdelivr.net;
       connect-src 'self' https://cdn.jsdelivr.net https://interview-api-spring.onrender.com https://interview-api-c842.onrender.com http://localhost:8080 http://127.0.0.1:8080 http://localhost:3000 http://127.0.0.1:3000;

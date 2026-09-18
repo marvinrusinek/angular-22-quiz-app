@@ -40,8 +40,15 @@ main {
   color: #444;
 }
 
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
-
+// Material Icons is self-hosted (see the @font-face in index.html, preloaded
+// and service-worker-cached) — this used to ALSO @import the same font from
+// fonts.googleapis.com, a leftover from before that migration (see commit
+// a215b63f) that was never removed here. A second @font-face for the exact
+// same font-family, fetched from an un-preloaded remote origin that mobile
+// networks and the StackBlitz embed can't always reach, is exactly the kind
+// of redundant dependency that made icons intermittently fail to render —
+// removed rather than fixed, since the self-hosted font already covers every
+// icon this app uses.
 .material-icons {
   font-family: 'Material Icons';
   font-weight: normal;

@@ -189,14 +189,22 @@ mat-card-actions {
 }
 
 /* ✓ Final card style — thick RHS + bottom border */
+// Uses the app's existing --bg-card/--border-card/--text-on-card/--shadow-card
+// theme tokens (defined in styles.scss for both [data-theme="light"] and
+// [data-theme="dark"]) instead of the hardcoded #fff/#000 this previously
+// carried — those hardcoded values ignored dark mode entirely, leaving a
+// bright white card (and Material's own light-theme text color) in an
+// otherwise-dark page. The light-mode values of these tokens are identical
+// to the old hardcoded ones, so desktop/light appearance is unchanged.
 :host ::ng-deep mat-card.quiz-card,
 :host ::ng-deep .quiz-card {
-  border: 1.5px solid #000 !important;
+  border: 1.5px solid var(--border-card) !important;
   border-right-width: 3px !important;
   border-bottom-width: 3px !important;
-  background: #fff !important;
+  background: var(--bg-card) !important;
+  color: var(--text-on-card) !important;
   border-radius: 10px !important;
-  box-shadow: 10px 10px 5px #999 !important;
+  box-shadow: var(--shadow-card) !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
 }
@@ -252,21 +260,14 @@ mat-card-actions {
   }
 }
 
-// The intro card is intentionally always white (see `mat-card.quiz-card` above,
-// `background: #fff !important`). In dark mode the app's global light text color
-// therefore leaves the subtitle + summary near-invisible on the white card, so
-// force them to dark. The attribute lives on <html>, an ancestor of this host,
-// so :host-context is required (not a plain [data-theme] selector).
-:host-context([data-theme='dark']) {
-  ::ng-deep mat-card-subtitle,
-  ::ng-deep mat-card-subtitle span,
-  .intro-text,
-  .intro-text p,
-  .intro-text .bold-text,
-  .intro-centered-text {
-    color: #212121 !important;
-  }
-}
+// Previously the intro card was hardcoded ALWAYS white (see `mat-card.quiz-card`
+// above), which left the app's global light-mode dark mode text color
+// unreadable against it, so THIS rule force-darkened it back. Now that the
+// card itself follows --bg-card/--text-on-card (see `mat-card.quiz-card`
+// above), that premise no longer holds — forcing dark text here would instead
+// make it unreadable against the now-dark card. Removed rather than kept:
+// `.quiz-card`'s own `color: var(--text-on-card)` already supplies correct,
+// theme-aware text color for subtitle/intro-text without a separate override.
 
 // Quiz meta: difficulty · # of questions · estimated time (stacked)
 .quiz-meta {

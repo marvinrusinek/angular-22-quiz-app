@@ -47,6 +47,14 @@
   --text-option: #0f0900;
   --text-scoreboard-badge: #006400;
   --text-scoreboard-timer: #006400;
+
+  // Slide-toggle (mat-slide-toggle / MDC switch) colors — same values this
+  // app has always used in light mode. See the [data-theme="dark"] block for
+  // why these need a distinct dark-mode set (unchanged here on purpose).
+  --mdc-switch-selected-track-color: #{vars.$vivid-blue};
+  --mdc-switch-selected-handle-color: #{vars.$black};
+  --mdc-switch-unselected-track-color: #{vars.$vivid-blue}33;
+  --mdc-switch-unselected-handle-color: #{vars.$black};
 }
 
 [data-theme="dark"] {
@@ -90,6 +98,18 @@
 
   // Material card subtitle text color for dark mode
   --mat-card-subtitle-text-color: #e0e0e0;
+
+  // Slide-toggle colors, dark-mode variant. The light-mode values (pure black
+  // handle, a track tinted to ~20% opacity) were previously applied
+  // unconditionally via `!important` regardless of theme — against this
+  // theme's dark card background (--bg-card: #3a3d46) a black handle and a
+  // faint 20%-opacity track both lose enough contrast to become hard to see
+  // on a small mobile screen. The handle switches to a light color and the
+  // unselected track's opacity is raised so both states stay visible.
+  --mdc-switch-selected-track-color: #{vars.$vivid-blue};
+  --mdc-switch-selected-handle-color: #ffffff;
+  --mdc-switch-unselected-track-color: #{vars.$vivid-blue}66;
+  --mdc-switch-unselected-handle-color: #d8d8d8;
 }
 
 /* ─────────────────────────────────────────────
@@ -414,21 +434,24 @@ mat-card {
 }
 
 // TRACK + THUMB COLORS (SELECTED)
+// Read from the theme-aware --mdc-switch-* custom properties (set per-theme
+// above) rather than a literal color, so light and dark mode each get their
+// own handle/track contrast instead of both being forced to the same value.
 .mat-mdc-slide-toggle .mdc-switch--selected .mdc-switch__track {
-  background-color: #{vars.$vivid-blue} !important;
+  background-color: var(--mdc-switch-selected-track-color) !important;
 }
 
 .mat-mdc-slide-toggle .mdc-switch--selected .mdc-switch__handle {
-  background-color: #{vars.$black} !important;
+  background-color: var(--mdc-switch-selected-handle-color) !important;
 }
 
 // TRACK + THUMB COLORS (UNSELECTED)
 .mat-mdc-slide-toggle .mdc-switch--unselected .mdc-switch__track {
-  background-color: #{vars.$vivid-blue}33 !important; /* faded */
+  background-color: var(--mdc-switch-unselected-track-color) !important;
 }
 
 .mat-mdc-slide-toggle .mdc-switch--unselected .mdc-switch__handle {
-  background-color: #{vars.$black} !important;
+  background-color: var(--mdc-switch-unselected-handle-color) !important;
 }
 
 // REMOVE MDC RIPPLE + FOCUS RING
@@ -444,13 +467,10 @@ mat-card {
 }
 
 /* GLOBAL OVERRIDES FOR MDC SWITCH COLORS */
+// Track/handle colors themselves now live in the [data-theme="light"] and
+// [data-theme="dark"] blocks above (theme-aware — see their own comments);
+// only the theme-independent "remove the purple halo" overrides stay here.
 :root {
-  --mdc-switch-selected-track-color: #{vars.$vivid-blue} !important;
-  --mdc-switch-selected-handle-color: #{vars.$black} !important;
-
-  --mdc-switch-unselected-track-color: #{vars.$vivid-blue}33 !important;
-  --mdc-switch-unselected-handle-color: #{vars.$black} !important;
-
   // Remove the purple halo
   --mdc-switch-selected-focus-state-layer-color: transparent !important;
   --mdc-switch-selected-hover-state-layer-color: transparent !important;

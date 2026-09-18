@@ -667,13 +667,37 @@
         min-height: 375px !important;
         padding-bottom: 8px !important;
         margin: 0 !important;
-        // .quiz-tile__image (a real <img>, not a background) needs no
-        // mobile-specific override here — its base rule already positions it
-        // identically (center, 10px from top, 300x210) on every breakpoint,
-        // matching what this background-size/-position pair used to force.
+        // At narrow/stacked widths the desktop approach — an absolutely
+        // positioned image plus a magic-number top margin on .quiz-info to
+        // clear it — is exactly the brittle setup that caused the reported
+        // text/image overlap: the offset (previously a fixed 230px) was
+        // tuned for one assumed tile width and silently drifts out of sync
+        // whenever the tile's actual rendered width differs (a narrow
+        // StackBlitz embed, an unusually narrow phone, etc.), since the
+        // absolutely positioned image doesn't participate in the layout the
+        // margin is trying to clear. Switching the image to NORMAL FLOW here
+        // removes the need for any offset at all — .quiz-tile is already
+        // `display: flex; flex-direction: column` (set outside this media
+        // query), so a normal-flow image is simply the first flex child and
+        // .quiz-info flows directly beneath it, at whatever height the image
+        // actually renders at. object-fit stays `fill` (unchanged — see the
+        // base .quiz-tile__image rule) so the image keeps exactly the same
+        // stretch it has always had; only ITS POSITIONING changes here.
+        .quiz-tile__image {
+          position: static !important;
+          top: auto !important;
+          left: auto !important;
+          transform: none !important;
+          display: block !important;
+          width: 100% !important;
+          max-width: 300px !important;
+          height: auto !important;
+          aspect-ratio: 300 / 210 !important;
+          margin: 0 auto !important;
+        }
 
         .quiz-info {
-          margin: 230px 0 0 5px !important;
+          margin: 8px 0 0 5px !important;
           width: calc(100% - 10px) !important;
           height: auto !important;
           padding: 10px 10px 2px !important;

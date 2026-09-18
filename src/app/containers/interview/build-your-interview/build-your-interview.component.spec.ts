@@ -8,6 +8,7 @@ import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '../../../shared/tokens/api
 import { Observable, of, throwError } from 'rxjs';
 
 import { InterviewApiService } from '../../../shared/services/api/interview-api.service';
+import { InterviewWarmupCoordinatorService } from '../../../shared/services/interview/interview-warmup-coordinator.service';
 import { InterviewApiError } from '../../../shared/services/api/interview-api.errors';
 import { AssessmentBuilderService } from '../../../shared/services/features/assessment/assessment-builder.service';
 import type { CreatedInterviewSession } from '../../../shared/services/api/interview-api.service';
@@ -114,6 +115,11 @@ describe('BuildYourInterviewComponent', () => {
             warmUp: jest.fn(() => of(undefined))
           }
         },
+        // Warm-up now goes through the app-lifecycle coordinator, not
+        // InterviewApiService directly — see its own spec suite for that
+        // service's real dedup/reset behavior. This block only cares that
+        // it's CALLED, never that it makes a real request.
+        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
         { provide: Router, useValue: router },
         { provide: QuizStartSpinnerService, useValue: spinner },
         // Stage 9C: the builder now creates the session through the API.
@@ -884,16 +890,25 @@ describe('BuildYourInterviewComponent — Spring warm-up (Phase 2)', () => {
     httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
   });
 
-  it('destroying the component before the warm-up resolves is safe (no error, no leak)', () => {
+  it('destroying the component before the warm-up resolves does NOT cancel it — it is app-scoped now, not component-scoped', () => {
+    // Superseded assertion (this test previously expected `cancelled: true`):
+    // warm-up now goes through InterviewWarmupCoordinatorService, whose
+    // shared observable is deliberately NOT tied to any one caller's
+    // lifetime (`shareReplay({ refCount: false })` — see its own doc
+    // comment). This is a DELIBERATE behavior change, not a regression: the
+    // whole point of promoting warm-up to an app-lifecycle coordinator is
+    // that navigating away from whichever component started it (Quiz
+    // Selection, or this Builder) must never cancel an in-flight app-level
+    // wake-up another component may still be relying on.
     fixture.detectChanges();
     const healthReq = httpMock.expectOne((req) => req.url === 'http://spring.test/api/health');
 
-    // takeUntilDestroyed unsubscribes on destroy, which HttpClient propagates
-    // into actually CANCELLING the in-flight request — the strongest possible
-    // form of "safe": nothing is left running at all, let alone able to throw
-    // or observably affect the (now gone) component afterward.
     expect(() => fixture.destroy()).not.toThrow();
-    expect(healthReq.cancelled).toBe(true);
+    expect(healthReq.cancelled).toBe(false);
+
+    // The (now-orphaned, but still real) request can still be resolved
+    // without throwing or observably affecting the destroyed component.
+    expect(() => healthReq.flush({ status: 'UP' })).not.toThrow();
 
     // Node's own metadata request is unrelated to the warm-up and was never
     // subject to takeUntilDestroyed here, so it must NOT be cancelled by the
@@ -922,6 +937,74 @@ describe('BuildYourInterviewComponent — Spring warm-up (Phase 2)', () => {
 
     healthReq.flush({ status: 'UP' });
     httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+  });
+
+  // ── App-lifecycle warm-up coordinator: dedup + fallback semantics ──
+  // The requests below are triggered directly against the REAL
+  // InterviewWarmupCoordinatorService (root-provided, same instance the
+  // Builder itself injects) to simulate QuizSelectionComponent's own
+  // earlier call — proving the Builder's warm-up genuinely SHARES app-level
+  // state rather than merely coincidentally deduping within itself.
+
+  it('joins an already in-flight app-level warm-up instead of sending a second request', () => {
+    const coordinator = TestBed.inject(InterviewWarmupCoordinatorService);
+    // Simulates Quiz Selection's earlier call, already in flight before the
+    // Builder even exists.
+    coordinator.warmUp().subscribe();
+    const earlierReq = httpMock.expectOne((req) => req.url === 'http://spring.test/api/health');
+
+    fixture.detectChanges(); // Builder's own ngOnInit → warmUpSpring()
+
+    // Still exactly one outstanding request — Builder's call joined it.
+    httpMock.expectNone((req) => req.url === 'http://spring.test/api/health');
+    earlierReq.flush({ status: 'UP' });
+
+    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+  });
+
+  it('sends no request at all when an earlier app-level warm-up already succeeded', () => {
+    const coordinator = TestBed.inject(InterviewWarmupCoordinatorService);
+    coordinator.warmUp().subscribe();
+    httpMock.expectOne((req) => req.url === 'http://spring.test/api/health').flush({ status: 'UP' });
+
+    fixture.detectChanges(); // Builder's own ngOnInit
+
+    httpMock.expectNone((req) => req.url === 'http://spring.test/api/health');
+    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+  });
+
+  it('a failed early app-level warm-up is swallowed and permits exactly one Builder fallback attempt', () => {
+    const coordinator = TestBed.inject(InterviewWarmupCoordinatorService);
+    coordinator.warmUp().subscribe({
+      // Must never surface as an error to its own caller either.
+      error: () => fail('coordinator warmUp() must never error')
+    });
+    httpMock
+      .expectOne((req) => req.url === 'http://spring.test/api/health')
+      .error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' });
+
+    fixture.detectChanges(); // Builder's own ngOnInit — the one allowed fallback
+
+    const fallbackReq = httpMock.expectOne((req) => req.url === 'http://spring.test/api/health');
+    expect(fallbackReq.request.method).toBe('GET');
+    fallbackReq.flush({ status: 'UP' });
+
+    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+  });
+
+  it('repeated Builder navigation after success sends no further health requests', () => {
+    fixture.detectChanges(); // first Builder instance
+    httpMock.expectOne((req) => req.url === 'http://spring.test/api/health').flush({ status: 'UP' });
+    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    fixture.destroy();
+
+    // A second Builder instance — simulates navigating away and back.
+    const fixture2 = TestBed.createComponent(BuildYourInterviewComponent);
+    fixture2.detectChanges();
+
+    httpMock.expectNone((req) => req.url === 'http://spring.test/api/health');
+    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    fixture2.destroy();
   });
 });
 
@@ -964,6 +1047,7 @@ describe('BuildYourInterviewComponent — spinner cleanup on destroy (concurrenc
             warmUp: jest.fn(() => of(undefined))
           }
         },
+        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
         {
           // Never resolves within the test — startInterview() stays
           // suspended here, with the overlay already shown, until destroy.
@@ -1133,8 +1217,9 @@ describe('BuildYourInterviewComponent — production with NO configured API orig
 
   it('skips the Spring warm-up safely when Interview API configuration is unavailable', () => {
     const http = TestBed.inject(HttpTestingController);
-    // No request to any /health path — the guard in warmUpSpring() returns
-    // before InterviewApiService.warmUp() is ever called.
+    // No request to any /health path — InterviewWarmupCoordinatorService's
+    // own `configured` guard (mirroring InterviewApiService's) returns
+    // `of(undefined)` without ever touching HttpClient.
     http.expectNone((req) => req.url.includes('/health'));
     http.match((req) => req.url.endsWith('/quizzes')).forEach((r) => r.flush({ quizzes: [] }));
   });

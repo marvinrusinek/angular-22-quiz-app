@@ -29,6 +29,7 @@ import { BestScoreService } from '../../shared/services/progress/best-score.serv
 import { LearningPathService } from '../../shared/services/features/learning-path/learning-path.service';
 import { DifficultyRecommendationService } from '../../shared/services/features/learning-path/difficulty-recommendation.service';
 import { SessionEngagementService } from '../../shared/services/state/session-engagement.service';
+import { InterviewWarmupCoordinatorService } from '../../shared/services/interview/interview-warmup-coordinator.service';
 
 import { ProgressSummary, QuizProgress } from '../../shared/models/progress.model';
 
@@ -90,6 +91,7 @@ export class QuizSelectionComponent implements OnInit {
   private readonly bestScoreService = inject(BestScoreService);
   private readonly sessionEngagement = inject(SessionEngagementService);
   private readonly metadataApi = inject(TopicQuizMetadataService);
+  private readonly warmupCoordinator = inject(InterviewWarmupCoordinatorService);
   private readonly router = inject(Router);
 
   // Gates the progress-driven pieces on THIS screen. Shown whenever the user has
@@ -354,6 +356,18 @@ export class QuizSelectionComponent implements OnInit {
     // Tile imagery comes from /quizzes. Fire-and-forget: the bundled value keeps
     // tiles painted until this lands, and the service never throws.
     this.metadataApi.load().subscribe({ error: () => undefined });
+
+    // Give Spring's free-tier container a head start waking up, as early as
+    // this app can possibly do it — Quiz Selection is the first screen a
+    // user reaches, well before Interview Mode's own Assessment Builder.
+    // Entirely fire-and-forget: never awaited, never gates rendering or
+    // navigation, never surfaces an error here (this page is Node-owned;
+    // Spring being unreachable is not this page's concern at all). The
+    // coordinator itself dedupes against Builder's own later call — see its
+    // doc comment — and its underlying request is NOT tied to this
+    // component's lifetime, so navigating away to the Builder does not
+    // cancel it.
+    this.warmupCoordinator.warmUp().subscribe();
 
     // Open at the TOP of the page — otherwise navigating here (e.g. "Select
     // Quiz" from a scrolled-down Results page) inherits the previous scroll

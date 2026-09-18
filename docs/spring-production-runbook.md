@@ -358,17 +358,60 @@ run to run.
   (§4 above) and is equally true of a plain `/api/health` ping used as a
   warm-up. A 200 from `/api/health` is evidence the process is answering
   HTTP, never evidence the database is reachable.
-- **The Interview Builder now fires one best-effort `/api/health` ping to
-  Spring on open**, in parallel with Node's own topic-metadata load,
-  purely to give Spring's container a head start before the user's
-  eventual Start Assessment click. It is NOT a readiness guarantee: it
-  never blocks rendering, never gates form validity or the Start button,
-  never surfaces a failure, is sent at most once per Builder page life,
-  and is cancelled (via the request's own subscription teardown) if the
-  Builder is left before it resolves. Whether it measurably shortens the
-  FIRST real cold-start request has not been isolated from ordinary
-  variance in Render's own boot time — treat it as a plausible small
-  head start, not a proven fix in its own right.
+- **A best-effort `/api/health` ping to Spring now begins as early as
+  `QuizSelectionComponent` (2026-09-18)** — the first screen a user
+  reaches, well before Interview Mode's own Assessment Builder — instead
+  of only starting once the user has already navigated into the Builder.
+  See "Application-scoped warm-up coordinator" immediately below for the
+  full design; the short version: one shared `InterviewWarmupCoordinatorService`
+  (root-provided) is the ONE place this ping is ever issued, Quiz
+  Selection and the Builder both call it, and it is NOT a readiness
+  guarantee: it never blocks rendering, never gates form validity or the
+  Start button, and never surfaces a failure anywhere outside Interview
+  Mode. Whether it measurably shortens the FIRST real cold-start request
+  has not been isolated from ordinary variance in Render's own boot
+  time — treat it as a plausible, now-earlier head start, not a proven
+  fix or a guarantee in its own right.
+
+#### Application-scoped warm-up coordinator (added 2026-09-18)
+
+Two different screens can each be the first place a user reaches on a
+given visit — Quiz Selection (Node-owned, but the app's earliest
+screen) and the Interview Builder (Spring-owned, the Interview entry
+point). Both want to give Spring's free-tier container a head start,
+but firing two independent `/api/health` pings for the same purpose
+would waste one of them. `InterviewWarmupCoordinatorService`
+(`src/app/shared/services/interview/interview-warmup-coordinator.service.ts`)
+is the single, root-provided, app-lifecycle-scoped owner of that one
+ping, with this state machine:
+
+- **idle** → the first caller (normally Quiz Selection, on `ngOnInit`)
+  issues exactly one `GET /api/health`.
+- **in-flight** → every OTHER caller during that window (Quiz Selection
+  itself again, or the Builder reached shortly after) shares the SAME
+  request — never a second one. The underlying HTTP call is
+  intentionally NOT tied to any one caller's component lifetime, so
+  navigating away (Quiz Selection → Builder, in particular) does not
+  cancel it.
+- **success** → cached as complete for the rest of that application's
+  in-memory lifetime. No later caller — Builder included — ever issues
+  another request for the rest of that page load; only a full reload
+  (a fresh injector) resets this.
+- **failure/timeout** → the OPPOSITE of success: never cached. Cleared
+  so exactly one LATER caller can retry — in practice, this is what
+  makes the Builder's own call a genuine fallback: if Quiz Selection's
+  earlier attempt failed (or a user deep-links straight into the
+  Builder, skipping Quiz Selection entirely), the Builder still gets
+  one attempt of its own. A failure can never permanently lock the
+  coordinator out of trying again on a later visit.
+
+This is still exactly what it always was — a container wake-up signal,
+not a database-readiness check, not gated in front of Start Assessment,
+and never retried on a timer/interval/visibility listener. It reduces
+*perceived* cold-start delay by starting earlier and only once, but it
+cannot guarantee Spring (or Neon) will be warm by the time a user clicks
+Start Assessment — that is still what the three-attempt session-create
+recovery above exists to absorb.
 - **A real production observation, 2026-09-15**: after an overnight idle,
   one click on Start Assessment produced a POST that reached Spring's own
   60-second client-side timeout, an automatic same-key retry that ALSO

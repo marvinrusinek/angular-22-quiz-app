@@ -22,6 +22,7 @@ import {
 } from '../../../shared/models/AssessmentConfig.model';
 
 import { InterviewApiService } from '../../../shared/services/api/interview-api.service';
+import { InterviewWarmupCoordinatorService } from '../../../shared/services/interview/interview-warmup-coordinator.service';
 import type { CreatedInterviewSession } from '../../../shared/services/api/interview-api.service';
 import { InterviewApiError } from '../../../shared/services/api/interview-api.errors';
 import { InterviewCatalogService } from '../../../shared/services/interview/interview-catalog.service';
@@ -151,6 +152,7 @@ export class BuildYourInterviewComponent implements OnInit {
   private readonly api = inject(InterviewApiService);
   private readonly backendSession = inject(BackendInterviewSessionService);
   private readonly integrity = inject(AssessmentIntegrityService);
+  private readonly warmupCoordinator = inject(InterviewWarmupCoordinatorService);
 
   /** In-flight guard for session creation. Not derived from the disabled state. */
   private creating = false;
@@ -546,10 +548,22 @@ export class BuildYourInterviewComponent implements OnInit {
   }
 
   /**
-   * Best-effort, NON-BLOCKING Spring wake-up — fired at most ONCE per
-   * Builder lifecycle, entirely in PARALLEL with the catalog load above:
-   * neither awaits nor gates the other, and this one is never surfaced to
-   * the user in any way (no loading flag, no error text, no effect on
+   * Best-effort, NON-BLOCKING Spring wake-up — this is now the FALLBACK
+   * half of app-lifecycle warm-up, not the only one: `QuizSelectionComponent`
+   * (the earliest screen a user reaches) already calls the SAME
+   * `InterviewWarmupCoordinatorService` on its own `ngOnInit`, well before a
+   * user ever reaches this Builder. Both calls go through that one
+   * coordinator, which shares a single in-flight request and skips entirely
+   * once a warm-up has already succeeded this app lifetime — see its own
+   * doc comment for the full idle/in-flight/success/failure-reset
+   * semantics. This call is what makes that a real fallback: if Quiz
+   * Selection's earlier attempt failed or was never reached (a deep link
+   * straight into the Builder, for instance), this is the one later retry
+   * the coordinator allows.
+   *
+   * Entirely in PARALLEL with the catalog load above: neither awaits nor
+   * gates the other, and this is never surfaced to the user in any way (no
+   * loading flag, no error text, no effect on
    * `startDisabled()`/`presetStartDisabled()`). Its only purpose is to give
    * Spring's free-tier container a head start before the user's eventual
    * Start Assessment click — see InterviewApiService#warmUp's own doc
@@ -557,15 +571,19 @@ export class BuildYourInterviewComponent implements OnInit {
    * and docs/spring-production-runbook.md for the full picture (Node,
    * Spring and Neon can each independently be cold).
    *
-   * `takeUntilDestroyed` unsubscribes on destroy — a component destroyed
-   * before this resolves neither leaks the subscription nor does anything
-   * observable once torn down (the empty `subscribe()` has no next/error/
-   * complete handler to run late). No poll, no interval, no keep-alive: one
-   * GET, once, ever, per component instance.
+   * `takeUntilDestroyed` unsubscribes THIS component's own subscription on
+   * destroy, but — unlike before this call went through the coordinator —
+   * that does NOT cancel the underlying HTTP request: the coordinator's
+   * shared observable is deliberately NOT tied to any one caller's
+   * lifetime (`shareReplay({ refCount: false })`), specifically so
+   * navigating away from whichever component started it can never cancel
+   * an app-level warm-up another component may still be relying on. No
+   * poll, no interval, no keep-alive: the coordinator issues at most one
+   * request per successful outcome and at most one retry per failed one,
+   * never more, regardless of how many components call this.
    */
   private warmUpSpring(): void {
-    if (!isInterviewApiConfigured()) return;
-    this.api.warmUp().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+    this.warmupCoordinator.warmUp().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
 
   /**

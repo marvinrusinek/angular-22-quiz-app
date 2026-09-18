@@ -3,6 +3,10 @@ import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+
+import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '../../shared/tokens/api-base-url.token';
 
 import { QuizSelectionComponent } from './quiz-selection.component';
 import { QuizService } from '../../shared/services/data/quiz.service';
@@ -13,6 +17,7 @@ import { LearningPathService } from '../../shared/services/features/learning-pat
 import { DifficultyRecommendationService } from '../../shared/services/features/learning-path/difficulty-recommendation.service';
 import { SessionEngagementService } from '../../shared/services/state/session-engagement.service';
 import { TopicQuizMetadataService } from '../../shared/services/api/topic-quiz-metadata.service';
+import { InterviewWarmupCoordinatorService } from '../../shared/services/interview/interview-warmup-coordinator.service';
 import { QuizStatus } from '../../shared/models/quiz-status.enum';
 
 /**
@@ -91,6 +96,7 @@ describe('QuizSelectionComponent — bank-absence catalog (S6o)', () => {
         { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
         { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
         { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
+        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
         { provide: Router, useValue: router }
       ]
     });
@@ -256,7 +262,8 @@ describe('QuizSelectionComponent — tile keyboard accessibility', () => {
         { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
         { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
         { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
-        { provide: TopicQuizMetadataService, useValue: makeMetadataApi() }
+        { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
+        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
       ]
     });
 
@@ -448,7 +455,8 @@ describe('QuizSelectionComponent — tile image loading (NgOptimizedImage conver
         { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
         { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
         { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
-        { provide: TopicQuizMetadataService, useValue: makeMetadataApi() }
+        { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
+        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
       ]
     });
 
@@ -600,5 +608,131 @@ describe('QuizSelectionComponent — tile image loading (NgOptimizedImage conver
       expect(img.getAttribute('loading')).toBe('eager');
       expect(img.getAttribute('fetchpriority')).not.toBe('high');
     }
+  });
+});
+
+/**
+ * Early Spring warm-up: QuizSelectionComponent is the earliest screen a user
+ * reaches, so it now starts InterviewWarmupCoordinatorService's `/health`
+ * ping on its OWN `ngOnInit`, well before Interview Mode's own Builder.
+ * Uses REAL HttpClient (via HttpTestingController) and the REAL
+ * TopicQuizMetadataService/InterviewWarmupCoordinatorService — unlike the
+ * describe blocks above (which mock both) — so these tests can observe the
+ * ACTUAL, independent HTTP requests this component fires on init: one to
+ * Node (topic metadata) and one to Spring (the warm-up ping), and prove
+ * neither blocks the other or this component's own rendering.
+ */
+describe('QuizSelectionComponent — early Spring warm-up', () => {
+  function render(): { fixture: ComponentFixture<QuizSelectionComponent>; http: HttpTestingController } {
+    sessionStorage.clear();
+    localStorage.clear();
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'http://node.test/api' },
+        { provide: INTERVIEW_API_BASE_URL, useValue: 'http://spring.test/api' },
+        {
+          provide: QuizService, useValue: {
+            setQuizId: jest.fn(),
+            setQuizStatus: jest.fn(),
+            setCompletedQuizId: jest.fn(),
+            setCheckedShuffle: jest.fn(),
+            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            quizCompleted: false
+          }
+        },
+        { provide: AchievementService, useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() } },
+        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+        { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } }
+      ]
+    });
+
+    const fixture = TestBed.createComponent(QuizSelectionComponent);
+    const http = TestBed.inject(HttpTestingController);
+    return { fixture, http };
+  }
+
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('initiates the Spring warm-up exactly once on init', () => {
+    const { fixture, http } = render();
+    fixture.detectChanges(); // ngOnInit
+
+    const healthReqs = http.match((req) => req.url === 'http://spring.test/api/health');
+    expect(healthReqs).toHaveLength(1);
+    expect(healthReqs[0].request.method).toBe('GET');
+    healthReqs[0].flush({ status: 'UP' });
+
+    http.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+  });
+
+  it('rendering and Node /quizzes metadata loading are not blocked by the Spring warm-up — both outstanding at once, warm-up left unresolved', () => {
+    const { fixture, http } = render();
+    fixture.detectChanges();
+
+    // Both requests exist simultaneously, before either is flushed.
+    const healthReq = http.expectOne((req) => req.url === 'http://spring.test/api/health');
+    const metadataReq = http.expectOne((req) => req.url === 'http://node.test/api/quizzes');
+
+    // Resolve Node's FIRST, while Spring's warm-up is left deliberately
+    // unresolved — the page must already be fully rendered regardless.
+    metadataReq.flush({ quizzes: [] });
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.quiz-grid')).not.toBeNull();
+
+    // Clean up the still-open warm-up so afterEach's verify() passes.
+    healthReq.flush({ status: 'UP' });
+  });
+
+  it('a Spring warm-up failure never surfaces an error outside Interview Mode', () => {
+    const { fixture, http } = render();
+    fixture.detectChanges();
+
+    const healthReq = http.expectOne((req) => req.url === 'http://spring.test/api/health');
+    expect(() =>
+      healthReq.error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' })
+    ).not.toThrow();
+
+    // Nothing on this Node-owned page reacts to it at all.
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.quiz-grid')).not.toBeNull();
+
+    http.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+  });
+
+  it('destroying QuizSelectionComponent does NOT cancel the app-scoped in-flight warm-up', () => {
+    const { fixture, http } = render();
+    fixture.detectChanges();
+
+    const healthReq = http.expectOne((req) => req.url === 'http://spring.test/api/health');
+    expect(() => fixture.destroy()).not.toThrow();
+    expect(healthReq.cancelled).toBe(false);
+
+    // Still resolvable after destruction, with no observable effect.
+    expect(() => healthReq.flush({ status: 'UP' })).not.toThrow();
+
+    http.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+  });
+
+  it('the warm-up never goes to Node, and Node metadata never goes to Spring', () => {
+    const { fixture, http } = render();
+    fixture.detectChanges();
+
+    expect(http.match((req) => req.url === 'http://node.test/api/health')).toHaveLength(0);
+    expect(http.match((req) => req.url === 'http://spring.test/api/quizzes')).toHaveLength(0);
+
+    http.expectOne((req) => req.url === 'http://spring.test/api/health').flush({ status: 'UP' });
+    http.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
   });
 });

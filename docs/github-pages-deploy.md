@@ -32,9 +32,12 @@ Use a short-path clone (e.g. `C:/ghp10`); deep paths break `ngh` on Windows.
    node node_modules/@angular/cli/bin/ng.js build --configuration=production
    npm run verify:artifact
    ```
-   Require exit code 0. The `npx ng build` wrapper occasionally exits 139 (a segfault in the
-   `npx` process itself, after Angular has written its output); do not deploy output from a
-   run that exited non-zero — rebuild with the direct CLI command above.
+   Require exit code 0. On this Windows machine the build intermittently exits 139 (a
+   segmentation fault) *after* Angular reports "Application bundle generation complete" and
+   has written its output. It has been observed with both `npx ng build` and the direct
+   `node …/ng.js` command; the cause is not identified. Treat any non-zero exit as a failed
+   build: delete `dist` and rebuild until the exit code is 0. Never deploy output from a run
+   that exited non-zero, even though the files look complete.
 3. Stage and verify: `npm run stage:ghpages -- --clone C:/ghp10`. It wipes the clone's working
    tree, copies the build, adds `404.html` and `.nojekyll`, stages, and prints PASS or exits
    non-zero. **Do not commit on a non-zero exit.** It never commits or pushes.

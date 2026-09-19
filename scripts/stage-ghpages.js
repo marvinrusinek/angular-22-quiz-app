@@ -44,6 +44,22 @@ function walk(dir, base = dir) {
   );
 }
 
+/**
+ * Plain recursive byte copy. Deliberately not `fs.cpSync`: on this Windows setup
+ * (Node 22) `cpSync` into the real gh-pages clone terminates the process
+ * silently (exit 127, nothing copied) even though the same call succeeds into a
+ * temp directory, so the failure is invisible to fixture-based tests.
+ */
+function copyTree(src, dst) {
+  fs.mkdirSync(dst, { recursive: true });
+  for (const e of fs.readdirSync(src, { withFileTypes: true })) {
+    const from = path.join(src, e.name);
+    const to = path.join(dst, e.name);
+    if (e.isDirectory()) copyTree(from, to);
+    else fs.copyFileSync(from, to);
+  }
+}
+
 function basePrefix(buildDir) {
   const m = fs.readFileSync(path.join(buildDir, 'index.html'), 'utf8').match(/<base href="([^"]*)"/);
   return m ? m[1] : '/';
@@ -131,7 +147,7 @@ function stage(cloneDir, buildDir) {
   if (pre.failures.length) return { phase: 'build-manifest', pre, failures: pre.failures };
 
   for (const name of fs.readdirSync(clone)) if (name !== '.git') fs.rmSync(path.join(clone, name), { recursive: true, force: true });
-  fs.cpSync(build, clone, { recursive: true });
+  copyTree(build, clone);
   fs.copyFileSync(path.join(clone, 'index.html'), path.join(clone, '404.html'));
   fs.writeFileSync(path.join(clone, '.nojekyll'), '');
 

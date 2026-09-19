@@ -6,6 +6,7 @@ import { filter } from 'rxjs/operators';
 import { GoogleSpinnerComponent } from './components/google-spinner/google-spinner.component';
 import { PwaUpdateService } from './shared/services/pwa-update.service';
 import { QuizStartSpinnerService } from './shared/services/ui/quiz-start-spinner.service';
+import { ThemeService } from './shared/services/ui/theme.service';
 
 @Component({
   selector: 'codelab-root',
@@ -30,6 +31,13 @@ export class AppComponent {
   private readonly router = inject(Router);
 
   constructor() {
+    // Construct ThemeService at the root. It is `providedIn: 'root'` but Angular
+    // only builds a root service when something injects it, and its constructor
+    // effect is what sets `data-theme` on <html>. Left to the theme-toggle
+    // button, a route without one (Build Your Interview has none) could load or
+    // refresh with the persisted theme never applied.
+    inject(ThemeService);
+
     // Start watching for new deployed versions (no-op when the SW is disabled,
     // e.g. local dev). Prompts to reload on VERSION_READY.
     this.pwaUpdate.init();

@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
+import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { DomSanitizer } from '@angular/platform-browser';
 
 import { ThemeService } from '../../shared/services/ui/theme.service';
+import { registerThemeIcons } from './theme-icons';
 
 @Component({
   selector: 'codelab-theme-toggle',
@@ -17,7 +19,7 @@ import { ThemeService } from '../../shared/services/ui/theme.service';
       matTooltipPosition="below"
       aria-label="Toggle dark/light mode"
     >
-      <mat-icon>{{ themeService.icon() }}</mat-icon>
+      <mat-icon [svgIcon]="themeService.icon()" aria-hidden="true"></mat-icon>
     </button>
   `,
   styles: [`
@@ -62,4 +64,8 @@ import { ThemeService } from '../../shared/services/ui/theme.service';
 export class ThemeToggleComponent {
   // ── injects ─────────────────────────────────────────────────────
   public readonly themeService = inject(ThemeService);
+
+  constructor() {
+    registerThemeIcons(inject(MatIconRegistry), inject(DomSanitizer));
+  }
 }

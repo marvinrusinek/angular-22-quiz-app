@@ -1,5 +1,6 @@
 import { computed, effect, Service, signal } from '@angular/core';
 import { swallow } from '../../utils/error-logging';
+import { THEME_ICON_DARK_MODE, THEME_ICON_LIGHT_MODE } from '../../../components/theme-toggle/theme-icons';
 
 export type Theme = 'light' | 'dark';
 
@@ -10,7 +11,10 @@ export class ThemeService {
 
   // ── computed ────────────────────────────────────────────────────
   readonly isDark = computed(() => this.theme() === 'dark');
-  readonly icon = computed(() => this.isDark() ? 'light_mode' : 'dark_mode');
+  // Locally bundled SVG icon ids (see theme-icons.ts), NOT Material Icons
+  // ligature names — `dark_mode`/`light_mode` are absent from the self-hosted
+  // subsetted font, confirmed by direct glyph-coverage measurement.
+  readonly icon = computed(() => this.isDark() ? THEME_ICON_LIGHT_MODE : THEME_ICON_DARK_MODE);
   readonly tooltip = computed(() => this.isDark() ? 'Switch to light mode' : 'Switch to dark mode');
 
   // ── properties ──────────────────────────────────────────────────

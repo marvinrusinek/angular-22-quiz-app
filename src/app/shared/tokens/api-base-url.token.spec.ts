@@ -222,6 +222,36 @@ describe('Interview API selection follows the serving origin', () => {
   });
 });
 
+/**
+ * Literal-value regression guard for the Oracle cutover (2026-09-19).
+ * Every other test in this file compares against the IMPORTED constants,
+ * so it would keep passing even if the constant's value silently reverted
+ * or drifted. These assert the actual real-world hostnames so a future
+ * accidental revert of the cutover — or an accidental change to Node's
+ * permanently-unrelated origin — fails loudly here.
+ */
+describe('production origins after the Oracle cutover (2026-09-19)', () => {
+  it('INTERVIEW_PROD_API_BASE_URL points at Oracle, not Render', () => {
+    expect(INTERVIEW_PROD_API_BASE_URL).toBe('https://interview-api-spring.marvinrusinek.com/api');
+    expect(INTERVIEW_PROD_API_BASE_URL).not.toContain('onrender.com');
+  });
+
+  it('production Interview resolution (any non-local hostname) uses Oracle', () => {
+    expect(resolveInterviewApiBaseUrl(false, 'marvinrusinek.github.io'))
+      .toBe('https://interview-api-spring.marvinrusinek.com/api');
+  });
+
+  it('local Interview resolution is unaffected — still localhost:8080', () => {
+    expect(resolveInterviewApiBaseUrl(true, 'localhost')).toBe('http://localhost:8080/api');
+    expect(resolveInterviewApiBaseUrl(true, '127.0.0.1')).toBe('http://localhost:8080/api');
+  });
+
+  it('Node/Topic Quiz production origin is untouched by the Interview cutover', () => {
+    expect(PROD_API_BASE_URL).toBe('https://interview-api-c842.onrender.com/api');
+    expect(resolveApiBaseUrl(false, 'marvinrusinek.github.io')).toBe(PROD_API_BASE_URL);
+  });
+});
+
 describe('bootstrap provider tokens resolve independently', () => {
   it('provideApiBaseUrl and provideInterviewApiBaseUrl register SEPARATE tokens', () => {
     TestBed.resetTestingModule();

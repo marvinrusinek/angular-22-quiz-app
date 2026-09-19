@@ -81,7 +81,7 @@ export const INTERVIEW_DEV_API_BASE_URL = 'http://localhost:8080/api';
  * origin and `PROD_API_BASE_URL` above are untouched by construction — Topic
  * Quiz routing never moves.
  */
-export const INTERVIEW_PROD_API_BASE_URL = 'https://interview-api-spring.onrender.com/api';
+export const INTERVIEW_PROD_API_BASE_URL = 'https://interview-api-spring.marvinrusinek.com/api';
 
 /**
  * True when Interview Mode has a backend origin configured for this build.

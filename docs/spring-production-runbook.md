@@ -129,8 +129,15 @@ on today's code, not a permanent rule immune to revision.
   it isn't itself required for an Interview-only rollback.
 - **Public health/readiness endpoints**:
   - Node: `GET https://interview-api-c842.onrender.com/api/health`
-  - Spring: `GET https://interview-api-spring.onrender.com/api/health`
-    (liveness) and
+  - Spring (current production, Oracle, since the 2026-09-19 cutover —
+    see `docs/oracle-migration-runbook.md` Stage E): `GET
+    https://interview-api-spring.marvinrusinek.com/api/health` (liveness).
+    Oracle publicly blocks `/actuator/*` (Caddy), so there is no public
+    readiness probe there — `/api/health` is the only public Spring
+    health signal now.
+  - Spring (Render — **intact, unmodified rollback target, not currently
+    receiving production traffic**): `GET
+    https://interview-api-spring.onrender.com/api/health` (liveness) and
     `GET https://interview-api-spring.onrender.com/actuator/health/readiness`
     (readiness)
 - **Both production origins must remain in the CSP `connect-src`
@@ -258,33 +265,44 @@ curl -s -o /dev/null -w "%{http_code}\n" https://interview-api-c842.onrender.com
 # expect: 200, body {"status":"ok","uptimeSeconds":<n>}
 
 # Spring liveness — Interview Mode process availability signal
-curl -s -o /dev/null -w "%{http_code}\n" https://interview-api-spring.onrender.com/api/health
+# (Oracle, current production since the 2026-09-19 cutover)
+curl -s -o /dev/null -w "%{http_code}\n" https://interview-api-spring.marvinrusinek.com/api/health
 
-# Spring readiness — confirms Spring's own configured readiness signal
-# (application-lifecycle state), NOT database connectivity by itself —
-# see the explanation below.
-curl -s -o /dev/null -w "%{http_code}\n" https://interview-api-spring.onrender.com/actuator/health/readiness
-# expect: 200, body {"status":"UP"}
+# Oracle publicly blocks /actuator/* (Caddy) — confirm it stays that way:
+curl -s -o /dev/null -w "%{http_code}\n" https://interview-api-spring.marvinrusinek.com/actuator/health
+# expect: 404
 
 # Representative Topic Quiz metadata check (Node) — a REAL database-backed
 # endpoint, and the actual evidence Node can reach and query PostgreSQL.
 curl -s https://interview-api-c842.onrender.com/api/quizzes | head -c 300
 
-# Representative Interview-Mode-adjacent database check (Spring) — same
-# reasoning: a real database-backed endpoint, not readiness, is the
-# evidence Spring can reach and query PostgreSQL.
-curl -s https://interview-api-spring.onrender.com/api/quizzes | head -c 300
+# Representative Interview-Mode-adjacent database check (Spring, Oracle) —
+# same reasoning: a real database-backed endpoint is the evidence Spring
+# can reach and query PostgreSQL.
+curl -s https://interview-api-spring.marvinrusinek.com/api/quizzes | head -c 300
+
+# --- Render Spring (intact, unmodified rollback target — not currently
+# receiving production traffic; see docs/oracle-migration-runbook.md
+# Stage F) ---
+curl -s -o /dev/null -w "%{http_code}\n" https://interview-api-spring.onrender.com/api/health
+curl -s -o /dev/null -w "%{http_code}\n" https://interview-api-spring.onrender.com/actuator/health/readiness
+# expect: 200, body {"status":"UP"}
 ```
 
-Expected successful status: **200** for every check above. A non-200, a
-connection timeout, or an empty body is the first sign of an issue — see §8.
+Expected successful status: **200** for every check above, **except** the
+Oracle `/actuator/health` check, which expects **404** (publicly blocked
+by Caddy — see `docs/oracle-migration-runbook.md` §4.12). A non-200 where
+200 is expected, a connection timeout, or an empty body is the first sign
+of an issue — see §8.
 
 - **`/api/health` (both services) is the lighter check**: it only proves the
   process is running and answering HTTP — Spring's own doc comment on
   `HealthController` calls it *"liveness probe, parity with the Node
   reference's `GET /api/health`"*. It says nothing about the database.
-- **`/actuator/health/readiness` (Spring only) — audited and empirically
-  verified, not assumed.** By default, Spring Boot does not add other
+- **`/actuator/health/readiness` (Spring only; Render only — Oracle blocks
+  all public `/actuator/*` access via Caddy, so this readiness probe is
+  only reachable on the Render rollback target, not on current production)
+  — audited and empirically verified, not assumed.** By default, Spring Boot does not add other
   health indicators to the liveness/readiness groups
   ([Spring Boot reference docs, Actuator Endpoints — Liveness and Readiness Probes](https://docs.spring.io/spring-boot/reference/actuator/endpoints.html)),
   and that default is confirmed unmodified here: `backend-spring/src/main/resources/application.properties`

@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
-import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '../tokens/api-base-url.token';
+import { API_BASE_URL, INTERVIEW_API_BASE_URL, PROD_API_BASE_URL, INTERVIEW_PROD_API_BASE_URL } from '../tokens/api-base-url.token';
 import { apiErrorInterceptor } from './api-error.interceptor';
 
 const BASE = 'http://api.test/api';
@@ -98,6 +98,42 @@ describe('apiErrorInterceptor', () => {
     expect(loggedText).not.toContain('should not be logged');
     expect(loggedText).not.toContain('shouldNeverBeLogged');
     expect(loggedText).not.toContain('token=');
+
+    logSpy.mockRestore();
+    delete (globalThis as any).__swallowVerbose;
+  });
+
+  it('recognizes the REAL production Node and Oracle Spring bases (post-cutover, 2026-09-19)', async () => {
+    // Matching only changes ONE observable thing (whether swallow() logs at
+    // all) — the error propagates either way — so this must inspect the log
+    // side effect, not just the rethrown error, or it would pass even if
+    // neither base matched.
+    const logSpy = jest.spyOn(console, 'debug').mockImplementation(() => undefined);
+    (globalThis as any).__swallowVerbose = true;
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([apiErrorInterceptor])),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: PROD_API_BASE_URL },
+        { provide: INTERVIEW_API_BASE_URL, useValue: INTERVIEW_PROD_API_BASE_URL }
+      ]
+    });
+    const realHttp = TestBed.inject(HttpClient);
+    const realBackend = TestBed.inject(HttpTestingController);
+
+    const nodePromise = firstValueFrom(realHttp.get(`${PROD_API_BASE_URL}/quizzes`)).catch(() => undefined);
+    realBackend.expectOne(`${PROD_API_BASE_URL}/quizzes`).flush({}, { status: 500, statusText: 'error' });
+    await nodePromise;
+
+    const springPromise = firstValueFrom(realHttp.get(`${INTERVIEW_PROD_API_BASE_URL}/interview-sessions/is_1`)).catch(() => undefined);
+    realBackend.expectOne(`${INTERVIEW_PROD_API_BASE_URL}/interview-sessions/is_1`)
+      .flush({}, { status: 500, statusText: 'error' });
+    await springPromise;
+
+    realBackend.verify();
+    expect(logSpy).toHaveBeenCalledTimes(2);
 
     logSpy.mockRestore();
     delete (globalThis as any).__swallowVerbose;

@@ -1,17 +1,17 @@
 # Oracle Cloud Migration Runbook — Spring Interview Service
 
-**Status as of 2026-09-19 (updated): VM PROVISIONED, STACK NOT YET
-DEPLOYED.** The Oracle Ampere A1 VM now exists and is network-reachable —
-see §0 for the exact, verified infrastructure facts. Nothing has been
-DEPLOYED to it yet: `deploy/oracle/`'s Spring+Caddy stack has never been
-started there, Render is still running and still the production Spring
-host, Angular's production API URL/CSP/CORS are all unchanged, and DNS
-being live is a Stage-B prerequisite for Caddy's automatic HTTPS, not a
-production traffic cutover. This document and `deploy/oracle/` exist so
-the remaining deployment (Stage C onward) can follow a rehearsed,
-evidence-based sequence instead of being improvised — see
-`docs/spring-production-runbook.md` for the CURRENT, still-authoritative
-production architecture and operations doc this one extends.
+**Status as of 2026-09-19 (updated): STAGE E CUTOVER APPLIED.** Angular's
+production Interview session lifecycle now points at Oracle
+(`https://interview-api-spring.marvinrusinek.com`) — `INTERVIEW_PROD_API_BASE_URL`
+and the CSP `connect-src` in `src/index.html` were updated together in the
+cutover commit (see Stage E below for the exact diff and rationale).
+**Render's `interview-api-spring` service remains intact, unmodified, and
+running as the verified rollback target (Stage F)** — it was never
+stopped, deleted, or reconfigured; only Angular's own routing changed.
+Topic Quiz/Weak Areas traffic (Node) and Neon are unaffected by this
+cutover. See `docs/spring-production-runbook.md` for the day-to-day
+operations doc, now updated to describe Oracle as the current production
+Spring host.
 
 ## 0. Verified infrastructure facts (provisioned, not yet deployed to)
 
@@ -241,16 +241,17 @@ a real data-fetching call such as `GET /api/quizzes` succeeding — not by
 any of the three endpoints above. This distinction carries over unchanged
 to Oracle.
 
-### 1.9 Frontend/CSP/CORS references that would need cutover edits (NOT edited now)
+### 1.9 Frontend/CSP/CORS references — cutover edits (APPLIED 2026-09-19, Stage E)
 
-| Location | Current value | Cutover action (Stage E only) |
+| Location | Prior value | Cutover action (Stage E) |
 |---|---|---|
-| `src/app/shared/tokens/api-base-url.token.ts` | `INTERVIEW_PROD_API_BASE_URL = 'https://interview-api-spring.onrender.com/api'` | → `https://interview-api-spring.marvinrusinek.com/api` (real, live domain — §0) |
-| `src/index.html` CSP `connect-src` | Lists `https://interview-api-spring.onrender.com` (and Node's origin, and local dev ports) | ADD `https://interview-api-spring.marvinrusinek.com` (see Stage E — Render's origin stays listed until rollback is no longer needed) |
-| `docs/spring-production-runbook.md` | References `interview-api-spring.onrender.com` in §1, §4 (health check commands), and its incident guide | Update alongside the cutover, not before |
-| `render.yaml` | `interview-api-spring` service definition | Unchanged — Render remains the rollback target (§Stage F); this file is not touched by the migration itself |
+| `src/app/shared/tokens/api-base-url.token.ts` | `INTERVIEW_PROD_API_BASE_URL = 'https://interview-api-spring.onrender.com/api'` | → `https://interview-api-spring.marvinrusinek.com/api` — **done** |
+| `src/index.html` CSP `connect-src` | Listed `https://interview-api-spring.onrender.com` (and Node's origin, and local dev ports) | REPLACED with `https://interview-api-spring.marvinrusinek.com` (no duplicate Spring origin retained) — **done** |
+| `docs/spring-production-runbook.md` | Referenced `interview-api-spring.onrender.com` in §1, §4 (health check commands) as production | Updated to describe Oracle as current production, Render as intact rollback — **done** |
+| `render.yaml` | `interview-api-spring` service definition | Unchanged — Render remains the rollback target (§Stage F); this file is not touched by the migration |
 
-None of these four locations are edited by this preparation task.
+This preparation-stage table is left in place as a historical record of what
+Stage E's own execution (below) confirms was actually applied.
 
 ### 1.10 Migration mechanism and dual-instance-against-Neon safety
 
@@ -790,34 +791,35 @@ pointed at Render throughout.
    Spring/Oracle, zero fallback in either direction) — repeat it here
    with Oracle as the Spring target instead of Render.
 
-### Stage E — Production cutover proposal (list only, NOT applied)
+### Stage E — Production cutover — **APPLIED 2026-09-19**
 
-The full future diff, once Stages A–D are complete and confirmed:
+Applied exactly as follows (approved cutover; Render already validated
+live via Stage C's direct-fetch lifecycle proof and Stage D's browser
+acceptance test, so Render's origin is REPLACED outright rather than kept
+as a temporary CSP duplicate):
 
 1. `src/app/shared/tokens/api-base-url.token.ts`:
-   `INTERVIEW_PROD_API_BASE_URL` → `https://interview-api-spring.marvinrusinek.com/api`.
-2. `src/index.html` CSP `connect-src`: ADD
-   `https://interview-api-spring.marvinrusinek.com`. Render's
-   origin (`interview-api-spring.onrender.com`) stays listed until
-   rollback is no longer a live concern (see Stage F) — removing it
-   early would be exactly the "fails closed silently" trap
-   `docs/spring-production-runbook.md` §6 already warns about.
-3. Any CORS configuration needed on the Oracle side: `ALLOWED_ORIGINS`
-   in the VM's `.env` set to the real production frontend origin
-   (`https://marvinrusinek.github.io`), replacing whatever throwaway
-   value Stage D used.
-4. `docs/spring-production-runbook.md`: update the URL references listed
-   in §1.9 above to describe Oracle as the current production Spring
-   host, with Render demoted to "rollback target" language matching this
-   document's own Stage F.
+   `INTERVIEW_PROD_API_BASE_URL` → `https://interview-api-spring.marvinrusinek.com/api`
+   (was `https://interview-api-spring.onrender.com/api`).
+2. `src/index.html` CSP `connect-src`: REPLACED
+   `https://interview-api-spring.onrender.com` with
+   `https://interview-api-spring.marvinrusinek.com` — no duplicate Spring
+   origin is retained. A rollback (Stage F) restores the Render origin
+   here; it is not kept listed in the interim.
+3. Oracle-side CORS: `ALLOWED_ORIGINS` on the VM already includes
+   `https://marvinrusinek.github.io` (confirmed during Stage D's browser
+   acceptance test) — no VM-side change made or needed by this cutover.
+4. `docs/spring-production-runbook.md`: updated the URL references in §1
+   and §4 to describe Oracle as the current production Spring host, with
+   Render explicitly documented as the intact, unmodified rollback
+   target.
 5. GitHub Pages rebuild/deploy — the standard `ng build
-   --configuration=production && npm run verify:artifact` sequence
-   already used for every prior deploy in this repository's history,
+   --configuration=production && npm run verify:artifact` sequence,
    pushed to `gh-pages`.
 6. **No Node endpoint changes** — Node's `PROD_API_BASE_URL` and every
-   Topic-Quiz-adjacent path are untouched by this list, exactly as every
-   prior Interview-only change in this repository's history has kept
-   Node unaffected.
+   Topic-Quiz-adjacent path are untouched, exactly as every prior
+   Interview-only change in this repository's history has kept Node
+   unaffected.
 
 ### Stage F — Rollback
 
@@ -825,9 +827,11 @@ If Oracle needs to be rolled back after Stage E's cutover:
 
 1. **Restore the Render Spring base URL and CSP**: revert
    `INTERVIEW_PROD_API_BASE_URL` back to
-   `https://interview-api-spring.onrender.com/api`; the CSP entry for it
-   was never removed (Stage E, item 2), so no CSP edit is needed here —
-   only the base-URL constant changes.
+   `https://interview-api-spring.onrender.com/api`, AND revert the CSP
+   `connect-src` entry in `src/index.html` back to
+   `https://interview-api-spring.onrender.com` — Stage E (item 2) replaced
+   the Render origin outright rather than keeping both listed, so both
+   files need the reverting edit, not just the base-URL constant.
 2. **Rebuild/deploy GitHub Pages** — same standard sequence as Stage E
    item 5.
 3. **Verify Render health and session creation** — repeat
@@ -856,8 +860,9 @@ If Oracle needs to be rolled back after Stage E's cutover:
 ## 6. Cross-references
 
 - `docs/spring-production-runbook.md` — the current, still-authoritative
-  production operations doc for the EXISTING Render deployment; this
-  document extends it for Oracle without replacing anything in it.
+  production operations doc; now updated (Stage E) to describe Oracle as
+  the current production Spring host, with Render documented as the
+  intact rollback target.
 - `deploy/oracle/` — the actual deployment package this document
   describes.
 - `render.yaml` — the current Render Blueprint; unchanged by this task,

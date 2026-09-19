@@ -1,0 +1,60 @@
+# Reverse proxy for the Spring Interview service on Oracle Cloud.
+#
+# {$SPRING_API_DOMAIN} is substituted from the environment at container
+# start (see .env.example) — the real, live hostname is
+# interview-api-spring.marvinrusinek.com, which already resolves to the
+# Oracle VM's reserved public IP (confirmed live DNS, see
+# docs/oracle-migration-runbook.md's provisioned-VM facts). Kept as an env
+# var rather than hardcoded here so this Caddyfile stays reusable if the
+# hostname ever needs to change without editing tracked source. Caddy
+# issues and renews its TLS certificate for this host automatically
+# (Let's Encrypt/ZeroSSL, via its built-in ACME client), which requires
+# ports 80/443 to be reachable from the public internet — already true
+# per the OCI ingress rules and UFW config recorded in the runbook. No
+# manual certificate handling.
+{$SPRING_API_DOMAIN} {
+	# ── Actuator: never exposed publicly ───────────────────────────────
+	# Spring itself already keeps Actuator at conservative defaults
+	# (only /actuator/health exposed, show-details=never — see
+	# backend-spring/src/main/resources/application.properties) and the
+	# Docker healthcheck in compose.yaml reaches Spring directly over the
+	# internal network, never through this proxy. There is therefore no
+	# legitimate reason for ANY /actuator/* path to be reachable from the
+	# public internet at all — block the whole prefix here as a second,
+	# independent layer rather than relying on Spring's defaults alone.
+	@actuator path /actuator* /actuator
+	respond @actuator 404
+
+	# ── Everything else: proxy to Spring on the internal network ───────
+	reverse_proxy spring:8080 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		# X-Forwarded-Proto is NOT set explicitly here: Caddy's reverse_proxy
+		# already sets it (and X-Forwarded-For/-Host) by default — `caddy
+		# validate` flags an explicit duplicate of it as unnecessary.
+	}
+
+	# ── Security headers Spring does NOT already set ───────────────────
+	# Spring's own SecurityHeadersFilter (backend-spring/src/main/java/com/
+	# quizbackend/web/SecurityHeaders.java) already sets, on every response:
+	# X-Content-Type-Options, Referrer-Policy, Cross-Origin-Resource-Policy,
+	# Cache-Control, and Pragma. NONE of those are repeated below — setting
+	# them again here would either duplicate an identical value (harmless
+	# but confusing) or risk silently overriding Spring's own value if this
+	# file's wording ever drifts from that filter's. Only headers Spring
+	# has no opinion on (because they describe the TLS/transport layer
+	# Caddy owns, not the application layer Spring owns) are added here.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	# Caddy's own structured access log — separate from Spring's
+	# application log (which stays on stdout/stderr, captured by Docker's
+	# own log driver; see docs/oracle-migration-runbook.md's logging
+	# section for rotation/disk-usage guidance covering both).
+	log {
+		output stdout
+		format json
+	}
+}

@@ -1,0 +1,105 @@
+name: quizbackend-spring-oracle
+
+# Production deployment for the Spring Interview service on an Oracle Cloud
+# Always Free Ampere A1 (ARM64) VM. Companion to backend-spring/Dockerfile —
+# this file does not change that image or Spring's application behavior at
+# all; it only decides how the already-existing, already-verified image is
+# run and fronted with HTTPS.
+#
+# Two services ONLY: Spring itself, and a Caddy reverse proxy in front of
+# it. No PostgreSQL here — the app connects to the SAME Neon database it
+# already uses on Render, over the network, via SPRING_DATASOURCE_* below.
+# Spring's own port (8080) is never published to the host; only Caddy's
+# 80/443 are, matching the OCI security-list plan in
+# docs/oracle-migration-runbook.md.
+#
+# Values come ENTIRELY from the shell environment / a real .env file next
+# to this one (see .env.example) — nothing here is a secret, and nothing
+# here needs to change between environments beyond that file.
+
+services:
+  spring:
+    build:
+      context: ../../backend-spring
+      dockerfile: Dockerfile
+    # Tagged explicitly (not left as the build's anonymous output) so a
+    # rollback can retag a PREVIOUS build back onto this name without
+    # rebuilding — see scripts/rollback.sh.
+    image: quizbackend-spring:${SPRING_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      # Three of these four are genuinely fail-closed with NO default inside
+      # the Spring app itself (see backend-spring/src/main/resources/
+      # application.properties) — an unset value means the container refuses
+      # to start, so the `:?` form below makes that failure happen at
+      # `docker compose` time, with a clear message, rather than deep inside
+      # a JVM stack trace.
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:?SPRING_DATASOURCE_URL is required}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:?SPRING_DATASOURCE_USERNAME is required}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?SPRING_DATASOURCE_PASSWORD is required}
+      TOPIC_QUIZ_RECEIPT_SECRET: ${TOPIC_QUIZ_RECEIPT_SECRET:?TOPIC_QUIZ_RECEIPT_SECRET is required}
+      # ALLOWED_ORIGINS is DELIBERATELY NOT `:?required` here — Spring itself
+      # treats it as optional (application.properties:
+      # cors.allowed-origins=${ALLOWED_ORIGINS:}, an empty allow-list if
+      # unset — see AllowedOrigins.java's own doc comment for why that is a
+      # SAFE, restrictive default rather than a permissive one). Using `:?`
+      # here would make `docker compose up` refuse to start during Stage
+      # C/D of docs/oracle-migration-runbook.md, which deliberately runs
+      # with ALLOWED_ORIGINS empty or scoped to a throwaway test origin —
+      # before the real production frontend origin is ever set at Stage E.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+    # No `ports:` — deliberately not published to the host at all. Only
+    # reachable from other containers on this compose project's own
+    # network (Caddy, and the Docker healthcheck below), never from the
+    # VM's public interface. This is what "port 8080 not public" means at
+    # the container level; docs/oracle-migration-runbook.md also covers
+    # the OS/OCI firewall layers that back this up independently.
+    expose:
+      - "8080"
+    healthcheck:
+      # Same plain-TCP check the image's own Dockerfile HEALTHCHECK already
+      # performs — repeated here so `docker compose ps` and Caddy's
+      # depends_on/service_healthy gate both see it without relying on the
+      # image default surviving an unrelated future Dockerfile edit.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Real, live DNS: interview-api-spring.marvinrusinek.com already
+      # points at the Oracle VM (see .env.example and
+      # docs/oracle-migration-runbook.md's provisioned-VM facts). DNS being
+      # live is NOT the same as production traffic being cut over — Angular
+      # continues pointing at Render until the runbook's staged validation
+      # (health/CORS/full lifecycle/reboot recovery/idle) is complete.
+      SPRING_API_DOMAIN: ${SPRING_API_DOMAIN:?SPRING_API_DOMAIN is required}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Named volumes ONLY for what Caddy itself must persist across
+      # restarts — its ACME account state and issued TLS certificates.
+      # Nothing else in this compose project uses a volume.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      spring:
+        condition: service_healthy
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

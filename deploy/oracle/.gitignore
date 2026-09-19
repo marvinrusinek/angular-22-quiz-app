@@ -1,0 +1,4 @@
+# Runtime-generated on the VM by scripts/deploy.sh — holds a plain image
+# tag reference (not a secret), but generated state never belongs in
+# version control regardless.
+.deploy-state/

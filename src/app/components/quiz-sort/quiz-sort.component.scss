@@ -3,65 +3,30 @@
 .quiz-sort {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;   // safety net: on a very narrow screen the two buttons stack rather than overflow
   gap: 10px;
+  max-width: 100%;
 
-  .sort-label {
-    font-size: 16px;
-    font-weight: 700;
-    color: vars.$fire-red;
-    white-space: nowrap;
-  }
-
-  .sort-buttons {
-    display: flex;
-    gap: 6px;
-  }
-
-  // Difficulty arrow buttons: outlined blue, filled-blue when active/selected.
+  // Both buttons share one look: outlined blue, light-gray on hover. There is no
+  // "selected" fill — neither button is ever inactive, each one just shows the
+  // direction currently applied to its own dimension.
   .sort-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
+    gap: 4px;
+    min-width: 44px;
     height: 38px;
-    padding: 0;
+    padding: 0 14px;
     border: 1px solid vars.$dodger-blue;
     border-radius: 6px;
     background: vars.$white;
     color: vars.$dodger-blue;
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
-
-    mat-icon {
-      font-size: 22px;
-      width: 22px;
-      height: 22px;
-    }
-
-    &:hover:not(:disabled) {
-      background: vars.$very-light-gray;
-    }
-
-    // Active = currently-applied difficulty direction. Also disabled, but we
-    // keep the filled "selected" look (full opacity, default cursor).
-    &.active {
-      background: vars.$dodger-blue;
-      color: vars.$white;
-      opacity: 1;
-      cursor: default;
-    }
-  }
-
-  // Alphabetical A–Z / Z–A dropdown on the right.
-  .sort-select {
-    height: 38px;
-    padding: 0 10px;
     font-size: 14px;
     font-weight: 700;
-    color: vars.$dodger-blue;
-    background: vars.$white;
-    border: 1px solid vars.$dodger-blue;
-    border-radius: 6px;
+    line-height: 1;
+    white-space: nowrap;
     cursor: pointer;
     transition: background-color 0.2s;
 
@@ -69,9 +34,38 @@
       background: vars.$very-light-gray;
     }
 
-    &:focus {
-      outline: none;
-      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+    // Keyboard focus stays visible now that the buttons are never disabled.
+    &:focus-visible {
+      outline: 2px solid vars.$dodger-blue;
+      outline-offset: 2px;
     }
+  }
+
+  // The button's text takes the BUTTON's typography. This must be explicit and
+  // more specific than the parent's global `.toolbar button span` rule
+  // (QuizSelectionComponent is ViewEncapsulation.None, so that rule reaches any
+  // <span> inside a toolbar button — including this one — and would otherwise
+  // render it at 24px in red).
+  .sort-btn .sort-btn__text {
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    line-height: inherit;
+  }
+
+  .sort-btn__icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex: none;
+  }
+}
+
+// Touch screens: keep each control a comfortable (≥ 44px) tap target. Two short
+// buttons comfortably share one row even at 320px.
+@media (max-width: 600px) {
+  .quiz-sort .sort-btn {
+    height: 44px;
+    min-width: 48px;
   }
 }

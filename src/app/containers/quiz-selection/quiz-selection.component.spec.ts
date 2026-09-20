@@ -736,3 +736,290 @@ describe('QuizSelectionComponent — early Spring warm-up', () => {
     http.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
   });
 });
+
+/**
+ * Sort controls: the toolbar now has ONE Difficulty toggle button and ONE
+ * alphabetical toggle button (`[ Difficulty ↑ ]  [ A–Z ]`) in place of a label,
+ * an ↑/↓ button pair and an A–Z / Z–A dropdown. The ORDERING is unchanged and
+ * so is the state: two independent dimensions the component already owned —
+ * difficulty is the primary grouping (by RANK, not by the difficulty strings) and
+ * A–Z / Z–A orders quizzes WITHIN each difficulty group. Everything below drives
+ * the REAL rendered buttons and reads the REAL rendered tile order.
+ *
+ * Two quizzes per difficulty, listed in an order that is neither sorted nor
+ * reversed, so "within each difficulty" is genuinely exercised.
+ */
+describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle buttons)', () => {
+  const CATALOG: ReadonlyArray<readonly [id: string, title: string, difficulty: string]> = [
+    ['components', 'Angular Components', 'beginner'],
+    ['bindings', 'Angular Bindings', 'beginner'],
+    ['signals', 'Angular Signals', 'intermediate'],
+    ['directives', 'Angular Directives', 'intermediate'],
+    ['performance', 'Performance Tuning', 'advanced'],
+    ['architecture', 'Angular Architecture', 'advanced']
+  ];
+
+  // Difficulty direction first, alphabetical direction second. Worked out by
+  // hand: rank groups Beginner < Intermediate < Advanced, then title A–Z / Z–A.
+  const ASC_AZ = ['bindings', 'components', 'directives', 'signals', 'architecture', 'performance'];
+  const ASC_ZA = ['components', 'bindings', 'signals', 'directives', 'performance', 'architecture'];
+  const DESC_AZ = ['architecture', 'performance', 'directives', 'signals', 'bindings', 'components'];
+  const DESC_ZA = ['performance', 'architecture', 'signals', 'directives', 'components', 'bindings'];
+
+  const titleOf = (id: string): string => CATALOG.find(([qid]) => qid === id)![1];
+  const AZ = 'A–Z';
+  const ZA = 'Z–A';
+
+  function render(seed?: () => void): { fixture: ComponentFixture<QuizSelectionComponent>; comp: QuizSelectionComponent } {
+    sessionStorage.clear();
+    localStorage.clear();
+    seed?.();
+
+    const metadataApi: any = {
+      load: jest.fn(() => of(CATALOG.map(([quizId]) => ({ quizId })))),
+      difficultyByQuiz: signal(new Map<string, string | null>(CATALOG.map(([id, , d]) => [id, d]))),
+      milestoneByQuiz: signal(new Map<string, string>(CATALOG.map(([id, t]) => [id, t]))),
+      summaryByQuiz: signal(new Map<string, string>(CATALOG.map(([id]) => [id, `About ${id}.`]))),
+      imageByQuiz: signal(new Map<string, string>()),
+      factsByQuiz: signal(new Map<string, readonly string[]>()),
+      questionCountByQuiz: signal(new Map<string, number | null>(CATALOG.map(([id]) => [id, 5]))),
+      imageFor: () => '',
+      factsFor: () => []
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: QuizService, useValue: {
+            setQuizId: jest.fn(),
+            setQuizStatus: jest.fn(),
+            setCompletedQuizId: jest.fn(),
+            setCheckedShuffle: jest.fn(),
+            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            quizCompleted: false
+          }
+        },
+        { provide: AchievementService, useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() } },
+        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+        { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
+        { provide: TopicQuizMetadataService, useValue: metadataApi },
+        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
+      ]
+    });
+
+    const fixture = TestBed.createComponent(QuizSelectionComponent);
+    fixture.detectChanges();
+    return { fixture, comp: fixture.componentInstance };
+  }
+
+  // ── reading and driving the REAL rendered controls / tiles ─────────
+  type Ctx = ReturnType<typeof render>;
+  const el = ({ fixture }: Ctx): HTMLElement => fixture.nativeElement;
+  const difficultyBtn = (c: Ctx): HTMLButtonElement => el(c).querySelector('.toolbar .sort-btn--difficulty')!;
+  const alphaBtn = (c: Ctx): HTMLButtonElement => el(c).querySelector('.toolbar .sort-btn--alpha')!;
+  const btnText = (b: HTMLButtonElement): string => b.querySelector('.sort-btn__text')!.textContent!.trim();
+  const arrow = (c: Ctx): string => difficultyBtn(c).querySelector('mat-icon')!.textContent!.trim();
+  /** The tile order the USER sees, as quiz ids (via the rendered titles). */
+  const renderedIds = (c: Ctx): string[] =>
+    Array.from(el(c).querySelectorAll('.quiz-title')).map((t) => {
+      const title = t.textContent!.trim();
+      return CATALOG.find(([, ttl]) => ttl === title)![0];
+    });
+  const click = (c: Ctx, btn: HTMLButtonElement): void => { btn.click(); c.fixture.detectChanges(); };
+
+  it('renders ONE Difficulty button and ONE alphabetical button — no "Sort by difficulty:" label, no ↑/↓ pair, no dropdown', () => {
+    const c = render();
+    const toolbarSort = el(c).querySelector('.toolbar app-quiz-sort')!;
+
+    expect(toolbarSort.querySelectorAll('button')).toHaveLength(2);
+    expect(toolbarSort.querySelector('select')).toBeNull();
+    expect(toolbarSort.textContent).not.toContain('Sort by difficulty:');
+    expect(btnText(difficultyBtn(c))).toBe('Difficulty');
+    expect(arrow(c)).toBe('arrow_upward');
+    expect(btnText(alphaBtn(c))).toBe(AZ);
+  });
+
+  describe('Difficulty ordering — by RANK, never by the difficulty strings', () => {
+    it('Difficulty ↑: Beginner → Intermediate → Advanced', () => {
+      const c = render();
+
+      expect(renderedIds(c)).toEqual(ASC_AZ);
+      expect(c.comp.displayedQuizzes().map((q) => q.difficulty))
+        .toEqual(['beginner', 'beginner', 'intermediate', 'intermediate', 'advanced', 'advanced']);
+    });
+
+    it('Difficulty ↓: Advanced → Intermediate → Beginner', () => {
+      const c = render();
+      click(c, difficultyBtn(c));
+
+      expect(renderedIds(c)).toEqual(DESC_AZ);
+      expect(c.comp.displayedQuizzes().map((q) => q.difficulty))
+        .toEqual(['advanced', 'advanced', 'intermediate', 'intermediate', 'beginner', 'beginner']);
+    });
+
+    it('is NOT a plain alphabetical sort of the strings (that would put "advanced" before "beginner")', () => {
+      const c = render();
+
+      const firstGroup = c.comp.displayedQuizzes().slice(0, 2).map((q) => q.difficulty);
+      expect(firstGroup).toEqual(['beginner', 'beginner']);
+      const alphabeticalStrings = [...CATALOG.map(([, , d]) => d)].sort();
+      expect(alphabeticalStrings[0]).toBe('advanced');   // what a string sort would have led with
+      expect(c.comp.displayedQuizzes()[0].difficulty).not.toBe(alphabeticalStrings[0]);
+    });
+  });
+
+  describe('the buttons toggle', () => {
+    it('Difficulty: ↑ ↔ ↓ — arrow, accessible name and tile order all follow', () => {
+      const c = render();
+      expect([arrow(c), difficultyBtn(c).getAttribute('aria-label')]).toEqual(['arrow_upward', 'Sort by difficulty ascending']);
+
+      click(c, difficultyBtn(c));
+      expect([arrow(c), difficultyBtn(c).getAttribute('aria-label')]).toEqual(['arrow_downward', 'Sort by difficulty descending']);
+      expect(renderedIds(c)).toEqual(DESC_AZ);
+      expect(c.comp.sortDifficulty()).toBe('desc');
+
+      click(c, difficultyBtn(c));
+      expect([arrow(c), difficultyBtn(c).getAttribute('aria-label')]).toEqual(['arrow_upward', 'Sort by difficulty ascending']);
+      expect(renderedIds(c)).toEqual(ASC_AZ);
+      expect(c.comp.sortDifficulty()).toBe('asc');
+    });
+
+    it('A–Z ↔ Z–A still works — reverses order WITHIN each difficulty and leaves the groups where they are', () => {
+      const c = render();
+      expect([btnText(alphaBtn(c)), alphaBtn(c).getAttribute('aria-label')]).toEqual([AZ, 'Sort alphabetically A to Z']);
+
+      click(c, alphaBtn(c));
+      expect([btnText(alphaBtn(c)), alphaBtn(c).getAttribute('aria-label')]).toEqual([ZA, 'Sort alphabetically Z to A']);
+      expect(renderedIds(c)).toEqual(ASC_ZA);
+      // Same three groups in the same order — only the order inside each changed.
+      expect(c.comp.displayedQuizzes().map((q) => q.difficulty))
+        .toEqual(['beginner', 'beginner', 'intermediate', 'intermediate', 'advanced', 'advanced']);
+      expect(c.comp.sortAlpha()).toBe('za');
+
+      click(c, alphaBtn(c));
+      expect(btnText(alphaBtn(c))).toBe(AZ);
+      expect(renderedIds(c)).toEqual(ASC_AZ);
+      expect(c.comp.sortAlpha()).toBe('az');
+    });
+
+    it('switching between the two: each button changes only its own dimension, and the rendered order composes correctly every time', () => {
+      const c = render();
+      const step = (btn: HTMLButtonElement, expected: string[], difficulty: string, alpha: string, arrowIcon: string, alphaText: string): void => {
+        click(c, btn);
+        expect(renderedIds(c)).toEqual(expected);
+        expect([c.comp.sortDifficulty(), c.comp.sortAlpha()]).toEqual([difficulty, alpha]);
+        expect([arrow(c), btnText(alphaBtn(c))]).toEqual([arrowIcon, alphaText]);
+      };
+
+      expect(renderedIds(c)).toEqual(ASC_AZ);
+      step(difficultyBtn(c), DESC_AZ, 'desc', 'az', 'arrow_downward', AZ);
+      step(alphaBtn(c), DESC_ZA, 'desc', 'za', 'arrow_downward', ZA);
+      step(difficultyBtn(c), ASC_ZA, 'asc', 'za', 'arrow_upward', ZA);
+      step(alphaBtn(c), ASC_AZ, 'asc', 'az', 'arrow_upward', AZ);
+    });
+
+    it('keeps keyboard focus on the pressed button after it re-renders (the old ↑/↓ pair disabled the pressed button)', () => {
+      const c = render();
+      document.body.appendChild(el(c));   // focus needs an attached element
+      const btn = difficultyBtn(c);
+      btn.focus();
+      click(c, btn);
+
+      expect(difficultyBtn(c).disabled).toBe(false);
+      expect(document.activeElement).toBe(difficultyBtn(c));
+      el(c).remove();
+    });
+  });
+
+  describe('search and sorting together', () => {
+    it('search narrows the list and every sort combination still orders the survivors correctly', () => {
+      const c = render();
+      c.comp.searchTerm.set('angular');   // word-start match: everything except "Performance Tuning"
+      c.fixture.detectChanges();
+
+      expect(renderedIds(c)).toEqual(ASC_AZ.filter((id) => id !== 'performance'));
+      click(c, difficultyBtn(c));
+      expect(renderedIds(c)).toEqual(DESC_AZ.filter((id) => id !== 'performance'));
+      click(c, alphaBtn(c));
+      expect(renderedIds(c)).toEqual(DESC_ZA.filter((id) => id !== 'performance'));
+      click(c, difficultyBtn(c));
+      expect(renderedIds(c)).toEqual(ASC_ZA.filter((id) => id !== 'performance'));
+    });
+
+    it('sorting never changes the search term, and the search never changes the sort state', () => {
+      const c = render();
+      c.comp.searchTerm.set('angular');
+      c.fixture.detectChanges();
+
+      click(c, difficultyBtn(c));
+      click(c, alphaBtn(c));
+      expect(c.comp.searchTerm()).toBe('angular');
+
+      c.comp.searchTerm.set('');
+      c.fixture.detectChanges();
+      expect([c.comp.sortDifficulty(), c.comp.sortAlpha()]).toEqual(['desc', 'za']);
+    });
+
+    it('a search with no matches shows nothing; clearing it restores the list in the CURRENT sort order', () => {
+      const c = render();
+      click(c, difficultyBtn(c));   // desc / az
+
+      c.comp.searchTerm.set('zzz-no-such-topic');
+      c.fixture.detectChanges();
+      expect(renderedIds(c)).toEqual([]);
+      click(c, alphaBtn(c));        // buttons keep working over an empty result
+
+      c.comp.searchTerm.set('');
+      c.fixture.detectChanges();
+      expect(renderedIds(c)).toEqual(DESC_ZA);
+    });
+
+    it('search matches only the title (not the difficulty), exactly as before', () => {
+      const c = render();
+      c.comp.searchTerm.set('advanced');   // a difficulty, not a title word
+      c.fixture.detectChanges();
+
+      expect(renderedIds(c)).toEqual([]);
+    });
+  });
+
+  describe('persistence is unchanged', () => {
+    it('still stores the same two keys with the same values', () => {
+      const c = render();
+      expect([localStorage.getItem('quizSortDifficulty'), localStorage.getItem('quizSortAlpha')]).toEqual(['asc', 'az']);
+
+      click(c, difficultyBtn(c));
+      click(c, alphaBtn(c));
+      c.fixture.detectChanges();
+
+      expect(localStorage.getItem('quizSortDifficulty')).toBe('desc');
+      expect(localStorage.getItem('quizSortAlpha')).toBe('za');
+    });
+
+    it('restores a saved preference and the buttons show it', () => {
+      const c = render(() => {
+        localStorage.setItem('quizSortDifficulty', 'desc');
+        localStorage.setItem('quizSortAlpha', 'za');
+      });
+
+      expect(renderedIds(c)).toEqual(DESC_ZA);
+      expect([arrow(c), btnText(alphaBtn(c))]).toEqual(['arrow_downward', ZA]);
+      expect(difficultyBtn(c).getAttribute('aria-label')).toBe('Sort by difficulty descending');
+      expect(alphaBtn(c).getAttribute('aria-label')).toBe('Sort alphabetically Z to A');
+    });
+
+    it('ignores a corrupt saved value and falls back to the defaults', () => {
+      const c = render(() => {
+        localStorage.setItem('quizSortDifficulty', 'sideways');
+        localStorage.setItem('quizSortAlpha', 'qq');
+      });
+
+      expect(renderedIds(c)).toEqual(ASC_AZ);
+    });
+  });
+});

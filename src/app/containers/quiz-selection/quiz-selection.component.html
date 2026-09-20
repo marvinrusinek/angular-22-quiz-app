@@ -134,39 +134,50 @@
     />
   }
 
-  <!-- Toolbar: search + sort (right above the grid they act on) -->
+  <!-- Toolbar: search + difficulty filter + sort (right above the grid they act on).
+       The filter (WHICH quizzes) and the sort (their ORDER) are independent and
+       sit together in one group, so on a narrow screen they wrap as a unit. -->
   <div class="toolbar">
     <app-quiz-search
       [searchTerm]="searchTerm()"
       (searchTermChange)="searchTerm.set($event)"
     ></app-quiz-search>
 
-    <app-quiz-sort
-      [difficultyDirection]="sortDifficulty()"
-      (difficultyDirectionChange)="sortDifficulty.set($event)"
-      [alphaDirection]="sortAlpha()"
-      (alphaDirectionChange)="sortAlpha.set($event)"
-    ></app-quiz-sort>
+    <div class="toolbar-controls">
+      <app-quiz-difficulty-filter
+        [difficulty]="difficultyFilter()"
+        (difficultyChange)="difficultyFilter.set($event)"
+      ></app-quiz-difficulty-filter>
+
+      <app-quiz-sort
+        [difficultyDirection]="sortDifficulty()"
+        (difficultyDirectionChange)="sortDifficulty.set($event)"
+        [alphaDirection]="sortAlpha()"
+        (alphaDirectionChange)="sortAlpha.set($event)"
+      ></app-quiz-sort>
+    </div>
   </div>
 
-  <!-- Empty state: quizzes are loaded but none match the search -->
+  <!-- Empty state: quizzes are loaded but none match the search and/or the
+       difficulty filter. ONE element; noResultsMessage() names what is narrowing
+       the list, so it reads correctly whichever of the two caused it. -->
   @if (quizzes().length > 0 && displayedQuizzes().length === 0) {
     <span
       class="no-results"
       role="status"
       aria-live="polite"
-      i18n
     >
-      No quizzes match your search.
+      {{ noResultsMessage() }}
     </span>
   }
 
-  <!-- Announces the updated count while actively searching. Not shown when the
-       search box is empty (avoids a spurious announcement on every page load)
-       and not shown for zero results (the "no quizzes match" message above
-       already covers that, so this never duplicates it). Visually hidden —
-       the tile grid itself already shows the count to sighted users. -->
-  @if (searchTerm().trim().length > 0 && displayedQuizzes().length > 0) {
+  <!-- Announces the updated count while actively searching OR filtering by
+       difficulty. Not shown when neither is active (avoids a spurious
+       announcement on every page load) and not shown for zero results (the
+       "no quizzes match" message above already covers that, so this never
+       duplicates it). Visually hidden — the tile grid itself already shows the
+       count to sighted users. -->
+  @if ((searchTerm().trim().length > 0 || isDifficultyFiltered()) && displayedQuizzes().length > 0) {
     <span
       class="visually-hidden"
       role="status"

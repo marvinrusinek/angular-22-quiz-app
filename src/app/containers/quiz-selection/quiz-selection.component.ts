@@ -17,6 +17,7 @@ import { QuizStatus } from '../../shared/models/quiz-status.enum';
 import { AnimationState } from '../../shared/models/AnimationState.type';
 import { Quiz, QuizDifficulty } from '../../shared/models/Quiz.model';
 import { AlphaDirection, DifficultyDirection } from '../../shared/models/QuizSort.type';
+import { DifficultyFilter } from '../../shared/models/QuizFilter.type';
 import { QuizSelectionParams } from '../../shared/models/QuizSelectionParams.model';
 
 import { QuizService } from '../../shared/services/data/quiz.service';
@@ -43,6 +44,7 @@ import {
 } from '../../components/quiz-card-progress/quiz-card-progress.component';
 import { QuizSearchComponent } from '../../components/quiz-search/quiz-search.component';
 import { QuizSortComponent } from '../../components/quiz-sort/quiz-sort.component';
+import { QuizDifficultyFilterComponent } from '../../components/quiz-difficulty-filter/quiz-difficulty-filter.component';
 import { ThemeToggleComponent } from '../../components/theme-toggle/theme-toggle.component';
 import { ScrollDownIndicatorComponent } from '../../components/scroll-down-indicator/scroll-down-indicator.component';
 import { CountUpDirective } from '../../directives/count-up.directive';
@@ -65,6 +67,7 @@ import { swallow } from '../../shared/utils/error-logging';
     NgOptimizedImage,
     QuizSearchComponent,
     QuizSortComponent,
+    QuizDifficultyFilterComponent,
     ThemeToggleComponent,
     ScrollDownIndicatorComponent,
     RecommendedNextQuizComponent,
@@ -180,6 +183,12 @@ export class QuizSelectionComponent implements OnInit {
   readonly sortDifficulty = signal<DifficultyDirection>('asc');
   readonly sortAlpha = signal<AlphaDirection>('az');
 
+  // Difficulty FILTER — which difficulty to show, NOT how to order it ('all' shows
+  // every difficulty). Independent of both sort dimensions above. Deliberately not
+  // persisted: every visit starts on 'all', so a leftover narrowing can never make
+  // the catalog look incomplete (the search term is likewise session-only).
+  readonly difficultyFilter = signal<DifficultyFilter>('all');
+
   // Persist both sort dimensions so they're remembered on the next visit.
   private readonly persistSortEffect = effect(() => {
     writeLocalString(SK_QUIZ_SORT_DIFFICULTY, this.sortDifficulty());
@@ -203,15 +212,37 @@ export class QuizSelectionComponent implements OnInit {
     this.refreshAchievementsSummary();
   });
 
-  // The grid renders this: filter the full list by the search term, then sort
-  // the result. Neither step mutates the source array (filter returns a new
-  // array; sortQuizzes spreads before sorting).
+  // The grid renders this: filter the full list by the search term AND the
+  // difficulty filter (a quiz must satisfy both), then sort the result. The
+  // filter only decides which quizzes remain; the sort — unchanged — orders
+  // whatever remains. Neither step mutates the source array (filter returns a
+  // new array; sortQuizzes spreads before sorting).
   readonly displayedQuizzes = computed<Quiz[]>(() => {
     const term = this.searchTerm();
+    const difficultyFilter = this.difficultyFilter();
     const difficultyDir = this.sortDifficulty();
     const alphaDir = this.sortAlpha();
-    const filtered = (this.quizzes() ?? []).filter(quiz => this.matchesSearch(quiz, term));
+    const filtered = (this.quizzes() ?? []).filter(
+      quiz => this.matchesSearch(quiz, term) && this.matchesDifficulty(quiz, difficultyFilter)
+    );
     return this.sortQuizzes(filtered, difficultyDir, alphaDir);
+  });
+
+  // True while the difficulty filter is narrowing the list (anything but 'all').
+  readonly isDifficultyFiltered = computed(() => this.difficultyFilter() !== 'all');
+
+  // The ONE empty-state message. It names whatever is actually narrowing the
+  // list, so it reads correctly whether zero results came from the search, the
+  // difficulty filter, or both together.
+  readonly noResultsMessage = computed(() => {
+    const searching = this.searchTerm().trim().length > 0;
+    if (searching && this.isDifficultyFiltered()) {
+      return $localize`No quizzes match your search and difficulty filter.`;
+    }
+    if (this.isDifficultyFiltered()) {
+      return $localize`No quizzes match the selected difficulty.`;
+    }
+    return $localize`No quizzes match your search.`;
   });
 
   // Summary stats for the catalog row: total quizzes, total questions, and a
@@ -586,6 +617,13 @@ export class QuizSelectionComponent implements OnInit {
     // NOT "chANGe detection". A plain substring includes() matched mid-word noise.
     const title = (quiz?.milestone ?? '').toString().toLowerCase();
     return title.split(/[^a-z0-9]+/).some(word => word.startsWith(needle));
+  }
+
+  // 'all' keeps every quiz (including any with a missing/unknown difficulty);
+  // a specific difficulty keeps only quizzes of exactly that difficulty.
+  private matchesDifficulty(quiz: Quiz, filter: DifficultyFilter): boolean {
+    if (filter === 'all') return true;
+    return (quiz?.difficulty ?? '').toString().toLowerCase() === filter;
   }
 
   // Return a NEW sorted array (never mutates the input). Two-dimensional:

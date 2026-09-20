@@ -1,0 +1,23 @@
+<!-- The VISIBLE value is the current filter ("All Difficulties" by default, then
+     Beginner / Intermediate / Advanced) — that is what communicates the state.
+     The tooltip and the accessible name say what the control DOES, and are the same
+     fixed text whichever difficulty is selected (identical text also stops
+     Material announcing it twice). MatSelect exposes the selected value and the
+     open/closed state itself. -->
+<mat-select
+  class="difficulty-select"
+  [value]="difficulty()"
+  (selectionChange)="onSelectionChange($event.value)"
+  matTooltip="Filter quizzes by difficulty"
+  i18n-matTooltip
+  [matTooltipDisabled]="panelOpen()"
+  aria-label="Filter quizzes by difficulty"
+  i18n-aria-label
+  [panelWidth]="null"
+  (openedChange)="panelOpen.set($event)"
+>
+  <mat-option value="all" i18n>All Difficulties</mat-option>
+  <mat-option value="beginner" i18n>Beginner</mat-option>
+  <mat-option value="intermediate" i18n>Intermediate</mat-option>
+  <mat-option value="advanced" i18n>Advanced</mat-option>
+</mat-select>

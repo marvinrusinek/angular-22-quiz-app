@@ -1,0 +1,55 @@
+@use '../../../variables' as vars;
+
+// Sized to look like its neighbours, the Difficulty / A–Z sort buttons: outlined
+// blue, 14px bold, light-gray on hover. The MatSelect trigger lives in Material's
+// own view (outside this component's style scope), so its text and arrow are
+// styled through the select design tokens rather than by reaching inside it.
+:host {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.difficulty-select {
+  --mat-select-trigger-text-size: 14px;
+  --mat-select-trigger-text-weight: 700;
+  --mat-select-enabled-trigger-text-color: #{vars.$dodger-blue};
+  --mat-select-enabled-arrow-color: #{vars.$dodger-blue};
+  --mat-select-focused-arrow-color: #{vars.$dodger-blue};
+
+  display: inline-flex;
+  align-items: center;
+  // The selected text is left-aligned like the desktop layout. Set explicitly: the
+  // parent centres everything in its toolbar on phones (text-align: center) and
+  // that would otherwise be inherited into the select.
+  text-align: left;
+  box-sizing: border-box;
+  // Fixed to the widest label ("All Difficulties") so the control does not change
+  // width, and shove its neighbours around, as the selection changes.
+  width: 168px;
+  max-width: 100%;
+  height: 38px;
+  padding: 0 8px 0 14px;
+  border: 1px solid vars.$dodger-blue;
+  border-radius: 6px;
+  background: vars.$white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background: vars.$very-light-gray;
+  }
+
+  // Keyboard focus stays clearly visible (Material's own host outline is off).
+  &:focus-visible {
+    outline: 2px solid vars.$dodger-blue;
+    outline-offset: 2px;
+  }
+}
+
+// Touch screens: keep the control a comfortable (≥ 44px) tap target, matching
+// the sort buttons beside it.
+@media (max-width: 600px) {
+  .difficulty-select {
+    height: 44px;
+  }
+}

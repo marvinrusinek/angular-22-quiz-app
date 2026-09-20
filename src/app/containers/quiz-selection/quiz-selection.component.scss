@@ -118,6 +118,18 @@
     .quiz-menu-label {
       margin-left: 10px;
     }
+
+    // Difficulty filter + sort buttons, kept together as ONE group so that on a
+    // narrow screen they wrap as a unit (filter on one row, the two sort buttons
+    // on the next) instead of splitting arbitrarily.
+    .toolbar-controls {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-width: 100%;
+    }
   }
 
   // Override Material menu panel background to white
@@ -156,7 +168,7 @@
     }
   }
 
-  // Empty state shown when a search filters out every quiz.
+  // Empty state shown when the search and/or the difficulty filter leaves no quiz.
   .no-results {
     display: block;
     text-align: center;

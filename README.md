@@ -1,7 +1,7 @@
 <h1 align="center">🚀 Angular Quiz App</h1>
 
 <p>
-<strong>A full-featured Angular learning and interview-preparation platform built with Angular 22, TypeScript, Signals, RxJS, Angular Material, and a Node/Express backend.</strong>
+<strong>A full-featured Angular learning and interview-preparation platform built with Angular 22, TypeScript, Signals, RxJS, and Angular Material, with Node/Express powering Topic Quizzes and Spring Boot powering Interview Mode.</strong>
 </p>
 
 <p>
@@ -48,12 +48,13 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 
 <ul>
 <li>Angular 22 architecture using standalone components, Signals, RxJS, Signal Forms, and focused service layers</li>
-<li>Backend-driven Interview Mode with timed mixed-topic assessments, session persistence, answer submission, server-side scoring, and protected result retrieval</li>
+<li>Spring Boot-powered Interview Mode with timed mixed-topic assessments, session persistence, answer submission, server-side scoring, and protected result retrieval</li>
 <li>Topic Quiz system supporting single-answer, multiple-answer, immediate feedback, explanations, timers, shuffling, and detailed results</li>
 <li>Performance analytics including interview history, performance trends, topic-level analysis, and Weak Areas Practice</li>
 <li>Backend-authoritative quiz architecture with PostgreSQL as the source of truth, server-side correctness evaluation, protected assessment data, strict CSP, and no answer-bearing quiz bank shipped with the Angular application</li>
-<li>Comprehensive automated testing covering Angular unit tests and Playwright end-to-end workflows</li>
+<li>Automated testing across the stack with Angular unit tests, Jest, Playwright, JUnit 5, MockMvc, Testcontainers, and Node/Spring API contract-parity testing</li>
 <li>PWA and responsive UI built with Angular Material and accessibility-conscious interaction patterns</li>
+<li>Dual-backend architecture with Node/Express and Spring Boot implementations sharing API contracts verified through cross-runtime parity testing</li>
 </ul>
 
 <hr>
@@ -72,7 +73,7 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 
 <h2>🧭 Architecture Overview</h2>
 
-<p>The application follows a modular frontend/backend architecture. Angular container components orchestrate application flow, focused services encapsulate business logic, and Signals and RxJS keep the UI synchronized with user interactions. Both Topic Quiz and Interview Mode communicate with a Node/Express REST API backed by PostgreSQL, which serves as the authoritative data store for quiz content, assessment sessions, answers, and scoring. </p>
+<p>The application follows a modular frontend/backend architecture. Angular container components orchestrate application flow, focused services encapsulate business logic, and Signals and RxJS keep the UI synchronized with user interactions. Topic Quizzes and quiz metadata are served through a Node/Express REST API, while Interview Mode session workflows are served through a Spring Boot REST API. Both backends use a shared PostgreSQL database, hosted on Neon in production, as the authoritative store for quiz content, assessment sessions, submitted answers, and server-side results.</p>
 
 <p>The frontend combines <strong>Angular Signals</strong> for fine-grained reactive UI state with <strong>RxJS</strong> for asynchronous data flows, event coordination, and cross-component communication. Correctness-sensitive operations remain backend-authoritative so answer-bearing quiz data is not shipped with the Angular application. </p>
 
@@ -118,27 +119,38 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 <hr>
 
 <h2>📁 Project Structure</h2>
-<p>The project is organized into reusable UI components, feature containers, and focused service layers to promote separation of concerns, maintainability, and scalability.</p>
+<p>The project is organized into an Angular frontend, dedicated Node/Express and Spring Boot APIs, automated end-to-end testing, and deployment infrastructure, with focused service layers and clear separation between application domains.</p>
 <pre><code>
 angular-22-quiz-app/
 ├── src/
 │   └── app/
 │       ├── components/
 │       ├── containers/
-│       ├── interview/
-│       ├── practice/
 │       └── shared/
 │           ├── services/
 │           ├── models/
 │           └── utils/
 │
-├── backend/
-│   ├── routes/
-│   ├── services/
-│   ├── data/
-│   └── database/
+├── backend/                         # Node/Express API
+│   └── src/
+│       ├── routes/
+│       ├── quiz/
+│       ├── interview/
+│       └── database/
 │
-├── e2e/
+├── backend-spring/                  # Spring Boot API
+│   └── src/
+│       ├── main/
+│       │   └── java/
+│       └── test/
+│
+├── e2e/                             # Playwright end-to-end tests
+│
+├── deploy/
+│   └── oracle/                      # Oracle Cloud deployment
+│
+├── docs/
+├── scripts/
 └── ...
 </code></pre>
 

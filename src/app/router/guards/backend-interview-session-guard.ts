@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivate, Router, UrlTree } from '@angular/router';
 
+import { BackendInterviewResultService } from '../../shared/services/interview/backend-interview-result.service';
 import { BackendInterviewSessionService } from '../../shared/services/interview/backend-interview-session.service';
 import { InterviewSessionReferenceStorage } from '../../shared/services/interview/interview-session-reference.storage';
 
@@ -16,8 +17,14 @@ import { InterviewSessionReferenceStorage } from '../../shared/services/intervie
  *   mismatch      route id ≠ stored id       → builder (reference kept: it may
  *                                              belong to a different, valid tab)
  *   unauthorized  reference already cleared  → builder
- *   expired       ALLOW — the component finalizes and forwards to results
- *   submitted     → results
+ *   submitted     the resume call only CLAIMS this (409 CONFLICT), and
+ *   expired       (409 SESSION_EXPIRED) is a session past its deadline that
+ *                 nothing has finalized yet. Neither is taken on trust: the
+ *                 authenticated result endpoint confirms (and, for an expired
+ *                 session, finalizes) it. Confirmed → results. Dead credential
+ *                 → builder. Anything it cannot confirm → ALLOW, and the
+ *                 component shows its retry card. Never a redirect on a guess,
+ *                 so a stray 409 cannot ping-pong with the Results guard.
  *   unavailable   ALLOW — the component shows a retry state; the reference is
  *                 deliberately preserved so a transient outage cannot destroy a
  *                 live assessment
@@ -25,6 +32,7 @@ import { InterviewSessionReferenceStorage } from '../../shared/services/intervie
 @Injectable({ providedIn: 'root' })
 export class BackendInterviewSessionGuard implements CanActivate {
   private readonly session = inject(BackendInterviewSessionService);
+  private readonly results = inject(BackendInterviewResultService);
   private readonly storage = inject(InterviewSessionReferenceStorage);
   private readonly router = inject(Router);
 
@@ -43,11 +51,17 @@ export class BackendInterviewSessionGuard implements CanActivate {
 
     switch (outcome.kind) {
       case 'active':
-      case 'expired':
       case 'unavailable':
         return true;
       case 'submitted':
-        return this.router.createUrlTree(['/interview/results', reference.sessionId]);
+      case 'expired': {
+        const verdict = await this.results.confirmFinished();
+        if (verdict.kind === 'results') {
+          return this.router.createUrlTree(['/interview/results', verdict.sessionId]);
+        }
+        if (verdict.kind === 'builder') return this.toBuilder();
+        return true;   // unresolved: the component renders the retry card
+      }
       case 'unauthorized':
       case 'none':
       default:

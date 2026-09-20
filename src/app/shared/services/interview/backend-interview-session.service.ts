@@ -99,6 +99,7 @@ export class BackendInterviewSessionService {
   private readonly _optimisticFlags = signal<ReadonlyMap<string, boolean>>(new Map());
 
   private token = '';
+  private resumeInFlight: Promise<ResumeOutcome> | null = null;
   private readonly saveState = new Map<string, QuestionSaveState>();
   private readonly reviewSaveState = new Map<string, ReviewSaveState>();
   /**
@@ -190,8 +191,32 @@ export class BackendInterviewSessionService {
     this.storage.write(session.sessionId, sessionToken, 0);
   }
 
-  /** Stage 9D entry point. Never called from a constructor or an effect. */
-  async resumeFromStoredReference(): Promise<ResumeOutcome> {
+  /**
+   * Stage 9D entry point. Never called from a constructor or an effect.
+   *
+   * Overlapping calls (two activations of the same URL, a retry click while a
+   * guard is still resuming) share ONE request and one outcome, so a burst of
+   * lifecycle emissions can never fan out into duplicate requests.
+   */
+  resumeFromStoredReference(): Promise<ResumeOutcome> {
+    this.resumeInFlight ??= this.resumeOnce().finally(() => {
+      this.resumeInFlight = null;
+    });
+    return this.resumeInFlight;
+  }
+
+  /**
+   * The resume call reported the session as finished (submitted or expired) but
+   * the authenticated result endpoint could not confirm it. Land in the ordinary
+   * error state — the component's retry card — instead of leaving a terminal
+   * status that has no session to render. The stored reference is untouched, so
+   * Retry can still succeed.
+   */
+  markResumeUnresolved(): void {
+    this._status.set('error');
+  }
+
+  private async resumeOnce(): Promise<ResumeOutcome> {
     const reference = this.storage.read();
     if (!reference) return { kind: 'none' };
 

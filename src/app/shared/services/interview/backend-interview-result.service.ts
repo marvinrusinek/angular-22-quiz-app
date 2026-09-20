@@ -39,6 +39,18 @@ export type ResultLoadOutcome =
   /** The backend answered, but with something unusable. */
   | { readonly kind: 'malformed' };
 
+/**
+ * What to do with a session the resume call reported as finished.
+ *   results     the authenticated result was fetched — the finish is PROVEN
+ *   builder     the credential is dead or missing — nothing to show
+ *   unresolved  the result could not confirm it (still running, unreachable,
+ *               malformed) — stay put in the retry state, never navigate
+ */
+export type FinishedVerdict =
+  | { readonly kind: 'results'; readonly sessionId: string }
+  | { readonly kind: 'builder' }
+  | { readonly kind: 'unresolved' };
+
 @Service()
 export class BackendInterviewResultService {
   private readonly api = inject(InterviewApiService);
@@ -60,14 +72,57 @@ export class BackendInterviewResultService {
   /** Session id the loaded result belongs to, for route matching. */
   readonly sessionId = computed(() => this._result()?.sessionId ?? '');
 
+  /** Loads currently on the wire, so overlapping callers share one request. */
+  private readonly inFlight = new Map<string, Promise<ResultLoadOutcome>>();
+
   /**
    * Load the result for `sessionId`.
    *
    * Prefers the in-memory result the session service already holds from a
    * just-completed submit, so the common path (submit → navigate) issues no
    * extra request. A refresh or a direct visit falls through to `GET /result`.
+   *
+   * Overlapping calls for the same session share ONE request.
    */
-  async load(routeSessionId: string): Promise<ResultLoadOutcome> {
+  load(routeSessionId: string): Promise<ResultLoadOutcome> {
+    const pending = this.inFlight.get(routeSessionId);
+    if (pending) return pending;
+
+    const run = this.loadOnce(routeSessionId).finally(() => {
+      this.inFlight.delete(routeSessionId);
+    });
+    this.inFlight.set(routeSessionId, run);
+    return run;
+  }
+
+  /**
+   * The resume call said the stored session is submitted or expired. That is
+   * only a claim: `409` means "already submitted" on THIS endpoint but a
+   * different thing on others, and an expired session is not finalized until
+   * something asks for its result. Ask, with the stored credential, through the
+   * one shared pipeline — a fetched result is the only proof, and it is left in
+   * memory so the Results route that follows issues no second request.
+   *
+   * Never navigates and never throws: the caller acts on the verdict.
+   */
+  async confirmFinished(): Promise<FinishedVerdict> {
+    const reference = this.storage.read();
+    if (!reference) return { kind: 'builder' };
+
+    const outcome = await this.load(reference.sessionId);
+    switch (outcome.kind) {
+      case 'loaded':
+        return { kind: 'results', sessionId: reference.sessionId };
+      case 'unauthorized':   // load() already dropped the dead reference
+      case 'none':
+        return { kind: 'builder' };
+      default:               // 'not-ready' | 'unavailable' | 'malformed'
+        this.session.markResumeUnresolved();
+        return { kind: 'unresolved' };
+    }
+  }
+
+  private async loadOnce(routeSessionId: string): Promise<ResultLoadOutcome> {
     const existing = this._result();
     if (existing && existing.sessionId === routeSessionId) {
       return { kind: 'loaded', result: existing };

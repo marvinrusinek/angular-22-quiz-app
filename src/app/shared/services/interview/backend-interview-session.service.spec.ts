@@ -200,6 +200,50 @@ describe('resume outcomes', () => {
     await service.resumeFromStoredReference();
     expect(api.resumeSession).toHaveBeenCalledTimes(1);
   });
+
+  it('OVERLAPPING calls share one request and one outcome', async () => {
+    TestBed.inject(InterviewSessionReferenceStorage).write('is_1', TOKEN, 0);
+    api.resumeSession.mockReturnValue(
+      throwError(() => new InterviewApiError('SESSION_EXPIRED', 409))
+    );
+
+    const [a, b, c] = await Promise.all([
+      service.resumeFromStoredReference(),
+      service.resumeFromStoredReference(),
+      service.resumeFromStoredReference()
+    ]);
+
+    expect(api.resumeSession).toHaveBeenCalledTimes(1);
+    expect([a, b, c]).toEqual([{ kind: 'expired' }, { kind: 'expired' }, { kind: 'expired' }]);
+  });
+
+  it('a call AFTER the previous one settled is a fresh request (coalescing never caches an outcome)', async () => {
+    TestBed.inject(InterviewSessionReferenceStorage).write('is_1', TOKEN, 0);
+    api.resumeSession.mockReturnValueOnce(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
+    expect(await service.resumeFromStoredReference()).toEqual({ kind: 'unavailable' });
+
+    api.resumeSession.mockReturnValueOnce(of(session()));
+    expect(await service.resumeFromStoredReference()).toEqual({ kind: 'active' });
+    expect(api.resumeSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('markResumeUnresolved lands in the retry (error) state and KEEPS the reference', async () => {
+    const storage = TestBed.inject(InterviewSessionReferenceStorage);
+    storage.write('is_1', TOKEN, 0);
+    api.resumeSession.mockReturnValue(
+      throwError(() => new InterviewApiError('CONFLICT', 409))
+    );
+    expect(await service.resumeFromStoredReference()).toEqual({ kind: 'submitted' });
+    expect(service.status()).toBe('submitted');
+
+    service.markResumeUnresolved();
+
+    expect(service.status()).toBe('error');
+    expect(service.loading()).toBe(false);
+    expect(storage.read()?.sessionId).toBe('is_1');
+  });
 });
 
 describe('optimistic saving', () => {

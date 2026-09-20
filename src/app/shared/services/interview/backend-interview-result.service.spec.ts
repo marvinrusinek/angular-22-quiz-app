@@ -290,3 +290,84 @@ describe('guard', () => {
     expect(url(await guard.canActivate(snapshot('is_1')))).not.toContain(TOKEN);
   });
 });
+
+/**
+ * The resume endpoint only CLAIMS a session is finished. `confirmFinished` is
+ * the single place that turns the claim into a decision, and only a fetched,
+ * usable result counts as proof.
+ */
+describe('confirmFinished', () => {
+  const session = () => TestBed.inject(BackendInterviewSessionService);
+
+  it('a fetched result proves it: verdict is results for the STORED session, result kept in memory', async () => {
+    storage.write('is_1', TOKEN, 0);
+    api.getResult.mockReturnValue(of(result()));
+
+    expect(await service.confirmFinished()).toEqual({ kind: 'results', sessionId: 'is_1' });
+    expect(service.result()?.sessionId).toBe('is_1');
+    expect(api.getResult).toHaveBeenCalledWith('is_1', TOKEN);
+  });
+
+  it('with no stored reference there is nothing to prove: builder, and NO request', async () => {
+    expect(await service.confirmFinished()).toEqual({ kind: 'builder' });
+    expect(api.getResult).not.toHaveBeenCalled();
+  });
+
+  it('a dead credential (401) is builder, and the reference is dropped', async () => {
+    storage.write('is_1', TOKEN, 0);
+    fails('UNAUTHORIZED', 401);
+
+    expect(await service.confirmFinished()).toEqual({ kind: 'builder' });
+    expect(storage.read()).toBeNull();
+    expect(service.result()).toBeNull();
+  });
+
+  it.each([
+    ['still running (409)', 'CONFLICT', 409],
+    ['unreachable', 'BACKEND_UNAVAILABLE', 0],
+    ['a server error', 'BACKEND_UNAVAILABLE', 500]
+  ] as const)('%s cannot confirm it: unresolved, error state, reference kept, NO result exposed', async (_l, code, status) => {
+    storage.write('is_1', TOKEN, 0);
+    fails(code, status);
+
+    expect(await service.confirmFinished()).toEqual({ kind: 'unresolved' });
+    expect(session().status()).toBe('error');
+    expect(storage.read()?.sessionId).toBe('is_1');
+    expect(service.result()).toBeNull();
+    expect(service.hasResult()).toBe(false);
+  });
+
+  it('a body that is not a usable result cannot confirm it either', async () => {
+    storage.write('is_1', TOKEN, 0);
+    api.getResult.mockReturnValue(of({ sessionId: '' } as unknown as InterviewResultViewModel));
+
+    expect(await service.confirmFinished()).toEqual({ kind: 'unresolved' });
+    expect(service.result()).toBeNull();
+  });
+});
+
+describe('overlapping loads', () => {
+  it('share ONE request, and a later load re-uses the adopted result', async () => {
+    storage.write('is_1', TOKEN, 0);
+    api.getResult.mockReturnValue(of(result()));
+
+    const [a, b] = await Promise.all([service.load('is_1'), service.load('is_1')]);
+
+    expect(a.kind).toBe('loaded');
+    expect(b.kind).toBe('loaded');
+    expect(api.getResult).toHaveBeenCalledTimes(1);
+
+    await service.load('is_1');
+    expect(api.getResult).toHaveBeenCalledTimes(1);   // in-memory result, no request
+  });
+
+  it('a failed load is never cached: the next call asks the backend again', async () => {
+    storage.write('is_1', TOKEN, 0);
+    api.getResult.mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    expect((await service.load('is_1')).kind).toBe('unavailable');
+
+    api.getResult.mockReturnValueOnce(of(result()));
+    expect((await service.load('is_1')).kind).toBe('loaded');
+    expect(api.getResult).toHaveBeenCalledTimes(2);
+  });
+});

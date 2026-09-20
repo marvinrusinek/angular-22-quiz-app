@@ -9,7 +9,9 @@ import { InterviewSessionReferenceStorage } from '../../../shared/services/inter
 import { InterviewApiService } from '../../../shared/services/api/interview-api.service';
 import { InterviewApiError } from '../../../shared/services/api/interview-api.errors';
 import { BackendInterviewTimerService } from '../../../shared/services/interview/backend-interview-timer.service';
-import type { InterviewSessionViewModel } from '../../../shared/models/interview/interview-view-models';
+import { BackendInterviewResultService } from '../../../shared/services/interview/backend-interview-result.service';
+import { InterviewHistoryService } from '../../../shared/services/features/interview/interview-history.service';
+import type { InterviewResultViewModel, InterviewSessionViewModel } from '../../../shared/models/interview/interview-view-models';
 import type { SaveInterviewAnswerResponse } from '../../../shared/models/api/interview-api.dto';
 
 /**
@@ -63,6 +65,7 @@ let component: InterviewSessionComponent;
 let backend: BackendInterviewSessionService;
 let api: {
   saveAnswer: jest.Mock; submitSession: jest.Mock; resumeSession: jest.Mock; setReviewFlag: jest.Mock;
+  getResult: jest.Mock;
 };
 let router: Router;
 
@@ -91,9 +94,10 @@ const settleMicrotasks = async (): Promise<void> => {
 
 beforeEach(() => {
   sessionStorage.clear();
+  localStorage.clear();
   api = {
     saveAnswer: jest.fn(), submitSession: jest.fn(), resumeSession: jest.fn(),
-    setReviewFlag: jest.fn()
+    setReviewFlag: jest.fn(), getResult: jest.fn()
   };
 
   TestBed.resetTestingModule();
@@ -105,6 +109,8 @@ beforeEach(() => {
       BackendInterviewSessionService,
       InterviewSessionReferenceStorage,
       BackendInterviewTimerService,
+      BackendInterviewResultService,
+      InterviewHistoryService,
       { provide: InterviewApiService, useValue: api }
     ]
   });
@@ -438,5 +444,141 @@ describe('storage security during an active session', () => {
       expect(raw).not.toContain(banned);
     }
     expect(sessionStorage.getItem('interviewSession')).toBeNull();
+  });
+});
+
+/**
+ * "Try Again" after the backend was unreachable. The retry re-runs the resume,
+ * and the answer may now be "this session is already over" — either submitted
+ * (409 CONFLICT) or past its deadline and never finalized (409 SESSION_EXPIRED).
+ * Neither may leave the user on the error card or, worse, on a permanent
+ * "Preparing interview…": each is confirmed by the authenticated result and
+ * forwarded to Results exactly once.
+ */
+describe('recovering a finished session from the retry state', () => {
+  const finished = (): InterviewResultViewModel => ({
+    sessionId: 'is_1',
+    submittedAtMs: Date.parse('2026-08-01T12:00:00.000Z'),
+    submittedByExpiry: false,
+    total: 10, answered: 9, unanswered: 1, correct: 7, incorrect: 2, percentage: 70,
+    durationSeconds: 900, timeUsedSeconds: 540,
+    config: { mode: 'custom', difficulty: 'beginner', topicIds: ['rxjs'], questionCount: 10 },
+    byTopic: [{ topicId: 'rxjs', title: 'RxJS', correct: 7, incorrect: 2, unanswered: 1, total: 10, percentage: 70 }],
+    review: [{
+      questionId: 'rxjs:q:0', sourceQuizId: 'rxjs', questionText: 'Q?', type: 'single',
+      options: [{ optionId: 1, text: 'A' }, { optionId: 2, text: 'B' }],
+      selectedOptionIds: [1], correctOptionIds: [1], explanation: 'Because.',
+      isCorrect: true, isAnswered: true, flagged: false
+    }]
+  });
+
+  const unreachable = () =>
+    throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0));
+  const conflict = () => throwError(() => new InterviewApiError('CONFLICT', 409));
+  const expired = () => throwError(() => new InterviewApiError('SESSION_EXPIRED', 409));
+
+  /** The guard let the component through in the error state (backend was down). */
+  async function renderInErrorState(): Promise<void> {
+    TestBed.inject(InterviewSessionReferenceStorage).write('is_1', TOKEN, 0);
+    api.resumeSession.mockReturnValue(unreachable());
+    backend = TestBed.inject(BackendInterviewSessionService);
+    await backend.resumeFromStoredReference();
+
+    fixture = TestBed.createComponent(InterviewSessionComponent);
+    rendered = true;
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    expect(backend.status()).toBe('error');
+  }
+
+  const text = () => fixture.nativeElement.textContent as string;
+
+  it.each([
+    ['submitted (CONFLICT)', conflict],
+    ['expired and never finalized (SESSION_EXPIRED)', expired]
+  ])('%s: confirmed by the result, then ONE navigation to Results for the right session', async (_label, resume) => {
+    await renderInErrorState();
+    api.resumeSession.mockReturnValue(resume());
+    api.getResult.mockReturnValue(of(finished()));
+
+    await component.retryResume();
+
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/interview/results', 'is_1']);
+    expect(api.getResult).toHaveBeenCalledTimes(1);
+    expect(component.retrying()).toBe(false);
+  });
+
+  it.each([
+    ['a 409 from the result endpoint (the session is really still running)', () => conflict()],
+    ['a 500', () => throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 500))],
+    ['a network failure', () => unreachable()]
+  ])('an unconfirmed finish (%s): no navigation, and the retry card stays usable — never "Preparing…"', async (_label, resultError) => {
+    await renderInErrorState();
+    api.resumeSession.mockReturnValue(expired());
+    api.getResult.mockReturnValue(resultError());
+
+    await component.retryResume();
+    fixture.detectChanges();
+
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(component.retrying()).toBe(false);
+    expect(backend.status()).toBe('error');
+    expect(fixture.nativeElement.querySelector('.interview-unavailable')).not.toBeNull();
+    expect(text()).not.toContain('Preparing interview');
+    // …and it can be retried again, once per click.
+    api.resumeSession.mockClear();
+    await component.retryResume();
+    expect(api.resumeSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('a dead credential found while confirming goes to the builder, not Results', async () => {
+    await renderInErrorState();
+    api.resumeSession.mockReturnValue(conflict());
+    api.getResult.mockReturnValue(throwError(() => new InterviewApiError('UNAUTHORIZED', 401)));
+
+    await component.retryResume();
+
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/interview']);
+  });
+
+  it('a double click sends ONE resume request and produces ONE navigation', async () => {
+    await renderInErrorState();
+    api.resumeSession.mockClear();
+    api.resumeSession.mockReturnValue(expired());
+    api.getResult.mockReturnValue(of(finished()));
+
+    await Promise.all([component.retryResume(), component.retryResume()]);
+
+    expect(api.resumeSession).toHaveBeenCalledTimes(1);
+    expect(api.getResult).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+  });
+
+  it('a component destroyed while the retry is in flight causes no late navigation', async () => {
+    await renderInErrorState();
+    const resume$ = new Subject<InterviewSessionViewModel>();
+    api.resumeSession.mockReturnValue(resume$);
+    api.getResult.mockReturnValue(of(finished()));
+
+    const pending = component.retryResume();
+    fixture.destroy();
+    rendered = false;
+    resume$.error(new InterviewApiError('CONFLICT', 409));
+    await pending;
+
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('an ACTIVE resume from the retry state just restarts the display timer: no result request, no navigation', async () => {
+    await renderInErrorState();
+    api.resumeSession.mockReturnValue(of(session()));
+
+    await component.retryResume();
+
+    expect(backend.status()).toBe('active');
+    expect(api.getResult).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 });

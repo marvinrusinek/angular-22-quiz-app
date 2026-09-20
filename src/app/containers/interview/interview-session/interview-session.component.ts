@@ -21,6 +21,7 @@ import { Router } from '@angular/router';
 import { swallow } from '../../../shared/utils/error-logging';
 
 import { AssessmentIntegrityService } from '../../../shared/services/features/interview/assessment-integrity.service';
+import { BackendInterviewResultService } from '../../../shared/services/interview/backend-interview-result.service';
 import { BackendInterviewSessionService } from '../../../shared/services/interview/backend-interview-session.service';
 import { BackendInterviewTimerService } from '../../../shared/services/interview/backend-interview-timer.service';
 import { toggleOption } from '../../../shared/services/interview/interview-answer-transitions';
@@ -74,6 +75,7 @@ import type { InterviewOptionViewModel } from '../../../shared/models/interview/
 })
 export class InterviewSessionComponent implements OnInit, OnDestroy {
   private readonly session = inject(BackendInterviewSessionService);
+  private readonly results = inject(BackendInterviewResultService);
   private readonly timer = inject(BackendInterviewTimerService);
   private readonly integrity = inject(AssessmentIntegrityService);
   private readonly dialog = inject(MatDialog);
@@ -185,6 +187,7 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
   readonly isFinalizing = this._finalizing.asReadonly();
   private submitDialogRef: MatDialogRef<InterviewSubmitDialogComponent, boolean> | null = null;
   private submitStarted = false;
+  private destroyed = false;
   readonly submitError = signal<string | null>(null);
 
   constructor() {
@@ -214,6 +217,7 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.timer.stop();
     // The session is NOT cleared on leave: the backend owns it and the minimal
     // reference must survive so the user can resume or load their result.
@@ -226,18 +230,42 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
     this.timer.syncFromServer(this.session.serverRemainingSeconds(), this.session.durationSeconds());
   }
 
-  /** Retry after a backend outage. The reference was deliberately preserved. */
+  /**
+   * Retry after a backend outage. The reference was deliberately preserved.
+   *
+   * The answer may now be "this session is already over" (submitted, or past
+   * its deadline and never finalized). That is confirmed through the same
+   * authenticated result lookup the route guard uses before anything navigates;
+   * an unconfirmed finish leaves the retry card in place. Every path ends with
+   * `retrying` cleared, and nothing runs after the component is destroyed.
+   */
   async retryResume(): Promise<void> {
     if (this.retrying()) return;
     this.retrying.set(true);
     try {
       const outcome = await this.session.resumeFromStoredReference();
-      if (outcome.kind === 'active') {
-        this.startDisplayTimer();
-      } else if (outcome.kind === 'submitted') {
-        await this.router.navigate(['/interview/results', this.session.sessionId()]);
-      } else if (outcome.kind === 'unauthorized' || outcome.kind === 'none') {
-        await this.router.navigate(['/interview']);
+      if (this.destroyed) return;
+
+      switch (outcome.kind) {
+        case 'active':
+          this.startDisplayTimer();
+          break;
+        case 'submitted':
+        case 'expired': {
+          const verdict = await this.results.confirmFinished();
+          if (this.destroyed) return;
+          if (verdict.kind === 'results') {
+            await this.router.navigate(['/interview/results', verdict.sessionId]);
+          } else if (verdict.kind === 'builder') {
+            await this.router.navigate(['/interview']);
+          }
+          break;   // unresolved: the retry card stays, and can be tried again
+        }
+        case 'unauthorized':
+        case 'none':
+          await this.router.navigate(['/interview']);
+          break;
+        // 'unavailable': status is 'error' — the retry card is already showing
       }
     } finally {
       this.retrying.set(false);

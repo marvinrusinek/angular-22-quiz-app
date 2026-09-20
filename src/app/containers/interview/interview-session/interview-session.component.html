@@ -6,10 +6,18 @@
   <!-- Backend unavailable. The session reference is deliberately preserved so a
        transient outage cannot destroy a live assessment. -->
   <div class="interview-unavailable" role="status" aria-live="polite">
-    <p class="interview-unavailable__text" i18n>
-      Cannot reach the interview service. Your assessment is safe — check your
-      connection and try again.
-    </p>
+    @if (errorReason() === 'unconfirmed') {
+      <!-- The service answered, but whether this interview is active, expired or
+           finished could not be confirmed — NOT a connectivity problem. -->
+      <p class="interview-unavailable__text" i18n>
+        We couldn&rsquo;t confirm the status of this interview. Please try again.
+      </p>
+    } @else {
+      <p class="interview-unavailable__text" i18n>
+        Cannot reach the interview service. Your assessment is safe — check your
+        connection and try again.
+      </p>
+    }
     <button type="button" class="show-results-btn" [disabled]="retrying()" (click)="retryResume()" i18n>
       Try Again
     </button>

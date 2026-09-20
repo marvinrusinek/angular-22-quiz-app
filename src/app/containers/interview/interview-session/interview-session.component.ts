@@ -91,6 +91,8 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
   readonly total = this.session.questionCount;
   readonly currentQuestion = this.session.currentQuestion;
   readonly status = this.session.status;
+  /** Which message the retry card shows: service unreachable vs. status unconfirmed. */
+  readonly errorReason = this.session.errorReason;
   readonly retrying = signal(false);
 
   readonly questionText = computed(() => this.currentQuestion()?.questionText ?? '');
@@ -203,11 +205,12 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // The guard already hydrated (or failed). Never resume again here.
-    if (this.status() === 'submitted') {
-      void this.router.navigate(['/interview/results', this.session.sessionId()]);
-      return;
-    }
-
+    //
+    // A finished session (submitted / expired) never gets this far: the guard
+    // confirms it through the result endpoint and redirects first, so this runs
+    // only over `active` or the `error` retry state. That invariant is pinned by
+    // interview-session-lifecycle.spec.ts, which fails if a route change ever
+    // lets one through.
     this.startDisplayTimer();
 
     // Integrity was reset once at session creation; a refresh restores the

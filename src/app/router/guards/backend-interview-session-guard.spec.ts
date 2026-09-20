@@ -218,6 +218,9 @@ describe.each([
       const session = TestBed.inject(BackendInterviewSessionService);
       expect(session.status()).toBe('error');
       expect(session.loading()).toBe(false);
+      // The service ANSWERED; the interview's state is what is unknown — so the
+      // card must not say the service cannot be reached.
+      expect(session.errorReason()).toBe('unconfirmed');
       expect(api.getResult).toHaveBeenCalledTimes(1);   // no ping-pong with the Results guard
       expect(storage.read()?.sessionId).toBe('is_1');   // the live reference survives
     });
@@ -232,6 +235,7 @@ describe.each([
       expect(await run()).toBe(true);
       const session = TestBed.inject(BackendInterviewSessionService);
       expect(session.status()).toBe('error');
+      expect(session.errorReason()).toBe('unconfirmed');
       expect(session.loading()).toBe(false);
       expect(storage.read()?.sessionId).toBe('is_1');
     });
@@ -252,7 +256,9 @@ describe.each([
       api.getResult.mockReturnValue(of({ sessionId: '' } as unknown as InterviewResultViewModel));
 
       expect(await run()).toBe(true);
-      expect(TestBed.inject(BackendInterviewSessionService).status()).toBe('error');
+      const session = TestBed.inject(BackendInterviewSessionService);
+      expect(session.status()).toBe('error');
+      expect(session.errorReason()).toBe('unconfirmed');
     });
   });
 
@@ -290,8 +296,13 @@ it('BACKEND UNREACHABLE: allows the retry state and PRESERVES the reference', as
   fails('BACKEND_UNAVAILABLE', 0);
 
   expect(await run()).toBe(true);
-  expect(TestBed.inject(BackendInterviewSessionService).status()).toBe('error');
+  const session = TestBed.inject(BackendInterviewSessionService);
+  expect(session.status()).toBe('error');
+  // A genuine outage keeps its connectivity wording: the resume itself failed,
+  // so this is NOT the "could not confirm the interview's status" case.
+  expect(session.errorReason()).toBe('unreachable');
   expect(storage.read()?.sessionId).toBe('is_1');
+  expect(api.getResult).not.toHaveBeenCalled();   // nothing finished was claimed, nothing to confirm
 });
 
 it('a MALFORMED reference is treated as absent and removed', async () => {

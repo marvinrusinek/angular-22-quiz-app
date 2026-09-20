@@ -229,6 +229,68 @@ describe('resume outcomes', () => {
     expect(api.resumeSession).toHaveBeenCalledTimes(2);
   });
 
+  describe('error reason (which message the retry card shows)', () => {
+    const storage = () => TestBed.inject(InterviewSessionReferenceStorage);
+    const resumeFails = (code: 'BACKEND_UNAVAILABLE' | 'UNKNOWN' | 'CONFLICT', status: number) =>
+      api.resumeSession.mockReturnValue(throwError(() => new InterviewApiError(code, status)));
+
+    it.each([
+      ['unreachable (network)', 'BACKEND_UNAVAILABLE', 0],
+      ['unreachable (5xx)', 'BACKEND_UNAVAILABLE', 500],
+      ['an unrecognised failure', 'UNKNOWN', 0]
+    ] as const)('a failed resume — %s — is "unreachable"', async (_label, code, status) => {
+      storage().write('is_1', TOKEN, 0);
+      resumeFails(code, status);
+
+      expect(await service.resumeFromStoredReference()).toEqual({ kind: 'unavailable' });
+      expect(service.status()).toBe('error');
+      expect(service.errorReason()).toBe('unreachable');
+    });
+
+    it('markResumeUnresolved is "unconfirmed" — the service answered, the state is unknown', async () => {
+      storage().write('is_1', TOKEN, 0);
+      resumeFails('CONFLICT', 409);
+      await service.resumeFromStoredReference();
+
+      service.markResumeUnresolved();
+
+      expect(service.status()).toBe('error');
+      expect(service.errorReason()).toBe('unconfirmed');
+    });
+
+    it('the reason follows the LATEST failure, in both directions — never stale', async () => {
+      storage().write('is_1', TOKEN, 0);
+
+      resumeFails('CONFLICT', 409);
+      await service.resumeFromStoredReference();
+      service.markResumeUnresolved();
+      expect(service.errorReason()).toBe('unconfirmed');
+
+      // A later retry that cannot reach the service must not keep the old reason.
+      resumeFails('BACKEND_UNAVAILABLE', 0);
+      await service.resumeFromStoredReference();
+      expect(service.status()).toBe('error');
+      expect(service.errorReason()).toBe('unreachable');
+
+      // …and back again.
+      resumeFails('CONFLICT', 409);
+      await service.resumeFromStoredReference();
+      service.markResumeUnresolved();
+      expect(service.errorReason()).toBe('unconfirmed');
+    });
+
+    it('the reason changes only what is displayed: reference, token handling and status stay as before', async () => {
+      storage().write('is_1', TOKEN, 0);
+      resumeFails('CONFLICT', 409);
+      await service.resumeFromStoredReference();
+
+      service.markResumeUnresolved();
+
+      expect(storage().read()?.sessionId).toBe('is_1');   // valid credentials are NOT cleared
+      expect(api.resumeSession).toHaveBeenCalledTimes(1); // and nothing was re-requested
+    });
+  });
+
   it('markResumeUnresolved lands in the retry (error) state and KEEPS the reference', async () => {
     const storage = TestBed.inject(InterviewSessionReferenceStorage);
     storage.write('is_1', TOKEN, 0);

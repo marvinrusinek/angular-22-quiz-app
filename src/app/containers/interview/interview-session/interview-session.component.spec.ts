@@ -581,4 +581,200 @@ describe('recovering a finished session from the retry state', () => {
     expect(api.getResult).not.toHaveBeenCalled();
     expect(router.navigate).not.toHaveBeenCalled();
   });
+
+  /**
+   * The retry card is ONE card with two truthful messages. "Cannot reach the
+   * interview service" is right when the resume request failed; it is wrong when
+   * the service answered and the interview's state is what could not be
+   * confirmed. Wording is asserted as a literal on purpose — a copy change must
+   * fail here rather than pass through a shared constant.
+   */
+  describe('retry card wording', () => {
+    const UNCONFIRMED = 'We couldn’t confirm the status of this interview. Please try again.';
+    const NETWORK = 'Cannot reach the interview service. Your assessment is safe — check your connection and try again.';
+
+    const server500 = () => throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 500));
+    const notFound = () => throwError(() => new InterviewApiError('UNAUTHORIZED', 404));
+    const unauthorized = () => throwError(() => new InterviewApiError('UNAUTHORIZED', 401));
+
+    const settle = async (): Promise<void> => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      fixture.detectChanges();
+    };
+    const cardText = (): string =>
+      (fixture.nativeElement.querySelector('.interview-unavailable__text')?.textContent ?? '')
+        .replace(/\s+/g, ' ').trim();
+    const card = (): HTMLElement | null => fixture.nativeElement.querySelector('.interview-unavailable');
+    const tryAgain = (): HTMLButtonElement =>
+      fixture.nativeElement.querySelector('.interview-unavailable .show-results-btn');
+
+    /** What the user sees after the retry, given how the two calls answer. */
+    async function retryWith(resume: () => unknown, result?: () => unknown): Promise<void> {
+      await renderInErrorState();
+      expect(cardText()).toBe(NETWORK);   // the starting point is a genuine outage
+      api.resumeSession.mockReturnValue(resume());
+      if (result) api.getResult.mockReturnValue(result());
+      await component.retryResume();
+      await settle();
+    }
+
+    describe.each([
+      ['submitted (CONFLICT)', conflict],
+      ['expired and never finalized (SESSION_EXPIRED)', expired]
+    ])('resume says %s, but the result cannot confirm it', (_label, resume) => {
+      it.each([
+        ['result 500', server500],
+        ['a network failure', unreachable],
+        ['result 409 (still running — contradicts the resume)', conflict]
+      ])('%s → the accurate "could not confirm" wording, not a connectivity claim', async (_l, result) => {
+        await retryWith(resume, result);
+
+        expect(cardText()).toBe(UNCONFIRMED);
+        expect(fixture.nativeElement.textContent).not.toContain('Cannot reach the interview service');
+        expect(fixture.nativeElement.textContent).not.toContain('Preparing interview');
+        expect(router.navigate).not.toHaveBeenCalled();   // no false Results navigation
+      });
+    });
+
+    it('screen readers get it through the card’s existing status semantics — one message, one live region', async () => {
+      await retryWith(expired, server500);
+
+      expect(card()?.getAttribute('role')).toBe('status');
+      expect(card()?.getAttribute('aria-live')).toBe('polite');
+      const messages = card()?.querySelectorAll('.interview-unavailable__text') ?? [];
+      expect(messages.length).toBe(1);   // never both messages at once
+      expect(card()?.contains(messages[0])).toBe(true);
+    });
+
+    it('is also what the FIRST paint shows when the guard let the component through unconfirmed', async () => {
+      TestBed.inject(InterviewSessionReferenceStorage).write('is_1', TOKEN, 0);
+      api.resumeSession.mockReturnValue(expired());
+      backend = TestBed.inject(BackendInterviewSessionService);
+      await backend.resumeFromStoredReference();
+      backend.markResumeUnresolved();   // what BackendInterviewResultService.confirmFinished does
+
+      fixture = TestBed.createComponent(InterviewSessionComponent);
+      rendered = true;
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(cardText()).toBe(UNCONFIRMED);
+    });
+
+    it('the Try Again button is wired to exactly one retry per click', async () => {
+      await retryWith(expired, server500);
+      // Spied rather than executed: a click runs inside Angular's zone, where a
+      // mocked throw-on-subscribe would be reported as an unhandled exception by
+      // the test environment alone. The attempts themselves are exercised below.
+      const retry = jest.spyOn(component, 'retryResume').mockResolvedValue();
+
+      tryAgain().click();
+      expect(retry).toHaveBeenCalledTimes(1);
+      tryAgain().click();
+      expect(retry).toHaveBeenCalledTimes(2);
+    });
+
+    it('Retry stays available and BOUNDED: one attempt is exactly one resume + one confirmation, and nothing repeats on its own', async () => {
+      await retryWith(expired, server500);
+      const resumeBefore = api.resumeSession.mock.calls.length;
+      const resultBefore = api.getResult.mock.calls.length;
+      expect(tryAgain().textContent?.trim()).toBe('Try Again');
+      expect(tryAgain().disabled).toBe(false);
+
+      // Nothing polls: idle time adds no requests.
+      await new Promise<void>((resolve) => setTimeout(resolve, 50));
+      expect(api.resumeSession.mock.calls.length).toBe(resumeBefore);
+      expect(api.getResult.mock.calls.length).toBe(resultBefore);
+
+      // Each click is exactly one attempt, and the card comes back each time.
+      for (let click = 1; click <= 3; click++) {
+        await component.retryResume();
+        await settle();
+        expect(api.resumeSession.mock.calls.length).toBe(resumeBefore + click);
+        expect(api.getResult.mock.calls.length).toBe(resultBefore + click);
+        expect(cardText()).toBe(UNCONFIRMED);
+        expect(tryAgain().disabled).toBe(false);
+      }
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(TestBed.inject(InterviewSessionReferenceStorage).read()?.sessionId).toBe('is_1');   // credentials kept
+    });
+
+    describe('a genuine connectivity failure keeps its own wording', () => {
+      it.each([
+        ['a network failure on the resume', unreachable],
+        ['a 500 on the resume', server500]
+      ])('%s', async (_l, resume) => {
+        await retryWith(resume);
+
+        expect(cardText()).toBe(NETWORK);
+        expect(cardText()).not.toBe(UNCONFIRMED);
+        expect(api.getResult).not.toHaveBeenCalled();   // nothing finished was claimed, nothing to confirm
+        expect(router.navigate).not.toHaveBeenCalled();
+      });
+
+      it('the wording follows the LATEST failure in both directions — no stale message', async () => {
+        await retryWith(expired, server500);
+        expect(cardText()).toBe(UNCONFIRMED);
+
+        api.resumeSession.mockReturnValue(unreachable());
+        await component.retryResume();
+        await settle();
+        expect(cardText()).toBe(NETWORK);
+
+        api.resumeSession.mockReturnValue(conflict());
+        api.getResult.mockReturnValue(server500());
+        await component.retryResume();
+        await settle();
+        expect(cardText()).toBe(UNCONFIRMED);
+      });
+    });
+
+    describe('credential / session failures keep their safe redirect', () => {
+      it('a resume 401 goes to the builder, never probes the result, and never shows the unconfirmed wording', async () => {
+        await retryWith(unauthorized);
+
+        expect(router.navigate).toHaveBeenCalledTimes(1);
+        expect(router.navigate).toHaveBeenCalledWith(['/interview']);
+        expect(api.getResult).not.toHaveBeenCalled();
+        expect(fixture.nativeElement.textContent).not.toContain(UNCONFIRMED);
+      });
+
+      it.each([
+        ['401 (invalid token)', unauthorized],
+        ['404 (unknown session)', notFound]
+      ])('confirming with the result and getting a %s goes to the builder, not Results', async (_l, result) => {
+        await retryWith(expired, result);
+
+        expect(router.navigate).toHaveBeenCalledTimes(1);
+        expect(router.navigate).toHaveBeenCalledWith(['/interview']);
+        expect(fixture.nativeElement.textContent).not.toContain(UNCONFIRMED);
+        expect(TestBed.inject(InterviewSessionReferenceStorage).read()).toBeNull();   // dead credential cleared, as before
+      });
+    });
+
+    it.each([
+      ['submitted (CONFLICT)', conflict],
+      ['expired and never finalized (SESSION_EXPIRED)', expired]
+    ])('a CONFIRMED %s navigates to Results once and never shows the error', async (_l, resume) => {
+      await retryWith(resume, () => of(finished()));
+
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      expect(router.navigate).toHaveBeenCalledWith(['/interview/results', 'is_1']);
+      expect(card()).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain(UNCONFIRMED);
+      expect(fixture.nativeElement.textContent).not.toContain('Cannot reach the interview service');
+    });
+
+    it('an ACTIVE resume renders the assessment and never shows either message', async () => {
+      await retryWith(() => of(session()));
+
+      expect(backend.status()).toBe('active');
+      expect(card()).toBeNull();
+      expect(fixture.nativeElement.querySelector('.interview-question')?.textContent).toContain('Which answer is correct?');
+      expect(fixture.nativeElement.textContent).not.toContain(UNCONFIRMED);
+      expect(fixture.nativeElement.textContent).not.toContain('Cannot reach the interview service');
+      expect(api.getResult).not.toHaveBeenCalled();
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+  });
 });

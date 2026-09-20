@@ -26,6 +26,17 @@ import type {
 
 export type BackendSessionStatus = 'idle' | 'loading' | 'active' | 'expired' | 'submitted' | 'error';
 
+/**
+ * WHY the session is in `status === 'error'`. Meaningful only while that status
+ * holds; every entry into it sets the reason in the same step (`failWith`), so
+ * the two cannot disagree.
+ *   unreachable   the resume request itself failed (offline, 5xx, unknown)
+ *   unconfirmed   the service WAS reached and reported the session as finished
+ *                 (submitted or expired), but the authenticated result could not
+ *                 confirm it — whether it is active or over is not known
+ */
+export type SessionErrorReason = 'unreachable' | 'unconfirmed';
+
 export type ResumeOutcome =
   | { readonly kind: 'active' }
   | { readonly kind: 'none' }
@@ -63,6 +74,7 @@ export class BackendInterviewSessionService {
 
   // ── state ─────────────────────────────────────────────────────────
   private readonly _status = signal<BackendSessionStatus>('idle');
+  private readonly _errorReason = signal<SessionErrorReason>('unreachable');
   private readonly _sessionId = signal<string>('');
   private readonly _questions = signal<readonly InterviewQuestionViewModel[]>([]);
   /** CONFIRMED by the server. */
@@ -113,6 +125,8 @@ export class BackendInterviewSessionService {
 
   // ── public surface ────────────────────────────────────────────────
   readonly status = this._status.asReadonly();
+  /** Why `status` is `'error'`. Read it only while that status holds. */
+  readonly errorReason = this._errorReason.asReadonly();
   readonly sessionId = this._sessionId.asReadonly();
   readonly questions = this._questions.asReadonly();
   readonly currentIndex = this._currentIndex.asReadonly();
@@ -213,6 +227,12 @@ export class BackendInterviewSessionService {
    * Retry can still succeed.
    */
   markResumeUnresolved(): void {
+    this.failWith('unconfirmed');
+  }
+
+  /** The ONLY way into `status === 'error'`, so status and reason move together. */
+  private failWith(reason: SessionErrorReason): void {
+    this._errorReason.set(reason);
     this._status.set('error');
   }
 
@@ -244,10 +264,10 @@ export class BackendInterviewSessionService {
         case 'UNAUTHORIZED':
           // A dead reference is useless — drop it so the user is not stuck.
           this.clearSession();
-          this._status.set('error');
+          this.failWith('unreachable');
           return { kind: 'unauthorized' };
         default:
-          this._status.set('error');
+          this.failWith('unreachable');
           return { kind: 'unavailable' };
       }
     }

@@ -79,19 +79,22 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 <h3>High-Level Flow</h3>
 
 <pre><code>
-                        Angular 22 Frontend
-                                 │
-                 ┌───────────────┴───────────────┐
-                 │                               │
-            Topic Quizzes                  Interview Mode
-                 │                               │
-          Node / Express                    Spring Boot
-                 │                               │
-                 │                       Spring Data JPA
-                 │                               │
-                 └───────────────┬───────────────┘
-                                 │
-                            PostgreSQL
+                    Angular 22 Frontend
+                           │
+               ┌───────────┴───────────┐
+               │                       │
+         Topic Quizzes            Interview Mode
+               │                       │
+        Node / Express             Spring Boot
+               │                  Spring JDBC
+               │                 Spring Data JPA*
+               │                       │
+               └───────────┬───────────┘
+                           │
+                    PostgreSQL / Neon
+
+* Spring Data JPA is used for quiz metadata;
+  Interview persistence primarily uses Spring JDBC.
 </code></pre>
 
 <hr>

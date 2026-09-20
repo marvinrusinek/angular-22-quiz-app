@@ -155,16 +155,18 @@ angular-22-quiz-app/
 </code></pre>
 
 <hr>
-
 <h2>⚙️ Getting Started</h2>
 
 <h3>Prerequisites</h3>
 
 <ul>
-<li>Node.js 22 or later</li>
-<li>Angular CLI 22</li>
-<li>PostgreSQL</li>
+  <li>Node.js 22 or later</li>
+  <li>Angular CLI 22</li>
+  <li>Java 21</li>
+  <li>PostgreSQL</li>
 </ul>
+
+<p>The project uses two backend services: a Node/Express API for Topic Quizzes and a Spring Boot API for Interview Mode. Both services connect to PostgreSQL.</p>
 
 <h3>Installation</h3>
 
@@ -172,15 +174,37 @@ angular-22-quiz-app/
 cd angular-22-quiz-app
 npm install</code></pre>
 
-<!--
-<h3>PostgreSQL Setup</h3>
+<h3>Database Configuration</h3>
 
-<h3>Environment Configuration</h3>
+<p>PostgreSQL is the authoritative server-side data store for quiz content, Interview sessions, submitted answers, and results. Production uses PostgreSQL hosted by Neon.</p>
 
-<h3>Run the Backend API</h3>
--->
+<p>Configure the required database connection and application environment variables before starting the backend services. Keep credentials and secrets in local environment configuration and never commit them to source control.</p>
+
+<h3>Run the Topic Quiz API</h3>
+
+<p>The Node/Express backend serves Topic Quizzes and quiz metadata.</p>
+
+<pre><code>npm run dev</code></pre>
+
+<p>The development command starts the Node/Express API together with the Angular development server.</p>
+
+<h3>Run the Interview API</h3>
+
+<p>Interview Mode is served by the Spring Boot backend. The project includes the Maven Wrapper, so a separate global Maven installation is not required.</p>
+
+<pre><code>cd backend-spring
+./mvnw spring-boot:run</code></pre>
+
+<p>On Windows PowerShell:</p>
+
+<pre><code>cd backend-spring
+.\mvnw.cmd spring-boot:run</code></pre>
+
+<p>The Spring Boot API runs locally on port <code>8080</code> when using the default development configuration.</p>
 
 <h3>Run the Angular Frontend</h3>
+
+<p>If the frontend is not already running through the development command, start it separately with:</p>
 
 <pre><code>ng serve</code></pre>
 
@@ -188,7 +212,7 @@ npm install</code></pre>
 
 <pre><code>http://localhost:4200</code></pre>
 
-<p>The application will automatically reload when source files are modified.</p>
+<p>For the complete local application, ensure the Angular frontend, Node/Express Topic Quiz API, Spring Boot Interview API, and PostgreSQL database are all available.</p>
 
 <hr>
 

@@ -203,7 +203,7 @@ npm install</code></pre>
 
 <p>The Spring Boot API runs locally on port <code>8080</code> when using the default development configuration.</p>
 
-<h3>Run the Angular Frontend</h3>
+<h3>Run the Angular Frontend separately</h3>
 
 <p>If the frontend is not already running through the development command, start it separately with:</p>
 

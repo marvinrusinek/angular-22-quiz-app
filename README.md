@@ -67,7 +67,7 @@ The application combines topic-based Angular quizzes with a timed Interview Mode
 <p><strong>Weak Areas Practice</strong> — Analyzes previous quiz performance to identify weaker topics and generate targeted practice opportunities.</p>
 <p><strong>Progress & Achievements</strong> — Progress tracking and achievements across the learning experience.</p>
 <p><strong>Modern UX</strong> — Angular Material, responsive layouts, dark/light themes, keyboard navigation, accessibility-focused interactions, and PWA support.</p>
-<p><strong>Testing & Reliability</strong> — Angular unit testing and Playwright end-to-end coverage, including backend session and database isolation.</p>
+<p><strong>Testing & Reliability</strong> — Automated frontend, backend, integration, contract-parity, and end-to-end testing across the Angular, Node/Express, and Spring Boot application stack.</p>
 
 <hr>
 
@@ -163,7 +163,7 @@ angular-22-quiz-app/
   <li>Node.js 22 or later</li>
   <li>Angular CLI 22</li>
   <li>Java 21</li>
-  <li>PostgreSQL</li>
+  <li>PostgreSQL-compatible database access (Neon is used in production)</li>
 </ul>
 
 <p>The project uses two backend services: a Node/Express API for Topic Quizzes and a Spring Boot API for Interview Mode. Both services connect to PostgreSQL.</p>
@@ -180,9 +180,10 @@ npm install</code></pre>
 
 <p>Configure the required database connection and application environment variables before starting the backend services. Keep credentials and secrets in local environment configuration and never commit them to source control.</p>
 
-<h3>Run the Topic Quiz API</h3>
+<h3>Run the Topic Quiz API and Angular Frontend</h3>
 
 <p>The Node/Express backend serves Topic Quizzes and quiz metadata.</p>
+
 
 <pre><code>npm run dev</code></pre>
 

@@ -1,5 +1,7 @@
 import { test, expect, Page, request } from '@playwright/test';
 
+import { SPRING_HEALTH_URL } from './support/e2e-backends';
+
 /**
  * Stage 9D-2 cutover smoke: the Interview session route driven against a REAL
  * backend.
@@ -10,11 +12,10 @@ import { test, expect, Page, request } from '@playwright/test';
  * an answer key. The full Interview e2e migration lands in Stage 9F; this file
  * covers the cutover itself.
  *
- * The whole file SKIPS when no backend is reachable, so the suite stays green
- * on a machine running only `ng serve`.
+ * These tests need the Spring Interview backend that Playwright starts on :8080. If it is not
+ * healthy the whole file FAILS (it used to skip, and it used to probe the Node backend on :3000,
+ * which is not the one that serves Interview sessions).
  */
-
-const API = process.env['E2E_API_BASE_URL'] ?? 'http://localhost:3000/api';
 
 const OPTION = '.io-input';
 const NEXT = '.pg-next';
@@ -23,16 +24,21 @@ const QUESTION_BOX = '.interview-question-box';
 const SESSION_URL = /\/interview\/session\/[^/?#]+/;
 
 test.beforeAll(async () => {
-  let reachable = false;
+  // Interview lifecycle traffic goes to SPRING (the app's INTERVIEW_API_BASE_URL), which Playwright
+  // starts and controls — see playwright.config.ts. A backend that is not answering means the harness
+  // is broken, and that must FAIL: skipping would let a misconfigured run report green while proving
+  // nothing. The URL comes from the shared helper, never from an environment override, so this
+  // cannot be pointed at a backend the harness does not control.
+  const context = await request.newContext();
   try {
-    const context = await request.newContext();
-    const response = await context.get(`${API}/health`, { timeout: 3000 });
-    reachable = response.ok();
+    const response = await context.get(SPRING_HEALTH_URL, { timeout: 5000 });
+    expect(
+      response.ok(),
+      `The controlled Spring Interview backend at ${SPRING_HEALTH_URL} is not healthy (HTTP ${response.status()}) — Playwright should have started it`
+    ).toBe(true);
+  } finally {
     await context.dispose();
-  } catch {
-    reachable = false;
   }
-  test.skip(!reachable, `No Interview backend at ${API} — run \`npm --prefix backend start\`.`);
 });
 
 async function startInterview(page: Page, count = '10'): Promise<void> {

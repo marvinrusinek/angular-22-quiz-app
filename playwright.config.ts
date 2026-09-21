@@ -1,6 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
-import { E2E_ADMIN_DATABASE_URL, E2E_DATABASE_NAME, E2E_DATABASE_URL } from './e2e/support/e2e-database';
+import {
+  DEV_DATABASE_URL,
+  E2E_ADMIN_DATABASE_URL,
+  E2E_DATABASE_NAME,
+  E2E_DATABASE_URL,
+  devDatabaseName,
+} from './e2e/support/e2e-database';
+import { NODE_HEALTH_URL, SPRING_HEALTH_URL } from './e2e/support/e2e-backends';
 
 /**
  * Playwright e2e config. These tests drive the app in a real browser to
@@ -68,12 +75,26 @@ export default defineConfig({
     },
   ],
   /**
-   * TWO servers: the Angular app and the Interview API.
+   * THREE servers, started strictly in this order (Playwright runs its
+   * webServer entries one after another and waits for each URL before the next):
    *
-   * Interview Mode is backend-backed — the assessment is created, saved and
-   * scored on the server — so the specs that drive it cannot run against
-   * `ng serve` alone. The backend runs from `backend/` because it resolves its
-   * quiz bank relative to the working directory.
+   *   1. Angular  :4200  the app under test (reused if you already run `ng serve`)
+   *   2. Node     :3000  Topic Quiz + Interview-builder metadata. Creates, migrates
+   *                      and seeds the disposable `e2e_*` database.
+   *   3. Spring   :8080  Interview session lifecycle. Attaches to THAT SAME
+   *                      database and only validates it (`ddl-auto=validate`) —
+   *                      Node stays the only schema author, as in production.
+   *
+   * This mirrors the app's real routing (api-base-url.token.ts): Topic Quiz and the
+   * Interview builder's topic list go to Node, session create/answer/review/submit
+   * go to Spring. Both ports are FIXED — the app hard-codes them for a local dev
+   * build and the page's CSP allows only them — so the harness has to OWN both.
+   * See e2e/support/e2e-backends.js, the single definition of those ports.
+   *
+   * Both backends are NEVER reused: a server already answering on 3000 or 8080
+   * could be the developer's own, wired to their real database, and E2E traffic
+   * (which writes sessions and answers) must not reach it. If either port is
+   * taken the run aborts before any test runs.
    */
   webServer: [
     {
@@ -88,9 +109,15 @@ export default defineConfig({
       // The throwaway database is created HERE, not in globalSetup: Playwright
       // launches webServer first, so a database created there would not exist
       // yet when the backend opens its pool.
-      command: 'node ../e2e/support/ensure-e2e-database.js && npm run dev',
+      //
+      // preflight-ports.js runs FIRST and checks BOTH controlled ports, so a
+      // busy 8080 (the developer's Spring) aborts the run before a database is
+      // created — Playwright would otherwise only notice when Spring's turn comes.
+      command:
+        'node ../e2e/support/preflight-ports.js && ' +
+        'node ../e2e/support/ensure-e2e-database.js && npm run dev',
       cwd: 'backend',
-      url: 'http://localhost:3000/api/health',
+      url: NODE_HEALTH_URL,
       timeout: 120_000,
       // NOT reused: an already-running backend would be pointed at the
       // developer's database, which is exactly what this isolation prevents.
@@ -99,6 +126,26 @@ export default defineConfig({
         DATABASE_URL: E2E_DATABASE_URL,
         E2E_DATABASE_NAME,
         E2E_ADMIN_DATABASE_URL,
+      },
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      // Starts only AFTER Node is healthy, i.e. after the database exists, is
+      // migrated and is seeded. launch-spring.js refuses to start unless its
+      // datasource is THIS run's `e2e_*` database, builds the jar out of tree
+      // (never in backend-spring/), and gives Spring an explicit environment —
+      // nothing is inherited from the shell or read from `.env`.
+      command: 'node e2e/support/launch-spring.js',
+      url: SPRING_HEALTH_URL,
+      // The first run builds the jar with Maven; later runs use the cached jar.
+      timeout: 600_000,
+      // NOT reused — see the note above.
+      reuseExistingServer: false,
+      env: {
+        E2E_DATABASE_URL,
+        E2E_DATABASE_NAME,
+        E2E_DEV_DATABASE_NAME: DEV_DATABASE_URL.length > 0 ? devDatabaseName() : '',
       },
       stdout: 'pipe',
       stderr: 'pipe',

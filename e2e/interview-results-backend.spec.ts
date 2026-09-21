@@ -1,5 +1,7 @@
 import { test, expect, Page, request } from '@playwright/test';
 
+import { SPRING_HEALTH_URL } from './support/e2e-backends';
+
 /**
  * Stage 9E: the RESULTS half of the backend migration, against a real backend.
  *
@@ -7,24 +9,29 @@ import { test, expect, Page, request } from '@playwright/test';
  * an identical frozen result, that nothing answer-bearing reaches localStorage,
  * and that the result endpoint carries no backend internals.
  *
- * Skips entirely when no backend is reachable, so the suite stays green on a
- * machine running only `ng serve`.
+ * Needs the Spring Interview backend that Playwright starts on :8080. If it is not healthy the
+ * whole file FAILS (it used to skip, and it used to probe the Node backend on :3000).
  */
-const API = process.env['E2E_API_BASE_URL'] ?? 'http://localhost:3000/api';
 
 const RESULTS_URL = /\/interview\/results\/[^/?#]+/;
 const HISTORY_KEY = 'interviewAttemptHistory:v2';
 
 test.beforeAll(async () => {
-  let reachable = false;
+  // Interview lifecycle traffic goes to SPRING (the app's INTERVIEW_API_BASE_URL), which Playwright
+  // starts and controls — see playwright.config.ts. A backend that is not answering means the harness
+  // is broken, and that must FAIL: skipping would let a misconfigured run report green while proving
+  // nothing. The URL comes from the shared helper, never from an environment override, so this
+  // cannot be pointed at a backend the harness does not control.
+  const context = await request.newContext();
   try {
-    const context = await request.newContext();
-    reachable = (await context.get(`${API}/health`, { timeout: 3000 })).ok();
+    const response = await context.get(SPRING_HEALTH_URL, { timeout: 5000 });
+    expect(
+      response.ok(),
+      `The controlled Spring Interview backend at ${SPRING_HEALTH_URL} is not healthy (HTTP ${response.status()}) — Playwright should have started it`
+    ).toBe(true);
+  } finally {
     await context.dispose();
-  } catch {
-    reachable = false;
   }
-  test.skip(!reachable, `No Interview backend at ${API}.`);
 });
 
 async function completeInterview(page: Page, count = 10): Promise<void> {

@@ -280,25 +280,33 @@ import { PracticeSessionService } from '../../shared/services/features/practice/
 
     /* Needs Review: ONE TOPIC PER LINE. These were bare inline spans with no
        separator, so several topics ran together ("A — 33%B — 67%"). A real list,
-       right-aligned to match the other values in this column. */
+       left-aligned beneath its heading. */
     .progress-summary__weak-list {
       margin: 0;
       padding: 0;
       list-style: none;
       display: flex;
       flex-direction: column;
-      align-items: flex-end;
+      align-items: flex-start;
       gap: 3px;
-      text-align: right;
+      text-align: left;
       /* On a narrow screen a long name wraps; balance the lines so the
          percentage stays attached to a word instead of stranding alone. */
       text-wrap: balance;
     }
 
-    /* A multi-line value should sit level with the TOP of its label, not float
-       at the vertical centre of the row. Single-line rows are unaffected. */
+    /* Strongest and Needs Review: heading on top, value(s) beneath it, left-
+       aligned. ONE shared rule, so the two rows can never drift apart. The gap
+       between the two blocks exceeds the heading-to-value gap so each block
+       reads as one group. */
+    .progress-summary__rows--highlights {
+      gap: 12px;
+    }
+
     .progress-summary__rows--highlights .progress-summary__row {
+      flex-direction: column;
       align-items: flex-start;
+      gap: 4px;
     }
 
     .progress-summary__bar {

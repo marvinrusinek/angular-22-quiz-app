@@ -111,13 +111,18 @@ test.describe('Assessment Integrity Mode', () => {
     const info = await page.evaluate(() => {
       const hasInterviewBox = !!document.querySelector('.interview-question-box');
       const hasFullscreenBtn = !!document.querySelector('.ai-fullscreen-btn');
-      // The topic question heading must remain selectable.
-      const heading = document.querySelector('h3[quiz-projected-content], mat-card-content h3') as HTMLElement | null;
-      const headingSelect = heading ? getComputedStyle(heading).userSelect : 'auto';
-      return { hasInterviewBox, hasFullscreenBtn, headingSelect };
+      return { hasInterviewBox, hasFullscreenBtn };
     });
     expect(info.hasInterviewBox).toBe(false);
     expect(info.hasFullscreenBtn).toBe(false);
-    expect(info.headingSelect).not.toBe('none');
+
+    // The topic question heading must remain selectable. It must also EXIST:
+    // a missing heading has to fail this test, not skip the check. The text
+    // assertion fails when nothing matches (and if more than one element does),
+    // and waits for the heading to be filled.
+    const heading = page.locator('codelab-quiz-content h3');
+    await expect(heading).toHaveText(/\S/);
+    const headingUserSelect = await heading.evaluate((el) => getComputedStyle(el).userSelect);
+    expect(headingUserSelect).not.toBe('none');
   });
 });

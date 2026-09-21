@@ -1,4 +1,5 @@
-// The question / FET heading <h3> is now PROJECTED in from the parent
-// (quiz.component) via <ng-content>. Because projected content keeps the
+// The question box (.question-box: the question / FET heading <h3> plus an
+// optional code snippet) is PROJECTED in from the parent (quiz.component) via
+// <ng-content>. Because projected content keeps the
 // AUTHORING component's encapsulation, its styles live in quiz.component.scss —
 // a scoped `h3 { … }` rule here would not match the projected element.

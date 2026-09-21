@@ -1,3 +1,5 @@
-<!-- The heading <h3> is PROJECTED in by the parent (quiz.component). It lands
-     here, and is filled by the DOM-write effect via contentChild('qText'). -->
+<!-- The question box (.question-box, marked quiz-projected-content) is PROJECTED in
+     by the parent (quiz.component). It holds the heading <h3 #qText> and, when the
+     question has one, an <app-code-snippet>. It lands
+     here; the <h3> is filled by the DOM-write effect via contentChild('qText'). -->
 <ng-content select="[quiz-projected-content]"></ng-content>

@@ -11,10 +11,12 @@ import { InterviewAttemptHistoryEntry } from '../models/interview-history.model'
  * That helper sums RAW correct/total across attempts rather than averaging
  * pre-rounded percentages, so one tiny sample can't make a topic look strong.
  *
- * DATA NOTE: topic-level correct/total only exists on interview-shaped attempt
- * records. Topic quizzes persist a per-quiz BEST PERCENTAGE only (BestScoreService)
- * — no correct/answered counts — so they cannot participate in the "at least N
- * answered" rule and are deliberately not a source here.
+ * DATA NOTE: topic-level correct/total comes from two stores of RAW counts —
+ * Interview History and topicPerformanceHistory:v1, which holds topic-quiz and
+ * Weak Areas Practice records (WeakAreasService merges both into one attempt
+ * list). BestScoreService is deliberately NOT a source: it keeps only a per-quiz
+ * best PERCENTAGE, which cannot say how many questions were answered and so
+ * cannot satisfy the "at least N answered" rule.
  */
 
 /** Accuracy at or above this is NOT weak. Exactly 80 is excluded. */

@@ -3,6 +3,7 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 import { ProgressPanelComponent } from './progress-panel.component';
 import { ProgressSummary } from '../../shared/models/progress.model';
+import { TopicPerformanceHistoryService } from '../../shared/services/progress/topic-performance-history.service';
 import { QuizCardProgressState } from '../quiz-card-progress/quiz-card-progress.component';
 
 function summary(overrides: Partial<ProgressSummary> = {}): ProgressSummary {
@@ -94,5 +95,56 @@ describe('ProgressPanelComponent', () => {
   it('does not render for a null summary even with activity', () => {
     set(['completed'], null);
     expect(panel()).toBeNull();
+  });
+
+  describe('Performance Insights inside the panel', () => {
+    afterEach(() => localStorage.clear());
+
+    const insights = (): HTMLElement | null =>
+      fixture.nativeElement.querySelector('codelab-performance-insights');
+    const text = (n: Element | null): string => (n?.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+    it('sits BENEATH the existing progress breakdown, which is unchanged', () => {
+      set(['completed']);
+      header()?.click();
+      fixture.detectChanges();
+
+      expect(insights()).toBeTruthy();
+      // DOCUMENT_POSITION_FOLLOWING: insights come after the progress summary.
+      expect(details()!.compareDocumentPosition(insights()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      // Existing content is all still there.
+      expect(text(details())).toContain('Overall Progress');
+      expect(text(details())).toContain('Dependency Injection');
+      expect(text(details())).toContain('Complete a quiz or interview to identify weak areas.');
+    });
+
+    it('shows the neutral empty state when there is no performance history yet', () => {
+      set(['in-progress']);
+      expect(text(insights())).toContain('Performance Insights');
+      expect(text(insights())).toContain('Complete quizzes or interviews to build your performance history.');
+    });
+
+    it('reflects recorded history, live, without touching the progress summary', () => {
+      set(['completed']);
+      TestBed.inject(TopicPerformanceHistoryService).record('quiz:rxjs:1', 'topic-quiz', [
+        { topicId: 'rxjs', topicName: 'RxJS', correct: 9, total: 10 }
+      ]);
+      fixture.detectChanges();
+
+      expect(text(insights())).toContain('Topic Quiz');
+      expect(text(insights())).toContain('90%');
+      expect(text(insights())).toContain('9 / 10 questions · 1 attempt');
+      expect(text(insights())).not.toContain('Interview Mode');
+      expect(text(details())).toContain('Overall Progress');
+    });
+
+    it('does not make the panel appear when there is no activity, whatever the history holds', () => {
+      TestBed.inject(TopicPerformanceHistoryService).record('quiz:rxjs:1', 'topic-quiz', [
+        { topicId: 'rxjs', topicName: 'RxJS', correct: 9, total: 10 }
+      ]);
+      set(['not-started', 'not-started']);
+      expect(panel()).toBeNull();
+      expect(insights()).toBeNull();
+    });
   });
 });

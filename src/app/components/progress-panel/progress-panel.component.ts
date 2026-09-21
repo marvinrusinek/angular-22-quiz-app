@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 
 import { ProgressSummary } from '../../shared/models/progress.model';
+import { PerformanceInsightsService } from '../../shared/services/progress/performance-insights.service';
+import { PerformanceInsightsComponent } from '../performance-insights/performance-insights.component';
 import { QuizCardProgressState } from '../quiz-card-progress/quiz-card-progress.component';
 import { ProgressSummaryComponent } from '../progress-summary/progress-summary.component';
 
@@ -23,7 +25,7 @@ import { ProgressSummaryComponent } from '../progress-summary/progress-summary.c
   selector: 'codelab-progress-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatExpansionModule, ProgressSummaryComponent],
+  imports: [MatExpansionModule, ProgressSummaryComponent, PerformanceInsightsComponent],
   template: `
     @if (hasActivity() && summary(); as s) {
       <mat-accordion class="progress-panel">
@@ -36,6 +38,7 @@ import { ProgressSummaryComponent } from '../progress-summary/progress-summary.c
           </mat-expansion-panel-header>
 
           <codelab-progress-summary [summary]="s" variant="details" />
+          <codelab-performance-insights [insights]="insights()" />
         </mat-expansion-panel>
       </mat-accordion>
     }
@@ -72,6 +75,9 @@ import { ProgressSummaryComponent } from '../progress-summary/progress-summary.c
   `]
 })
 export class ProgressPanelComponent {
+  /** Read-only Performance Insights, shown beneath the progress breakdown. */
+  protected readonly insights = inject(PerformanceInsightsService).insights;
+
   /** Derived aggregate progress shown in the header + expanded body. */
   readonly summary = input<ProgressSummary | null>(null);
   /** Per-quiz card states; the panel shows only when at least one is not 'not-started'. */

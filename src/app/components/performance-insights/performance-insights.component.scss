@@ -1,0 +1,135 @@
+// Uses only the app's theme variables, so light/dark follow the global theme.
+// Sized for the ~560px Your Progress panel and stacks cleanly under 600px.
+:host {
+  display: block;
+}
+
+.pi {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+}
+
+.pi__heading {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #212121);
+}
+
+.pi__section {
+  margin-top: 14px;
+}
+
+.pi__subheading {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-secondary, #555555);
+}
+
+.pi__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+// Name on the left, figure on the right, supporting lines beneath. Wraps rather
+// than truncating, so a long topic name never clips.
+.pi__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1px 12px;
+}
+
+.pi__name {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #212121);
+  overflow-wrap: anywhere;
+}
+
+.pi__figure {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #212121);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pi__detail,
+.pi__basis {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary, #555555);
+  font-variant-numeric: tabular-nums;
+}
+
+.pi__basis {
+  font-size: 11.5px;
+  opacity: 0.85;
+}
+
+.pi__detail--muted {
+  font-style: italic;
+}
+
+.pi__empty {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary, #555555);
+}
+
+.pi__note {
+  margin: 14px 0 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--text-secondary, #555555);
+}
+
+.pi__linkrow {
+  margin: 12px 0 0;
+}
+
+// Primary text colour + underline, NOT --text-link: that vivid blue is ~3:1 on
+// white and ~4:1 on the dark panel, below the 4.5:1 that 12.5px text needs. The
+// underline is what marks it as a link; the blue stays on the focus ring only.
+.pi__link,
+.pi__toggle {
+  padding: 4px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary, #212121);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--text-link, #3b98fd);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+}
+
+.pi__toggle {
+  margin-top: 6px;
+}
+
+@media (max-width: 600px) {
+  .pi__item {
+    gap: 1px 8px;
+  }
+}

@@ -1,4 +1,4 @@
-import { computed, Service, signal } from '@angular/core';
+import { computed, Service, Signal, signal } from '@angular/core';
 
 import {
   TOPIC_PERFORMANCE_HISTORY_MAX,
@@ -11,6 +11,14 @@ import { SK_TOPIC_PERFORMANCE_HISTORY } from '../../constants/session-keys';
 import { readLocalJson, writeLocalJson } from '../../utils/local-storage';
 import { TopicAttemptLike } from '../../utils/weak-areas';
 
+/** The retained history as callers see it: immutable, oldest → newest. */
+type TopicRecords = readonly Readonly<TopicPerformanceRecord>[];
+
+/** Freeze the array and each record. Records are always freshly built, never shared. */
+function frozen(records: readonly TopicPerformanceRecord[]): TopicRecords {
+  return Object.freeze(records.map((record) => Object.freeze(record)));
+}
+
 /**
  * Sole owner of `topicPerformanceHistory:v1` — reliable RAW topic performance
  * from normal topic quizzes and Weak Areas Practice.
@@ -21,10 +29,18 @@ import { TopicAttemptLike } from '../../utils/weak-areas';
  */
 @Service()
 export class TopicPerformanceHistoryService {
-  private readonly _records = signal<TopicPerformanceRecord[]>(this.load());
+  private readonly _records = signal<TopicRecords>(this.load());
 
-  /** All retained records, oldest → newest. */
-  readonly records = this._records.asReadonly();
+  /**
+   * All retained records, oldest → newest, INCLUDING `source` and `attemptId`.
+   *
+   * Read-only by type AND at runtime: the array and every record in it are
+   * frozen, so a caller can neither push into this history nor edit a stored
+   * count. A signal's `asReadonly()` only stops `set()`; it does not protect the
+   * value, and the next `record()` would otherwise persist whatever a caller
+   * had smuggled into the shared array.
+   */
+  readonly records: Signal<TopicRecords> = this._records.asReadonly();
 
   /**
    * The records shaped as attempts for the shared aggregation helper. Each
@@ -83,7 +99,7 @@ export class TopicPerformanceHistoryService {
 
     // Append, then keep the NEWEST records. Older valid entries are never
     // rewritten or dropped except by this bounded retention.
-    const next = [...existing, ...incoming].slice(-TOPIC_PERFORMANCE_HISTORY_MAX);
+    const next = frozen([...existing, ...incoming].slice(-TOPIC_PERFORMANCE_HISTORY_MAX));
     this._records.set(next);
     this.save(next);
   }
@@ -94,7 +110,7 @@ export class TopicPerformanceHistoryService {
   }
 
   // ── internals ───────────────────────────────────────────────────
-  private load(): TopicPerformanceRecord[] {
+  private load(): TopicRecords {
     const raw = readLocalJson<unknown>(SK_TOPIC_PERFORMANCE_HISTORY, null);
     const list = Array.isArray(raw)
       ? raw
@@ -114,10 +130,10 @@ export class TopicPerformanceHistoryService {
       seen.add(key);
       out.push(record);
     }
-    return out.slice(-TOPIC_PERFORMANCE_HISTORY_MAX);
+    return frozen(out.slice(-TOPIC_PERFORMANCE_HISTORY_MAX));
   }
 
-  private save(records: TopicPerformanceRecord[]): void {
+  private save(records: TopicRecords): void {
     writeLocalJson(SK_TOPIC_PERFORMANCE_HISTORY, {
       version: TOPIC_PERFORMANCE_HISTORY_VERSION,
       records

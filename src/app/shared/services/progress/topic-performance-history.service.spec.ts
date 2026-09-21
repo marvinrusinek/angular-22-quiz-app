@@ -80,6 +80,125 @@ describe('TopicPerformanceHistoryService — recording', () => {
   });
 });
 
+describe('TopicPerformanceHistoryService — read-only records() accessor', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => {
+    jest.useRealTimers();
+    localStorage.clear();
+  });
+
+  /** Run a mutation a caller might attempt; whether it throws or is ignored is irrelevant. */
+  const attempt = (mutation: () => void): void => {
+    try {
+      mutation();
+    } catch {
+      // Frozen data throws in strict mode. The assertions below check the OUTCOME.
+    }
+  };
+
+  it('exposes source, attemptId, completedAt and raw counts for both sources', () => {
+    jest.useFakeTimers({ now: new Date('2026-09-01T10:00:00.000Z') });
+    const svc = service();
+    svc.record('quiz:rxjs:1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5 }]);
+    svc.record('practice:p1', 'weak-areas-practice', [{ topicId: 'signals', topicName: 'Signals', correct: 1, total: 3 }]);
+
+    expect(svc.records()).toEqual([
+      { attemptId: 'quiz:rxjs:1', source: 'topic-quiz', completedAt: '2026-09-01T10:00:00.000Z', topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5 },
+      { attemptId: 'practice:p1', source: 'weak-areas-practice', completedAt: '2026-09-01T10:00:00.000Z', topicId: 'signals', topicName: 'Signals', correct: 1, total: 3 }
+    ]);
+  });
+
+  it('keeps `source` on records loaded from storage', () => {
+    localStorage.setItem(SK_TOPIC_PERFORMANCE_HISTORY, JSON.stringify({
+      version: 1,
+      records: [
+        { attemptId: 'a', source: 'topic-quiz', completedAt: '2026-07-01T10:00:00.000Z', topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 5 },
+        { attemptId: 'b', source: 'weak-areas-practice', completedAt: '2026-07-02T10:00:00.000Z', topicId: 'rxjs', topicName: 'RxJS', correct: 2, total: 5 }
+      ]
+    }));
+    expect(service().records().map((r) => [r.attemptId, r.source])).toEqual([
+      ['a', 'topic-quiz'],
+      ['b', 'weak-areas-practice']
+    ]);
+  });
+
+  it('cannot be corrupted by a caller mutating the returned array or its records', () => {
+    const svc = service();
+    svc.record('a1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 4 }]);
+
+    const rows = svc.records() as unknown as Record<string, unknown>[];
+    attempt(() => rows.push({ attemptId: 'INJECTED', source: 'topic-quiz', completedAt: '2026-07-01T10:00:00.000Z', topicId: 't', topicName: 't', correct: 9, total: 9 }));
+    attempt(() => { rows[0]!['correct'] = 4; });
+    attempt(() => { rows[0]!['source'] = 'weak-areas-practice'; });
+    attempt(() => { rows.length = 0; });
+    attempt(() => rows.splice(0, 1));
+
+    expect(Object.isFrozen(svc.records())).toBe(true);
+    expect(Object.isFrozen(svc.records()[0])).toBe(true);
+    expect(svc.records()).toHaveLength(1);
+    expect(svc.records()[0]).toMatchObject({ attemptId: 'a1', source: 'topic-quiz', correct: 1, total: 4 });
+
+    // The decisive check: the NEXT write persists a clean store.
+    svc.record('a2', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 2, total: 4 }]);
+    const persisted = stored() as { records: { attemptId: string; correct: number; source: string }[] };
+    expect(persisted.records.map((r) => r.attemptId)).toEqual(['a1', 'a2']);
+    expect(persisted.records[0]).toMatchObject({ correct: 1, source: 'topic-quiz' });
+  });
+
+  it('protects records that were LOADED from storage, not just freshly recorded ones', () => {
+    localStorage.setItem(SK_TOPIC_PERFORMANCE_HISTORY, JSON.stringify({
+      version: 1,
+      records: [{ attemptId: 'a', source: 'topic-quiz', completedAt: '2026-07-01T10:00:00.000Z', topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 5 }]
+    }));
+    const svc = service();
+    const rows = svc.records() as unknown as Record<string, unknown>[];
+    attempt(() => { rows[0]!['correct'] = 5; });
+    attempt(() => rows.push({}));
+
+    expect(Object.isFrozen(svc.records())).toBe(true);
+    expect(svc.records()).toHaveLength(1);
+    expect(svc.records()[0]!.correct).toBe(1);
+  });
+
+  it('leaves asAttempts() working — it derives fresh objects, never the frozen records', () => {
+    const svc = service();
+    svc.record('a1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 3, total: 4 }]);
+    const attempts = svc.asAttempts();
+    expect(attempts[0]!.topicPerformance[0]).toMatchObject({ topicId: 'rxjs', correct: 3, total: 4, percentage: 75 });
+    expect(Object.isFrozen(attempts[0])).toBe(false);
+  });
+
+  it('persists byte-for-byte the same JSON as before — freezing changes nothing on disk', () => {
+    jest.useFakeTimers({ now: new Date('2026-09-01T10:00:00.000Z') });
+    const svc = service();
+    svc.record('quiz:rxjs:1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5 }]);
+    svc.record('practice:p1', 'weak-areas-practice', [
+      { topicId: 'signals', topicName: 'Signals', correct: 1, total: 3 },
+      { topicId: 'forms', topicName: 'Forms', correct: 2, total: 2 }
+    ]);
+
+    const expected = JSON.stringify({
+      version: 1,
+      records: [
+        { attemptId: 'quiz:rxjs:1', source: 'topic-quiz', completedAt: '2026-09-01T10:00:00.000Z', topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5 },
+        { attemptId: 'practice:p1', source: 'weak-areas-practice', completedAt: '2026-09-01T10:00:00.000Z', topicId: 'signals', topicName: 'Signals', correct: 1, total: 3 },
+        { attemptId: 'practice:p1', source: 'weak-areas-practice', completedAt: '2026-09-01T10:00:00.000Z', topicId: 'forms', topicName: 'Forms', correct: 2, total: 2 }
+      ]
+    });
+    expect(localStorage.getItem(SK_TOPIC_PERFORMANCE_HISTORY)).toBe(expected);
+  });
+
+  it('retains the 200-record cap and still appends after freezing', () => {
+    const svc = service();
+    for (let i = 0; i < 205; i++) {
+      svc.record(`a-${i}`, 'topic-quiz', [{ topicId: 'rxjs', correct: 1, total: 2 }]);
+    }
+    expect(svc.records()).toHaveLength(200);
+    expect(svc.records()[0]!.attemptId).toBe('a-5');
+    expect(svc.records()[199]!.attemptId).toBe('a-204');
+  });
+});
+
 describe('TopicPerformanceHistoryService — resilient loading', () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());

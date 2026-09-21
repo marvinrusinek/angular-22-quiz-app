@@ -355,6 +355,47 @@ describe('PerformanceInsightsComponent', () => {
       for (const id of topicIn('pi-review-heading')) expect(strong.has(id)).toBe(false);
     });
 
+    describe('several topics render as separate rows', () => {
+      // 3 weak (33%, 67%, 72%) and 3 strong (95%, 91%, 100%) — the most each list shows.
+      const many = [att(1, [
+        ['signals', 3, 9], ['http', 2, 3], ['di', 18, 25],
+        ['router', 21, 22], ['forms', 10, 11], ['pipes', 10, 10]
+      ])];
+
+      const rows = (headingId: string): HTMLElement[] =>
+        qa(`section[aria-labelledby="${headingId}"] ul > li`);
+
+      it.each([
+        ['pi-review-heading', ['signals', 'http', 'di'], ['SIGNALS', 'HTTP', 'DI'], ['33%', '67%', '72%']],
+        ['pi-strongest-heading', ['pipes', 'router', 'forms'], ['PIPES', 'ROUTER', 'FORMS'], ['100%', '95%', '91%']]
+      ])('%s: one <li> per topic inside one <ul>, each holding only its own name and figure',
+        (headingId, ids, names, figures) => {
+          show(insightsFrom({ attempts: many }));
+
+          const list = q(`section[aria-labelledby="${headingId}"] ul`) as HTMLElement;
+          expect(list.tagName).toBe('UL');
+          expect(rows(headingId)).toHaveLength(3);
+          expect(rows(headingId).map((li) => li.dataset['topic'])).toEqual(ids);
+
+          rows(headingId).forEach((li, i) => {
+            expect(li.tagName).toBe('LI');
+            // Exactly one name and one figure per row — nothing shared with a neighbour.
+            expect(li.querySelectorAll('.pi__name')).toHaveLength(1);
+            expect(li.querySelectorAll('.pi__figure')).toHaveLength(1);
+            expect(norm(li.querySelector('.pi__name'))).toBe(names[i]);
+            expect(norm(li.querySelector('.pi__figure'))).toBe(figures[i]);
+            // …and no other topic's name leaks into this row.
+            for (const other of names.filter((_, j) => j !== i)) expect(norm(li)).not.toContain(other);
+          });
+        });
+
+      it('keeps every row of both lists apart from the other list', () => {
+        show(insightsFrom({ attempts: many }));
+        const review = new Set(rows('pi-review-heading').map((li) => li.dataset['topic']));
+        for (const li of rows('pi-strongest-heading')) expect(review.has(li.dataset['topic'])).toBe(false);
+      });
+    });
+
     it('does not rank an under-sampled topic as strongest', () => {
       show(insightsFrom({ attempts }));
       expect(topicIn('pi-strongest-heading')).not.toContain('tiny');

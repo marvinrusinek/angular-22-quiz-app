@@ -124,13 +124,11 @@ import { PracticeSessionService } from '../../shared/services/features/practice/
                 <dt class="progress-summary__label" i18n>Needs Review</dt>
                 <dd class="progress-summary__value">
                   @if (weakTopics().length > 0) {
-                    <span class="progress-summary__weak-list">
+                    <ul class="progress-summary__weak-list">
                       @for (t of weakTopics(); track t.topicId) {
-                        <span class="progress-summary__weak-topic"
-                          >{{ t.topicName }} — {{ t.percentage }}%</span
-                        >
+                        <li class="progress-summary__weak-topic">{{ t.topicName }} — {{ t.percentage }}%</li>
                       }
-                    </span>
+                    </ul>
                   } @else if (insufficientData()) {
                     <span i18n>Complete a quiz or interview to identify weak areas.</span>
                   } @else {
@@ -278,6 +276,29 @@ import { PracticeSessionService } from '../../shared/services/features/practice/
     .progress-summary__count {
       min-width: 44px;
       text-align: right;
+    }
+
+    /* Needs Review: ONE TOPIC PER LINE. These were bare inline spans with no
+       separator, so several topics ran together ("A — 33%B — 67%"). A real list,
+       right-aligned to match the other values in this column. */
+    .progress-summary__weak-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      text-align: right;
+      /* On a narrow screen a long name wraps; balance the lines so the
+         percentage stays attached to a word instead of stranding alone. */
+      text-wrap: balance;
+    }
+
+    /* A multi-line value should sit level with the TOP of its label, not float
+       at the vertical centre of the row. Single-line rows are unaffected. */
+    .progress-summary__rows--highlights .progress-summary__row {
+      align-items: flex-start;
     }
 
     .progress-summary__bar {

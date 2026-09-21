@@ -125,6 +125,71 @@ describe('Practice Weak Areas action — activation', () => {
   });
 });
 
+describe('Needs Review — one topic per row', () => {
+  const THREE: WeakTopic[] = [
+    { topicId: 'signals', topicName: 'Angular Signals', percentage: 33.3, correct: 3, incorrect: 6, total: 9, lastActivityAt: '2026-07-30T00:00:00.000Z' },
+    { topicId: 'http', topicName: 'Angular HTTP', percentage: 66.7, correct: 2, incorrect: 1, total: 3, lastActivityAt: '2026-07-29T00:00:00.000Z' },
+    { topicId: 'di', topicName: 'Dependency Injection', percentage: 72, correct: 18, incorrect: 7, total: 25, lastActivityAt: '2026-07-28T00:00:00.000Z' }
+  ];
+
+  beforeEach(() => {
+    start.mockClear();
+    startResult.set(true);
+    insufficient.set(false);
+  });
+
+  const items = (fixture: ComponentFixture<ProgressSummaryComponent>): HTMLElement[] =>
+    Array.from(fixture.nativeElement.querySelectorAll('.progress-summary__weak-list > .progress-summary__weak-topic'));
+
+  it('renders several weak topics as separate list items, not run-on inline text', () => {
+    // The reported defect was bare inline <span>s with no rule, flowing onto one
+    // line. Jest strips component CSS and jsdom has no layout, so what CAN be
+    // pinned here is the semantic structure (a <ul> of <li>s); the stylesheet's
+    // effect — one topic per line — is checked in a real browser.
+    weakTopics.set(THREE);
+    const fixture = mount();
+
+    const list = fixture.nativeElement.querySelector('.progress-summary__weak-list') as HTMLElement;
+    expect(list.tagName).toBe('UL');
+    expect(items(fixture)).toHaveLength(3);
+    expect(items(fixture).every((li) => li.tagName === 'LI')).toBe(true);
+  });
+
+  it('gives each item exactly its own "name — NN%" and nothing from its neighbours', () => {
+    weakTopics.set(THREE);
+    const fixture = mount();
+
+    expect(items(fixture).map((li) => (li.textContent ?? '').trim())).toEqual([
+      'Angular Signals — 33%',
+      'Angular HTTP — 67%',
+      'Dependency Injection — 72%'
+    ]);
+  });
+
+  it('keeps the same order the Weak Areas service returned (weakest first)', () => {
+    weakTopics.set(THREE);
+    const fixture = mount();
+    expect(items(fixture).map((li) => li.textContent!.split(' — ')[0]))
+      .toEqual(['Angular Signals', 'Angular HTTP', 'Dependency Injection']);
+  });
+
+  it('still renders a single weak topic as a one-item list', () => {
+    weakTopics.set([THREE[0]]);
+    const fixture = mount();
+    expect(items(fixture)).toHaveLength(1);
+    expect((items(fixture)[0].textContent ?? '').trim()).toBe('Angular Signals — 33%');
+  });
+
+  it('leaves the Practice action and its accessible label exactly as they were', () => {
+    weakTopics.set(THREE);
+    const fixture = mount();
+    expect(action(fixture)).not.toBeNull();
+    expect(action(fixture)!.textContent!.trim()).toBe('Practice Weak Areas');
+    expect(action(fixture)!.getAttribute('aria-label'))
+      .toBe('Practice weak areas: Angular Signals, Angular HTTP, Dependency Injection');
+  });
+});
+
 describe('Practice Weak Areas action — never navigates into an empty session', () => {
   beforeEach(() => {
     start.mockClear();

@@ -25,6 +25,7 @@
       </section>
 
       <section class="pi__section" aria-labelledby="pi-recent-heading">
+        <hr class="pi__divider" />
         <h4 id="pi-recent-heading" class="pi__subheading" i18n>Recent Performance</h4>
         <ul class="pi__list">
           @for (s of recentRows(); track s.source) {
@@ -53,6 +54,7 @@
 
       @if (topics().length > 0) {
         <section class="pi__section" aria-labelledby="pi-topics-heading">
+          <hr class="pi__divider" />
           <h4 id="pi-topics-heading" class="pi__subheading" i18n>Performance by Topic</h4>
           <ul class="pi__list">
             @for (t of visibleTopics(); track t.topicId) {
@@ -87,6 +89,7 @@
         </section>
 
         <section class="pi__section" aria-labelledby="pi-strongest-heading">
+          <hr class="pi__divider" />
           <h4 id="pi-strongest-heading" class="pi__subheading" i18n>Strongest Topics</h4>
           @if (strongest().length > 0) {
             <ul class="pi__list">
@@ -109,6 +112,7 @@
 
       @if (needsReview().length > 0) {
         <section class="pi__section" aria-labelledby="pi-review-heading">
+          <hr class="pi__divider" />
           <h4 id="pi-review-heading" class="pi__subheading" i18n>Needs Review</h4>
           <ul class="pi__list">
             @for (t of needsReview(); track t.topicId) {

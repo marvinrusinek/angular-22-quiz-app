@@ -508,4 +508,84 @@ describe('PerformanceInsightsComponent', () => {
       expect(qa('[class*="--up"], [class*="--down"], [class*="--good"], [class*="--bad"]')).toHaveLength(0);
     });
   });
+
+  // ── category dividers ─────────────────────────────────────────────
+
+  describe('dividers between the major categories', () => {
+    const dividers = (): HTMLElement[] => qa('hr.pi__divider');
+    /** Which section each divider opens, in DOM order. */
+    const opens = (): (string | null)[] =>
+      dividers().map((hr) => hr.parentElement!.getAttribute('aria-labelledby'));
+
+    // Overview, Recent, Topics, Strongest and Needs Review all present.
+    const everything = (): PerformanceInsights =>
+      insightsFrom({
+        topicRecords: quizRecords(),
+        attempts: [att(1, [['weak', 5, 10], ['solid', 9, 10]])]
+      });
+
+    it('puts one between each pair of categories: Overview→Recent→Topic→Strongest→Needs Review', () => {
+      show(everything());
+      expect(qa('section.pi__section')).toHaveLength(5);
+      expect(opens()).toEqual([
+        'pi-recent-heading', 'pi-topics-heading', 'pi-strongest-heading', 'pi-review-heading'
+      ]);
+    });
+
+    it('is a real thematic break (<hr>), the FIRST child of the category it precedes', () => {
+      show(everything());
+      for (const hr of dividers()) {
+        expect(hr.tagName).toBe('HR');
+        expect(hr.parentElement!.firstElementChild).toBe(hr);
+        expect(hr.parentElement!.tagName).toBe('SECTION');
+      }
+    });
+
+    it('has none before the first category and none after the last', () => {
+      show(everything());
+      const sections = qa('section.pi__section');
+      expect(sections[0].querySelector('hr')).toBeNull();
+      expect(sections[sections.length - 1].lastElementChild!.tagName).not.toBe('HR');
+    });
+
+    it('never puts one between individual topics or items', () => {
+      show(everything());
+      expect(qa('ul hr, li hr')).toHaveLength(0);
+      expect(qa('ul > *').every((child) => child.tagName === 'LI')).toBe(true);
+    });
+
+    it('a category that is not shown brings no divider with it', () => {
+      // Overview + Recent only: no topic data, so no topics/strongest/review sections.
+      show(insightsFrom({ topicRecords: quizRecords() }));
+      expect(opens()).toEqual(['pi-recent-heading']);
+
+      // Topics + Strongest, but nothing needs review.
+      show(insightsFrom({ topicRecords: quizRecords(), attempts: [att(1, [['solid', 9, 10]])] }));
+      expect(opens()).toEqual(['pi-recent-heading', 'pi-topics-heading', 'pi-strongest-heading']);
+    });
+
+    it('always has exactly one fewer divider than categories, whatever is shown', () => {
+      for (const data of [
+        insightsFrom({ topicRecords: quizRecords() }),
+        insightsFrom({ topicRecords: quizRecords(), attempts: [att(1, [['solid', 9, 10]])] }),
+        everything()
+      ]) {
+        show(data);
+        expect(dividers()).toHaveLength(qa('section.pi__section').length - 1);
+      }
+    });
+
+    it('is absent from the empty state', () => {
+      show(insightsFrom());
+      expect(dividers()).toHaveLength(0);
+    });
+
+    it('adds nothing to the heading structure or the accessible region labels', () => {
+      show(everything());
+      expect(qa('h4').map((h) => norm(h))).toEqual([
+        'Performance Overview', 'Recent Performance', 'Performance by Topic', 'Strongest Topics', 'Needs Review'
+      ]);
+      expect(qa('section[aria-labelledby]').every((s) => !!el.querySelector(`#${s.getAttribute('aria-labelledby')}`))).toBe(true);
+    });
+  });
 });

@@ -21,6 +21,20 @@
   margin-top: 14px;
 }
 
+// A subtle rule between the major categories (never between items). It is the
+// first child of the section it PRECEDES, so it exists exactly when that section
+// does. The 14px above comes from the section's own margin-top and the 14px below
+// is set here, so the space is equal on both sides — and matches the 14/14 around
+// the divider that opens the whole block. Same border token as the rest of the panel.
+.pi__divider {
+  height: 0;
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  overflow: visible;
+}
+
 .pi__subheading {
   margin: 0 0 6px;
   font-size: 11px;

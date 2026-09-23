@@ -199,6 +199,157 @@ describe('QuizSelectionComponent — bank-absence catalog (S6o)', () => {
 });
 
 /**
+ * Your Progress visibility gate — `showSelectionProgress`.
+ *
+ * ROOT DEFECT this guards against: a Custom or preset Interview completed
+ * WITHOUT ever touching a Topic Quiz tile left "Your Progress" (and the
+ * Performance Insights section inside it) hidden, despite the attempt already
+ * being durably recorded in `interviewAttemptHistory:v2` and ready to display.
+ * The Interview Mode entry point on this page (the promo card's "Start
+ * Building") is plain navigation and deliberately never calls
+ * `sessionEngagement.markEngaged()` or touches Topic-Quiz sessionStorage, so
+ * the pre-fix gate — `engaged() || hasAccessedQuizzes() ||
+ * achievementsEarned() > 0` — had no path to becoming true from Interview
+ * activity alone.
+ *
+ * The fix adds one more OR clause reading the EXISTING, already-reactive
+ * `InterviewHistoryService.history()` signal — no new storage key, no
+ * duplicated state, no synchronization mechanism. These tests use the REAL
+ * `InterviewHistoryService` (root-provided, localStorage-backed, no HTTP
+ * dependency) rather than a stub, so "persisted" here means genuinely
+ * persisted through the same store Performance Insights reads.
+ */
+describe('QuizSelectionComponent — Your Progress visibility gate', () => {
+  let router: { navigate: jest.Mock };
+
+  const makeMetadataApi = (): any => ({
+    load: jest.fn(() => of([{ quizId: 'create-first-app' }])),
+    difficultyByQuiz: signal(new Map([['create-first-app', 'beginner']])),
+    milestoneByQuiz: signal(new Map([['create-first-app', 'Create Your First App']])),
+    summaryByQuiz: signal(new Map([['create-first-app', 'Get started with Angular.']])),
+    imageByQuiz: signal(new Map()),
+    factsByQuiz: signal(new Map()),
+    questionCountByQuiz: signal(new Map([['create-first-app', 5]])),
+    imageFor: () => '',
+    factsFor: () => []
+  });
+
+  /** `engaged`/`achievementsEarned` are the ONLY two OR clauses stubbed per test; the
+   *  rest of the gate — hasAccessedQuizzes() (sessionStorage) and the new Interview
+   *  clause (the REAL, unstubbed InterviewHistoryService) — is driven by real storage. */
+  function configureTestBed(opts: { engaged?: boolean; earnedAchievements?: number } = {}): void {
+    router = { navigate: jest.fn().mockResolvedValue(true) };
+    // Reset first so setup() may be called more than once per test — needed
+    // for the "reinitialization" case, which deliberately builds a second,
+    // independent component/service graph to prove the Interview record
+    // (not any in-memory state) is what keeps the gate open.
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        QuizSelectionComponent,
+        {
+          provide: QuizService, useValue: {
+            setQuizId: jest.fn(), setQuizStatus: jest.fn(), setCompletedQuizId: jest.fn(),
+            setCheckedShuffle: jest.fn(),
+            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            quizCompleted: false
+          }
+        },
+        {
+          provide: AchievementService,
+          useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: opts.earnedAchievements ?? 0, total: 6 }), earnedIds: () => new Set() }
+        },
+        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+        { provide: SessionEngagementService, useValue: { engaged: () => opts.engaged ?? false, markEngaged: jest.fn() } },
+        { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
+        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
+        { provide: Router, useValue: router }
+        // InterviewHistoryService: intentionally NOT stubbed — the real,
+        // root-provided, localStorage-backed service is used, so a seeded
+        // `interviewAttemptHistory:v2` is read exactly as production does.
+      ]
+    });
+  }
+
+  // Clears storage, configures TestBed, THEN instantiates — mirrors the
+  // bank-absence block's setup() so a test can seed localStorage beforehand.
+  function setup(opts?: { engaged?: boolean; earnedAchievements?: number }): QuizSelectionComponent {
+    configureTestBed(opts);
+    const comp = TestBed.inject(QuizSelectionComponent);
+    comp.ngOnInit();
+    return comp;
+  }
+
+  /** A minimal, valid interviewAttemptHistory:v2 store `validateAttemptEntry` accepts. */
+  function seedInterviewHistory(over: Record<string, unknown> = {}): void {
+    localStorage.setItem('interviewAttemptHistory:v2', JSON.stringify({
+      version: 2,
+      attempts: [{
+        id: 'att_1', completedAt: '2026-08-01T10:00:00.000Z',
+        score: 7, totalQuestions: 10, percentage: 70, completionReason: 'submitted',
+        ...over
+      }]
+    }));
+  }
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
+
+  it('is HIDDEN with no qualifying state at all', () => {
+    const comp = setup();
+    expect(comp.showSelectionProgress()).toBe(false);
+  });
+
+  it('remains VISIBLE on session engagement alone (existing behavior, untouched)', () => {
+    const comp = setup({ engaged: true });
+    expect(comp.showSelectionProgress()).toBe(true);
+  });
+
+  it('remains VISIBLE on accessed Topic Quiz sessionStorage alone (existing behavior, untouched)', () => {
+    sessionStorage.setItem('startedQuizIds', JSON.stringify(['create-first-app']));
+    const comp = setup();
+    expect(comp.showSelectionProgress()).toBe(true);
+  });
+
+  it('is VISIBLE with a persisted Interview attempt alone — no Topic Quiz required (THE FIX)', () => {
+    seedInterviewHistory();
+    const comp = setup();
+    expect(comp.showSelectionProgress()).toBe(true);
+  });
+
+  it('does NOT distinguish a preset Interview attempt from a custom one', () => {
+    seedInterviewHistory({ configKind: 'preset', presetId: 'junior', presetName: 'Junior Angular Developer', configuredDifficulty: undefined });
+    const comp = setup();
+    expect(comp.showSelectionProgress()).toBe(true);
+  });
+
+  it('stays sufficient across a fresh reinitialization (durable, not session-scoped, state)', () => {
+    seedInterviewHistory();
+    // First "load" of the page.
+    expect(setup().showSelectionProgress()).toBe(true);
+    // A second, independent instantiation — as a page reload creates a brand
+    // new component/service graph — reads the SAME persisted store, with
+    // sessionEngagement back to its default false and no sessionStorage
+    // survived a real reload. Only the durable Interview record is why this
+    // stays true.
+    expect(setup().showSelectionProgress()).toBe(true);
+  });
+
+  it('a malformed/empty Interview store is NOT sufficient (no false positive)', () => {
+    localStorage.setItem('interviewAttemptHistory:v2', JSON.stringify({ version: 2, attempts: [] }));
+    expect(setup().showSelectionProgress()).toBe(false);
+
+    localStorage.setItem('interviewAttemptHistory:v2', 'not json');
+    expect(setup().showSelectionProgress()).toBe(false);
+  });
+});
+
+/**
  * Accessibility regression coverage for the quiz-tile keyboard-operability fix.
  *
  * ROOT DEFECT this guards against: the tile's ENTIRE clickable surface was a

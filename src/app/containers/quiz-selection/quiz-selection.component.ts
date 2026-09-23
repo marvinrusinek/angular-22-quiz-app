@@ -27,6 +27,7 @@ import { achievementCompletionMessage } from '../../shared/utils/achievement-pro
 import { CertificateEarnedBadgeComponent } from '../../components/interview/certificate-earned-badge/certificate-earned-badge.component';
 import { ProgressService } from '../../shared/services/progress/progress.service';
 import { BestScoreService } from '../../shared/services/progress/best-score.service';
+import { InterviewHistoryService } from '../../shared/services/features/interview/interview-history.service';
 import { LearningPathService } from '../../shared/services/features/learning-path/learning-path.service';
 import { DifficultyRecommendationService } from '../../shared/services/features/learning-path/difficulty-recommendation.service';
 import { SessionEngagementService } from '../../shared/services/state/session-engagement.service';
@@ -93,19 +94,30 @@ export class QuizSelectionComponent implements OnInit {
   private readonly difficultyService = inject(DifficultyRecommendationService);
   private readonly bestScoreService = inject(BestScoreService);
   private readonly sessionEngagement = inject(SessionEngagementService);
+  private readonly interviewHistory = inject(InterviewHistoryService);
   private readonly metadataApi = inject(TopicQuizMetadataService);
   private readonly warmupCoordinator = inject(InterviewWarmupCoordinatorService);
   private readonly router = inject(Router);
 
   // Gates the progress-driven pieces on THIS screen. Shown whenever the user has
   // ACTUAL progress — engaged this session (tile click), OR has accessed quizzes
-  // before, OR has earned any achievement — so a refresh / in-app navigation
-  // RETAINS the achievements header + per-tile progress. A truly new user (no
-  // progress at all) still starts with a clean, progress-free screen.
+  // before, OR has earned any achievement, OR has a persisted Interview attempt
+  // — so a refresh / in-app navigation RETAINS the achievements header +
+  // per-tile progress. A truly new user (no progress at all) still starts with
+  // a clean, progress-free screen.
+  //
+  // The Interview clause is DURABLE (interviewAttemptHistory:v2), unlike
+  // sessionEngagement — Interview Mode's own entry point (the promo card's
+  // "Start Building") is plain navigation and deliberately never calls
+  // markEngaged(), so a Custom or preset Interview completed without ever
+  // touching a Topic Quiz tile would otherwise leave this panel — and the
+  // Performance Insights section inside it — hidden despite the attempt
+  // already being safely recorded and ready to display.
   readonly showSelectionProgress = computed(() =>
     this.sessionEngagement.engaged() ||
     this.hasAccessedQuizzes() ||
-    this.achievementsEarned() > 0
+    this.achievementsEarned() > 0 ||
+    this.interviewHistory.history().length > 0
   );
 
   // Compact "Achievements X / N" progress for the catalog header. Populated

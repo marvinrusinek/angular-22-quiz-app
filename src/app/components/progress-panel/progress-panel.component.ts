@@ -83,6 +83,18 @@ export class ProgressPanelComponent {
   /** Per-quiz card states; the panel shows only when at least one is not 'not-started'. */
   readonly cardStates = input<readonly QuizCardProgressState[]>([]);
 
-  /** True when the user has any In Progress or Completed quiz. */
-  readonly hasActivity = computed(() => this.cardStates().some(state => state !== 'not-started'));
+  /**
+   * True when the user has any In Progress or Completed quiz, OR any real
+   * progress Performance Insights already represents (Topic Quiz, Interview
+   * or Practice — see PerformanceInsights.hasData). `cardStates` alone is
+   * Topic-Quiz-tile-state only and knows nothing about Interview history, so
+   * a Custom or preset Interview completed without ever touching a Topic
+   * Quiz tile would otherwise leave this panel hidden even after the parent
+   * (QuizSelectionComponent.showSelectionProgress) opens for exactly that
+   * attempt. Reuses the ALREADY-injected PerformanceInsightsService signal —
+   * no new injection, no new storage read, no duplicated history logic.
+   */
+  readonly hasActivity = computed(() =>
+    this.cardStates().some(state => state !== 'not-started') || this.insights().hasData
+  );
 }

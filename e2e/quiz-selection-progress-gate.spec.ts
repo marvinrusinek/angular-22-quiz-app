@@ -25,8 +25,11 @@ import { SPRING_HEALTH_URL } from './support/e2e-backends';
  * import targets of one another).
  */
 
-const PANEL = 'mat-expansion-panel';
-const PANEL_HEADER = 'mat-expansion-panel-header';
+// What showSelectionProgress() still gates on Quiz Selection. The dashboard no
+// longer lives there (it is on /progress), so the gate is asserted through the
+// achievements row it continues to control.
+const GATED = '.achievements-summary-row';
+const PROGRESS_LINK = 'a.progress-entry__link';
 const PANEL_DETAILS = '.progress-summary';
 const INSIGHTS = 'codelab-performance-insights';
 const HISTORY_KEY = 'interviewAttemptHistory:v2';
@@ -118,7 +121,9 @@ test.describe('Your Progress visibility — Interview history alone is sufficien
     }));
     expect(Object.values(preState).every((v) => v === null)).toBe(true);
     // No Topic Quiz tile is ever touched anywhere in this test.
-    await expect(page.locator(PANEL)).toHaveCount(0);
+    await expect(page.locator(GATED)).toHaveCount(0);
+    // ...but the entry point is always there, even for a user with nothing.
+    await expect(page.locator(PROGRESS_LINK)).toBeVisible();
 
     await completeCustomInterview(page);
 
@@ -131,11 +136,12 @@ test.describe('Your Progress visibility — Interview history alone is sufficien
     await page.locator('.ir-btn:has-text("Return to Quiz Selection")').click();
     await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
 
-    await expect(page.locator(PANEL)).toBeVisible();
-    // Confirm no Topic Quiz was ever completed — the panel is NOT here because of one.
+    await expect(page.locator(GATED)).toBeVisible();
+    // Confirm no Topic Quiz was ever completed — the gate is NOT open because of one.
     await expect(page.locator('.quiz-tile.completed')).toHaveCount(0);
 
-    await page.locator(PANEL_HEADER).click();
+    await page.locator(PROGRESS_LINK).click();
+    await expect(page).toHaveURL(/\/progress$/);
     await expect(page.locator(PANEL_DETAILS)).toBeVisible();
 
     const insights = page.locator(INSIGHTS);
@@ -158,8 +164,8 @@ test.describe('Your Progress visibility — Interview history alone is sufficien
     }));
     expect(Object.values(gateState).every((v) => v === null)).toBe(true);
 
-    await expect(page.locator(PANEL)).toBeVisible();
-    await page.locator(PANEL_HEADER).click();
+    await expect(page.locator(GATED)).toBeVisible();
+    await page.locator(PROGRESS_LINK).click();
     await expect(page.locator(INSIGHTS)).toContainText('Interview Mode');
     await expect(page.locator(INSIGHTS)).toContainText('70%');
     await expect(page.locator(INSIGHTS)).toContainText('7 / 10 questions · 1 attempt');
@@ -167,8 +173,10 @@ test.describe('Your Progress visibility — Interview history alone is sufficien
     // A REAL reload — not SPA navigation — proves this is durable storage, not
     // the in-memory SessionEngagementService the audit explicitly excluded as the fix.
     await page.reload();
+    await expect(page.locator(INSIGHTS)).toContainText('Interview Mode');
+    await page.goto('/quiz');
     await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
-    await expect(page.locator(PANEL)).toBeVisible();
+    await expect(page.locator(GATED)).toBeVisible();
   });
 
   test('Case C — a preset Interview attempt satisfies the same visibility contract as a custom one', async ({ page }) => {
@@ -176,8 +184,8 @@ test.describe('Your Progress visibility — Interview history alone is sufficien
     await page.goto('/quiz');
     await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
 
-    await expect(page.locator(PANEL)).toBeVisible();
-    await page.locator(PANEL_HEADER).click();
+    await expect(page.locator(GATED)).toBeVisible();
+    await page.locator(PROGRESS_LINK).click();
     await expect(page.locator(INSIGHTS)).toContainText('Interview Mode');
     await expect(page.locator(INSIGHTS)).toContainText('90%');
     await expect(page.locator(INSIGHTS)).toContainText('9 / 10 questions · 1 attempt');
@@ -186,6 +194,8 @@ test.describe('Your Progress visibility — Interview history alone is sufficien
   test('with no Interview history and no other engagement, Your Progress stays hidden (unchanged baseline)', async ({ page }) => {
     await page.goto('/quiz');
     await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
-    await expect(page.locator(PANEL)).toHaveCount(0);
+    await expect(page.locator(GATED)).toHaveCount(0);
+    // The dashboard is never embedded on Quiz Selection any more.
+    await expect(page.locator('codelab-progress-summary, mat-expansion-panel')).toHaveCount(0);
   });
 });

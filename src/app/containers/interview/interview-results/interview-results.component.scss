@@ -129,6 +129,8 @@
   // CTA (the action buttons below remain the primary controls).
   &__history-link {
     display: flex;
+    flex-wrap: wrap;
+    gap: 10px 12px;
     justify-content: center;
     margin-top: 14px;
 

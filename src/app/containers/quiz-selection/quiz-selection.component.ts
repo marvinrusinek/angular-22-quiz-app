@@ -33,10 +33,9 @@ import { DifficultyRecommendationService } from '../../shared/services/features/
 import { SessionEngagementService } from '../../shared/services/state/session-engagement.service';
 import { InterviewWarmupCoordinatorService } from '../../shared/services/interview/interview-warmup-coordinator.service';
 
-import { ProgressSummary, QuizProgress } from '../../shared/models/progress.model';
+import { QuizProgress } from '../../shared/models/progress.model';
 
 import { AchievementsSummaryComponent } from '../../components/achievements-summary/achievements-summary.component';
-import { ProgressPanelComponent } from '../../components/progress-panel/progress-panel.component';
 import { RecommendedNextQuizComponent } from '../../components/recommended-next-quiz/recommended-next-quiz.component';
 import { DifficultyRecommendationComponent } from '../../components/difficulty-recommendation/difficulty-recommendation.component';
 import {
@@ -75,7 +74,6 @@ import { swallow } from '../../shared/utils/error-logging';
     DifficultyRecommendationComponent,
     AchievementsSummaryComponent,
     CertificateEarnedBadgeComponent,
-    ProgressPanelComponent,
     QuizCardProgressComponent,
     CountUpDirective
   ],
@@ -289,13 +287,9 @@ export class QuizSelectionComponent implements OnInit {
     return { quizCount, questionCount, levels };
   });
 
-  // ── progress tracking (derived; reuses the shared best-score store) ─────
-  // Recomputes whenever the quiz list changes. Reads completion + best scores
-  // from ProgressService (single source), never from localStorage directly here.
-  readonly progressSummary = computed<ProgressSummary>(() =>
-    this.progressService.getProgressSummary(this.quizzes() ?? [])
-  );
-
+  // ── per-tile progress (derived; reuses the shared best-score store) ─────
+  // The aggregate "Your Progress" dashboard no longer lives here — it is the
+  // /progress page (ProgressPageComponent), which builds its own summary.
   // Per-quiz card state. 'completed' (durable best-score store, or an existing
   // completed status) wins; otherwise an existing STARTED/CONTINUE status →
   // 'in-progress'; otherwise 'not-started'. Best score shows only when recorded.
@@ -322,11 +316,6 @@ export class QuizSelectionComponent implements OnInit {
     }
     return map;
   });
-
-  // Flat list of card states — drives the progress panel's "has activity" guard.
-  readonly cardStateList = computed<QuizCardProgressState[]>(() =>
-    Array.from(this.quizCardProgress().values()).map(entry => entry.state)
-  );
 
   // Recommended Next Quiz. Derived from the SAME per-quiz state map the rest of
   // this screen uses (quizCardProgress), so it re-evaluates immediately whenever

@@ -1,0 +1,38 @@
+<div class="progress-page">
+  <header class="progress-page__bar">
+    <h1 #pageHeading class="progress-page__title" tabindex="-1" i18n>Your Progress</h1>
+    <codelab-theme-toggle />
+  </header>
+
+  @if (hasProgress()) {
+    <!-- One card holds the existing dashboard: the completion summary (with its
+         Strongest / Needs Review / Practice action) and Performance Insights.
+         Both components are unchanged; only their host moved. -->
+    <div class="progress-page__dashboard">
+      <codelab-progress-summary [summary]="summary()" variant="details" />
+      <codelab-performance-insights [insights]="insights()" />
+    </div>
+  } @else {
+    <!-- New user: a real page with a useful next step, never a redirect or a
+         blank screen. Plain links only — nothing here writes storage, marks
+         engagement or creates a session. -->
+    <div class="progress-page__empty" role="status">
+      <p class="progress-page__empty-main" i18n>
+        Complete a Topic Quiz or an Interview to start building your performance history.
+      </p>
+    </div>
+  }
+
+  <div class="progress-page__actions">
+    <a
+      class="pp-btn"
+      [class.pp-btn--primary]="!hasProgress()"
+      routerLink="/quiz"
+      i18n
+    >Choose a Quiz</a>
+    <a class="pp-btn" routerLink="/interview" i18n>Start an Interview</a>
+  </div>
+
+  <!-- Same cue the other long pages use; self-hides when there is nothing to scroll. -->
+  <app-scroll-down-indicator />
+</div>

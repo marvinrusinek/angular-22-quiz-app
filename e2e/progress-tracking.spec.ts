@@ -1,9 +1,9 @@
 import { test, expect, Page } from '@playwright/test';
 import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading, correctRowsForHeading } from './helpers';
 
-const PANEL = 'mat-expansion-panel';
-const PANEL_HEADER = 'mat-expansion-panel-header';
 const PANEL_DETAILS = '.progress-summary';
+const GATED = '.achievements-summary-row';
+const PROGRESS_LINK = 'a.progress-entry__link';
 const TS_TILE = '.quiz-tile:has(h5.quiz-title:text-is("Fixture Widgets"))';
 const BEST_SCORES_KEY = 'quizBestScores';
 
@@ -14,31 +14,23 @@ const BEST_SCORES_KEY = 'quizBestScores';
  *     (`Record<quizId, number 0-100>`; key presence means "completed"). Durable:
  *     survives reloads, and a lower retake never lowers it.
  *
- *  2. PANEL VISIBILITY — the "Your Progress" panel and the per-card score line
- *     sit behind `@if (showSelectionProgress())`, which is an OR of three
- *     sources (quiz-selection.component.ts:102):
- *
- *         sessionEngagement.engaged()   in-memory — lost on any reload
- *       || hasAccessedQuizzes()         sessionStorage (startedQuizIds /
- *                                       completedQuizIds) — survives a RELOAD
- *                                       in the SAME TAB, but not a new tab or a
- *                                       restarted browser
- *       || achievementsEarned() > 0     localStorage — survives everything,
- *                                       including a new browser session
- *
- *     Only the FIRST is per-page-load. Once the user has real progress the panel
- *     is retained across a refresh BY DESIGN, so the achievements header and
- *     per-tile progress don't vanish on a returning user. A brand-new user with
- *     no progress at all still gets a clean, progress-free screen.
+ *  2. SELECTION-SCREEN VISIBILITY — the Your Progress DASHBOARD now lives on its
+ *     own unguarded /progress route and is always reachable through the always-on
+ *     "View Your Progress" link. What remains behind
+ *     `@if (showSelectionProgress())` on Quiz Selection is the achievements row,
+ *     Recommended Next Quiz, and the per-card score line. That gate is an OR of
+ *     engagement (in-memory), the sessionStorage accessed list, achievements
+ *     (localStorage) and Interview history — so once the user has real progress
+ *     it is retained across a refresh, while a brand-new user gets a clean screen.
  *
  *     Playwright gives each test a fresh context, so every test here starts as
  *     that brand-new user — both stores begin empty.
  *
  * Consequence for this spec: it enters through Quiz Selection and clicks the
  * tile (deep-linking to a question URL never sets the in-memory flag), and after
- * a refresh it expects the panel to REMAIN — this run has completed a quiz, so
- * the durable sources hold. The session-only half of the gate is asserted
- * separately below, with a user who has no stored progress.
+ * a refresh it expects the gated content to REMAIN — this run has completed a
+ * quiz, so the durable sources hold. The session-only half of the gate is
+ * asserted separately below, with a user who has no stored progress.
  */
 
 /** The durable record — read directly, so it is independent of panel visibility. */
@@ -104,35 +96,42 @@ async function answerFixtureWidgets(page: Page, wrongFirst = false): Promise<voi
   await expect(page).toHaveURL(/\/results\//);
 }
 
-test('progress: score persists durably, the panel is retained once progress exists, and a lower retake keeps the best score', async ({ page }) => {
+test('progress: score persists durably, the dashboard reflects it, gated content is retained, and a lower retake keeps the best score', async ({ page }) => {
   test.setTimeout(240_000);
 
   // ── complete the quiz perfectly (100%), entering via the tile so the
   //    session-engagement flag is set the way a real user sets it ───────────
   await engageViaTileAndStart(page);
   await answerFixtureWidgets(page);
+
+  // Topic Results offers the dashboard as a real link, and it lands on /progress.
+  await page.getByTitle('your progress').click();
+  await expect(page).toHaveURL(/\/progress$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Your Progress' })).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/results\//);
+
   await backToSelection(page);
 
-  // ── panel is visible for an ENGAGED session ─────────────────────────────
-  await expect(page.locator(PANEL)).toBeVisible();
-  // Catalog-safe: the total is the number of quizzes, which grows over time.
-  await expect(page.locator(PANEL_HEADER)).toContainText(/1 of \d+ completed/);
-  await expect(page.locator(PANEL_DETAILS)).toBeHidden();  // collapsed by default
+  // ── the gated content is visible for an ENGAGED session ────────────────
+  await expect(page.locator(GATED)).toBeVisible();
 
-  // The percentage is derived from the same total, so derive it here too rather
-  // than hard-coding it (1 of 20 → 5%).
-  const headerText = (await page.locator(PANEL_HEADER).textContent()) ?? '';
-  const totalQuizzes = Number(/1 of (\d+) completed/.exec(headerText)?.[1]);
-  expect(totalQuizzes).toBeGreaterThan(0);
-  await expect(page.locator(PANEL_HEADER))
-    .toContainText(`${Math.round((1 / totalQuizzes) * 100)}%`);
-
-  // Expanding reveals the full bar-graph breakdown (overall + difficulty bars).
-  await page.locator(PANEL_HEADER).click();
-  await expect(page.locator(PANEL_DETAILS)).toBeVisible();
+  // ── the dashboard is a separate page, reached through the always-on link ──
+  await page.locator(PROGRESS_LINK).click();
+  await expect(page).toHaveURL(/\/progress$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Your Progress' })).toBeVisible();
   await expect(page.locator(PANEL_DETAILS)).toContainText('Overall Progress');
   await expect(page.locator(PANEL_DETAILS)).toContainText('Beginner');
-  await expect(page.locator(`${PANEL_DETAILS} .progress-summary__bar[role="progressbar"]`).first()).toBeVisible();
+  // Catalog-safe: the percentage depends on the (growing) quiz total, so assert
+  // that one completed quiz moved the bar off zero rather than hard-coding it.
+  const overall = page.locator(`${PANEL_DETAILS} .progress-summary__bar[role="progressbar"]`).first();
+  await expect(overall).toBeVisible();
+  const pct = Number(/(\d+) percent/.exec((await overall.getAttribute('aria-label')) ?? '')?.[1]);
+  expect(pct).toBeGreaterThan(0);
+  // The dashboard is NOT embedded on Quiz Selection any more.
+  await page.getByRole('link', { name: 'Choose a Quiz' }).click();
+  await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
+  await expect(page.locator('mat-expansion-panel, codelab-progress-summary')).toHaveCount(0);
 
   // The completed card shows Completed + Best 100%.
   const completedTile = page.locator('.quiz-tile.completed');
@@ -143,14 +142,14 @@ test('progress: score persists durably, the panel is retained once progress exis
   // ── the DURABLE record, asserted independently of any UI ────────────────
   expect((await storedBestScores(page))['fixture-widgets']).toBe(100);
 
-  // ── refresh: the in-memory flag resets, but DURABLE progress keeps the panel ──
+  // ── refresh: the in-memory flag resets, but DURABLE progress keeps the gate open ──
   await page.reload();
   await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
 
-  // The panel REMAINS. engaged() is back to false, but this run completed a
+  // The gated content REMAINS. engaged() is back to false, but this run completed a
   // quiz, so hasAccessedQuizzes() (sessionStorage — intact, same tab) and
   // achievementsEarned() (localStorage) each hold the gate open on their own.
-  await expect(page.locator(PANEL)).toBeVisible();
+  await expect(page.locator(GATED)).toBeVisible();
   expect((await storedBestScores(page))['fixture-widgets']).toBe(100);
 
   // ── navigate away through the app and come back ────────────────────────
@@ -161,9 +160,8 @@ test('progress: score persists durably, the panel is retained once progress exis
   await page.goBack();
   await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
 
-  // Panel still there, showing the SAME saved score.
-  await expect(page.locator(PANEL)).toBeVisible();
-  await expect(page.locator(PANEL_HEADER)).toContainText(/1 of \d+ completed/);
+  // Gated content still there, showing the SAME saved score.
+  await expect(page.locator(GATED)).toBeVisible();
   await expect(page.locator('.quiz-tile.completed .quiz-card-progress')).toContainText('100%');
 
   // ── retake with a LOWER score: completed quiz → results → Restart ───────
@@ -185,10 +183,10 @@ test('progress: score persists durably, the panel is retained once progress exis
  * The gate from a BRAND-NEW user's starting point.
  *
  * With nothing stored, every source of `showSelectionProgress()` is false, so
- * the screen starts clean. Engaging then opens the gate — and note that the very
- * act of opening a quiz is itself RECORDED (the quiz is added to the
- * sessionStorage accessed list), so from that point on the panel survives a
- * reload of this tab. The "clean start" is the state of a user with no stored
+ * the screen starts clean (apart from the always-on View Your Progress link).
+ * Engaging then opens the gate — and note that the very act of opening a quiz is
+ * itself RECORDED (the quiz is added to the sessionStorage accessed list), so
+ * from that point on the gated content survives a reload of this tab. The "clean start" is the state of a user with no stored
  * progress, not something that returns on every page load.
  */
 test('progress: a brand-new user starts clean, and engaging opens the gate durably', async ({ page }) => {
@@ -206,31 +204,32 @@ test('progress: a brand-new user starts clean, and engaging opens the gate durab
   }));
   expect(Object.values(stored).every((v) => v === null || v === '{}' || v === '[]')).toBe(true);
 
-  // Fresh load: no panel.
-  await expect(page.locator(PANEL)).toHaveCount(0);
+  // Fresh load: nothing gated, but the entry point is still offered.
+  await expect(page.locator(GATED)).toHaveCount(0);
+  await expect(page.locator(PROGRESS_LINK)).toBeVisible();
 
   // Tile click calls onSelect() -> markEngaged(), which opens the gate.
   await page.locator(TS_TILE).click();
   await expect(page).toHaveURL(/\/quiz\/(intro|results)\/fixture-widgets/);
   await page.goBack();   // router navigation, so the in-memory flag survives
   await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
-  await expect(page.locator(PANEL)).toBeVisible();
+  await expect(page.locator(GATED)).toBeVisible();
 
   // A real reload drops the in-memory flag — but opening the quiz recorded it in
   // the sessionStorage accessed list, which survives a reload of this tab, so
   // hasAccessedQuizzes() now holds the gate open on its own.
   await page.reload();
   await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
-  await expect(page.locator(PANEL)).toBeVisible();
+  await expect(page.locator(GATED)).toBeVisible();
 
   // Prove it is the STORED progress doing the work, not something incidental.
   // Both stores must go: the accessed list is in sessionStorage, scores and
   // achievements in localStorage. Clearing only one leaves the gate open.
   // Clearing both represents a brand-new user or cleared site data — NOT a new
   // browser session, which would drop sessionStorage but keep localStorage, so
-  // achievementsEarned() would still hold the panel open on its own.
+  // achievementsEarned() would still hold the gate open on its own.
   await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
   await page.reload();
   await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
-  await expect(page.locator(PANEL)).toHaveCount(0);
+  await expect(page.locator(GATED)).toHaveCount(0);
 });

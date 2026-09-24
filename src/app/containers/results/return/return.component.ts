@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 
@@ -34,7 +34,7 @@ import { swallow } from '../../../shared/utils/error-logging';
 @Component({
   selector: 'codelab-results-return',
   standalone: true,
-  imports: [MatCardModule, MatListModule],
+  imports: [MatCardModule, MatListModule, RouterLink],
   templateUrl: './return.component.html',
   styleUrls: ['./return.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

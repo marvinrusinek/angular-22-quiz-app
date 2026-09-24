@@ -25,6 +25,20 @@
         >&nbsp;&nbsp;
         <span class="mdc-button__label"><strong i18n>Select Quiz</strong></span>
       </a>
+      <!-- A REAL link (routerLink → href), unlike the click-only anchors around it,
+           so it is keyboard-reachable and works with open-in-new-tab. Navigation
+           only: Your Progress is the aggregate across attempts, not this result. -->
+      <a
+        class="btn hvr-radial-out mdc-button mdc-button--outlined"
+        title="your progress"
+        i18n-title
+        routerLink="/progress"
+      >
+        <div class="mdc-button__ripple"></div>
+        <i class="material-icons mdc-button__icon" aria-hidden="true">score</i
+        >&nbsp;&nbsp;
+        <span class="mdc-button__label"><strong i18n>View Your Progress</strong></span>
+      </a>
       <a
         class="btn hvr-radial-out mdc-button mdc-button--outlined"
         title="back to Codelab"

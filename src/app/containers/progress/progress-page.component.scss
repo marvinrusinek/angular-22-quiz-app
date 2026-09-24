@@ -1,0 +1,106 @@
+// Your Progress page. Uses only the app's global theme tokens (--text-*,
+// --bg-secondary, --border-color, --text-link), which flip with [data-theme],
+// so light and dark need no per-theme rules here. The two dashboard components
+// bring their own presentation and are unchanged; this file only lays out the
+// page around them.
+:host {
+  display: block;
+}
+
+.progress-page {
+  max-width: 760px;
+  margin: 20px auto;
+  padding: 0 12px;
+  color: var(--text-primary, #212121);
+
+  &__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+
+    // Focus is moved here on route entry (see the component). It is a focus
+    // TARGET, not a control, so it gets no ring — every real control on the
+    // page keeps its own visible focus style.
+    &:focus {
+      outline: none;
+    }
+  }
+
+  // The dashboard card — the chrome the summary used to carry when embedded in
+  // an accordion (its 'details' variant strips it). No arbitrary 560px width:
+  // the page column sets the width.
+  &__dashboard {
+    padding: 16px 20px;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 12px;
+    background: var(--bg-secondary, rgba(255, 255, 255, 0.6));
+    box-sizing: border-box;
+  }
+
+  &__empty {
+    padding: 36px 16px;
+    text-align: center;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 14px;
+    background: var(--bg-secondary, rgba(255, 255, 255, 0.6));
+
+    &-main {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--text-primary, #212121);
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+  }
+}
+
+.pp-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 18px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-primary, #212121);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+
+  // The primary action (the empty state's "Choose a Quiz") inverts the page's
+  // own text/background pair, so it is high-contrast in BOTH themes. The app's
+  // vivid blue is deliberately not used for text-bearing fills: white on it is
+  // ~3:1, below the 4.5:1 this size needs.
+  &--primary {
+    background: var(--text-primary, #212121);
+    border-color: var(--text-primary, #212121);
+    color: var(--bg-primary, #ffffff);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--text-link, #3b98fd);
+    outline-offset: 2px;
+  }
+}
+
+@media (max-width: 600px) {
+  .progress-page {
+    &__dashboard {
+      padding: 12px 14px;
+    }
+  }
+}

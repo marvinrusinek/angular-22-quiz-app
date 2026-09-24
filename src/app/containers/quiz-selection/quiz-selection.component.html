@@ -78,6 +78,13 @@
     </div>
   }
 
+  <!-- Your Progress is its own page (/progress), which has an empty state, so this
+       entry point is ALWAYS available — deliberately NOT behind showSelectionProgress.
+       A plain link: it writes nothing, marks no engagement, creates no session. -->
+  <p class="progress-entry">
+    <a class="progress-entry__link" routerLink="/progress" i18n>View Your Progress</a>
+  </p>
+
   <!-- Progress-driven pieces stay hidden on a fresh load; they appear once the
        user starts using a quiz this session (showSelectionProgress). Their own
        inner guards still apply (e.g. renders nothing until there's data). -->
@@ -107,13 +114,7 @@
       <p class="accessed-subline">{{ completionParts().subline }}</p>
     }
 
-    <!-- Your Progress — collapsible; hidden until a quiz is In Progress or Completed -->
-    <codelab-progress-panel
-      [summary]="progressSummary()"
-      [cardStates]="cardStateList()"
-    />
-
-    <!-- Recommended Next Quiz — directly beneath Your Progress. Start/Continue
+    <!-- Recommended Next Quiz — beneath the achievements row. Start/Continue
          reuse the existing quiz-start navigation; completion goes to the builder.
          Hidden once the Difficulty card owns the completion state, so the finished
          path shows ONE "Excellent work! / Build an Interview" card, not two. -->

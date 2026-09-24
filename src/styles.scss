@@ -708,19 +708,6 @@ button.mat-mdc-menu-trigger {
   color: var(--text-primary) !important;
 }
 
-// "Your Progress" expansion chevron: dark-on-dark and invisible in dark mode.
-// The progress panel uses Emulated encapsulation, so the Material indicator is
-// styled here (global). Cover both the theming token and the ::after border
-// (the chevron itself) so it's a visible, theme-appropriate colour.
-[data-theme="dark"] .progress-panel {
-  --mat-expansion-header-indicator-color: var(--text-secondary, #c0c0c0);
-
-  .mat-expansion-indicator::after {
-    color: var(--text-secondary, #c0c0c0);
-    border-color: var(--text-secondary, #c0c0c0);
-  }
-}
-
 // Confirm dialog (rendered in the CDK overlay, outside component scope).
 // The overlay sits under <html data-theme>, so the theme custom props
 // resolve here for both light and dark without a per-theme rule.

@@ -350,6 +350,180 @@ describe('QuizSelectionComponent — Your Progress visibility gate', () => {
 });
 
 /**
+ * "View Your Progress" — the entry point that REPLACED the embedded dashboard.
+ *
+ * Your Progress is now its own page (/progress, ProgressPageComponent), which has
+ * an empty state, so its entry here is ALWAYS available and deliberately not
+ * behind `showSelectionProgress`. That gate is KEPT — including the Step 1
+ * Interview-history clause — because it still governs what remains on this
+ * screen: the achievements row, the Recommended Next Quiz, the difficulty
+ * recommendation and the per-tile progress lines.
+ *
+ * These render the real template (fixture), with the REAL, unstubbed
+ * InterviewHistoryService so "persisted Interview history" is genuinely read
+ * from storage, seeded BEFORE the component exists (the history loads once).
+ */
+describe('QuizSelectionComponent — Your Progress entry point', () => {
+  let navigateByUrl: jest.SpyInstance;
+  const markEngaged = jest.fn();
+
+  const makeMetadataApi = (): any => ({
+    load: jest.fn(() => of([{ quizId: 'create-first-app' }])),
+    difficultyByQuiz: signal(new Map([['create-first-app', 'beginner']])),
+    milestoneByQuiz: signal(new Map([['create-first-app', 'Create Your First App']])),
+    summaryByQuiz: signal(new Map([['create-first-app', 'Get started with Angular.']])),
+    imageByQuiz: signal(new Map<string, string>()),
+    factsByQuiz: signal(new Map<string, readonly string[]>()),
+    questionCountByQuiz: signal(new Map([['create-first-app', 5]])),
+    imageFor: () => '',
+    factsFor: () => []
+  });
+
+  function render(opts: { engaged?: boolean; seed?: () => void } = {}): ComponentFixture<QuizSelectionComponent> {
+    sessionStorage.clear();
+    localStorage.clear();
+    markEngaged.mockClear();
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: QuizService, useValue: {
+            setQuizId: jest.fn(), setQuizStatus: jest.fn(), setCompletedQuizId: jest.fn(), setCheckedShuffle: jest.fn(),
+            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            quizCompleted: false
+          }
+        },
+        { provide: AchievementService, useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() } },
+        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+        { provide: SessionEngagementService, useValue: { engaged: () => opts.engaged ?? false, markEngaged } },
+        { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
+        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
+        // InterviewHistoryService: intentionally NOT stubbed.
+      ]
+    });
+    opts.seed?.();
+    navigateByUrl = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    const fixture = TestBed.createComponent(QuizSelectionComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const seedInterview = (over: Record<string, unknown> = {}): void => {
+    localStorage.setItem('interviewAttemptHistory:v2', JSON.stringify({
+      version: 2,
+      attempts: [{
+        id: 'att_1', completedAt: '2026-08-01T10:00:00.000Z', score: 7, totalQuestions: 10,
+        percentage: 70, completionReason: 'submitted', ...over
+      }]
+    }));
+  };
+  const q = (f: ComponentFixture<QuizSelectionComponent>, sel: string): HTMLElement | null =>
+    f.nativeElement.querySelector(sel);
+
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
+
+  describe('the entry link', () => {
+    it('is present with NO progress at all — a new user can reach /progress', () => {
+      const f = render();
+      const link = q(f, 'a.progress-entry__link') as HTMLAnchorElement;
+      expect(link).not.toBeNull();
+      expect((link.textContent ?? '').trim()).toBe('View Your Progress');
+      expect(link.getAttribute('href')).toBe('/progress');
+      // ...while the gated content is (correctly) still hidden for that same user.
+      expect(q(f, '.achievements-summary-row')).toBeNull();
+    });
+
+    it('is present WITH progress too', () => {
+      const f = render({ engaged: true });
+      expect(q(f, 'a.progress-entry__link')).not.toBeNull();
+      expect(q(f, '.achievements-summary-row')).not.toBeNull();
+    });
+
+    it('is a real link, and appears exactly once', () => {
+      const f = render({ engaged: true });
+      const links = f.nativeElement.querySelectorAll('a.progress-entry__link');
+      expect(links).toHaveLength(1);
+      expect(links[0].tagName).toBe('A');
+    });
+
+    it('navigates to /progress with NO side effects: no engagement, no storage, no history change', () => {
+      const f = render();
+      const before = { local: JSON.stringify({ ...localStorage }), session: JSON.stringify({ ...sessionStorage }) };
+
+      (q(f, 'a.progress-entry__link') as HTMLAnchorElement).click();
+
+      expect(navigateByUrl).toHaveBeenCalledTimes(1);
+      expect(navigateByUrl.mock.calls[0][0].toString()).toBe('/progress');
+      expect(markEngaged).not.toHaveBeenCalled();
+      expect(JSON.stringify({ ...localStorage })).toBe(before.local);
+      expect(JSON.stringify({ ...sessionStorage })).toBe(before.session);
+    });
+  });
+
+  describe('the embedded dashboard is gone', () => {
+    it.each([
+      ['a new user', {}],
+      ['an engaged user', { engaged: true }],
+      ['a user with Interview history', { seed: () => seedInterview() }]
+    ] as [string, { engaged?: boolean; seed?: () => void }][])(
+      'is not rendered for %s',
+      (_label, opts) => {
+        const f = render(opts);
+        expect(q(f, 'codelab-progress-panel')).toBeNull();
+        expect(q(f, 'mat-expansion-panel')).toBeNull();
+        expect(q(f, 'codelab-progress-summary')).toBeNull();
+        expect(q(f, 'codelab-performance-insights')).toBeNull();
+      }
+    );
+  });
+
+  describe('showSelectionProgress still gates the content that remains on this screen', () => {
+    it('hides it all for a new user', () => {
+      const f = render();
+      expect(q(f, '.achievements-summary-row')).toBeNull();
+      expect(q(f, 'codelab-recommended-next-quiz')).toBeNull();
+      expect(q(f, 'codelab-difficulty-recommendation')).toBeNull();
+      expect(q(f, 'codelab-quiz-card-progress')).toBeNull();
+    });
+
+    it('shows it all on session engagement (existing behavior, untouched)', () => {
+      const f = render({ engaged: true });
+      expect(q(f, '.achievements-summary-row')).not.toBeNull();
+      expect(q(f, 'codelab-recommended-next-quiz')).not.toBeNull();
+      expect(q(f, 'codelab-difficulty-recommendation')).not.toBeNull();
+      expect(q(f, 'codelab-quiz-card-progress')).not.toBeNull();
+    });
+
+    it('shows it all on persisted Interview history alone — the Step 1 fix, intact', () => {
+      const f = render({ seed: () => seedInterview() });
+      expect(q(f, '.achievements-summary-row')).not.toBeNull();
+      expect(q(f, 'codelab-recommended-next-quiz')).not.toBeNull();
+      expect(q(f, 'codelab-quiz-card-progress')).not.toBeNull();
+    });
+
+    it('treats a preset Interview attempt the same as a custom one', () => {
+      const f = render({ seed: () => seedInterview({ configKind: 'preset', presetId: 'junior', presetName: 'Junior Angular Developer' }) });
+      expect(q(f, '.achievements-summary-row')).not.toBeNull();
+    });
+
+    it('an empty Interview store does NOT open the gate (no false positive)', () => {
+      const f = render({ seed: () => localStorage.setItem('interviewAttemptHistory:v2', JSON.stringify({ version: 2, attempts: [] })) });
+      expect(q(f, '.achievements-summary-row')).toBeNull();
+    });
+  });
+});
+
+/**
  * Accessibility regression coverage for the quiz-tile keyboard-operability fix.
  *
  * ROOT DEFECT this guards against: the tile's ENTIRE clickable surface was a

@@ -66,9 +66,12 @@
          celebration + "View Certificate" once every requirement is satisfied. -->
     <app-interview-certificate-status class="interview-results__certificate" />
 
-    <!-- Gateway to the full Interview History (read-only record of past attempts). -->
+    <!-- Gateways off this single attempt: the full Interview History (read-only
+         record of past attempts) and Your Progress (aggregate across attempts and
+         modes). Plain links, like the history link — neither ends the session. -->
     <div class="interview-results__history-link">
       <a class="ir-btn" routerLink="/interview/history" i18n>View Interview History</a>
+      <a class="ir-btn" routerLink="/progress" i18n>View Your Progress</a>
     </div>
 
     <div class="interview-results__actions">

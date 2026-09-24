@@ -1,6 +1,6 @@
 @if (insights(); as data) {
   <section class="pi" aria-labelledby="pi-heading">
-    <h3 id="pi-heading" class="pi__heading" i18n>Performance Insights</h3>
+    <h2 id="pi-heading" class="pi__heading" i18n>Performance Insights</h2>
 
     @if (!data.hasData) {
       <p class="pi__empty" i18n>Complete quizzes or interviews to build your performance history.</p>
@@ -9,7 +9,7 @@
       <!-- Each source keeps its own numbers and its own one-line basis. There is
            deliberately no combined figure: they measure different things. -->
       <section class="pi__section" aria-labelledby="pi-overview-heading">
-        <h4 id="pi-overview-heading" class="pi__subheading" i18n>Performance Overview</h4>
+        <h3 id="pi-overview-heading" class="pi__subheading" i18n>Performance Overview</h3>
         <ul class="pi__list">
           @for (s of sources(); track s.source) {
             <li class="pi__item" [attr.data-source]="s.source">
@@ -26,7 +26,7 @@
 
       <section class="pi__section" aria-labelledby="pi-recent-heading">
         <hr class="pi__divider" />
-        <h4 id="pi-recent-heading" class="pi__subheading" i18n>Recent Performance</h4>
+        <h3 id="pi-recent-heading" class="pi__subheading" i18n>Recent Performance</h3>
         <ul class="pi__list">
           @for (s of recentRows(); track s.source) {
             <li class="pi__item" [attr.data-source]="s.source">
@@ -55,7 +55,7 @@
       @if (topics().length > 0) {
         <section class="pi__section" aria-labelledby="pi-topics-heading">
           <hr class="pi__divider" />
-          <h4 id="pi-topics-heading" class="pi__subheading" i18n>Performance by Topic</h4>
+          <h3 id="pi-topics-heading" class="pi__subheading" i18n>Performance by Topic</h3>
           <ul class="pi__list">
             @for (t of visibleTopics(); track t.topicId) {
               <li class="pi__item" [attr.data-topic]="t.topicId">
@@ -90,7 +90,7 @@
 
         <section class="pi__section" aria-labelledby="pi-strongest-heading">
           <hr class="pi__divider" />
-          <h4 id="pi-strongest-heading" class="pi__subheading" i18n>Strongest Topics</h4>
+          <h3 id="pi-strongest-heading" class="pi__subheading" i18n>Strongest Topics</h3>
           @if (strongest().length > 0) {
             <ul class="pi__list">
               @for (t of strongest(); track t.topicId) {
@@ -113,7 +113,7 @@
       @if (needsReview().length > 0) {
         <section class="pi__section" aria-labelledby="pi-review-heading">
           <hr class="pi__divider" />
-          <h4 id="pi-review-heading" class="pi__subheading" i18n>Needs Review</h4>
+          <h3 id="pi-review-heading" class="pi__subheading" i18n>Needs Review</h3>
           <ul class="pi__list">
             @for (t of needsReview(); track t.topicId) {
               <li class="pi__item" [attr.data-topic]="t.topicId">

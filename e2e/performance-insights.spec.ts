@@ -10,19 +10,15 @@ import { test, expect, Page } from '@playwright/test';
  * stores are still readable by the feature. No answer data is seeded — the
  * stores hold raw counts only.
  *
- * The panel is reached the way a user reaches it (see progress-tracking.spec.ts):
- * Quiz Selection → click a tile → back. That tile click is what opens the
- * session-engagement gate; deep-linking or seeding alone would not show it.
+ * The dashboard lives on its own unguarded /progress route, so it is reached by
+ * navigating to it: there is no engagement gate or accordion to open first.
  *
  * Assertions are about content and structure — sources, counts, labels — never
  * pixels, fonts or CSS.
  */
 
-const PANEL = 'mat-expansion-panel';
-const PANEL_HEADER = 'mat-expansion-panel-header';
 const PANEL_DETAILS = '.progress-summary';
 const INSIGHTS = 'codelab-performance-insights';
-const TS_TILE = '.quiz-tile:has(h5.quiz-title:text-is("Fixture Widgets"))';
 
 const TOPIC_KEY = 'topicPerformanceHistory:v1';
 const INTERVIEW_KEY = 'interviewAttemptHistory:v2';
@@ -98,17 +94,10 @@ async function seed(page: Page, stores: { topic?: object; interview?: object }):
   );
 }
 
-/** Quiz Selection → tile → back, then expand Your Progress. A real user's route to the panel. */
+/** Open the dedicated Your Progress page directly (a real, unguarded route). */
 async function openYourProgress(page: Page): Promise<void> {
-  await page.goto('/quiz');
-  await page.locator(TS_TILE).waitFor({ state: 'visible', timeout: 20_000 });
-  await page.locator(TS_TILE).click();
-  await expect(page).toHaveURL(/\/quiz\/(intro|results)\/fixture-widgets/);
-  await page.goBack();
-  await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
-
-  await expect(page.locator(PANEL)).toBeVisible();
-  await page.locator(PANEL_HEADER).click();
+  await page.goto('/progress');
+  await expect(page.getByRole('heading', { level: 1, name: 'Your Progress' })).toBeVisible({ timeout: 20_000 });
   await expect(page.locator(PANEL_DETAILS)).toBeVisible();
 }
 
@@ -130,7 +119,7 @@ test('performance insights: separate sources, transparent comparison, and Strong
 
   const insights = page.locator(INSIGHTS);
   await expect(insights).toBeVisible();
-  await expect(insights.getByRole('heading', { level: 3, name: 'Performance Insights' })).toBeVisible();
+  await expect(insights.getByRole('heading', { level: 2, name: 'Performance Insights' })).toBeVisible();
 
   // ── the existing Your Progress content is still there, unchanged ──────
   await expect(page.locator(PANEL_DETAILS)).toContainText('Overall Progress');
@@ -193,7 +182,10 @@ test('performance insights: separate sources, transparent comparison, and Strong
   expect(pageErrors).toEqual([]);
 });
 
-test('performance insights: a user with no history sees a neutral empty state', async ({ page }) => {
+test('performance insights: a legacy best-score-only user sees the neutral Insights empty state', async ({ page }) => {
+  // A best score is progress (the summary shows) but is NOT Insights history, so
+  // the dashboard renders and Insights explains it has nothing yet.
+  await page.addInitScript(() => localStorage.setItem('quizBestScores', JSON.stringify({ 'fixture-widgets': 80 })));
   await openYourProgress(page);
   await expect(page.locator(INSIGHTS)).toContainText(
     'Complete quizzes or interviews to build your performance history.'

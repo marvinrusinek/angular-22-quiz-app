@@ -194,6 +194,28 @@
     border: 0;
   }
 
+  // "View Your Progress" — the compact, always-available entry to the /progress
+  // page. Same palette blue as the stat numbers beneath it (~6.6:1 on this
+  // surface) and underlined, so it reads as a link without relying on colour.
+  .progress-entry {
+    margin: 0 auto 12px;
+    text-align: center;
+
+    &__link {
+      color: vars.$chambray-blue;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+
+      &:focus-visible {
+        outline: 2px solid vars.$chambray-blue;
+        outline-offset: 2px;
+        border-radius: 3px;
+      }
+    }
+  }
+
   .achievements-summary-row {
     display: flex;
     flex-direction: row;

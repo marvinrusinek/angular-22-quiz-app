@@ -477,11 +477,11 @@ describe('PerformanceInsightsComponent', () => {
       }
     });
 
-    it('uses a real heading hierarchy: one h3 with h4 sections beneath', () => {
+    it('uses a real heading hierarchy: one h2 with h3 sections beneath (sits under the page h1)', () => {
       show(full());
-      expect(qa('h3')).toHaveLength(1);
-      expect(norm(q('h3'))).toBe('Performance Insights');
-      expect(qa('h4').map((h) => norm(h))).toEqual([
+      expect(qa('h2')).toHaveLength(1);
+      expect(norm(q('h2'))).toBe('Performance Insights');
+      expect(qa('h3').map((h) => norm(h))).toEqual([
         'Performance Overview', 'Recent Performance', 'Performance by Topic', 'Strongest Topics', 'Needs Review'
       ]);
     });
@@ -582,7 +582,7 @@ describe('PerformanceInsightsComponent', () => {
 
     it('adds nothing to the heading structure or the accessible region labels', () => {
       show(everything());
-      expect(qa('h4').map((h) => norm(h))).toEqual([
+      expect(qa('h3').map((h) => norm(h))).toEqual([
         'Performance Overview', 'Recent Performance', 'Performance by Topic', 'Strongest Topics', 'Needs Review'
       ]);
       expect(qa('section[aria-labelledby]').every((s) => !!el.querySelector(`#${s.getAttribute('aria-labelledby')}`))).toBe(true);

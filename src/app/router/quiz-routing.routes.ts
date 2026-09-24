@@ -28,6 +28,7 @@ import { PracticeResultGuard } from './guards/practice-result-guard';
 import { WeakAreasPracticeComponent } from '../containers/practice/weak-areas-practice/weak-areas-practice.component';
 import { WeakAreasPracticeResultsComponent } from '../containers/practice/weak-areas-practice-results/weak-areas-practice-results.component';
 import { BackendInterviewResultGuard } from './guards/backend-interview-result-guard';
+import { ProgressPageComponent } from '../containers/progress/progress-page.component';
 
 export const routes: Routes = [
   {
@@ -119,6 +120,15 @@ export const routes: Routes = [
     canActivate: [PracticeResultGuard]
   },
 
+  // Your Progress — aggregate performance across attempts and modes (Results is
+  // ONE attempt; Interview History is individual Interview attempts). Top-level
+  // rather than under results/, where `results/:quizId` would capture it as a quiz
+  // id. Deliberately UNGUARDED: a user with no history gets an empty state, not a
+  // redirect, so the URL always works.
+  {
+    path: 'progress',
+    component: ProgressPageComponent
+  },
   // Backward compatibility redirects
   { path: 'select', redirectTo: 'quiz', pathMatch: 'full' },
   { path: 'intro/:quizId', redirectTo: 'quiz/intro/:quizId', pathMatch: 'full' },

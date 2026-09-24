@@ -1,13 +1,13 @@
-import { OptionBindings } from '../../../../../../shared/models/OptionBindings.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
 
-import { QuizService } from '../../../../../../shared/services/data/quiz.service';
-import type { QuestionVerdictService } from '../../../../../../shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import type { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 
 import {
   questionTextForDisplayIndex,
   verdictStateForDisplayIndex
-} from '../../../../../../shared/services/features/verdict/authorized-correctness';
-import { norm } from '../../../../../../shared/utils/text-norm';
+} from '@shared/services/features/verdict/authorized-correctness';
+import { norm } from '@shared/utils/text-norm';
 
 /**
  * Is THIS option correct, for rendering purposes?

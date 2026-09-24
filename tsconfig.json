@@ -18,7 +18,12 @@
     "module": "ES2022",
     "useDefineForClassFields": false,
     "skipLibCheck": true,
-    "types": ["jest"]
+    "types": ["jest"],
+    // Path alias (relative to THIS file, so no `baseUrl` — deprecated in TS 6).
+    // Jest derives its moduleNameMapper from this same entry (see jest.config.js).
+    "paths": {
+      "@shared/*": ["./src/app/shared/*"]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

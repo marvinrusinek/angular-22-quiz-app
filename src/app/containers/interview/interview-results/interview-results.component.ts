@@ -11,22 +11,22 @@ import { Router, RouterLink } from '@angular/router';
 
 import { ActivatedRoute } from '@angular/router';
 
-import { formatMMSS } from '../../../shared/utils/format-time';
-import { BackendInterviewResultService } from '../../../shared/services/interview/backend-interview-result.service';
-import { BackendInterviewSessionService } from '../../../shared/services/interview/backend-interview-session.service';
-import { AssessmentIntegrityService } from '../../../shared/services/features/interview/assessment-integrity.service';
-import { InterviewAnalyticsService } from '../../../shared/services/features/interview/interview-analytics.service';
-import { InterviewHistoryService } from '../../../shared/services/features/interview/interview-history.service';
-import { interviewConfigLabel } from '../../../shared/models/interview-preset.model';
+import { formatMMSS } from '@shared/utils/format-time';
+import { BackendInterviewResultService } from '@shared/services/interview/backend-interview-result.service';
+import { BackendInterviewSessionService } from '@shared/services/interview/backend-interview-session.service';
+import { AssessmentIntegrityService } from '@shared/services/features/interview/assessment-integrity.service';
+import { InterviewAnalyticsService } from '@shared/services/features/interview/interview-analytics.service';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
+import { interviewConfigLabel } from '@shared/models/interview-preset.model';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 import { InterviewReviewComponent } from '../../../components/interview/interview-review/interview-review.component';
 import { PerformanceTrendsComponent } from '../../../components/interview/performance-trends/performance-trends.component';
 import { TopicPerformanceListComponent } from '../../../components/interview/topic-performance/topic-performance-list.component';
 import { InterviewReadinessComponent } from '../../../components/interview/interview-readiness/interview-readiness.component';
-import { InterviewReadinessService } from '../../../shared/services/features/interview/interview-readiness.service';
+import { InterviewReadinessService } from '@shared/services/features/interview/interview-readiness.service';
 import { ScrollDownIndicatorComponent } from '../../../components/scroll-down-indicator/scroll-down-indicator.component';
 import { InterviewCertificateStatusComponent } from '../../../components/interview/interview-certificate-status/interview-certificate-status.component';
-import { AchievementService } from '../../../shared/services/achievements/achievement.service';
+import { AchievementService } from '@shared/services/achievements/achievement.service';
 
 /**
  * Interview Results ("Assessment Complete"). Self-contained score summary +

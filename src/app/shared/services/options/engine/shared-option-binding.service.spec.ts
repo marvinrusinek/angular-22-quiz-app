@@ -1,19 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
 
-import { SK_SEL_Q } from '../../../constants/session-keys';
+import { SK_SEL_Q } from '@shared/constants/session-keys';
 
-import { ExplanationTextService } from '../../features/explanation/explanation-text.service';
-import { FeedbackService } from '../../features/feedback/feedback.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
 import { OptionBindingFactoryService } from './option-binding-factory.service';
 import { OptionClickHandlerService } from './option-click-handler.service';
-import { OptionService } from '../view/option.service';
+import { OptionService } from '@shared/services/options/view/option.service';
 import { QuestionResolutionService } from './question-resolution.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
 import { SharedOptionBindingService } from './shared-option-binding.service';
 

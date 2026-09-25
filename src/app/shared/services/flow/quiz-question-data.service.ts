@@ -1,15 +1,15 @@
 import { Service, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { QuestionType } from '../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../models/Option.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../features/explanation/explanation-text.service';
-import { QuizDataService } from '../data/quizdata.service';
-import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
-import { QuizService } from '../data/quiz.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 
 /**
  * Handles question data fetching, normalization, and preparation.

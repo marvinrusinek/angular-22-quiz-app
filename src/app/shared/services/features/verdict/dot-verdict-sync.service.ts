@@ -1,8 +1,8 @@
 import { Service, effect, inject, untracked } from '@angular/core';
 
 import { QuestionVerdictService } from './question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
 /**
  * Writes correctness-dependent dot state when a verdict ARRIVES.

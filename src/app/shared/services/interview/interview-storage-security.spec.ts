@@ -5,9 +5,9 @@ import { of } from 'rxjs';
 import { BackendInterviewResultService } from './backend-interview-result.service';
 import { BackendInterviewSessionService } from './backend-interview-session.service';
 import { InterviewSessionReferenceStorage } from './interview-session-reference.storage';
-import { InterviewApiService } from '../api/interview-api.service';
-import { InterviewHistoryService } from '../features/interview/interview-history.service';
-import type { InterviewResultViewModel } from '../../models/interview/interview-view-models';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
+import type { InterviewResultViewModel } from '@shared/models/interview/interview-view-models';
 
 /**
  * End-state storage contract for a COMPLETED interview.

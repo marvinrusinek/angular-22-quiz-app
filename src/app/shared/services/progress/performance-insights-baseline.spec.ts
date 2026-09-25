@@ -3,20 +3,20 @@ import { TestBed } from '@angular/core/testing';
 import {
   SK_INTERVIEW_HISTORY,
   SK_TOPIC_PERFORMANCE_HISTORY
-} from '../../constants/session-keys';
+} from '@shared/constants/session-keys';
 import {
   TOPIC_PERFORMANCE_HISTORY_MAX,
   TOPIC_PERFORMANCE_HISTORY_VERSION
-} from '../../models/topic-performance-history.model';
-import { INTERVIEW_HISTORY_MAX } from '../../models/interview-history.model';
+} from '@shared/models/topic-performance-history.model';
+import { INTERVIEW_HISTORY_MAX } from '@shared/models/interview-history.model';
 import {
   calculateWeakTopics,
   WEAK_AREA_MAX_TOPICS,
   WEAK_AREA_MIN_ANSWERED,
   WEAK_AREA_THRESHOLD
-} from '../../utils/weak-areas';
-import { InterviewHistoryService } from '../features/interview/interview-history.service';
-import type { SanitizedAttemptInput } from '../interview/interview-result-history.adapter';
+} from '@shared/utils/weak-areas';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
+import type { SanitizedAttemptInput } from '@shared/services/interview/interview-result-history.adapter';
 import { TopicPerformanceHistoryService } from './topic-performance-history.service';
 import { WeakAreasService } from './weak-areas.service';
 

@@ -1,6 +1,6 @@
 import { computed, inject, Service } from '@angular/core';
 
-import { InterviewAttemptHistoryEntry } from '../../../models/interview-history.model';
+import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
 import {
   InterviewTopicTrendsResult,
   TopicStrengthBand,
@@ -8,8 +8,8 @@ import {
   TopicTrendDirection,
   TopicTrendFilter,
   TopicTrendPoint
-} from '../../../models/interview-topic-trends.model';
-import { aggregateTopicPercentages } from '../../../utils/interview-topic-history';
+} from '@shared/models/interview-topic-trends.model';
+import { aggregateTopicPercentages } from '@shared/utils/interview-topic-history';
 import { InterviewHistoryService } from './interview-history.service';
 
 // The dead-band for a directional topic trend, in percentage points. One named

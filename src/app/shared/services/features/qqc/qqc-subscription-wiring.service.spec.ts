@@ -3,10 +3,10 @@ import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
 import { QqcSubscriptionWiringService } from './qqc-subscription-wiring.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizNavigationService } from '../../flow/quiz-navigation.service';
-import { ResetStateService } from '../../state/reset-state.service';
-import { SharedVisibilityService } from '../../ui/shared-visibility.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizNavigationService } from '@shared/services/flow/quiz-navigation.service';
+import { ResetStateService } from '@shared/services/state/reset-state.service';
+import { SharedVisibilityService } from '@shared/services/ui/shared-visibility.service';
 
 /**
  * Subscription-LIFECYCLE tests. The suite previously asserted only outcomes, so

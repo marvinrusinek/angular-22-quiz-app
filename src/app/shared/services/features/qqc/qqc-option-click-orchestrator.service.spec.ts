@@ -1,15 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 
 import { QqcOptionClickOrchestratorService } from './qqc-option-click-orchestrator.service';
-import { NextButtonStateService } from '../../state/next-button-state.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizShuffleService } from '../../flow/quiz-shuffle.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { SelectionMessageService } from '../selection-message/selection-message.service';
-import { QuestionType } from '../../../models/question-type.enum';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { QuestionType } from '@shared/models/question-type.enum';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 /**
  * Stage 10 (Chokepoint #1 audit) — `buildCanonicalOptions` and

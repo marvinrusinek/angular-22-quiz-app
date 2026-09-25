@@ -1,14 +1,14 @@
 ﻿import { Service } from '@angular/core';
 
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { FeedbackContext } from './shared-option-feedback.service';
 
 import type { SharedOptionComponent } from '../../../../components/question/answer/shared-option-component/shared-option.component';
-import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
+import { declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
 
 type Host = SharedOptionComponent;
 

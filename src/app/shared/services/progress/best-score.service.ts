@@ -1,7 +1,7 @@
 import { Service } from '@angular/core';
 
-import { SK_QUIZ_BEST_SCORES } from '../../constants/session-keys';
-import { readLocalJson, writeLocalJson } from '../../utils/local-storage';
+import { SK_QUIZ_BEST_SCORES } from '@shared/constants/session-keys';
+import { readLocalJson, writeLocalJson } from '@shared/utils/local-storage';
 
 /** quizId -> best score (0-100). A key's presence means the quiz was completed. */
 export type BestScores = Record<string, number>;

@@ -1,29 +1,29 @@
 ﻿import { Service, inject } from '@angular/core';
 
-import { FeedbackProps } from '../../../models/FeedbackProps.model';
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
-import { SharedOptionConfig } from '../../../models/SharedOptionConfig.model';
+import { FeedbackProps } from '@shared/models/FeedbackProps.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
 
-import { SK_SEL_Q } from '../../../constants/session-keys';
+import { SK_SEL_Q } from '@shared/constants/session-keys';
 
-import { ExplanationTextService } from '../../features/explanation/explanation-text.service';
-import { FeedbackService } from '../../features/feedback/feedback.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
 import { OptionBindingFactoryService } from './option-binding-factory.service';
 import { OptionClickHandlerService } from './option-click-handler.service';
-import { OptionService } from '../view/option.service';
+import { OptionService } from '@shared/services/options/view/option.service';
 import { QuestionResolutionService } from './question-resolution.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
-import { authorizedCorrectTexts } from '../../features/verdict/authorized-correctness';
+import { authorizedCorrectTexts } from '@shared/services/features/verdict/authorized-correctness';
 
-import { feedbackAnchorMatches } from '../../../utils/feedback-anchor';
-import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { norm } from '../../../utils/text-norm';
+import { feedbackAnchorMatches } from '@shared/utils/feedback-anchor';
+import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
 
 @Service()
 export class SharedOptionBindingService {

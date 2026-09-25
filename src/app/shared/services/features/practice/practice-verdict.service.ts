@@ -3,12 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
-import { TopicQuizAttemptService } from '../verdict/topic-quiz-attempt.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { TopicQuizAttemptService } from '@shared/services/features/verdict/topic-quiz-attempt.service';
 import {
   QuestionVerdictError,
   type QuestionCheckResult
-} from '../verdict/question-verdict.types';
+} from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * The correctness authority for Weak Areas Practice.

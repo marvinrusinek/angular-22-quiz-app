@@ -4,12 +4,12 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-import { QuestionType } from '../models/question-type.enum';
-import type { Option } from '../models/Option.model';
-import type { QuizQuestion } from '../models/QuizQuestion.model';
+import { QuestionType } from '@shared/models/question-type.enum';
+import type { Option } from '@shared/models/Option.model';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { QqcOrchQuestionLoadService } from '../services/features/qqc/qqc-orch-question-load.service';
-import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { QqcOrchQuestionLoadService } from '@shared/services/features/qqc/qqc-orch-question-load.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 /**
  * CLASS C GROUP 2 — THE COLD-LOAD TYPE FALLBACK.

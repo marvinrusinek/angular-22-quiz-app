@@ -2,11 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 
-import { API_BASE_URL } from '../../tokens/api-base-url.token';
-import { QuestionType } from '../../models/question-type.enum';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { QuestionType } from '@shared/models/question-type.enum';
 import { TopicQuizTypeRegistry } from './topic-quiz-type-registry.service';
-import { withCorrectCountBanner } from '../../utils/correct-count-banner';
-import { QuizQuestionManagerService } from '../flow/quizquestionmgr.service';
+import { withCorrectCountBanner } from '@shared/utils/correct-count-banner';
+import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';
 
 /**
  * The "(N answers are correct)" banner reads a DECLARED count.

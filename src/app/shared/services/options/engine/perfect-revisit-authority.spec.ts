@@ -5,8 +5,8 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { SharedOptionBindingService } from './shared-option-binding.service';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
-import type { OptionBindings } from '../../../models/OptionBindings.model';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import type { OptionBindings } from '@shared/models/OptionBindings.model';
 
 /**
  * Restoring a question that was already answered perfectly.

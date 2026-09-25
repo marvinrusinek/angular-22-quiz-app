@@ -4,11 +4,11 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
-import { setQuizDataCache } from '../../../quiz-data-cache';
-import type { Quiz } from '../../../models/Quiz.model';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
+import type { Quiz } from '@shared/models/Quiz.model';
 
 /**
  * Verdict submission SEQUENCING.

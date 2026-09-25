@@ -3,10 +3,10 @@ import { signal } from '@angular/core';
 import { of } from 'rxjs';
 
 import { PracticeSessionService } from './practice-session.service';
-import { AssessmentBuilderService } from '../assessment/assessment-builder.service';
-import { TopicPerformanceHistoryService } from '../../progress/topic-performance-history.service';
-import { WeakAreasService } from '../../progress/weak-areas.service';
-import { TopicQuizQuestionsService } from '../../api/topic-quiz-questions.service';
+import { AssessmentBuilderService } from '@shared/services/features/assessment/assessment-builder.service';
+import { TopicPerformanceHistoryService } from '@shared/services/progress/topic-performance-history.service';
+import { WeakAreasService } from '@shared/services/progress/weak-areas.service';
+import { TopicQuizQuestionsService } from '@shared/services/api/topic-quiz-questions.service';
 import { PracticeVerdictService } from './practice-verdict.service';
 import {
   SK_COMPLETED_QUIZ_IDS,
@@ -18,10 +18,10 @@ import {
   SK_QUIZ_BEST_SCORES,
   SK_STARTED_QUIZ_IDS,
   SK_TOPIC_PERFORMANCE_HISTORY
-} from '../../../constants/session-keys';
-import { setQuizDataCache } from '../../../quiz-data-cache';
-import { Quiz } from '../../../models/Quiz.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+} from '@shared/constants/session-keys';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 // S6p (Angular Stage 14): src/assets/data/quiz.json was deleted — see
 // shared/testing/quiz-catalog-fixture.json (test-only, never bundled).
 //
@@ -29,7 +29,7 @@ import { QuizQuestion } from '../../../models/QuizQuestion.model';
 // explanation is freshly authored placeholder text, not sampled from the
 // canonical bank. Only quizId/milestone/difficulty/per-quiz question count
 // are real public catalog metadata.
-import quizData from '../../../testing/quiz-catalog-fixture.json';
+import quizData from '@shared/testing/quiz-catalog-fixture.json';
 
 const SYNTHETIC_CATALOG = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as Quiz[];
 

@@ -5,21 +5,21 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { SocAnswerProcessingService } from './soc-answer-processing.service';
-import { ExplanationTextService } from '../../features/explanation/explanation-text.service';
-import { FeedbackService } from '../../features/feedback/feedback.service';
-import { NextButtonStateService } from '../../state/next-button-state.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import { SelectionMessageService } from '../../features/selection-message/selection-message.service';
-import { SharedOptionExplanationService } from '../../features/shared-option/shared-option-explanation.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { TimerService } from '../../features/timer/timer.service';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE } from '../../features/verdict/question-verdict.types';
-import type { QuestionVerdictState } from '../../features/verdict/question-verdict.types';
-import { answerStateStub } from '../../../testing/answer-state-stub';
-import { norm } from '../../../utils/text-norm';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { SharedOptionExplanationService } from '@shared/services/features/shared-option/shared-option-explanation.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { IDLE_VERDICT_STATE } from '@shared/services/features/verdict/question-verdict.types';
+import type { QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import { answerStateStub } from '@shared/testing/answer-state-stub';
+import { norm } from '@shared/utils/text-norm';
 
 /**
  * A WRONG PICK MUST NOT END A MULTI-ANSWER QUESTION.

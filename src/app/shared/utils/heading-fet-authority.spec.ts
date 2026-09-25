@@ -1,7 +1,7 @@
 import { buildHeadingInputs } from './heading-inputs';
 import { deriveHeadingHtml, shouldShowFet } from './heading-model';
 import { IDLE_VERDICT_STATE, type QuestionVerdictState }
-  from '../services/features/verdict/question-verdict.types';
+  from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * Who is allowed to decide the user may read the explanation.

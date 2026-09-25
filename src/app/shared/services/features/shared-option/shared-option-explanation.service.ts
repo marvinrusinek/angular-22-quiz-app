@@ -2,21 +2,21 @@
 import { Subscription } from 'rxjs';
 import { filter, take } from 'rxjs/operators';
 
-import { SK_SEL_Q } from '../../../constants/session-keys';
+import { SK_SEL_Q } from '@shared/constants/session-keys';
 
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { authorizedCorrectTexts, authorizedExplanation } from '../verdict/authorized-correctness';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { norm } from '../../../utils/text-norm';
-import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { authorizedCorrectTexts, authorizedExplanation } from '@shared/services/features/verdict/authorized-correctness';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
+import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
 
 /**
  * Context passed from the component for explanation resolution.

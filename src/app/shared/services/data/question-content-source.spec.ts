@@ -9,10 +9,10 @@ import { signal } from '@angular/core';
 import { firstValueFrom, of } from 'rxjs';
 
 import { QuizDataLoaderService } from './quiz-data-loader.service';
-import { API_BASE_URL } from '../../tokens/api-base-url.token';
-import { QuestionType } from '../../models/question-type.enum';
-import type { QuizQuestion } from '../../models/QuizQuestion.model';
-import * as quizDataCache from '../../quiz-data-cache';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { QuestionType } from '@shared/models/question-type.enum';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import * as quizDataCache from '@shared/quiz-data-cache';
 
 /**
  * WHERE TOPIC QUIZ QUESTION CONTENT COMES FROM.

@@ -1,4 +1,4 @@
-import { AchievementId } from '../models/achievement.model';
+import { AchievementId } from '@shared/models/achievement.model';
 import { achievementCompletionMessage } from './achievement-progress-message';
 
 const set = (...ids: AchievementId[]) => new Set<AchievementId>(ids);

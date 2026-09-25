@@ -1,17 +1,17 @@
 import { Service, inject } from '@angular/core';
 
-import { Option } from '../../models/Option.model';
-import { Quiz } from '../../models/Quiz.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../features/explanation/explanation-text.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuizQuestionDataService } from './quiz-question-data.service';
 import { QuizScoringService } from './quiz-scoring.service';
-import { QuizService } from '../data/quiz.service';
-import { QuizStateService } from '../state/quizstate.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { SessionSnapshotResult } from './quiz-content-loader.service';
-import { swallow } from '../../utils/error-logging';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Handles session restore, hydration, and selection persistence.

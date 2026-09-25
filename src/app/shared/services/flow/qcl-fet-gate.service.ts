@@ -1,14 +1,14 @@
 import { Service, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { FET_UNLOCK_WATCHDOG_MS } from '../../constants/timing';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { FET_UNLOCK_WATCHDOG_MS } from '@shared/constants/timing';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../features/explanation/explanation-text.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuestionStateResult } from './quiz-content-loader.service';
-import { QuizService } from '../data/quiz.service';
-import { QuizStateService } from '../state/quizstate.service';
-import { swallow } from '../../utils/error-logging';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Handles FET gate control, explanation preparation, and explanation state evaluation.

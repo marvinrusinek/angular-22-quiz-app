@@ -1,7 +1,7 @@
 import { DestroyRef } from '@angular/core';
 
 import { AssessmentIntegrityService } from './assessment-integrity.service';
-import { SK_ASSESSMENT_INTEGRITY } from '../../../constants/session-keys';
+import { SK_ASSESSMENT_INTEGRITY } from '@shared/constants/session-keys';
 
 /**
  * Unit tests for the Assessment Integrity DETERRENT (Interview Mode only).

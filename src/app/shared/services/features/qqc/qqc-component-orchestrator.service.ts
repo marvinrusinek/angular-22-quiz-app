@@ -1,8 +1,8 @@
 import { inject, Service } from '@angular/core';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { QqcOrchClickService } from './qqc-orch-click.service';
 import { QqcOrchDisplayService } from './qqc-orch-display.service';

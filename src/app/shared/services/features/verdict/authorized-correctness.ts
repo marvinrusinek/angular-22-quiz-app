@@ -1,7 +1,7 @@
-import type { QuizService } from '../../data/quiz.service';
+import type { QuizService } from '@shared/services/data/quiz.service';
 import type { QuestionVerdictService } from './question-verdict.service';
 import type { QuestionVerdictState } from './question-verdict.types';
-import { norm } from '../../../utils/text-norm';
+import { norm } from '@shared/utils/text-norm';
 
 /**
  * Reading AUTHORIZED correctness for the question on screen.

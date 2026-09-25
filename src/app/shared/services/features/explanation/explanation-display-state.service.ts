@@ -7,17 +7,17 @@ import {
   distinctUntilChanged, filter, map, take, timeout
 } from 'rxjs/operators';
 
-import { FET_UNLOCK_WATCHDOG_MS } from '../../../constants/timing';
+import { FET_UNLOCK_WATCHDOG_MS } from '@shared/constants/timing';
 
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { ExplanationFormatterService } from './explanation-formatter.service';
 import { ExplanationGateService } from './explanation-gate.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { norm } from '../../../utils/text-norm';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
 
 /** Delay after rAF before unlocking FET in purgeAndDefer, allowing one paint frame plus this settle window. */
 const FET_UNLOCK_SETTLE_DELAY_MS = 120;

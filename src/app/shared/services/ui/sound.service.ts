@@ -1,9 +1,9 @@
 import { Service } from '@angular/core';
 import { Howl } from 'howler';
 
-import { SelectedOption } from '../../models/SelectedOption.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { isOptionCorrect } from '../../utils/is-option-correct';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
 
 @Service()
 export class SoundService {

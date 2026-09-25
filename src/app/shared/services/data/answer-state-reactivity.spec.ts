@@ -6,7 +6,7 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { QuizService } from './quiz.service';
-import { API_BASE_URL } from '../../tokens/api-base-url.token';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 /**
  * ASYNC ANSWER STATE MUST BE OBSERVABLE.

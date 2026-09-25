@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
-import { API_BASE_URL, INTERVIEW_API_BASE_URL, PROD_API_BASE_URL, INTERVIEW_PROD_API_BASE_URL } from '../tokens/api-base-url.token';
+import { API_BASE_URL, INTERVIEW_API_BASE_URL, PROD_API_BASE_URL, INTERVIEW_PROD_API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import { apiErrorInterceptor } from './api-error.interceptor';
 
 const BASE = 'http://api.test/api';

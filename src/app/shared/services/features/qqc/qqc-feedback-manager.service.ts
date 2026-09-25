@@ -1,24 +1,24 @@
 ﻿import { inject, Service } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { FeedbackConfig } from '../../../models/FeedbackConfig.model';
-import { FeedbackProps } from '../../../models/FeedbackProps.model';
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
+import { FeedbackConfig } from '@shared/models/FeedbackConfig.model';
+import { FeedbackProps } from '@shared/models/FeedbackProps.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
-import { FeedbackService } from '../feedback/feedback.service';
-import { QuizQuestionManagerService } from '../../flow/quizquestionmgr.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { SelectionMessageService } from '../selection-message/selection-message.service';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { norm } from '../../../utils/text-norm';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
+import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
 
 /**
  * Manages feedback display, option highlighting, and disable logic for QQC.

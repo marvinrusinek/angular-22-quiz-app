@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
-import { InterviewHistoryService } from '../features/interview/interview-history.service';
-import type { SanitizedAttemptInput } from '../interview/interview-result-history.adapter';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
+import type { SanitizedAttemptInput } from '@shared/services/interview/interview-result-history.adapter';
 import { PerformanceInsightsService } from './performance-insights.service';
 import { TopicPerformanceHistoryService } from './topic-performance-history.service';
 import { WeakAreasService } from './weak-areas.service';

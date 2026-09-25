@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { BehaviorSubject } from 'rxjs';
 
-import { FET_UNLOCK_WATCHDOG_MS } from '../../../constants/timing';
+import { FET_UNLOCK_WATCHDOG_MS } from '@shared/constants/timing';
 
 import { ExplanationDisplayStateService } from './explanation-display-state.service';
 import { ExplanationFormatterService } from './explanation-formatter.service';

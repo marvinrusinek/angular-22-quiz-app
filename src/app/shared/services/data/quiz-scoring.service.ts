@@ -1,16 +1,16 @@
 import { inject, Service, Injector, signal } from '@angular/core';
 
-import { SK_CORRECT_ANSWERS_COUNT, SK_SAVED_QUESTION_INDEX } from '../../constants/session-keys';
+import { SK_CORRECT_ANSWERS_COUNT, SK_SAVED_QUESTION_INDEX } from '@shared/constants/session-keys';
 
-import { QuizScore } from '../../models/QuizScore.model';
+import { QuizScore } from '@shared/models/QuizScore.model';
 
-import { QuizShuffleService } from '../flow/quiz-shuffle.service';
-import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { QuizService } from './quiz.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
-import { norm } from '../../utils/text-norm';
-import { swallow } from '../../utils/error-logging';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 
 @Service()
 export class QuizScoringService {

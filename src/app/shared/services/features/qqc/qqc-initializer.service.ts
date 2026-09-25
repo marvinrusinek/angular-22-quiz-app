@@ -4,16 +4,16 @@ import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import { Option } from '../../../models/Option.model';
-import { Quiz } from '../../../models/Quiz.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QqcQuestionLoaderService } from './qqc-question-loader.service';
-import { QuizDataService } from '../../data/quizdata.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
 /**
  * Manages initialization logic for QuizQuestionComponent:

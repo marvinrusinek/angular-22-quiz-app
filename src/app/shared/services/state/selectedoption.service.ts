@@ -3,29 +3,29 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, Subject } from 'rxjs';
 import { distinctUntilChanged, map, startWith } from 'rxjs/operators';
 
-import { QuestionType } from '../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../models/Option.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
-import { SelectedOption } from '../../models/SelectedOption.model';
-import { norm } from '../../utils/text-norm';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { norm } from '@shared/utils/text-norm';
 
-import { SK_DISPLAY_MODE, SK_IS_ANSWERED, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_USER_ANSWERS } from '../../constants/session-keys';
-import { shallowArrayEqual } from '../../utils/shallow-equal';
+import { SK_DISPLAY_MODE, SK_IS_ANSWERED, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_USER_ANSWERS } from '@shared/constants/session-keys';
+import { shallowArrayEqual } from '@shared/utils/shallow-equal';
 
 import { AnswerEvaluationService } from './answer-evaluation.service';
 import { NextButtonStateService } from './next-button-state.service';
 import { OptionFeedbackStateService } from './option-feedback-state.service';
 import { OptionIdResolverService } from './option-id-resolver.service';
 import { OptionLockStateService } from './option-lock-state.service';
-import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
-import { SoundService } from '../ui/sound.service';
-import { questionTextForDisplayIndex } from '../features/verdict/authorized-correctness';
-import type { QuestionCheckResult } from '../features/verdict/question-verdict.types';
-import { QuizService } from '../data/quiz.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { SoundService } from '@shared/services/ui/sound.service';
+import { questionTextForDisplayIndex } from '@shared/services/features/verdict/authorized-correctness';
+import type { QuestionCheckResult } from '@shared/services/features/verdict/question-verdict.types';
+import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectionCrudService } from './selection-crud.service';
 import { SelectionPersistenceService } from './selection-persistence.service';
-import { swallow } from '../../utils/error-logging';
+import { swallow } from '@shared/utils/error-logging';
 
 @Service()
 export class SelectedOptionService {

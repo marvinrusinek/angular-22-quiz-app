@@ -1,8 +1,8 @@
 import { computed, inject, Service, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { InterviewApiService } from '../api/interview-api.service';
-import { InterviewApiError } from '../api/interview-api.errors';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import { InterviewApiError } from '@shared/services/api/interview-api.errors';
 import { InterviewSessionReferenceStorage } from './interview-session-reference.storage';
 import { canonicalize, sameSelection } from './interview-answer-transitions';
 import type {
@@ -10,7 +10,7 @@ import type {
   InterviewResultViewModel,
   InterviewSessionConfigViewModel,
   InterviewSessionViewModel
-} from '../../models/interview/interview-view-models';
+} from '@shared/models/interview/interview-view-models';
 
 /**
  * Backend-oriented Interview session state.

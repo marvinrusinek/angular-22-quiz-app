@@ -6,12 +6,12 @@ import {
   PerformanceWindow,
   SourceSummary,
   TopicPerformanceInsight
-} from '../models/performance-insights.model';
-import { INTERVIEW_HISTORY_MAX, InterviewAttemptHistoryEntry } from '../models/interview-history.model';
+} from '@shared/models/performance-insights.model';
+import { INTERVIEW_HISTORY_MAX, InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
 import {
   TOPIC_PERFORMANCE_HISTORY_MAX,
   TopicPerformanceRecord
-} from '../models/topic-performance-history.model';
+} from '@shared/models/topic-performance-history.model';
 import {
   calculateWeakTopics,
   TopicAttemptLike,

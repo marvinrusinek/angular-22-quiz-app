@@ -6,16 +6,16 @@ import { of, throwError } from 'rxjs';
 
 import { AnswerEvaluationService } from './answer-evaluation.service';
 import { SelectedOptionService } from './selectedoption.service';
-import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import {
   TOPIC_QUIZ_VERDICT_ADAPTER,
   type TopicQuizVerdictAdapter
-} from '../features/verdict/verdict-adapter';
-import { QuestionVerdictError } from '../features/verdict/question-verdict.types';
-import { QuizService } from '../data/quiz.service';
-import { setQuizDataCache } from '../../quiz-data-cache';
-import type { Quiz } from '../../models/Quiz.model';
-import type { QuizQuestion } from '../../models/QuizQuestion.model';
+} from '@shared/services/features/verdict/verdict-adapter';
+import { QuestionVerdictError } from '@shared/services/features/verdict/question-verdict.types';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
+import type { Quiz } from '@shared/models/Quiz.model';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 /**
  * RESOLUTION STATUS from verdict state.

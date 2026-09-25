@@ -5,9 +5,9 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { SharedOptionClickService } from './shared-option-click.service';
-import { QuizService } from '../../data/quiz.service';
-import { TopicQuizTypeRegistry } from '../../api/topic-quiz-type-registry.service';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 /**
  * SINGLE vs MULTI IS A TYPE QUESTION, NOT AN ANSWER-KEY ONE.

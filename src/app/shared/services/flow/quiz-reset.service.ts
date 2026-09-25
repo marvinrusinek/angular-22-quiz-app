@@ -1,24 +1,24 @@
 import { Service, inject } from '@angular/core';
 
-import { SK_CORRECT_ANSWERS_COUNT, SK_SAVED_QUESTION_INDEX, SK_SELECTED_OPTIONS_MAP, SK_SHUFFLED_QUESTIONS, SK_USER_ANSWERS } from '../../constants/session-keys';
+import { SK_CORRECT_ANSWERS_COUNT, SK_SAVED_QUESTION_INDEX, SK_SELECTED_OPTIONS_MAP, SK_SHUFFLED_QUESTIONS, SK_USER_ANSWERS } from '@shared/constants/session-keys';
 
-import { ExplanationTextService } from '../features/explanation/explanation-text.service';
-import { NextButtonStateService } from '../state/next-button-state.service';
-import { OptionLockStateService } from '../state/option-lock-state.service';
-import { QqcQuestionLoaderService } from '../features/qqc/qqc-question-loader.service';
-import { QuestionTimingService } from '../features/timer/question-timing.service';
-import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
+import { OptionLockStateService } from '@shared/services/state/option-lock-state.service';
+import { QqcQuestionLoaderService } from '@shared/services/features/qqc/qqc-question-loader.service';
+import { QuestionTimingService } from '@shared/services/features/timer/question-timing.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { QuizDotStatusService } from './quiz-dot-status.service';
-import { QuizPersistenceService } from '../state/quiz-persistence.service';
-import { QuizService } from '../data/quiz.service';
-import { QuizStateService } from '../state/quizstate.service';
+import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
 import { QuizVisibilityRestoreService } from './quiz-visibility-restore.service';
-import { ResetBackgroundService } from '../ui/reset-background.service';
-import { ResetStateService } from '../state/reset-state.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
-import { SelectionMessageService } from '../features/selection-message/selection-message.service';
-import { TimerService } from '../features/timer/timer.service';
-import { swallow } from '../../utils/error-logging';
+import { ResetBackgroundService } from '@shared/services/ui/reset-background.service';
+import { ResetStateService } from '@shared/services/state/reset-state.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Orchestrates reset operations across multiple services.

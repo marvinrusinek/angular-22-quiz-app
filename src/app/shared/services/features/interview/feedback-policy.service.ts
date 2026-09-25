@@ -1,6 +1,6 @@
 import { Service, signal } from '@angular/core';
 
-import { FeedbackMode } from '../../../models/InterviewSession.model';
+import { FeedbackMode } from '@shared/models/InterviewSession.model';
 
 /**
  * Central switch for whether correctness feedback is shown immediately (normal

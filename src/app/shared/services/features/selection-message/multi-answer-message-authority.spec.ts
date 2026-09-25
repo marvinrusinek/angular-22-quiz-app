@@ -5,12 +5,12 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { SelectionMessageService, SELECT_ALL_THAT_APPLY_MSG } from './selection-message.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuestionType } from '../../../models/question-type.enum';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '../verdict/question-verdict.types';
-import type { Option } from '../../../models/Option.model';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuestionType } from '@shared/models/question-type.enum';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import type { Option } from '@shared/models/Option.model';
 
 /**
  * The multi-answer selection message.

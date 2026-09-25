@@ -3,9 +3,9 @@ import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree } from '@a
 import { of, throwError } from 'rxjs';
 
 import { QuizResolverService } from './quiz-resolver.service';
-import { QuizService } from '../data/quiz.service';
-import { TopicQuizMetadataService } from '../api/topic-quiz-metadata.service';
-import { Quiz } from '../../models/Quiz.model';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { Quiz } from '@shared/models/Quiz.model';
 
 /**
  * S6f — the resolver no longer fetches the bundled answer-bearing bank.

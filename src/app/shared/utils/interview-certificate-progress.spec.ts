@@ -1,4 +1,4 @@
-import { InterviewCertificateProgress } from '../models/interview-certificate.model';
+import { InterviewCertificateProgress } from '@shared/models/interview-certificate.model';
 import {
   certificateAccessibleSummary,
   certificateInterviewsShown,

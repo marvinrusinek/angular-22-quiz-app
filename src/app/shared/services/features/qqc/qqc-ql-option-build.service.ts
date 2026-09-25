@@ -1,13 +1,13 @@
 import { inject, Service } from '@angular/core';
 
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SharedOptionConfig } from '../../../models/SharedOptionConfig.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
 
-import { QuizService } from '../../data/quiz.service';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { swallow } from '../../../utils/error-logging';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Handles option building, enrichment, bindings, and dynamic component configuration for QQC.

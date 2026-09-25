@@ -4,7 +4,7 @@ import type {
   InterviewResultDto,
   InterviewReviewQuestionDto,
   InterviewSessionConfigDto
-} from '../../models/api/interview-api.dto';
+} from '@shared/models/api/interview-api.dto';
 import type {
   InterviewQuestionViewModel,
   InterviewResultViewModel,
@@ -12,7 +12,7 @@ import type {
   InterviewSessionConfigViewModel,
   InterviewSessionViewModel,
   InterviewTopicPerformanceViewModel
-} from '../../models/interview/interview-view-models';
+} from '@shared/models/interview/interview-view-models';
 
 /**
  * DTO → view model.

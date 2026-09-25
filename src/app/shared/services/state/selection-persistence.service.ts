@@ -1,11 +1,11 @@
 import { Service } from '@angular/core';
 
-import { SK_DOT_CONFIRMED, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP } from '../../constants/session-keys';
+import { SK_DOT_CONFIRMED, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP } from '@shared/constants/session-keys';
 
-import { SelectedOption } from '../../models/SelectedOption.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { norm } from '../../utils/text-norm';
-import { swallow } from '../../utils/error-logging';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * The subset of SelectedOptionService state that the persistence layer

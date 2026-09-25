@@ -1,8 +1,8 @@
 import { computed, inject, Service, Signal } from '@angular/core';
 
-import { PerformanceInsights } from '../../models/performance-insights.model';
-import { buildPerformanceInsights } from '../../utils/performance-insights';
-import { InterviewHistoryService } from '../features/interview/interview-history.service';
+import { PerformanceInsights } from '@shared/models/performance-insights.model';
+import { buildPerformanceInsights } from '@shared/utils/performance-insights';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
 import { TopicPerformanceHistoryService } from './topic-performance-history.service';
 import { WeakAreasService } from './weak-areas.service';
 

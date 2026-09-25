@@ -6,7 +6,7 @@ import {
   type TestRequest
 } from '@angular/common/http/testing';
 
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import { ApiTopicQuizVerdictAdapter } from './api-verdict.adapter';
 import { QuestionVerdictService } from './question-verdict.service';
 import { TopicQuizAttemptService } from './topic-quiz-attempt.service';

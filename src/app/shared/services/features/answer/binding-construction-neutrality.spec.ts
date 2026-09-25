@@ -6,8 +6,8 @@ import { of } from 'rxjs';
 
 import { AnswerBindingsService } from './answer-bindings.service';
 import { AnswerOptionsService } from './answer-options.service';
-import { QqcQlOptionBuildService } from '../qqc/qqc-ql-option-build.service';
-import type { Option } from '../../../models/Option.model';
+import { QqcQlOptionBuildService } from '@shared/services/features/qqc/qqc-ql-option-build.service';
+import type { Option } from '@shared/models/Option.model';
 
 /**
  * Building a binding must not consult the answer key.

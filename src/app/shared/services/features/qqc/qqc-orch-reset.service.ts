@@ -2,8 +2,8 @@ import { Service } from '@angular/core';
 
 import type { QuizQuestionComponent } from '../../../../components/question/quiz-question/quiz-question.component';
 
-import { delay } from '../../../utils/delay';
-import { swallow } from '../../../utils/error-logging';
+import { delay } from '@shared/utils/delay';
+import { swallow } from '@shared/utils/error-logging';
 
 type Host = QuizQuestionComponent;
 

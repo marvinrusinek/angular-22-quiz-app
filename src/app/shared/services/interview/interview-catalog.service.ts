@@ -1,8 +1,8 @@
 import { computed, inject, Service, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { InterviewApiService } from '../api/interview-api.service';
-import type { QuizMetadataDto } from '../../models/api/interview-api.dto';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import type { QuizMetadataDto } from '@shared/models/api/interview-api.dto';
 
 /**
  * Interview Mode's topic catalogue, sourced from the BACKEND.

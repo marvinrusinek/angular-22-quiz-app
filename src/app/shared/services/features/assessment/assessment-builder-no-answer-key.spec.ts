@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 
 import { AssessmentBuilderService } from './assessment-builder.service';
-import { QuestionType } from '../../../models/question-type.enum';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { questionsFromApiViews } from '../../../utils/topic-quiz-content';
-import { setQuizDataCache } from '../../../quiz-data-cache';
+import { QuestionType } from '@shared/models/question-type.enum';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { questionsFromApiViews } from '@shared/utils/topic-quiz-content';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
 
 /**
  * THE S6 INVARIANT: an API question in, a practice question out, and no answer

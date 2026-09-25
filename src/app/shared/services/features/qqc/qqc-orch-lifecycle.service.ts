@@ -3,10 +3,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { swallow } from '../../../utils/error-logging';
+import { swallow } from '@shared/utils/error-logging';
 
 import type { QuizQuestionComponent } from '../../../../components/question/quiz-question/quiz-question.component';
 

@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 
-import { InterviewResult, InterviewTopicScore } from '../../../models/InterviewResult.model';
+import { InterviewResult, InterviewTopicScore } from '@shared/models/InterviewResult.model';
 import {
   INTERVIEW_HISTORY_MAX,
   InterviewAttemptHistoryEntry
-} from '../../../models/interview-history.model';
-import { SK_INTERVIEW_HISTORY } from '../../../constants/session-keys';
+} from '@shared/models/interview-history.model';
+import { SK_INTERVIEW_HISTORY } from '@shared/constants/session-keys';
 import {
   filterAttempts,
   InterviewHistoryService,
@@ -13,7 +13,7 @@ import {
   validateAttemptEntry,
   validateHistoryStore
 } from './interview-history.service';
-import type { SanitizedAttemptInput } from '../../interview/interview-result-history.adapter';
+import type { SanitizedAttemptInput } from '@shared/services/interview/interview-result-history.adapter';
 
 /** A sanitized attempt as the adapter would produce it. */
 function sanitized(over: Partial<SanitizedAttemptInput> = {}): SanitizedAttemptInput {

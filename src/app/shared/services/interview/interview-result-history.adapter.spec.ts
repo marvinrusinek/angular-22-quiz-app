@@ -1,5 +1,5 @@
 import { toSanitizedAttempt } from './interview-result-history.adapter';
-import type { InterviewResultViewModel } from '../../models/interview/interview-view-models';
+import type { InterviewResultViewModel } from '@shared/models/interview/interview-view-models';
 
 /**
  * The adapter is the ONE place a backend result becomes durable local data, so

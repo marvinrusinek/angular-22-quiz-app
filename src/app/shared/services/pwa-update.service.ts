@@ -4,7 +4,7 @@ import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { interval } from 'rxjs';
 import { filter } from 'rxjs/operators';
 
-import { reportError } from '../utils/error-logging';
+import { reportError } from '@shared/utils/error-logging';
 
 /**
  * Keeps deployed users on a fresh bundle. The service worker (registered in

@@ -1,20 +1,20 @@
 import { inject, Service, WritableSignal } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 
-import { FormattedExplanation } from '../../../models/FormattedExplanation.model';
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { FormattedExplanation } from '@shared/models/FormattedExplanation.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 
 import { ExplanationDisplayStateService, FETPayload } from './explanation-display-state.service';
 import { ExplanationFormatterService } from './explanation-formatter.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { allCorrectSelectedFromVerdict } from '../verdict/authorized-correctness';
-import { TopicQuizTypeRegistry } from '../../api/topic-quiz-type-registry.service';
-import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
-import { norm } from '../../../utils/text-norm';
-import { swallow } from '../../../utils/error-logging';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { allCorrectSelectedFromVerdict } from '@shared/services/features/verdict/authorized-correctness';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
+import { declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 
 export { FETPayload } from './explanation-display-state.service';
 

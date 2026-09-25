@@ -2,21 +2,21 @@ import { Service, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { filter, take } from 'rxjs/operators';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import type { QuizQuestionComponent } from '../../../../components/question/quiz-question/quiz-question.component';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import type { QuestionVerdictState } from '../verdict/question-verdict.types';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import type { QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
 import {
   selectedVerdictFor,
   verdictStateForDisplayIndex
-} from '../verdict/authorized-correctness';
-import { norm } from '../../../utils/text-norm';
-import { swallow } from '../../../utils/error-logging';
-import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
+} from '@shared/services/features/verdict/authorized-correctness';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
+import { declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
 
 type Host = QuizQuestionComponent;
 

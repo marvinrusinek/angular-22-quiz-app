@@ -3,30 +3,30 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, ParamMap, Params, Router } from '@angular/router';
 import { distinctUntilChanged, filter, map, tap } from 'rxjs/operators';
 
-import { SK_SAVED_QUESTION_INDEX } from '../../constants/session-keys';
+import { SK_SAVED_QUESTION_INDEX } from '@shared/constants/session-keys';
 
-import { Option } from '../../models/Option.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { NextButtonStateService } from '../state/next-button-state.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { QuizContentLoaderService } from './quiz-content-loader.service';
 import { QuizDotStatusService } from './quiz-dot-status.service';
 import { QuizNavigationService } from './quiz-navigation.service';
-import { QuizPersistenceService } from '../state/quiz-persistence.service';
+import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
 import { QuizResetService } from './quiz-reset.service';
 import { QuizRouteService } from './quiz-route.service';
-import { QuizService } from '../data/quiz.service';
-import { QuizStateService } from '../state/quizstate.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
-import { SelectionMessageService } from '../features/selection-message/selection-message.service';
-import { QuestionTimingService } from '../features/timer/question-timing.service';
-import { TimerService } from '../features/timer/timer.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { QuestionTimingService } from '@shared/services/features/timer/question-timing.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
 import type { QuizComponent } from '../../../containers/quiz/quiz.component';
-import { withCorrectCountBanner } from '../../utils/correct-count-banner';
-import { bannerCorrectCount, declaredIsMultiAnswer } from '../../utils/question-type-authority';
-import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
-import { swallow } from '../../utils/error-logging';
+import { withCorrectCountBanner } from '@shared/utils/correct-count-banner';
+import { bannerCorrectCount, declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
+import { swallow } from '@shared/utils/error-logging';
 
 type Host = QuizComponent;
 

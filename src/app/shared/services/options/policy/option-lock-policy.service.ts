@@ -1,18 +1,18 @@
 import { Service, Injector, inject } from '@angular/core';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { OptionBindings } from '../../../models/OptionBindings.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
 
-import { QuizService } from '../../data/quiz.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import type { QuestionVerdictState } from '../../features/verdict/question-verdict.types';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import type { QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
 import {
   allCorrectSelectedFromVerdict,
   selectedVerdictFor,
   verdictStateForDisplayIndex
-} from '../../features/verdict/authorized-correctness';
-import { norm } from '../../../utils/text-norm';
+} from '@shared/services/features/verdict/authorized-correctness';
+import { norm } from '@shared/utils/text-norm';
 
 export interface LockIncorrectResult {
   shouldLockIncorrectOptions: boolean;

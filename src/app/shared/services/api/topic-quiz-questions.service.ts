@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, shareReplay } from 'rxjs/operators';
 
-import { API_BASE_URL } from '../../tokens/api-base-url.token';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 /**
  * Topic Quiz question loading from the private API.

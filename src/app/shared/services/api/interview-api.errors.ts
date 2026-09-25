@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
-import type { ApiErrorBodyDto } from '../../models/api/interview-api.dto';
+import type { ApiErrorBodyDto } from '@shared/models/api/interview-api.dto';
 
 /**
  * Typed Interview API errors.

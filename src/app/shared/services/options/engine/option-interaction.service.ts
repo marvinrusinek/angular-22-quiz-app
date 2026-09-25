@@ -1,26 +1,26 @@
 import { Service, inject } from '@angular/core';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { FeedbackProps } from '../../../models/FeedbackProps.model';
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
+import { FeedbackProps } from '@shared/models/FeedbackProps.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { SK_DOT_CONFIRMED, SK_MULTI_PERFECT } from '../../../constants/session-keys';
-import { writeSessionString } from '../../../utils/session-storage';
+import { SK_DOT_CONFIRMED, SK_MULTI_PERFECT } from '@shared/constants/session-keys';
+import { writeSessionString } from '@shared/utils/session-storage';
 
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import { TopicQuizDotVerdictSyncService } from '../../features/verdict/dot-verdict-sync.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { SelectionMessageService } from '../../features/selection-message/selection-message.service';
-import { TimerService } from '../../features/timer/timer.service';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '../../../utils/question-type-authority';
-import { norm } from '../../../utils/text-norm';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { TopicQuizDotVerdictSyncService } from '@shared/services/features/verdict/dot-verdict-sync.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { norm } from '@shared/utils/text-norm';
 
 export interface OptionInteractionState {
   optionBindings: OptionBindings[];

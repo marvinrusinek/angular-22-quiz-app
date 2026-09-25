@@ -6,24 +6,24 @@ import {
 } from 'rxjs';
 import { distinctUntilChanged, filter, observeOn } from 'rxjs/operators';
 
-import { FeedbackProps } from '../../../models/FeedbackProps.model';
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
-import { SharedOptionConfig } from '../../../models/SharedOptionConfig.model';
+import { FeedbackProps } from '@shared/models/FeedbackProps.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
 
-import { QUESTION_ROUTE_REGEX } from '../../../constants/route-patterns';
+import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
 
-import { ExplanationTextService } from '../../features/explanation/explanation-text.service';
-import { FeedbackService } from '../../features/feedback/feedback.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { TimerService } from '../../features/timer/timer.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
-import { norm } from '../../../utils/text-norm';
-import { swallow } from '../../../utils/error-logging';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
 
 /**
  * Interface representing the component surface area that the init service needs.

@@ -1,8 +1,8 @@
-import { InterviewAttemptHistoryEntry } from '../models/interview-history.model';
+import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
 import { aggregateTopicPercentages } from './interview-topic-history';
 // Regression: the readiness service re-exports the SAME helper — proving the
 // extraction left Readiness's aggregation untouched.
-import { aggregateTopicPercentages as fromReadiness } from '../services/features/interview/interview-readiness.service';
+import { aggregateTopicPercentages as fromReadiness } from '@shared/services/features/interview/interview-readiness.service';
 
 function attempt(topics: { id: string; correct: number; total: number }[]): InterviewAttemptHistoryEntry {
   return {

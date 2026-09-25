@@ -9,7 +9,7 @@
  *
  * The filename is kept only to avoid churning its importers.
  */
-import { QuizQuestion } from '../models/QuizQuestion.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 function setsEqual(a: Set<number>, b: Set<number>): boolean {
   if (a.size !== b.size) return false;

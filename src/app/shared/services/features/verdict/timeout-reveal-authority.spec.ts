@@ -4,18 +4,18 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import { ApiTopicQuizVerdictAdapter } from './api-verdict.adapter';
 import { QuestionVerdictService } from './question-verdict.service';
 import { TOPIC_QUIZ_VERDICT_ADAPTER } from './verdict-adapter';
-import { QuizService } from '../../data/quiz.service';
-import { setQuizDataCache } from '../../../quiz-data-cache';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
 import {
   isCurrentOptionCorrect,
   isTimeoutRevealAuthorized
 } from '../../../../components/question/answer/shared-option-component/option-item/helpers/option-item-correctness';
-import type { Quiz } from '../../../models/Quiz.model';
-import type { OptionBindings } from '../../../models/OptionBindings.model';
+import type { Quiz } from '@shared/models/Quiz.model';
+import type { OptionBindings } from '@shared/models/OptionBindings.model';
 
 /**
  * TIMEOUT REVEAL AUTHORITY (Stage 10F).

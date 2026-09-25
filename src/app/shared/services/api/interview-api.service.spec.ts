@@ -7,11 +7,11 @@ import { of } from 'rxjs';
 import { InterviewApiService } from './interview-api.service';
 import { InterviewApiError } from './interview-api.errors';
 import { TopicQuizMetadataService } from './topic-quiz-metadata.service';
-import { INTERVIEW_API_BASE_URL } from '../../tokens/api-base-url.token';
+import { INTERVIEW_API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import type {
   ActiveInterviewSessionDto,
   InterviewResultDto
-} from '../../models/api/interview-api.dto';
+} from '@shared/models/api/interview-api.dto';
 
 // A Spring origin, deliberately distinct from Node's own test base — proves
 // session-lifecycle calls resolve INTERVIEW_API_BASE_URL and never Node's.

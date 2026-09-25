@@ -3,20 +3,20 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { Subject, Subscription, timer } from 'rxjs';
 import { finalize, takeUntil, tap } from 'rxjs/operators';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { QuizService } from '../../data/quiz.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import {
   allCorrectSelectedFromVerdict,
   selectedVerdictFor
-} from '../verdict/authorized-correctness';
-import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { readSessionJson } from '../../../utils/session-storage';
-import { swallow } from '../../../utils/error-logging';
+} from '@shared/services/features/verdict/authorized-correctness';
+import { declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { readSessionJson } from '@shared/utils/session-storage';
+import { swallow } from '@shared/utils/error-logging';
 
 interface StopTimerAttemptOptions {
   questionIndex?: number,

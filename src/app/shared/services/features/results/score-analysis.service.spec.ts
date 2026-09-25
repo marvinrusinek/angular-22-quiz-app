@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
-import { IDLE_VERDICT_STATE } from '../verdict/question-verdict.types';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { IDLE_VERDICT_STATE } from '@shared/services/features/verdict/question-verdict.types';
 import { ScoreAnalysisService } from './score-analysis.service';
 
 const QUIZ_ID = 'test-quiz';

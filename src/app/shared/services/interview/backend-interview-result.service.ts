@@ -1,14 +1,14 @@
 import { computed, inject, Service, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { InterviewApiService } from '../api/interview-api.service';
-import { InterviewApiError } from '../api/interview-api.errors';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import { InterviewApiError } from '@shared/services/api/interview-api.errors';
 import { BackendInterviewSessionService } from './backend-interview-session.service';
 import { InterviewSessionReferenceStorage } from './interview-session-reference.storage';
 import { toSanitizedAttempt } from './interview-result-history.adapter';
-import { AssessmentIntegrityService } from '../features/interview/assessment-integrity.service';
-import { InterviewHistoryService } from '../features/interview/interview-history.service';
-import type { InterviewResultViewModel } from '../../models/interview/interview-view-models';
+import { AssessmentIntegrityService } from '@shared/services/features/interview/assessment-integrity.service';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
+import type { InterviewResultViewModel } from '@shared/models/interview/interview-view-models';
 
 /**
  * Loads and owns the SUBMITTED interview result.

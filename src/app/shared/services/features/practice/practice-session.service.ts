@@ -1,26 +1,26 @@
 import { computed, inject, Service, signal } from '@angular/core';
 
-import { GeneratedAssessment } from '../../../models/GeneratedAssessment.model';
-import { PracticeResult } from '../../../models/PracticeResult.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SK_PRACTICE_SESSION } from '../../../constants/session-keys';
-import { readSessionJson, removeSessionKey, writeSessionJson } from '../../../utils/session-storage';
+import { GeneratedAssessment } from '@shared/models/GeneratedAssessment.model';
+import { PracticeResult } from '@shared/models/PracticeResult.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SK_PRACTICE_SESSION } from '@shared/constants/session-keys';
+import { readSessionJson, removeSessionKey, writeSessionJson } from '@shared/utils/session-storage';
 import {
   canAdvanceFromQuestion,
   computePracticeResult,
   isMultiAnswerQuestion,
   isQuestionResolved
-} from '../../../utils/practice-scoring';
+} from '@shared/utils/practice-scoring';
 
 import { firstValueFrom } from 'rxjs';
 
-import { TopicQuizQuestionsService } from '../../api/topic-quiz-questions.service';
-import { TopicQuizMetadataService } from '../../api/topic-quiz-metadata.service';
-import { questionsFromApiViews } from '../../../utils/topic-quiz-content';
+import { TopicQuizQuestionsService } from '@shared/services/api/topic-quiz-questions.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { questionsFromApiViews } from '@shared/utils/topic-quiz-content';
 import { PracticeVerdictService } from './practice-verdict.service';
-import { AssessmentBuilderService } from '../assessment/assessment-builder.service';
-import { TopicPerformanceHistoryService } from '../../progress/topic-performance-history.service';
-import { WeakAreasService } from '../../progress/weak-areas.service';
+import { AssessmentBuilderService } from '@shared/services/features/assessment/assessment-builder.service';
+import { TopicPerformanceHistoryService } from '@shared/services/progress/topic-performance-history.service';
+import { WeakAreasService } from '@shared/services/progress/weak-areas.service';
 
 /** Persisted shape. Versioned so a future change can be migrated or discarded. */
 export const PRACTICE_SESSION_VERSION = 1 as const;

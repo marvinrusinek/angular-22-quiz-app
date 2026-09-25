@@ -14,15 +14,15 @@
  */
 import { TestBed } from '@angular/core/testing';
 
-import { QuestionType } from '../../../models/question-type.enum';
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { QuestionType } from '@shared/models/question-type.enum';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { FeedbackService } from './feedback.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 
 function opt(optionId: number, text: string, correct: boolean, selected = false): Option {
   return { optionId, text, correct, selected, value: optionId } as unknown as Option;

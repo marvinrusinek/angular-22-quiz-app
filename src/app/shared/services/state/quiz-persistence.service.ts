@@ -1,11 +1,11 @@
 import { Service, inject } from '@angular/core';
 
-import { SK_COMPLETED_QUIZ_IDS, SK_CORRECT_ANSWERS_COUNT, SK_DOT_CONFIRMED, SK_DISPLAY_MODE, SK_IS_ANSWERED, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_USER_ANSWERS } from '../../constants/session-keys';
-import { readSessionJson, removeSessionKey, writeSessionJson } from '../../utils/session-storage';
+import { SK_COMPLETED_QUIZ_IDS, SK_CORRECT_ANSWERS_COUNT, SK_DOT_CONFIRMED, SK_DISPLAY_MODE, SK_IS_ANSWERED, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_USER_ANSWERS } from '@shared/constants/session-keys';
+import { readSessionJson, removeSessionKey, writeSessionJson } from '@shared/utils/session-storage';
 
-import { QuizService } from '../data/quiz.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from './selectedoption.service';
-import { swallow } from '../../utils/error-logging';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Manages localStorage/sessionStorage persistence for quiz dot status and

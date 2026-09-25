@@ -1,8 +1,8 @@
 import { computed, inject, Service } from '@angular/core';
 
-import { InterviewHistoryService } from '../features/interview/interview-history.service';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
 import { TopicPerformanceHistoryService } from './topic-performance-history.service';
-import { calculateWeakTopics, TopicAttemptLike, WeakTopic } from '../../utils/weak-areas';
+import { calculateWeakTopics, TopicAttemptLike, WeakTopic } from '@shared/utils/weak-areas';
 
 /**
  * THE single source of "which topics are weakest" — consumed by BOTH the Your

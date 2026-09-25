@@ -2,8 +2,8 @@ import { TestBed } from '@angular/core/testing';
 
 import { ProgressService } from './progress.service';
 import { BestScoreService } from './best-score.service';
-import { Quiz } from '../../models/Quiz.model';
-import { SK_QUIZ_BEST_SCORES } from '../../constants/session-keys';
+import { Quiz } from '@shared/models/Quiz.model';
+import { SK_QUIZ_BEST_SCORES } from '@shared/constants/session-keys';
 
 function quiz(quizId: string, milestone: string, difficulty?: string): Quiz {
   return { quizId, milestone, difficulty } as unknown as Quiz;

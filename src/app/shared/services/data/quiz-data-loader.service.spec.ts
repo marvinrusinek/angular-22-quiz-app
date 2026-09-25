@@ -5,7 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { QuizDataLoaderService } from './quiz-data-loader.service';
-import { setQuizDataCache } from '../../quiz-data-cache';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
 
 /**
  * S5a CUTOVER: NO PRISTINE CLIENT ANSWER BANK IS LOADED.

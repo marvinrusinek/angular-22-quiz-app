@@ -5,17 +5,17 @@ import { ActivatedRoute } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { ScoreAnalysisService } from './score-analysis.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import {
   TOPIC_QUIZ_VERDICT_ADAPTER,
   type TopicQuizVerdictAdapter
-} from '../verdict/verdict-adapter';
-import { QuestionVerdictError } from '../verdict/question-verdict.types';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { setQuizDataCache } from '../../../quiz-data-cache';
-import type { Quiz } from '../../../models/Quiz.model';
-import type { QuizQuestion } from '../../../models/QuizQuestion.model';
+} from '@shared/services/features/verdict/verdict-adapter';
+import { QuestionVerdictError } from '@shared/services/features/verdict/question-verdict.types';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
+import type { Quiz } from '@shared/models/Quiz.model';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 /**
  * VERDICT AUTHORITY over Results and Review Answers (Stage 10I).

@@ -1,10 +1,10 @@
 import { inject, Service } from '@angular/core';
 
-import { OptionBindings } from '../../../models/OptionBindings.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
 
-import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
-import { QuizService } from '../../data/quiz.service';
-import { TimerService } from '../../features/timer/timer.service';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
 /**
  * Timer-expiry probes for option-item visual state.

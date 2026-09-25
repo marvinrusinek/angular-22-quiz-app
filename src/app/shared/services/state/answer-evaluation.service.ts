@@ -1,18 +1,18 @@
 import { Injectable } from '@angular/core';
 
-import { QuestionType } from '../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../models/Option.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
-import { SelectedOption } from '../../models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { OptionIdResolverService } from './option-id-resolver.service';
-import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
-import { QuizService } from '../data/quiz.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 
-import { isOptionCorrect } from '../../utils/is-option-correct';
-import { norm } from '../../utils/text-norm';
-import { swallow } from '../../utils/error-logging';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 
 export interface ResolutionStatus {
   resolved: boolean;

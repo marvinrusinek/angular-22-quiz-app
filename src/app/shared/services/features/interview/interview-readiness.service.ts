@@ -1,13 +1,13 @@
 import { computed, inject, Service } from '@angular/core';
 
-import { InterviewAttemptHistoryEntry } from '../../../models/interview-history.model';
+import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
 import {
   InterviewReadiness,
   InterviewReadinessBand,
   InterviewReadinessFactor
-} from '../../../models/interview-readiness.model';
-import { aggregateTopicPercentages } from '../../../utils/interview-topic-history';
-import { InterviewCatalogService } from '../../interview/interview-catalog.service';
+} from '@shared/models/interview-readiness.model';
+import { aggregateTopicPercentages } from '@shared/utils/interview-topic-history';
+import { InterviewCatalogService } from '@shared/services/interview/interview-catalog.service';
 import { InterviewHistoryService } from './interview-history.service';
 
 // Factor weights — the single source of truth for the readiness formula. Recent
@@ -25,7 +25,7 @@ const RECENT_WINDOW = 5;
 const WEAK_FACTOR = 60;
 
 // Re-exported for existing importers; the canonical home is interview-topic-history.
-export { aggregateTopicPercentages } from '../../../utils/interview-topic-history';
+export { aggregateTopicPercentages } from '@shared/utils/interview-topic-history';
 
 const clamp100 = (n: number): number => Math.max(0, Math.min(100, n));
 const round = (n: number): number => Math.round(n);

@@ -1,13 +1,13 @@
 import { Service, inject } from '@angular/core';
 
-import { Option } from '../../models/Option.model';
-import { SelectedOption } from '../../models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { OptionIdResolverService } from './option-id-resolver.service';
-import { QuizService } from '../data/quiz.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 import type { SelectedOptionService } from './selectedoption.service';
 
-import { norm } from '../../utils/text-norm';
+import { norm } from '@shared/utils/text-norm';
 
 type Host = SelectedOptionService;
 

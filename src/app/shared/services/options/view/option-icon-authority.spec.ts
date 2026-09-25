@@ -1,5 +1,5 @@
 import { OptionService } from './option.service';
-import type { OptionBindings } from '../../../models/OptionBindings.model';
+import type { OptionBindings } from '@shared/models/OptionBindings.model';
 
 /**
  * THE ICON REPORTS A VERDICT — IT DOES NOT REACH ONE.

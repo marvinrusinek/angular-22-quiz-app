@@ -1,18 +1,18 @@
 import { Service, inject } from '@angular/core';
 
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
 
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { OptionLockService } from '../policy/option-lock.service';
-import { OptionSelectionPolicyService } from '../policy/option-selection-policy.service';
-import { OptionService } from '../view/option.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
+import { OptionLockService } from '@shared/services/options/policy/option-lock.service';
+import { OptionSelectionPolicyService } from '@shared/services/options/policy/option-selection-policy.service';
+import { OptionService } from '@shared/services/options/view/option.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { currentOptionCorrectness } from '../../../../components/question/answer/shared-option-component/option-item/helpers/option-item-correctness';
-import { SelectedOptionService } from '../../state/selectedoption.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
 /**
  * Handles option UI utility methods: selection, highlighting, binding snapshots,

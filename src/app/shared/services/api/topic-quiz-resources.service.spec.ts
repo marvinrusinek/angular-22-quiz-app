@@ -6,9 +6,9 @@ import {
 } from '@angular/common/http/testing';
 
 import { TopicQuizResourcesService } from './topic-quiz-resources.service';
-import { API_BASE_URL } from '../../tokens/api-base-url.token';
-import * as quizDataCache from '../../quiz-data-cache';
-import type { Resource } from '../../models/Resource.model';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import * as quizDataCache from '@shared/quiz-data-cache';
+import type { Resource } from '@shared/models/Resource.model';
 
 /**
  * Results-page resource links, from the API.

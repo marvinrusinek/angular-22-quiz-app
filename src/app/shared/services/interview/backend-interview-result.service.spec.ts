@@ -6,11 +6,11 @@ import { BackendInterviewResultService } from './backend-interview-result.servic
 import { BackendInterviewSessionService } from './backend-interview-session.service';
 import { InterviewSessionReferenceStorage } from './interview-session-reference.storage';
 import { BackendInterviewResultGuard } from '../../../router/guards/backend-interview-result-guard';
-import { InterviewApiService } from '../api/interview-api.service';
-import { InterviewApiError, type InterviewApiErrorCode } from '../api/interview-api.errors';
-import { InterviewHistoryService } from '../features/interview/interview-history.service';
-import { SK_INTERVIEW_HISTORY } from '../../constants/session-keys';
-import type { InterviewResultViewModel } from '../../models/interview/interview-view-models';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import { InterviewApiError, type InterviewApiErrorCode } from '@shared/services/api/interview-api.errors';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
+import { SK_INTERVIEW_HISTORY } from '@shared/constants/session-keys';
+import type { InterviewResultViewModel } from '@shared/models/interview/interview-view-models';
 
 /**
  * ONE result-loading pipeline, shared by the guard and the Results page, so a

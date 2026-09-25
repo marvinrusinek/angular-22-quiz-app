@@ -3,14 +3,14 @@ import { of, throwError, Observable, Subject } from 'rxjs';
 
 import { BackendInterviewSessionService } from './backend-interview-session.service';
 import { InterviewSessionReferenceStorage } from './interview-session-reference.storage';
-import { InterviewApiService } from '../api/interview-api.service';
-import { InterviewApiError } from '../api/interview-api.errors';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import { InterviewApiError } from '@shared/services/api/interview-api.errors';
 import { canonicalize, toggleOption } from './interview-answer-transitions';
 import type {
   InterviewQuestionViewModel,
   InterviewSessionViewModel
-} from '../../models/interview/interview-view-models';
-import type { SaveInterviewAnswerResponse } from '../../models/api/interview-api.dto';
+} from '@shared/models/interview/interview-view-models';
+import type { SaveInterviewAnswerResponse } from '@shared/models/api/interview-api.dto';
 
 const TOKEN = 'a'.repeat(43);
 

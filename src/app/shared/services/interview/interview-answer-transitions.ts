@@ -1,4 +1,4 @@
-import type { InterviewQuestionViewModel } from '../../models/interview/interview-view-models';
+import type { InterviewQuestionViewModel } from '@shared/models/interview/interview-view-models';
 
 /**
  * PURE local selection transitions.

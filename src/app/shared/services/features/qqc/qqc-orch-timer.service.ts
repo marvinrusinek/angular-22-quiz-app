@@ -2,17 +2,17 @@ import { inject, Service } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import { Option } from '../../../models/Option.model';
+import { Option } from '@shared/models/Option.model';
 
-import { NextButtonStateService } from '../../state/next-button-state.service';
-import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
-import { TimerService } from '../timer/timer.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
-import { norm } from '../../../utils/text-norm';
-import { swallow } from '../../../utils/error-logging';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 
 import type { QuizQuestionComponent } from '../../../../components/question/quiz-question/quiz-question.component';
 

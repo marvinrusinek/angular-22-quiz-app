@@ -2,12 +2,12 @@ import { inject, Service } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { QuizService } from '../../data/quiz.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 
-import { delay } from '../../../utils/delay';
+import { delay } from '@shared/utils/delay';
 
 /**
  * Handles question data fetching, validation, and quiz loading for QQC.

@@ -18,13 +18,13 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { QuestionType } from '../../../models/question-type.enum';
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { QuestionType } from '@shared/models/question-type.enum';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { ExplanationFormatterService } from './explanation-formatter.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizShuffleService } from '../../flow/quiz-shuffle.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
 
 describe('FET display integration', () => {
   // ── ExplanationFormatterService ──────────────────────────────

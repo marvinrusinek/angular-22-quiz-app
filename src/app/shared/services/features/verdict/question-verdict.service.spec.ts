@@ -3,8 +3,8 @@ import { firstValueFrom } from 'rxjs';
 
 import { QuestionVerdictService } from './question-verdict.service';
 import { QuestionVerdictError } from './question-verdict.types';
-import { setQuizDataCache } from '../../../quiz-data-cache';
-import type { Quiz } from '../../../models/Quiz.model';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
+import type { Quiz } from '@shared/models/Quiz.model';
 
 /**
  * The Topic Quiz correctness authority.

@@ -1,7 +1,7 @@
-import { Option } from '../models/Option.model';
-import { Quiz } from '../models/Quiz.model';
-import { QuizQuestion } from '../models/QuizQuestion.model';
-import { QuizResource } from '../models/QuizResource.model';
+import { Option } from '@shared/models/Option.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizResource } from '@shared/models/QuizResource.model';
 
 /**
  * Runtime validation for the quiz dataset (assets/data/quiz.json).

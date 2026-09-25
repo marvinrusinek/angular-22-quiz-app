@@ -1,14 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
-import { SelectedOption } from '../../models/SelectedOption.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { AnswerEvaluationService } from './answer-evaluation.service';
 import { NextButtonStateService } from './next-button-state.service';
 import { OptionFeedbackStateService } from './option-feedback-state.service';
 import { OptionIdResolverService } from './option-id-resolver.service';
 import { OptionLockStateService } from './option-lock-state.service';
-import { QuizService } from '../data/quiz.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from './selectedoption.service';
 import { SelectionCrudService } from './selection-crud.service';
 import { SelectionPersistenceService } from './selection-persistence.service';

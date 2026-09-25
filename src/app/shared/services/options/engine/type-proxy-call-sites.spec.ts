@@ -5,9 +5,9 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { OptionInteractionService } from './option-interaction.service';
-import { QuestionType } from '../../../models/question-type.enum';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
-import type { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { QuestionType } from '@shared/models/question-type.enum';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 /**
  * THE CALL SITES, NOT THE HELPER.

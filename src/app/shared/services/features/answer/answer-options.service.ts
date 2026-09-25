@@ -1,11 +1,11 @@
 import { Service } from '@angular/core';
 
-import { declaredIsMultiAnswer } from '../../../../shared/utils/question-type-authority';
+import { declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
 
-import { Option } from '../../../../shared/models/Option.model';
-import { QuizQuestion } from '../../../../shared/models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { isOptionCorrect } from '../../../../shared/utils/is-option-correct';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
 
 @Service()
 export class AnswerOptionsService {

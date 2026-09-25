@@ -1,21 +1,21 @@
 ﻿import { forwardRef, inject, Service, Injector } from '@angular/core';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { QUESTION_ROUTE_REGEX } from '../../../constants/route-patterns';
-import { pinAllOfTheAboveLast, pinnedIndex1Based } from '../../../utils/all-of-the-above';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { norm } from '../../../utils/text-norm';
+import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
+import { pinAllOfTheAboveLast, pinnedIndex1Based } from '@shared/utils/all-of-the-above';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { selectedVerdictFor, verdictStateForDisplayIndex } from '../verdict/authorized-correctness';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { selectedVerdictFor, verdictStateForDisplayIndex } from '@shared/services/features/verdict/authorized-correctness';
 
 @Service()
 export class FeedbackService {

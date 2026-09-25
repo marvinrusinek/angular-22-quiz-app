@@ -1,21 +1,21 @@
 import { Service, inject } from '@angular/core';
 
-import { SK_DOT_CONFIRMED } from '../../constants/session-keys';
+import { SK_DOT_CONFIRMED } from '@shared/constants/session-keys';
 
-import { Option } from '../../models/Option.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
-import { SelectedOption } from '../../models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { QuizPersistenceService } from '../state/quiz-persistence.service';
-import { QuizService } from '../data/quiz.service';
+import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 import { QuizShuffleService } from './quiz-shuffle.service';
-import { QuizStateService } from '../state/quizstate.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
-import { isOptionCorrect } from '../../utils/is-option-correct';
-import { resolveIsMultiAnswer } from '../../utils/question-type-authority';
-import { norm } from '../../utils/text-norm';
-import { swallow } from '../../utils/error-logging';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 
 type DotStatus = 'correct' | 'wrong' | 'pending';
 type DotResolved = 'correct' | 'wrong';

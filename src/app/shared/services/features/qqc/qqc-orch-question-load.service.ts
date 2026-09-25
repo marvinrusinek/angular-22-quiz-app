@@ -2,12 +2,12 @@ import { ComponentRef, Service } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { debounceTime, take } from 'rxjs/operators';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
-import { reportError, swallow } from '../../../utils/error-logging';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { reportError, swallow } from '@shared/utils/error-logging';
 
 import type { QuizQuestionComponent } from '../../../../components/question/quiz-question/quiz-question.component';
 

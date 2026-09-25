@@ -1,4 +1,4 @@
-import type { WeakTopic } from '../utils/weak-areas';
+import type { WeakTopic } from '@shared/utils/weak-areas';
 
 /**
  * Performance Insights view models — DERIVED, read-only, never persisted.

@@ -1,22 +1,22 @@
 ﻿import { inject, Service } from '@angular/core';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { SK_DOT_CONFIRMED } from '../../../constants/session-keys';
+import { SK_DOT_CONFIRMED } from '@shared/constants/session-keys';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { NextButtonStateService } from '../../state/next-button-state.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizShuffleService } from '../../flow/quiz-shuffle.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { SelectionMessageService } from '../selection-message/selection-message.service';
-import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '../../../utils/question-type-authority';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { norm } from '../../../utils/text-norm';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
 
 /**
  * Manages option click orchestration: canonical option building, multi-answer

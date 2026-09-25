@@ -5,10 +5,10 @@ import {
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
-import { Quiz, QuizDifficulty } from '../../models/Quiz.model';
+import { Quiz, QuizDifficulty } from '@shared/models/Quiz.model';
 
-import { QuizService } from '../data/quiz.service';
-import { TopicQuizMetadataService } from '../api/topic-quiz-metadata.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
 
 /**
  * S6f: identity/existence only, from the safe metadata endpoint — never the

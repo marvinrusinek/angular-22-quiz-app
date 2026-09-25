@@ -1,4 +1,4 @@
-import { InterviewAttemptHistoryEntry, InterviewTopicHistoryEntry } from '../../../models/interview-history.model';
+import { InterviewAttemptHistoryEntry, InterviewTopicHistoryEntry } from '@shared/models/interview-history.model';
 import {
   aggregateTopicPercentages,
   buildExplanation,

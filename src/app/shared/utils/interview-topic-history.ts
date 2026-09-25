@@ -1,4 +1,4 @@
-import { InterviewAttemptHistoryEntry } from '../models/interview-history.model';
+import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
 
 /**
  * Generic aggregation of retained Interview History topic performance by topic —

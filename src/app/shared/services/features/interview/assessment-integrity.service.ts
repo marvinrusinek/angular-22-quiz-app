@@ -2,10 +2,10 @@ import { DestroyRef, Service, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { fromEvent, Subject } from 'rxjs';
 
-import { AssessmentIntegrityState } from '../../../models/AssessmentIntegrityState.model';
-import { SK_ASSESSMENT_INTEGRITY } from '../../../constants/session-keys';
-import { swallow } from '../../../utils/error-logging';
-import { readSessionJson, removeSessionKey, writeSessionJson } from '../../../utils/session-storage';
+import { AssessmentIntegrityState } from '@shared/models/AssessmentIntegrityState.model';
+import { SK_ASSESSMENT_INTEGRITY } from '@shared/constants/session-keys';
+import { swallow } from '@shared/utils/error-logging';
+import { readSessionJson, removeSessionKey, writeSessionJson } from '@shared/utils/session-storage';
 
 /**
  * Assessment Integrity Mode — a browser-based DETERRENT for Interview/Assessment

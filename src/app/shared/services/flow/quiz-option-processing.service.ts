@@ -1,23 +1,23 @@
 ﻿import { Service, inject } from '@angular/core';
 
-import { Option } from '../../models/Option.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
-import { SelectedOption } from '../../models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { NextButtonStateService } from '../state/next-button-state.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { QuizDotStatusService } from './quiz-dot-status.service';
-import { QuizPersistenceService } from '../state/quiz-persistence.service';
+import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
 import { QuizScoringService } from './quiz-scoring.service';
-import { QuizService } from '../data/quiz.service';
-import { QuizStateService } from '../state/quizstate.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
-import { TimerService } from '../features/timer/timer.service';
-import { SK_DISPLAY_MODE, SK_DOT_CONFIRMED, SK_IS_ANSWERED } from '../../constants/session-keys';
-import { writeSessionString } from '../../utils/session-storage';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { SK_DISPLAY_MODE, SK_DOT_CONFIRMED, SK_IS_ANSWERED } from '@shared/constants/session-keys';
+import { writeSessionString } from '@shared/utils/session-storage';
 
-import { isOptionCorrect } from '../../utils/is-option-correct';
-import { norm } from '../../utils/text-norm';
-import { swallow } from '../../utils/error-logging';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Result of evaluating immediate correctness for an option click.

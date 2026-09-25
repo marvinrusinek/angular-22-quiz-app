@@ -1,13 +1,13 @@
 import { Service } from '@angular/core';
 
-import { Option } from '../../models/Option.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
-import { ShuffleState } from '../../models/ShuffleState.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { ShuffleState } from '@shared/models/ShuffleState.model';
 
-import { isOptionCorrect } from '../../utils/is-option-correct';
-import { norm } from '../../utils/text-norm';
-import { ArrayUtils } from '../../utils/array-utils';
-import { swallow } from '../../utils/error-logging';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
+import { ArrayUtils } from '@shared/utils/array-utils';
+import { swallow } from '@shared/utils/error-logging';
 
 export interface PrepareShuffleOpts {
   shuffleQuestions?: boolean,

@@ -5,7 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { OptionClickHandlerService } from './option-click-handler.service';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 /**
  * UNKNOWN CORRECTNESS MUST STAY UNKNOWN (pre-S5a).

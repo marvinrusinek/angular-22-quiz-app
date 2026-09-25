@@ -2,15 +2,15 @@ import { TestBed } from '@angular/core/testing';
 import { NEVER, of } from 'rxjs';
 
 import { QclQuestionFetchService } from './qcl-question-fetch.service';
-import { ExplanationTextService } from '../features/explanation/explanation-text.service';
-import { QqcQuestionLoaderService } from '../features/qqc/qqc-question-loader.service';
-import { QuizDataService } from '../data/quizdata.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { QqcQuestionLoaderService } from '@shared/services/features/qqc/qqc-question-loader.service';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
 import { QuizDotStatusService } from './quiz-dot-status.service';
 import { QuizQuestionDataService } from './quiz-question-data.service';
-import { QuizService } from '../data/quiz.service';
-import { QuizStateService } from '../state/quizstate.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
-import { SelectionMessageService } from '../features/selection-message/selection-message.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
 
 /**
  * S6n regression coverage for loadQuestionFromRouteChange().

@@ -2,9 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import { PracticeVerdictService } from './practice-verdict.service';
-import { TopicQuizAttemptService } from '../verdict/topic-quiz-attempt.service';
+import { TopicQuizAttemptService } from '@shared/services/features/verdict/topic-quiz-attempt.service';
 
 /**
  * Weak Areas Practice is UNTIMED, and the server's per-question receipt is not.

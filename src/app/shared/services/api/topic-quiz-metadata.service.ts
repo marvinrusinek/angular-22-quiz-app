@@ -3,8 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map, shareReplay, tap } from 'rxjs/operators';
 
-import { API_BASE_URL } from '../../tokens/api-base-url.token';
-import { QUIZ_CATALOG_METADATA } from '../../data/quiz-catalog-metadata';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { QUIZ_CATALOG_METADATA } from '@shared/data/quiz-catalog-metadata';
 
 /**
  * PUBLIC quiz metadata from `GET /api/quizzes`.

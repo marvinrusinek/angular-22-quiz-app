@@ -4,14 +4,14 @@ import {
   catchError, distinctUntilChanged, filter, map, take
 } from 'rxjs/operators';
 
-import { QuestionType } from '../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../models/Option.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { QuizShuffleService } from '../flow/quiz-shuffle.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
 
-import { isOptionCorrect } from '../../utils/is-option-correct';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
 
 @Service()
 export class QuizQuestionResolverService {

@@ -1,4 +1,4 @@
-import type { CodeSnippetDto, InterviewQuestionTypeDto } from '../api/interview-api.dto';
+import type { CodeSnippetDto, InterviewQuestionTypeDto } from '@shared/models/api/interview-api.dto';
 
 /**
  * SAFE view models for an ACTIVE Interview.

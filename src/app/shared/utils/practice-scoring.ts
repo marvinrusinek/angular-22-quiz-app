@@ -1,10 +1,10 @@
-import { Option } from '../models/Option.model';
-import { QuizQuestion } from '../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 import {
   PracticeResult,
   PracticeReviewEntry,
   PracticeTopicScore
-} from '../models/PracticeResult.model';
+} from '@shared/models/PracticeResult.model';
 import { declaredIsMultiAnswer } from './question-type-authority';
 
 /**

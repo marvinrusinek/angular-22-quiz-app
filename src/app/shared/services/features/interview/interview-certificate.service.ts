@@ -6,16 +6,16 @@ import {
   InterviewCertificateProgress,
   InterviewCertificateRecord,
   REQUIRED_CERTIFICATE_INTERVIEWS
-} from '../../../models/interview-certificate.model';
-import { AchievementId } from '../../../models/achievement.model';
-import { InterviewReadinessBand } from '../../../models/interview-readiness.model';
+} from '@shared/models/interview-certificate.model';
+import { AchievementId } from '@shared/models/achievement.model';
+import { InterviewReadinessBand } from '@shared/models/interview-readiness.model';
 import {
   SK_INTERVIEW_CERTIFICATE,
   SK_INTERVIEW_CERTIFICATE_QUAL
-} from '../../../constants/session-keys';
-import { readLocalJson, removeLocalKey, writeLocalJson } from '../../../utils/local-storage';
+} from '@shared/constants/session-keys';
+import { readLocalJson, removeLocalKey, writeLocalJson } from '@shared/utils/local-storage';
 
-import { AchievementService } from '../../achievements/achievement.service';
+import { AchievementService } from '@shared/services/achievements/achievement.service';
 import { InterviewHistoryService } from './interview-history.service';
 
 // Display labels for readiness bands (kept local so this feature doesn't reach

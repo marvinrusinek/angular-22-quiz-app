@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { TopicPerformanceHistoryService } from './topic-performance-history.service';
-import { SK_TOPIC_PERFORMANCE_HISTORY } from '../../constants/session-keys';
+import { SK_TOPIC_PERFORMANCE_HISTORY } from '@shared/constants/session-keys';
 
 /**
  * Attempt-ID stability for topic-quiz recording.

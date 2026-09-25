@@ -3,7 +3,7 @@ import { inject, Service } from '@angular/core';
 import { catchError, map, type Observable } from 'rxjs';
 import { of, throwError } from 'rxjs';
 
-import { INTERVIEW_API_BASE_URL } from '../../tokens/api-base-url.token';
+import { INTERVIEW_API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import type {
   ActiveInterviewSessionDto,
   CreateInterviewSessionRequest,
@@ -13,11 +13,11 @@ import type {
   SetReviewFlagRequest,
   SetReviewFlagResponse,
   QuizMetadataDto
-} from '../../models/api/interview-api.dto';
+} from '@shared/models/api/interview-api.dto';
 import type {
   InterviewResultViewModel,
   InterviewSessionViewModel
-} from '../../models/interview/interview-view-models';
+} from '@shared/models/interview/interview-view-models';
 import { InterviewApiError, toInterviewApiError } from './interview-api.errors';
 import { toResultViewModel, toSessionViewModel } from './interview-api.mappers';
 import { TopicQuizMetadataService } from './topic-quiz-metadata.service';

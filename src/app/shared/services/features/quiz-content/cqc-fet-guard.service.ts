@@ -1,6 +1,6 @@
 import { Service, inject } from '@angular/core';
 
-import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
 
 import type { CodelabQuizContentComponent } from '../../../../containers/quiz/quiz-content/codelab-quiz-content.component';
 

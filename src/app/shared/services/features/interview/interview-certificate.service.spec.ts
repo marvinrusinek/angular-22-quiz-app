@@ -6,8 +6,8 @@ import {
   SK_INTERVIEW_CERTIFICATE_QUAL,
   SK_QUIZ_ACHIEVEMENTS,
   SK_INTERVIEW_HISTORY
-} from '../../../constants/session-keys';
-import { AchievementService } from '../../achievements/achievement.service';
+} from '@shared/constants/session-keys';
+import { AchievementService } from '@shared/services/achievements/achievement.service';
 import { InterviewHistoryService } from './interview-history.service';
 import {
   generateCertificateId,

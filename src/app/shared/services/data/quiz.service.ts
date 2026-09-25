@@ -3,17 +3,17 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, firstValueFrom, from, Observable, of, Subject } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 
-import { QuizStatus } from '../../models/quiz-status.enum';
+import { QuizStatus } from '@shared/models/quiz-status.enum';
 
-import { FinalResult, toDurableFinalResult } from '../../models/Final-Result.model';
-import { Option } from '../../models/Option.model';
-import { QuestionPayload } from '../../models/QuestionPayload.model';
-import { Quiz } from '../../models/Quiz.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
-import { QuizScore } from '../../models/QuizScore.model';
-import { QuizSelectionParams } from '../../models/QuizSelectionParams.model';
-import { Resource } from '../../models/Resource.model';
-import { SelectedOption } from '../../models/SelectedOption.model';
+import { FinalResult, toDurableFinalResult } from '@shared/models/Final-Result.model';
+import { Option } from '@shared/models/Option.model';
+import { QuestionPayload } from '@shared/models/QuestionPayload.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizScore } from '@shared/models/QuizScore.model';
+import { QuizSelectionParams } from '@shared/models/QuizSelectionParams.model';
+import { Resource } from '@shared/models/Resource.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { QuizAnswerEvaluationService } from './quiz-answer-evaluation.service';
 import { QuizBannerService } from './quiz-banner.service';
@@ -23,16 +23,16 @@ import { QuizQuestionEmitterService } from './quiz-question-emitter.service';
 import { QuizQuestionResolverService } from './quiz-question-resolver.service';
 import { QuizScoringService } from './quiz-scoring.service';
 import { QuizSessionManagerService } from './quiz-session-manager.service';
-import { QuizShuffleService } from '../flow/quiz-shuffle.service';
-import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
-import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
-import { QuizStateService } from '../state/quizstate.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
 
-import { SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID, SK_USER_ANSWERS } from '../../constants/session-keys';
+import { SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID, SK_USER_ANSWERS } from '@shared/constants/session-keys';
 
-import { isOptionCorrect } from '../../utils/is-option-correct';
-import { norm } from '../../utils/text-norm';
-import { swallow } from '../../utils/error-logging';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 
 @Service()
 export class QuizService {

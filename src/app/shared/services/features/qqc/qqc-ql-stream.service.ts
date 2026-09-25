@@ -4,30 +4,30 @@ import { ActivatedRouteSnapshot, Router } from '@angular/router';
 import { firstValueFrom, forkJoin, lastValueFrom, of } from 'rxjs';
 import { catchError, filter, take, timeout } from 'rxjs/operators';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../../models/Option.model';
-import { QAPayload } from '../../../models/QAPayload.model';
-import { QuestionPayload } from '../../../models/QuestionPayload.model';
-import { Quiz } from '../../../models/Quiz.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QAPayload } from '@shared/models/QAPayload.model';
+import { QuestionPayload } from '@shared/models/QuestionPayload.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
-import { QuestionTimingService } from '../timer/question-timing.service';
-import { QuizDataService } from '../../data/quizdata.service';
-import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { ResetBackgroundService } from '../../ui/reset-background.service';
-import { ResetStateService } from '../../state/reset-state.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { SelectionMessageService } from '../selection-message/selection-message.service';
-import { TimerService } from '../timer/timer.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { QuestionTimingService } from '@shared/services/features/timer/question-timing.service';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { ResetBackgroundService } from '@shared/services/ui/reset-background.service';
+import { ResetStateService } from '@shared/services/state/reset-state.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
-import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { delay } from '../../../utils/delay';
-import { swallow } from '../../../utils/error-logging';
+import { declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { delay } from '@shared/utils/delay';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Manages reactive streams, DOM freeze/thaw, and legacy question-loading pipeline.

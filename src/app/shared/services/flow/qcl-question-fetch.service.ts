@@ -2,26 +2,26 @@
 import { firstValueFrom, Observable, of } from 'rxjs';
 import { catchError, map, take } from 'rxjs/operators';
 
-import { SK_SAVED_QUESTION_INDEX } from '../../constants/session-keys';
+import { SK_SAVED_QUESTION_INDEX } from '@shared/constants/session-keys';
 
-import { QuestionType } from '../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../models/Option.model';
-import { QuestionPayload } from '../../models/QuestionPayload.model';
-import { Quiz } from '../../models/Quiz.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuestionPayload } from '@shared/models/QuestionPayload.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../features/explanation/explanation-text.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { FetchQuestionResult, RouteChangeQuestionResult, RouteQuestionResult } 
   from './quiz-content-loader.service';
-import { QqcQuestionLoaderService } from '../features/qqc/qqc-question-loader.service';
-import { QuizDataService } from '../data/quizdata.service';
+import { QqcQuestionLoaderService } from '@shared/services/features/qqc/qqc-question-loader.service';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
 import { QuizDotStatusService } from './quiz-dot-status.service';
 import { QuizQuestionDataService } from './quiz-question-data.service';
-import { QuizService } from '../data/quiz.service';
-import { QuizStateService } from '../state/quizstate.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
-import { SelectionMessageService } from '../features/selection-message/selection-message.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
 
 /**
  * Handles question fetching, loading, and API data retrieval.

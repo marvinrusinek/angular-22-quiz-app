@@ -1,22 +1,22 @@
 import { inject, Service } from '@angular/core';
 
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SharedOptionConfig } from '../../../models/SharedOptionConfig.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
-import { NextButtonStateService } from '../../state/next-button-state.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { QqcQlFetchService } from './qqc-ql-fetch.service';
 import { QqcQlOptionBuildService } from './qqc-ql-option-build.service';
 import { QqcQlStreamService } from './qqc-ql-stream.service';
-import { QuizService } from '../../data/quiz.service';
-import { allCorrectSelectedFromVerdict, questionTextForDisplayIndex } from '../verdict/authorized-correctness';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { SelectionMessageService } from '../selection-message/selection-message.service';
-import { TimerService } from '../timer/timer.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { allCorrectSelectedFromVerdict, questionTextForDisplayIndex } from '@shared/services/features/verdict/authorized-correctness';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
 /**
  * Manages question loading pipeline, quiz data fetching, and question initialization for QQC.

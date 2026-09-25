@@ -1,15 +1,15 @@
 import { inject, Service } from '@angular/core';
 import { firstValueFrom, Subscription } from 'rxjs';
 
-import { FormattedExplanation } from '../../../models/FormattedExplanation.model';
-import { QuestionState } from '../../../models/QuestionState.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { FormattedExplanation } from '@shared/models/FormattedExplanation.model';
+import { QuestionState } from '@shared/models/QuestionState.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 
 /**
  * Manages explanation text resolution, formatting, and caching for QQC.

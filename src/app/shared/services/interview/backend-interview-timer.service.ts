@@ -1,7 +1,7 @@
 import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
 import { Subject } from 'rxjs';
 
-import { formatMMSS } from '../../utils/format-time';
+import { formatMMSS } from '@shared/utils/format-time';
 
 /**
  * DISPLAY-ONLY countdown for a backend-owned Interview session.

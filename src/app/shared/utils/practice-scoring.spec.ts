@@ -1,5 +1,5 @@
-import { QuestionType } from '../models/question-type.enum';
-import { QuizQuestion } from '../models/QuizQuestion.model';
+import { QuestionType } from '@shared/models/question-type.enum';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 import {
   AuthorizedResolved,
   canAdvanceFromQuestion,

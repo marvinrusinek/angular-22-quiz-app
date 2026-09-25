@@ -1,10 +1,10 @@
 import { Service } from '@angular/core';
 
-import { Quiz } from '../../../models/Quiz.model';
+import { Quiz } from '@shared/models/Quiz.model';
 import {
   DifficultyLevel,
   DifficultyRecommendation
-} from '../../../models/difficulty-recommendation.model';
+} from '@shared/models/difficulty-recommendation.model';
 
 type Level = 'beginner' | 'intermediate' | 'advanced';
 

@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import { ApiTopicQuizVerdictAdapter } from './api-verdict.adapter';
 import { LocalTopicQuizVerdictAdapter } from './local-verdict.adapter.service';
 import {

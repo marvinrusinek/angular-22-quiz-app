@@ -1,6 +1,6 @@
 import type {
   CreateInterviewSessionRequest
-} from '../../models/api/interview-api.dto';
+} from '@shared/models/api/interview-api.dto';
 
 /**
  * Builder state → backend create-session request.

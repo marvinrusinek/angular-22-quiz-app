@@ -1,20 +1,20 @@
 import { inject, Service, WritableSignal } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 
-import { QuizStatus } from '../../models/quiz-status.enum';
+import { QuizStatus } from '@shared/models/quiz-status.enum';
 
-import { Option } from '../../models/Option.model';
-import { Quiz } from '../../models/Quiz.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
-import { SelectedOption } from '../../models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { SK_DOT_CONFIRMED, SK_DISPLAY_MODE, SK_MULTI_PERFECT, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID, SK_USER_ANSWERS } from '../../constants/session-keys';
+import { SK_DOT_CONFIRMED, SK_DISPLAY_MODE, SK_MULTI_PERFECT, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID, SK_USER_ANSWERS } from '@shared/constants/session-keys';
 
 import { QuizDataLoaderService } from './quiz-data-loader.service';
 import { QuizOptionsService } from './quiz-options.service';
 import { QuizQuestionResolverService } from './quiz-question-resolver.service';
 import { QuizScoringService } from './quiz-scoring.service';
-import { swallow } from '../../utils/error-logging';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Interface describing the QuizService state that the session manager

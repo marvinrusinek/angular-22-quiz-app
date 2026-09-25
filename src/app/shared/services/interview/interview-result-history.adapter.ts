@@ -1,9 +1,9 @@
-import { findInterviewPreset } from '../../models/interview-preset.model';
+import { findInterviewPreset } from '@shared/models/interview-preset.model';
 import type {
   InterviewCompletionReason,
   InterviewTopicHistoryEntry
-} from '../../models/interview-history.model';
-import type { InterviewResultViewModel } from '../../models/interview/interview-view-models';
+} from '@shared/models/interview-history.model';
+import type { InterviewResultViewModel } from '@shared/models/interview/interview-view-models';
 
 /**
  * Backend result → SANITIZED history record.

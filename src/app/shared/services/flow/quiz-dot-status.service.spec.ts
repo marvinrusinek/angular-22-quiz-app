@@ -1,16 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 
-import { QuestionType } from '../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../models/Option.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
-import { SelectedOption } from '../../models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { QuizPersistenceService } from '../state/quiz-persistence.service';
-import { QuizService } from '../data/quiz.service';
+import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 import { QuizShuffleService } from './quiz-shuffle.service';
-import { QuizStateService } from '../state/quizstate.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
 import { QuizDotStatusService } from './quiz-dot-status.service';
 

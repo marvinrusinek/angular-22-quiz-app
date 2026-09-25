@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 
 import { TopicPerformanceHistoryService } from './topic-performance-history.service';
-import { SK_TOPIC_PERFORMANCE_HISTORY } from '../../constants/session-keys';
-import { calculateWeakTopics, TopicAttemptLike } from '../../utils/weak-areas';
+import { SK_TOPIC_PERFORMANCE_HISTORY } from '@shared/constants/session-keys';
+import { calculateWeakTopics, TopicAttemptLike } from '@shared/utils/weak-areas';
 
 function service(): TopicPerformanceHistoryService {
   TestBed.resetTestingModule();

@@ -5,9 +5,9 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { QqcOrchClickService } from './qqc-orch-click.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '../verdict/question-verdict.types';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * Locking a correctly-answered single-answer question, in the QQC renderer.

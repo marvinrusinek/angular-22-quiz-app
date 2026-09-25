@@ -1,20 +1,20 @@
 ﻿import { inject, Service } from '@angular/core';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
-import { FeedbackService } from '../feedback/feedback.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { SelectionMessageService } from '../selection-message/selection-message.service';
-import { TimerService } from '../timer/timer.service';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
 
 /**
  * Manages option selection logic, state transitions, and correctness evaluation for QQC.

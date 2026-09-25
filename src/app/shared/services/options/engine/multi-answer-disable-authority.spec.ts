@@ -5,14 +5,14 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { SocAnswerProcessingService } from './soc-answer-processing.service';
-import { FeedbackService } from '../../features/feedback/feedback.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { TimerService } from '../../features/timer/timer.service';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '../../features/verdict/question-verdict.types';
-import { answerStateStub } from '../../../testing/answer-state-stub';
+import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import { answerStateStub } from '@shared/testing/answer-state-stub';
 
 /**
  * The multi-answer disable/lock mutation.

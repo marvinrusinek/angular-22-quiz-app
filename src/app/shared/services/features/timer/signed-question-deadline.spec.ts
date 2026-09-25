@@ -6,13 +6,13 @@ import { of } from 'rxjs';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import { QuestionTimingService } from './question-timing.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { TimerService } from './timer.service';
-import { TopicQuizAttemptService } from '../verdict/topic-quiz-attempt.service';
-import { QuizService } from '../../data/quiz.service';
+import { TopicQuizAttemptService } from '@shared/services/features/verdict/topic-quiz-attempt.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 
 /**
  * The signed question deadline is the ONLY timing authority for a Topic Quiz.

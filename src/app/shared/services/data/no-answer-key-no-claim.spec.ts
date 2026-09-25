@@ -2,13 +2,13 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
-import { API_BASE_URL } from '../../tokens/api-base-url.token';
-import { QuestionType } from '../../models/question-type.enum';
-import type { QuizQuestion } from '../../models/QuizQuestion.model';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { QuestionType } from '@shared/models/question-type.enum';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { questionsFromApiViews } from '../../utils/topic-quiz-content';
-import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
-import { QuizShuffleService } from '../flow/quiz-shuffle.service';
+import { questionsFromApiViews } from '@shared/utils/topic-quiz-content';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
 import { QuizQuestionResolverService } from './quiz-question-resolver.service';
 
 /**

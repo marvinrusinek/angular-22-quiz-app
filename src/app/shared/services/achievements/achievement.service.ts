@@ -6,17 +6,17 @@ import {
   AchievementId,
   AchievementView,
   EarnedAchievement
-} from '../../models/achievement.model';
-import { ACHIEVEMENT_DEFINITIONS } from '../../constants/achievements';
+} from '@shared/models/achievement.model';
+import { ACHIEVEMENT_DEFINITIONS } from '@shared/constants/achievements';
 import {
   CERTIFICATE_MIN_SCORE,
   CERTIFICATE_REQUIRED_BAND
-} from '../../models/interview-certificate.model';
-import { SK_QUIZ_ACHIEVEMENTS } from '../../constants/session-keys';
-import { readLocalJson, writeLocalJson } from '../../utils/local-storage';
-import { BestScores, BestScoreService } from '../progress/best-score.service';
-import { InterviewReadinessService } from '../features/interview/interview-readiness.service';
-import { InterviewHistoryService } from '../features/interview/interview-history.service';
+} from '@shared/models/interview-certificate.model';
+import { SK_QUIZ_ACHIEVEMENTS } from '@shared/constants/session-keys';
+import { readLocalJson, writeLocalJson } from '@shared/utils/local-storage';
+import { BestScores, BestScoreService } from '@shared/services/progress/best-score.service';
+import { InterviewReadinessService } from '@shared/services/features/interview/interview-readiness.service';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
 
 /**
  * Centralized, backend-free achievement engine. It owns the ONLY durable state

@@ -4,7 +4,7 @@ import {
   selectedVerdictFor
 } from './authorized-correctness';
 import { IDLE_VERDICT_STATE, type QuestionVerdictState } from './question-verdict.types';
-import type { QuizService } from '../../data/quiz.service';
+import type { QuizService } from '@shared/services/data/quiz.service';
 import type { QuestionVerdictService } from './question-verdict.service';
 
 /**

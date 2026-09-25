@@ -10,21 +10,21 @@ import {
   take,
 } from 'rxjs/operators';
 
-import { QuestionType } from '../../models/question-type.enum';
-import { resolveIsMultiAnswer } from '../../utils/question-type-authority';
+import { QuestionType } from '@shared/models/question-type.enum';
+import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
 
-import { Option } from '../../models/Option.model';
-import { Quiz } from '../../models/Quiz.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { TopicQuizQuestionsService } from '../api/topic-quiz-questions.service';
-import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
+import { TopicQuizQuestionsService } from '@shared/services/api/topic-quiz-questions.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
 import { QuizService } from './quiz.service';
-import { QuizShuffleService } from '../flow/quiz-shuffle.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
 
-import { isOptionCorrect } from '../../utils/is-option-correct';
-import { questionsFromApiViews } from '../../utils/topic-quiz-content';
-import { swallow } from '../../utils/error-logging';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { questionsFromApiViews } from '@shared/utils/topic-quiz-content';
+import { swallow } from '@shared/utils/error-logging';
 
 @Service()
 export class QuizDataService {

@@ -6,12 +6,12 @@ import { of, throwError } from 'rxjs';
 
 import { QuizScoringService } from './quiz-scoring.service';
 import { QuizService } from './quiz.service';
-import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
-import { TOPIC_QUIZ_VERDICT_ADAPTER, type TopicQuizVerdictAdapter } from '../features/verdict/verdict-adapter';
-import { QuestionVerdictError } from '../features/verdict/question-verdict.types';
-import { SelectedOptionService } from '../state/selectedoption.service';
-import { setQuizDataCache } from '../../quiz-data-cache';
-import type { Quiz } from '../../models/Quiz.model';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { TOPIC_QUIZ_VERDICT_ADAPTER, type TopicQuizVerdictAdapter } from '@shared/services/features/verdict/verdict-adapter';
+import { QuestionVerdictError } from '@shared/services/features/verdict/question-verdict.types';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
+import type { Quiz } from '@shared/models/Quiz.model';
 
 /**
  * SCORING FROM VERDICT STATE (Stage 10I).

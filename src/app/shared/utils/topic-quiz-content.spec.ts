@@ -13,10 +13,10 @@ import {
 import {
   TopicQuizQuestionsService,
   type TopicQuizQuestionView
-} from '../services/api/topic-quiz-questions.service';
-import { API_BASE_URL } from '../tokens/api-base-url.token';
-import { QuestionType } from '../models/question-type.enum';
-import * as quizDataCache from '../quiz-data-cache';
+} from '@shared/services/api/topic-quiz-questions.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { QuestionType } from '@shared/models/question-type.enum';
+import * as quizDataCache from '@shared/quiz-data-cache';
 
 /**
  * TOPIC QUIZ QUESTION CONTENT COMES FROM THE API.

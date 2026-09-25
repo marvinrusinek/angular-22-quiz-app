@@ -5,13 +5,13 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { ExplanationFormatterService } from './explanation-formatter.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { IDLE_VERDICT_STATE } from '../verdict/question-verdict.types';
-import type { QuestionVerdictState } from '../verdict/question-verdict.types';
-import { QuizService } from '../../data/quiz.service';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
-import { QuestionType } from '../../../models/question-type.enum';
-import type { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { IDLE_VERDICT_STATE } from '@shared/services/features/verdict/question-verdict.types';
+import type { QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { QuestionType } from '@shared/models/question-type.enum';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 /**
  * COMPOSED FET IDENTITY IS AUTHORIZED.

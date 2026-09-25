@@ -3,11 +3,11 @@ import { ParamMap } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { debounceTime, tap } from 'rxjs/operators';
 
-import { QUESTION_ROUTE_REGEX } from '../../../constants/route-patterns';
-import { SK_SEL_Q } from '../../../constants/session-keys';
+import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
+import { SK_SEL_Q } from '@shared/constants/session-keys';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { CqcFetGuardService } from './cqc-fet-guard.service';
 

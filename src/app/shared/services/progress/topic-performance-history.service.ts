@@ -6,10 +6,10 @@ import {
   TopicPerformanceRecord,
   TopicPerformanceSource,
   validateTopicPerformanceRecord
-} from '../../models/topic-performance-history.model';
-import { SK_TOPIC_PERFORMANCE_HISTORY } from '../../constants/session-keys';
-import { readLocalJson, writeLocalJson } from '../../utils/local-storage';
-import { TopicAttemptLike } from '../../utils/weak-areas';
+} from '@shared/models/topic-performance-history.model';
+import { SK_TOPIC_PERFORMANCE_HISTORY } from '@shared/constants/session-keys';
+import { readLocalJson, writeLocalJson } from '@shared/utils/local-storage';
+import { TopicAttemptLike } from '@shared/utils/weak-areas';
 
 /** The retained history as callers see it: immutable, oldest → newest. */
 type TopicRecords = readonly Readonly<TopicPerformanceRecord>[];

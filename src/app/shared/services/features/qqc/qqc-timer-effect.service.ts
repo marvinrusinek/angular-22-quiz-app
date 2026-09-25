@@ -2,25 +2,25 @@ import { inject, Service } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
 import { filter, map, take, timeout } from 'rxjs/operators';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
-import { NextButtonStateService } from '../../state/next-button-state.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { authorizedExplanation } from '../verdict/authorized-correctness';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { SelectionMessageService } from '../selection-message/selection-message.service';
-import { SoundService } from '../../ui/sound.service';
-import { TimerService } from '../timer/timer.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { authorizedExplanation } from '@shared/services/features/verdict/authorized-correctness';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { SoundService } from '@shared/services/ui/sound.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
-import { delay } from '../../../utils/delay';
-import { norm } from '../../../utils/text-norm';
+import { delay } from '@shared/utils/delay';
+import { norm } from '@shared/utils/text-norm';
 
 /**
  * Handles timer expiry, lock, and disable logic for QQC.

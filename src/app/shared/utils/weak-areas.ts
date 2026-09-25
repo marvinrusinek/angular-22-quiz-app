@@ -1,5 +1,5 @@
 import { AggregatedTopic, aggregateTopicPercentages } from './interview-topic-history';
-import { InterviewAttemptHistoryEntry } from '../models/interview-history.model';
+import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
 
 /**
  * Weak Areas Practice — the SINGLE definition of "which topics is the user

@@ -4,11 +4,11 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { API_BASE_URL } from '../../tokens/api-base-url.token';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import { TopicQuizTypeRegistry } from './topic-quiz-type-registry.service';
-import { QuizService } from '../data/quiz.service';
-import { setQuizDataCache } from '../../quiz-data-cache';
-import type { Quiz } from '../../models/Quiz.model';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
+import type { Quiz } from '@shared/models/Quiz.model';
 
 /**
  * Explicit type REACHING the runtime.

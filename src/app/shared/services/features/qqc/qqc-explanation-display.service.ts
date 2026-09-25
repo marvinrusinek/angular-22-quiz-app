@@ -2,26 +2,26 @@
 import { firstValueFrom, Observable, of } from 'rxjs';
 import { catchError, filter, map, take, timeout } from 'rxjs/operators';
 
-import { PROMISE_RACE_TIMEOUT_MS } from '../../../constants/timing';
+import { PROMISE_RACE_TIMEOUT_MS } from '@shared/constants/timing';
 
-import { FormattedExplanation } from '../../../models/FormattedExplanation.model';
-import { Option } from '../../../models/Option.model';
-import { QuestionState } from '../../../models/QuestionState.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { FormattedExplanation } from '@shared/models/FormattedExplanation.model';
+import { Option } from '@shared/models/Option.model';
+import { QuestionState } from '@shared/models/QuestionState.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QqcExplanationManagerService } from './qqc-explanation-manager.service';
-import { QuizDataService } from '../../data/quizdata.service';
-import { QuizQuestionManagerService } from '../../flow/quizquestionmgr.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { authorizedExplanation } from '../verdict/authorized-correctness';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
-import { delay } from '../../../utils/delay';
-import { norm } from '../../../utils/text-norm';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
+import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { authorizedExplanation } from '@shared/services/features/verdict/authorized-correctness';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { delay } from '@shared/utils/delay';
+import { norm } from '@shared/utils/text-norm';
 
 /**
  * Manages explanation display, formatted explanation text (FET) resolution,

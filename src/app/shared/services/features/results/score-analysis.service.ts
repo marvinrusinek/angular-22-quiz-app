@@ -1,12 +1,12 @@
 import { inject, Injector, Service } from '@angular/core';
 
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { Option } from '../../../models/Option.model';
-import { ScoreAnalysisItem } from '../../../models/Final-Result.model';
-import { norm } from '../../../utils/text-norm';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { ScoreAnalysisItem } from '@shared/models/Final-Result.model';
+import { norm } from '@shared/utils/text-norm';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 
 /**
  * Builds the per-question review analysis from the CURRENT (fresh) selection

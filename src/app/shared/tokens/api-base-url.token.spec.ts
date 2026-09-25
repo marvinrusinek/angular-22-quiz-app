@@ -18,8 +18,8 @@ import {
   resolveApiBaseUrl,
   resolveInterviewApiBaseUrl
 } from './api-base-url.token';
-import { InterviewApiService } from '../services/api/interview-api.service';
-import { TopicQuizMetadataService } from '../services/api/topic-quiz-metadata.service';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
 
 /**
  * REGRESSION: `resolveApiBaseUrl` used to THROW when production had no

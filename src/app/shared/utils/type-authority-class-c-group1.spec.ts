@@ -4,14 +4,14 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of, Subject } from 'rxjs';
 
-import { QuestionType } from '../models/question-type.enum';
-import type { QuizQuestion } from '../models/QuizQuestion.model';
+import { QuestionType } from '@shared/models/question-type.enum';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { OptionClickHandlerService } from '../services/options/engine/option-click-handler.service';
-import { SharedOptionBindingService } from '../services/options/engine/shared-option-binding.service';
-import { SocOptionUiService } from '../services/options/engine/soc-option-ui.service';
-import { QuizService } from '../services/data/quiz.service';
-import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { OptionClickHandlerService } from '@shared/services/options/engine/option-click-handler.service';
+import { SharedOptionBindingService } from '@shared/services/options/engine/shared-option-binding.service';
+import { SocOptionUiService } from '@shared/services/options/engine/soc-option-ui.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 /**
  * CLASS C GROUP 1 — CARDINALITY IS NO LONGER A TYPE ORACLE.

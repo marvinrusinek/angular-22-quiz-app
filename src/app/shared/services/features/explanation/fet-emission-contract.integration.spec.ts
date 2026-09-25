@@ -33,7 +33,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { FET_UNLOCK_WATCHDOG_MS } from '../../../constants/timing';
+import { FET_UNLOCK_WATCHDOG_MS } from '@shared/constants/timing';
 
 import { ExplanationTextService } from './explanation-text.service';
 

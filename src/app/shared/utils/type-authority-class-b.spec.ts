@@ -4,19 +4,19 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { QuestionType } from '../models/question-type.enum';
-import type { QuizQuestion } from '../models/QuizQuestion.model';
-import type { SelectedOption } from '../models/SelectedOption.model';
+import { QuestionType } from '@shared/models/question-type.enum';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import type { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { QuizDotStatusService } from '../services/flow/quiz-dot-status.service';
-import { QuizPersistenceService } from '../services/state/quiz-persistence.service';
-import { QuizService } from '../services/data/quiz.service';
-import { QuizShuffleService } from '../services/flow/quiz-shuffle.service';
-import { QuizStateService } from '../services/state/quizstate.service';
-import { SelectedOptionService } from '../services/state/selectedoption.service';
-import { SelectionMessageService } from '../services/features/selection-message/selection-message.service';
-import { OptionClickHandlerService } from '../services/options/engine/option-click-handler.service';
-import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
+import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { OptionClickHandlerService } from '@shared/services/options/engine/option-click-handler.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 /**
  * CLASS B — THE COUNT MUST NOT PROMOTE.

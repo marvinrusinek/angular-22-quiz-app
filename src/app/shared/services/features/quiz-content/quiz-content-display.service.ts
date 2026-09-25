@@ -4,7 +4,7 @@ import {
   distinctUntilChanged, map, shareReplay, startWith
 } from 'rxjs/operators';
 
-import { ExplanationTextService, FETPayload } from '../explanation/explanation-text.service';
+import { ExplanationTextService, FETPayload } from '@shared/services/features/explanation/explanation-text.service';
 
 @Service()
 export class QuizContentDisplayService {

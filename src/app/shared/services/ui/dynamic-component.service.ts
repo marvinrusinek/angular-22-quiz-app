@@ -1,6 +1,6 @@
 import { inject, Service, ViewContainerRef, ComponentRef, Type } from '@angular/core';
 
-import { ANSWER_COMPONENT } from '../../tokens/answer-component.token';
+import { ANSWER_COMPONENT } from '@shared/tokens/answer-component.token';
 
 @Service()
 export class DynamicComponentService {

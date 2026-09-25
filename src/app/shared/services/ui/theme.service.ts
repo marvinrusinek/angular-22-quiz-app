@@ -1,5 +1,5 @@
 import { computed, effect, Service, signal } from '@angular/core';
-import { swallow } from '../../utils/error-logging';
+import { swallow } from '@shared/utils/error-logging';
 import { THEME_ICON_DARK_MODE, THEME_ICON_LIGHT_MODE } from '../../../components/theme-toggle/theme-icons';
 
 export type Theme = 'light' | 'dark';

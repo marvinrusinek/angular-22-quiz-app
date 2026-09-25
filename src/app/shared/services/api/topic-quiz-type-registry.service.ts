@@ -6,8 +6,8 @@ import {
   TopicQuizQuestionsService,
   type TopicQuizQuestionType
 } from './topic-quiz-questions.service';
-import { QuestionType } from '../../models/question-type.enum';
-import type { QuizQuestion } from '../../models/QuizQuestion.model';
+import { QuestionType } from '@shared/models/question-type.enum';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 /**
  * Authorized question TYPE for the current Topic Quiz, from the API.

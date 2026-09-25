@@ -3,8 +3,8 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
 import { auditTime, distinctUntilChanged, filter, shareReplay } from 'rxjs/operators';
 
-import { SK_SAVED_QUESTION_INDEX } from '../../constants/session-keys';
-import { swallow } from '../../utils/error-logging';
+import { SK_SAVED_QUESTION_INDEX } from '@shared/constants/session-keys';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Holds the user-facing banner texts that sit above/below the question:

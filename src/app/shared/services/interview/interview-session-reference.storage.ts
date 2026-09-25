@@ -5,8 +5,8 @@ import {
   parseSessionReference,
   SK_INTERVIEW_SESSION_REF,
   type PersistedInterviewSessionReference
-} from '../../models/interview/interview-session-reference.model';
-import { readSessionJson, removeSessionKey, writeSessionJson } from '../../utils/session-storage';
+} from '@shared/models/interview/interview-session-reference.model';
+import { readSessionJson, removeSessionKey, writeSessionJson } from '@shared/utils/session-storage';
 
 /**
  * Owns the minimal Interview session reference in sessionStorage.

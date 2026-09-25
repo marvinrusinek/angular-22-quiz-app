@@ -1,10 +1,10 @@
-import { QuestionType } from '../models/question-type.enum';
-import type { Option } from '../models/Option.model';
-import type { QuizQuestion } from '../models/QuizQuestion.model';
+import { QuestionType } from '@shared/models/question-type.enum';
+import type { Option } from '@shared/models/Option.model';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
 import type {
   TopicQuizQuestionType,
   TopicQuizQuestionView
-} from '../services/api/topic-quiz-questions.service';
+} from '@shared/services/api/topic-quiz-questions.service';
 
 /**
  * Turning API question CONTENT into the app's `QuizQuestion` shape.

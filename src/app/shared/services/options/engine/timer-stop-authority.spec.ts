@@ -5,11 +5,11 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { SharedOptionClickService } from './shared-option-click.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
-import { TimerService } from '../../features/timer/timer.service';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '../../features/verdict/question-verdict.types';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * Stopping the countdown once every required answer is in.

@@ -1,12 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 
 import { SharedOptionExplanationService } from './shared-option-explanation.service';
-import { ExplanationTextService } from '../explanation/explanation-text.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
-import { shouldShowFet, type HeadingInputs } from '../../../utils/heading-model';
+import { shouldShowFet, type HeadingInputs } from '@shared/utils/heading-model';
 
 /**
  * NAVIGATING BACK MUST SHOW THE QUESTION TEXT.

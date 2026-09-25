@@ -1,8 +1,8 @@
 import { DestroyRef, Service, inject } from '@angular/core';
 
-import { NextButtonStateService } from '../state/next-button-state.service';
-import { QuizStateService } from '../state/quizstate.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
 @Service()
 export class QuizInitializationService {

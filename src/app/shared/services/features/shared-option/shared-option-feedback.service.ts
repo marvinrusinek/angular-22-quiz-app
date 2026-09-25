@@ -1,23 +1,23 @@
 ﻿import { Service, inject } from '@angular/core';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { FeedbackProps } from '../../../models/FeedbackProps.model';
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
+import { FeedbackProps } from '@shared/models/FeedbackProps.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { FeedbackService } from '../feedback/feedback.service';
-import { OptionClickHandlerService } from '../../options/engine/option-click-handler.service';
-import { OptionService } from '../../options/view/option.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
+import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
+import { OptionClickHandlerService } from '@shared/services/options/engine/option-click-handler.service';
+import { OptionService } from '@shared/services/options/view/option.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
-import { feedbackAnchorMatches } from '../../../utils/feedback-anchor';
-import { resolveIsMultiAnswer } from '../../../utils/question-type-authority';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { isValidOption } from '../../../utils/option-utils';
+import { feedbackAnchorMatches } from '@shared/utils/feedback-anchor';
+import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { isValidOption } from '@shared/utils/option-utils';
 
 /**
  * Context object carrying the component state needed by SharedOptionFeedbackService.

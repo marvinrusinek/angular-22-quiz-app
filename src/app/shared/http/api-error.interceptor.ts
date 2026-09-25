@@ -2,8 +2,8 @@ import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 
-import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '../tokens/api-base-url.token';
-import { swallow } from '../utils/error-logging';
+import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Centralized, DEV-ONLY diagnostic logging for requests to this app's own

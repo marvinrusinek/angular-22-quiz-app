@@ -4,7 +4,7 @@ import { distinctUntilChanged, map, startWith } from 'rxjs/operators';
 
 import { ExplanationFormatterService } from './explanation-formatter.service';
 
-import { swallow } from '../../../utils/error-logging';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Owns the per-question reactive storage that drives explanation/FET

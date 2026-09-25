@@ -1,12 +1,12 @@
 ﻿import { Service } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { QuestionPayload } from '../../../models/QuestionPayload.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuestionPayload } from '@shared/models/QuestionPayload.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
 
 /**
  * Manages option display preparation and render-readiness logic for QQC.

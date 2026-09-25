@@ -4,16 +4,16 @@ import {
   AssessmentConfig,
   AssessmentQuestionCount,
   DURATION_SECONDS_BY_COUNT
-} from '../../../models/AssessmentConfig.model';
-import { GeneratedAssessment } from '../../../models/GeneratedAssessment.model';
-import { Option } from '../../../models/Option.model';
-import { Quiz } from '../../../models/Quiz.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+} from '@shared/models/AssessmentConfig.model';
+import { GeneratedAssessment } from '@shared/models/GeneratedAssessment.model';
+import { Option } from '@shared/models/Option.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { getQuizData } from '../../../quiz-data-cache';
-import { ArrayUtils } from '../../../utils/array-utils';
-import { pinAllOfTheAboveLast } from '../../../utils/all-of-the-above';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
+import { getQuizData } from '@shared/quiz-data-cache';
+import { ArrayUtils } from '@shared/utils/array-utils';
+import { pinAllOfTheAboveLast } from '@shared/utils/all-of-the-above';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
 
 // Deep clone helper. Prefers structuredClone (used across the app, e.g.
 // QuizService.quizInitialState) but falls back to JSON so unit tests running

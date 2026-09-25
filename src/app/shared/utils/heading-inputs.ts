@@ -2,7 +2,7 @@ import {
   allCorrectSelectedFromVerdict,
   selectedVerdictFor,
   verdictStateForDisplayIndex
-} from '../services/features/verdict/authorized-correctness';
+} from '@shared/services/features/verdict/authorized-correctness';
 import { withCorrectCountBanner } from './correct-count-banner';
 import { bannerCorrectCount, declaredIsMultiAnswer } from './question-type-authority';
 import { HeadingInputs } from './heading-model';

@@ -4,18 +4,18 @@ import {
   toReviewQuestionViewModel,
   toSessionViewModel
 } from './interview-api.mappers';
-import { isMultiSelectQuestion } from '../../models/interview/interview-view-models';
+import { isMultiSelectQuestion } from '@shared/models/interview/interview-view-models';
 import {
   normalizeBaseUrl,
   resolveApiBaseUrl,
   DEV_API_BASE_URL,
   PROD_API_BASE_URL
-} from '../../tokens/api-base-url.token';
+} from '@shared/tokens/api-base-url.token';
 import type {
   ActiveInterviewSessionDto,
   InterviewResultDto,
   InterviewReviewQuestionDto
-} from '../../models/api/interview-api.dto';
+} from '@shared/models/api/interview-api.dto';
 
 const session: ActiveInterviewSessionDto = {
   sessionId: 'is_x',

@@ -1,7 +1,7 @@
 import { Service, inject } from '@angular/core';
 
 import { TimerService } from './timer.service';
-import { TopicQuizAttemptService } from '../verdict/topic-quiz-attempt.service';
+import { TopicQuizAttemptService } from '@shared/services/features/verdict/topic-quiz-attempt.service';
 
 /**
  * The one place a live Topic Quiz countdown is allowed to begin.

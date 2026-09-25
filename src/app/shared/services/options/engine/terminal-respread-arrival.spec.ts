@@ -5,14 +5,14 @@ import { ActivatedRoute } from '@angular/router';
 import { Observable, Subject, of } from 'rxjs';
 
 import { SocAnswerProcessingService } from './soc-answer-processing.service';
-import { FeedbackService } from '../../features/feedback/feedback.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import { TOPIC_QUIZ_VERDICT_ADAPTER } from '../../features/verdict/verdict-adapter';
-import type { QuestionCheckResult, QuestionExpiredResult } from '../../features/verdict/question-verdict.types';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { TimerService } from '../../features/timer/timer.service';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
+import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { TOPIC_QUIZ_VERDICT_ADAPTER } from '@shared/services/features/verdict/verdict-adapter';
+import type { QuestionCheckResult, QuestionExpiredResult } from '@shared/services/features/verdict/question-verdict.types';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 /**
  * THE LIFECYCLE, not the helper.

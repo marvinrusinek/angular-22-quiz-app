@@ -1,11 +1,11 @@
 import { Service } from '@angular/core';
 
-import { InterviewResult } from '../../../models/InterviewResult.model';
+import { InterviewResult } from '@shared/models/InterviewResult.model';
 import {
   InterviewAnalytics,
   PerformanceBand,
   TopicPerformance,
-} from '../../../models/interview-analytics.model';
+} from '@shared/models/interview-analytics.model';
 
 const EMPTY: InterviewAnalytics = Object.freeze({
   topics: Object.freeze([]),

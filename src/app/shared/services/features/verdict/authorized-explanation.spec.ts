@@ -4,8 +4,8 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { SharedOptionExplanationService } from '../shared-option/shared-option-explanation.service';
-import { ExplanationTextService } from '../explanation/explanation-text.service';
+import { SharedOptionExplanationService } from '@shared/services/features/shared-option/shared-option-explanation.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuestionVerdictService } from './question-verdict.service';
 import {
   authorizedExplanation,
@@ -13,13 +13,13 @@ import {
 } from './authorized-correctness';
 import { IDLE_VERDICT_STATE } from './question-verdict.types';
 import type { QuestionVerdictState } from './question-verdict.types';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
-import { QuestionType } from '../../../models/question-type.enum';
-import type { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { answerStateStub } from '../../../testing/answer-state-stub';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { QuestionType } from '@shared/models/question-type.enum';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { answerStateStub } from '@shared/testing/answer-state-stub';
 
 /**
  * FET CONTENT IS AUTHORIZED, NOT LOCAL.

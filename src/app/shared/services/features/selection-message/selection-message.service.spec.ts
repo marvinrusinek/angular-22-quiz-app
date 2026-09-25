@@ -2,15 +2,15 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of, Subject } from 'rxjs';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { QuizDotStatusService } from '../../../services/flow/quiz-dot-status.service';
-import { QuizService } from '../../../services/data/quiz.service';
-import { SelectedOptionService } from '../../../services/state/selectedoption.service';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { SelectionMessageService } from './selection-message.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { IDLE_VERDICT_STATE } from '../verdict/question-verdict.types';
-import type { QuestionVerdictState } from '../verdict/question-verdict.types';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { IDLE_VERDICT_STATE } from '@shared/services/features/verdict/question-verdict.types';
+import type { QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * DESIGN NOTE — initial state is CONTINUE_MSG, not START_MSG

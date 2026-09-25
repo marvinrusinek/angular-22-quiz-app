@@ -4,16 +4,16 @@ import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
 import { filter, skip, tap } from 'rxjs/operators';
 
-import { Option } from '../../../models/Option.model';
-import { QuestionPayload } from '../../../models/QuestionPayload.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuestionPayload } from '@shared/models/QuestionPayload.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { QuizNavigationService } from '../../flow/quiz-navigation.service';
-import { QuizService } from '../../data/quiz.service';
-import { ResetStateService } from '../../state/reset-state.service';
-import { SharedVisibilityService } from '../../ui/shared-visibility.service';
+import { QuizNavigationService } from '@shared/services/flow/quiz-navigation.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { ResetStateService } from '@shared/services/state/reset-state.service';
+import { SharedVisibilityService } from '@shared/services/ui/shared-visibility.service';
 
-import { swallow } from '../../../utils/error-logging';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Subscription factory service for QQC.

@@ -1,4 +1,4 @@
-import { AchievementId } from '../models/achievement.model';
+import { AchievementId } from '@shared/models/achievement.model';
 
 /**
  * Truthful completion message for the Quiz Selection banner, shown once every

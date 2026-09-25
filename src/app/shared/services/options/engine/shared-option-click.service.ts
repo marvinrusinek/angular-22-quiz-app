@@ -1,27 +1,27 @@
 ﻿import { Service, inject } from '@angular/core';
 
-import { FeedbackProps } from '../../../models/FeedbackProps.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { SelectedOption } from '../../../models/SelectedOption.model';
+import { FeedbackProps } from '@shared/models/FeedbackProps.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { NextButtonStateService } from '../../state/next-button-state.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { OptionClickHandlerService } from './option-click-handler.service';
 import { OptionInteractionService } from './option-interaction.service';
 import { OptionUiSyncService } from './option-ui-sync.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { SocAnswerProcessingService } from './soc-answer-processing.service';
 import { SocOptionUiService } from './soc-option-ui.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import { TimerService } from '../../features/timer/timer.service';
-import { TopicQuizTypeRegistry } from '../../api/topic-quiz-type-registry.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
 import {
   allCorrectSelectedFromVerdict,
   verdictStateForDisplayIndex
-} from '../../features/verdict/authorized-correctness';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { norm } from '../../../utils/text-norm';
+} from '@shared/services/features/verdict/authorized-correctness';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
 
 /**
  * Handles option click events for shared option components.

@@ -5,13 +5,13 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { OptionInteractionService } from './option-interaction.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { TimerService } from '../../features/timer/timer.service';
-import { setQuizDataCache } from '../../../quiz-data-cache';
-import type { Quiz } from '../../../models/Quiz.model';
-import type { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
+import type { Quiz } from '@shared/models/Quiz.model';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 /**
  * TIMER STOP derived from verdict state (Stage 9D).

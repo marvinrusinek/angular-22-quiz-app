@@ -3,21 +3,21 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { Observable, of } from 'rxjs';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { FormattedExplanation } from '../../../models/FormattedExplanation.model';
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { FormattedExplanation } from '@shared/models/FormattedExplanation.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { authorizedCorrectTexts, authorizedExplanation } from '../verdict/authorized-correctness';
-import { QuizService } from '../../data/quiz.service';
-import { QuizShuffleService } from '../../flow/quiz-shuffle.service';
-import { pinAllOfTheAboveLast, pinnedIndex1Based } from '../../../utils/all-of-the-above';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { norm } from '../../../utils/text-norm';
-import { withTerminalPeriod } from '../../../utils/terminal-period';
-import { swallow } from '../../../utils/error-logging';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { authorizedCorrectTexts, authorizedExplanation } from '@shared/services/features/verdict/authorized-correctness';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
+import { pinAllOfTheAboveLast, pinnedIndex1Based } from '@shared/utils/all-of-the-above';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
+import { withTerminalPeriod } from '@shared/utils/terminal-period';
+import { swallow } from '@shared/utils/error-logging';
 
 @Service()
 export class ExplanationFormatterService {

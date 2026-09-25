@@ -4,25 +4,25 @@ import { Router } from '@angular/router';
 import { EMPTY, firstValueFrom, of } from 'rxjs';
 import { catchError, switchMap, tap } from 'rxjs/operators';
 
-import { Option } from '../../models/Option.model';
-import { QuestionPayload } from '../../models/QuestionPayload.model';
-import { Quiz } from '../../models/Quiz.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuestionPayload } from '@shared/models/QuestionPayload.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../features/explanation/explanation-text.service';
-import { NextButtonStateService } from '../state/next-button-state.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { QuizContentLoaderService } from './quiz-content-loader.service';
-import { QuizDataService } from '../data/quizdata.service';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
 import { QuizQuestionDataService } from './quiz-question-data.service';
-import { QuizService } from '../data/quiz.service';
-import { QuizStateService } from '../state/quizstate.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
-import { TimerService } from '../features/timer/timer.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
-import { reportError } from '../../utils/error-logging';
+import { reportError } from '@shared/utils/error-logging';
 
 import type { QuizComponent } from '../../../containers/quiz/quiz.component';
-import { swallow } from '../../utils/error-logging';
+import { swallow } from '@shared/utils/error-logging';
 
 type Host = QuizComponent;
 

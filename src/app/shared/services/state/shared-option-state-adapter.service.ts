@@ -1,11 +1,11 @@
 import { Service, WritableSignal } from '@angular/core';
 
-import { FeedbackProps } from '../../models/FeedbackProps.model';
-import { Option } from '../../models/Option.model';
-import { OptionBindings } from '../../models/OptionBindings.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { FeedbackProps } from '@shared/models/FeedbackProps.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { OptionInteractionState } from '../options/engine/option-interaction.service';
+import { OptionInteractionState } from '@shared/services/options/engine/option-interaction.service';
 
 export interface SharedOptionUiState {
   selectedOptionHistory: (number | string)[];

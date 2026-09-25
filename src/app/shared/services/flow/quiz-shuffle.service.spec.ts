@@ -1,9 +1,9 @@
-import { QuestionType } from '../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../models/Option.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ArrayUtils } from '../../utils/array-utils';
+import { ArrayUtils } from '@shared/utils/array-utils';
 
 import { QuizShuffleService } from './quiz-shuffle.service';
 

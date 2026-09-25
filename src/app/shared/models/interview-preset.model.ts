@@ -1,4 +1,4 @@
-import { DifficultyDistribution, isValidDistribution } from '../utils/difficulty-quota';
+import { DifficultyDistribution, isValidDistribution } from '@shared/utils/difficulty-quota';
 
 /**
  * Role-Based Interview Presets — the SINGLE authoritative definition.

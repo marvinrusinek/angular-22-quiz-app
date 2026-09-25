@@ -1,14 +1,14 @@
 import { inject, Service } from '@angular/core';
 
-import { Option } from '../../models/Option.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { QuizDataLoaderService } from './quiz-data-loader.service';
 import { QuizOptionsService } from './quiz-options.service';
 import { QuizQuestionResolverService } from './quiz-question-resolver.service';
-import { QuizShuffleService } from '../flow/quiz-shuffle.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
 
-import { isOptionCorrect } from '../../utils/is-option-correct';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
 
 /**
  * Responsible for preparing and emitting question + options data to

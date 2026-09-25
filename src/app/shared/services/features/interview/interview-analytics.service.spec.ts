@@ -1,5 +1,5 @@
-import { InterviewResult, InterviewTopicScore } from '../../../models/InterviewResult.model';
-import { TopicPerformance } from '../../../models/interview-analytics.model';
+import { InterviewResult, InterviewTopicScore } from '@shared/models/InterviewResult.model';
+import { TopicPerformance } from '@shared/models/interview-analytics.model';
 import { InterviewAnalyticsService } from './interview-analytics.service';
 
 function topic(quizId: string, title: string, correct: number, total: number): InterviewTopicScore {

@@ -2,26 +2,26 @@
 import { MatCheckboxChange } from '@angular/material/checkbox';
 import { MatRadioChange } from '@angular/material/radio';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { SK_DISPLAY_MODE, SK_IS_ANSWERED, SK_MULTI_PERFECT } from '../../../constants/session-keys';
-import { writeSessionString } from '../../../utils/session-storage';
+import { SK_DISPLAY_MODE, SK_IS_ANSWERED, SK_MULTI_PERFECT } from '@shared/constants/session-keys';
+import { writeSessionString } from '@shared/utils/session-storage';
 
-import { FeedbackService } from '../../features/feedback/feedback.service';
-import { NextButtonStateService } from '../../state/next-button-state.service';
-import { OptionLockPolicyService } from '../policy/option-lock-policy.service';
-import { OptionSelectionPolicyService } from '../policy/option-selection-policy.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { SelectionMessageService } from '../../features/selection-message/selection-message.service';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '../../../utils/question-type-authority';
-import { norm } from '../../../utils/text-norm';
-import { swallow } from '../../../utils/error-logging';
+import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
+import { OptionLockPolicyService } from '@shared/services/options/policy/option-lock-policy.service';
+import { OptionSelectionPolicyService } from '@shared/services/options/policy/option-selection-policy.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 
 export interface OptionUiSyncContext {
   form: any;

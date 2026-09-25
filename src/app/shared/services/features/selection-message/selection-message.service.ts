@@ -3,25 +3,25 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, Subscription } from 'rxjs';
 import { distinctUntilChanged, filter, take } from 'rxjs/operators';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
-import { allCorrectSelectedFromVerdict, selectedVerdictFor } from '../verdict/authorized-correctness';
-import { norm } from '../../../utils/text-norm';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { allCorrectSelectedFromVerdict, selectedVerdictFor } from '@shared/services/features/verdict/authorized-correctness';
+import { norm } from '@shared/utils/text-norm';
 
-import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import type { QuestionVerdictState } from '../verdict/question-verdict.types';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { swallow } from '../../../utils/error-logging';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import type { QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * The multiple-answer prompt shown BEFORE the user has answered.

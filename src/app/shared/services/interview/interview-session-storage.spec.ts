@@ -4,7 +4,7 @@ import { InterviewSessionReferenceStorage } from './interview-session-reference.
 import {
   parseSessionReference,
   SK_INTERVIEW_SESSION_REF
-} from '../../models/interview/interview-session-reference.model';
+} from '@shared/models/interview/interview-session-reference.model';
 
 const TOKEN = 'a'.repeat(43);
 

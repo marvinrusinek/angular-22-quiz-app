@@ -2,38 +2,38 @@ import { Service, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { filter, take } from 'rxjs/operators';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { FeedbackProps } from '../../../models/FeedbackProps.model';
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
+import { FeedbackProps } from '@shared/models/FeedbackProps.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
 
-import { SK_MULTI_PERFECT, SK_SEL_Q } from '../../../constants/session-keys';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { writeSessionString } from '../../../utils/session-storage';
+import { SK_MULTI_PERFECT, SK_SEL_Q } from '@shared/constants/session-keys';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { writeSessionString } from '@shared/utils/session-storage';
 
-import { ExplanationTextService } from '../../features/explanation/explanation-text.service';
-import { FeedbackService } from '../../features/feedback/feedback.service';
-import { NextButtonStateService } from '../../state/next-button-state.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { OptionClickHandlerService } from './option-click-handler.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import { TopicQuizTypeRegistry } from '../../api/topic-quiz-type-registry.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
 import {
   declaredCorrectCount,
   declaredIsMultiAnswer
-} from '../../../utils/question-type-authority';
-import type { QuestionVerdictState } from '../../features/verdict/question-verdict.types';
+} from '@shared/utils/question-type-authority';
+import type { QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
 import {
   allCorrectSelectedFromVerdict,
   selectedVerdictFor
-} from '../../features/verdict/authorized-correctness';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { SelectionMessageService } from '../../features/selection-message/selection-message.service';
-import { SharedOptionExplanationService } from '../../features/shared-option/shared-option-explanation.service';
-import { TimerService } from '../../features/timer/timer.service';
-import { norm } from '../../../utils/text-norm';
+} from '@shared/services/features/verdict/authorized-correctness';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { SharedOptionExplanationService } from '@shared/services/features/shared-option/shared-option-explanation.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { norm } from '@shared/utils/text-norm';
 
 /** Delay before backup explanation emission after all correct answers are selected in multi-answer mode. */
 const MULTI_ANSWER_BACKUP_FET_DELAY_MS = 50;

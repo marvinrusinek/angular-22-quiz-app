@@ -4,17 +4,17 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { QuestionType } from '../models/question-type.enum';
-import type { Option } from '../models/Option.model';
-import type { QuizQuestion } from '../models/QuizQuestion.model';
-import type { SelectedOption } from '../models/SelectedOption.model';
+import { QuestionType } from '@shared/models/question-type.enum';
+import type { Option } from '@shared/models/Option.model';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import type { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { QqcOptionSelectionService } from '../services/features/qqc/qqc-option-selection.service';
-import { QuizService } from '../services/data/quiz.service';
-import { SelectedOptionService } from '../services/state/selectedoption.service';
-import { ExplanationTextService } from '../services/features/explanation/explanation-text.service';
-import { API_BASE_URL } from '../tokens/api-base-url.token';
-import { answerStateStub } from '../testing/answer-state-stub';
+import { QqcOptionSelectionService } from '@shared/services/features/qqc/qqc-option-selection.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { answerStateStub } from '@shared/testing/answer-state-stub';
 
 /**
  * QQC OPTION SELECTION — THE FET EMISSION GATE IS A TYPE DECISION.

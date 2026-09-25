@@ -8,7 +8,7 @@ import {
   normalizeBaseUrl,
   INTERVIEW_PROD_API_BASE_URL,
   resolveInterviewApiBaseUrl
-} from '../../tokens/api-base-url.token';
+} from '@shared/tokens/api-base-url.token';
 
 const custom = {
   presetId: null,

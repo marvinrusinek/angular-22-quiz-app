@@ -1,8 +1,8 @@
 import { Service } from '@angular/core';
 
-import { FeedbackProps } from '../../../models/FeedbackProps.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { feedbackAnchorMatches } from '../../../utils/feedback-anchor';
+import { FeedbackProps } from '@shared/models/FeedbackProps.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { feedbackAnchorMatches } from '@shared/utils/feedback-anchor';
 
 import type { SharedOptionComponent } from '../../../../components/question/answer/shared-option-component/shared-option.component';
 

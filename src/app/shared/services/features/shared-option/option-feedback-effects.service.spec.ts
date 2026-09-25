@@ -6,15 +6,15 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { OptionFeedbackEffectsService } from './option-feedback-effects.service';
-import { OptionBindingFactoryService } from '../../options/engine/option-binding-factory.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { TimerService } from '../timer/timer.service';
-import { setQuizDataCache } from '../../../quiz-data-cache';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
-import type { Quiz } from '../../../models/Quiz.model';
-import type { Option } from '../../../models/Option.model';
+import { OptionBindingFactoryService } from '@shared/services/options/engine/option-binding-factory.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import type { Quiz } from '@shared/models/Quiz.model';
+import type { Option } from '@shared/models/Option.model';
 
 /**
  * CONVERGENCE — `repaintOnVerdictArrival` must not keep rewriting bindings

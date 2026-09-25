@@ -2,27 +2,27 @@ import { Service, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
-import { QuestionType } from '../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../models/Option.model';
-import { QuestionPayload } from '../../models/QuestionPayload.model';
-import { Quiz } from '../../models/Quiz.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuestionPayload } from '@shared/models/QuestionPayload.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { SK_DOT_CONFIRMED } from '../../constants/session-keys';
+import { SK_DOT_CONFIRMED } from '@shared/constants/session-keys';
 
-import { ExplanationTextService } from '../features/explanation/explanation-text.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QclFetGateService } from './qcl-fet-gate.service';
 import { QclQuestionFetchService } from './qcl-question-fetch.service';
 import { QclSessionRestoreService } from './qcl-session-restore.service';
-import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
-import { QuizService } from '../data/quiz.service';
-import { QuizStateService } from '../state/quizstate.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
-import { bannerCorrectCount } from '../../utils/question-type-authority';
-import { isOptionCorrect } from '../../utils/is-option-correct';
-import { swallow } from '../../utils/error-logging';
+import { bannerCorrectCount } from '@shared/utils/question-type-authority';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Result from fetchAndSetQuestionData preparation.

@@ -1,11 +1,11 @@
 import { Service, WritableSignal, inject } from '@angular/core';
 
-import { Option } from '../../models/Option.model';
-import { QuestionPayload } from '../../models/QuestionPayload.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuestionPayload } from '@shared/models/QuestionPayload.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../features/explanation/explanation-text.service';
-import { QuizStateService } from '../state/quizstate.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
 
 interface DisplayState {
   mode: 'question' | 'explanation';

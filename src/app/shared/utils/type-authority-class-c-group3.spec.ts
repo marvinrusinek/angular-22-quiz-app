@@ -4,13 +4,13 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 
-import { QuestionType } from '../models/question-type.enum';
-import type { Option } from '../models/Option.model';
-import type { QuizQuestion } from '../models/QuizQuestion.model';
+import { QuestionType } from '@shared/models/question-type.enum';
+import type { Option } from '@shared/models/Option.model';
+import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { QuizQuestionManagerService } from '../services/flow/quizquestionmgr.service';
-import { QqcOrchQuestionLoadService } from '../services/features/qqc/qqc-orch-question-load.service';
-import { API_BASE_URL } from '../tokens/api-base-url.token';
+import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';
+import { QqcOrchQuestionLoadService } from '@shared/services/features/qqc/qqc-orch-question-load.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 /**
  * CLASS C GROUP 3 — SPLITTING INTERACTION TYPE FROM THE BANNER'S COUNT.

@@ -5,20 +5,20 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, from, Observable, of } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 
-import { Quiz } from '../../models/Quiz.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
-import { QuizResource } from '../../models/QuizResource.model';
-import { Resource } from '../../models/Resource.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizResource } from '@shared/models/QuizResource.model';
+import { Resource } from '@shared/models/Resource.model';
 
-import { SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID } from '../../constants/session-keys';
+import { SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID } from '@shared/constants/session-keys';
 
-import { QuizShuffleService } from '../flow/quiz-shuffle.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
 
-import { TopicQuizQuestionsService } from '../api/topic-quiz-questions.service';
-import { questionsFromApiViews } from '../../utils/topic-quiz-content';
-import { isOptionCorrect } from '../../utils/is-option-correct';
-import { ArrayUtils } from '../../utils/array-utils';
-import { swallow } from '../../utils/error-logging';
+import { TopicQuizQuestionsService } from '@shared/services/api/topic-quiz-questions.service';
+import { questionsFromApiViews } from '@shared/utils/topic-quiz-content';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { ArrayUtils } from '@shared/utils/array-utils';
+import { swallow } from '@shared/utils/error-logging';
 
 @Service()
 export class QuizDataLoaderService {

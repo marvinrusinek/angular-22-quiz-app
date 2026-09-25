@@ -1,22 +1,22 @@
 ﻿import { Service, inject } from '@angular/core';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { FeedbackProps } from '../../../models/FeedbackProps.model';
-import { Option } from '../../../models/Option.model';
-import { OptionBindings } from '../../../models/OptionBindings.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { FeedbackProps } from '@shared/models/FeedbackProps.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import {
   selectedVerdictFor,
   verdictStateForDisplayIndex
-} from '../../features/verdict/authorized-correctness';
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '../../../utils/question-type-authority';
-import { norm } from '../../../utils/text-norm';
+} from '@shared/services/features/verdict/authorized-correctness';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { norm } from '@shared/utils/text-norm';
 
 /**
  * Result of resolving correct indices for a question.

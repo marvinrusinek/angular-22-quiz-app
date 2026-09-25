@@ -6,11 +6,11 @@ import {
   distinctUntilChanged, filter, map, skipWhile, switchMap, take, tap
 } from 'rxjs/operators';
 
-import { Option } from '../../../models/Option.model';
-import { QuestionPayload } from '../../../models/QuestionPayload.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuestionPayload } from '@shared/models/QuestionPayload.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { shallowObjectEqual } from '../../../utils/shallow-equal';
+import { shallowObjectEqual } from '@shared/utils/shallow-equal';
 
 /**
  * Manages lifecycle-related orchestration for QuizQuestionComponent:

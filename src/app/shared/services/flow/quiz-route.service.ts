@@ -1,9 +1,9 @@
 import { Service, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
-import { TRAILING_INDEX_REGEX, TRAILING_INDEX_STRICT_REGEX } from '../../constants/route-patterns';
+import { TRAILING_INDEX_REGEX, TRAILING_INDEX_STRICT_REGEX } from '@shared/constants/route-patterns';
 
-import { QuizService } from '../data/quiz.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 
 /**
  * Handles route parameter parsing.

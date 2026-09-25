@@ -1,4 +1,4 @@
-import { Quiz } from '../models/Quiz.model';
+import { Quiz } from '@shared/models/Quiz.model';
 import { eligibleInterviewTopicIds, isEligibleInterviewTopic } from './interview-topics';
 
 function quiz(quizId: string, questionCount: number): Quiz {

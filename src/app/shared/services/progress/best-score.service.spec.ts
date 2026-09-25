@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { BestScoreService } from './best-score.service';
-import { SK_QUIZ_BEST_SCORES } from '../../constants/session-keys';
+import { SK_QUIZ_BEST_SCORES } from '@shared/constants/session-keys';
 
 describe('BestScoreService', () => {
   let service: BestScoreService;

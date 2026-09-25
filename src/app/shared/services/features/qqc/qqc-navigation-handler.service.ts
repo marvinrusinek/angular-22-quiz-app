@@ -2,19 +2,19 @@ import { inject, Service } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
-import { NextButtonStateService } from '../../state/next-button-state.service';
-import { QqcStatePersistenceService } from '../../state/qqc-state-persistence.service';
-import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { TimerService } from '../timer/timer.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
+import { QqcStatePersistenceService } from '@shared/services/state/qqc-state-persistence.service';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
-import { delay } from '../../../utils/delay';
+import { delay } from '@shared/utils/delay';
 
 /**
  * Manages navigation-related logic for QuizQuestionComponent:

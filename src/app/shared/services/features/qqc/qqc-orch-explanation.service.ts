@@ -1,11 +1,11 @@
 import { Service } from '@angular/core';
 
-import { Option } from '../../../models/Option.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import type { QuizQuestionComponent } from '../../../../components/question/quiz-question/quiz-question.component';
-import { delay } from '../../../utils/delay';
-import { norm } from '../../../utils/text-norm';
+import { delay } from '@shared/utils/delay';
+import { norm } from '@shared/utils/text-norm';
 
 type Host = QuizQuestionComponent;
 

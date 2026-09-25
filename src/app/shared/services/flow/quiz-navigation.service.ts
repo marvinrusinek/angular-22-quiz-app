@@ -4,27 +4,27 @@ import { ActivatedRoute, ActivatedRouteSnapshot, Router } from '@angular/router'
 import { firstValueFrom, Observable, of, Subject } from 'rxjs';
 import { catchError, take } from 'rxjs/operators';
 
-import { QuestionType } from '../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { Option } from '../../models/Option.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../features/explanation/explanation-text.service';
-import { NextButtonStateService } from '../state/next-button-state.service';
-import { OptionLockStateService } from '../state/option-lock-state.service';
-import { QqcQuestionLoaderService } from '../features/qqc/qqc-question-loader.service';
-import { QuestionVerdictService } from '../features/verdict/question-verdict.service';
-import { QuizDataService } from '../data/quizdata.service';
-import { QuizQuestionManagerService } from '../flow/quizquestionmgr.service';
-import { TopicQuizTypeRegistry } from '../api/topic-quiz-type-registry.service';
-import { QuizService } from '../data/quiz.service';
-import { QuizStateService } from '../state/quizstate.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
-import { TimerService } from '../features/timer/timer.service';
-import { SK_CORRECT_ANSWERS_COUNT, SK_SAVED_QUESTION_INDEX, SK_SELECTED_OPTIONS_MAP, SK_USER_ANSWERS } from '../../constants/session-keys';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
+import { OptionLockStateService } from '@shared/services/state/option-lock-state.service';
+import { QqcQuestionLoaderService } from '@shared/services/features/qqc/qqc-question-loader.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
+import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { SK_CORRECT_ANSWERS_COUNT, SK_SAVED_QUESTION_INDEX, SK_SELECTED_OPTIONS_MAP, SK_USER_ANSWERS } from '@shared/constants/session-keys';
 
-import { bannerCorrectCount } from '../../utils/question-type-authority';
-import { swallow } from '../../utils/error-logging';
+import { bannerCorrectCount } from '@shared/utils/question-type-authority';
+import { swallow } from '@shared/utils/error-logging';
 
 @Service()
 export class QuizNavigationService {

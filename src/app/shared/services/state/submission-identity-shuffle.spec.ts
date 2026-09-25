@@ -5,10 +5,10 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { SelectedOptionService } from './selectedoption.service';
-import { QuizService } from '../data/quiz.service';
-import { TOPIC_QUIZ_VERDICT_ADAPTER } from '../features/verdict/verdict-adapter';
-import { setQuizDataCache } from '../../quiz-data-cache';
-import type { Quiz } from '../../models/Quiz.model';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { TOPIC_QUIZ_VERDICT_ADAPTER } from '@shared/services/features/verdict/verdict-adapter';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
+import type { Quiz } from '@shared/models/Quiz.model';
 
 /**
  * THE QUESTION THE SERVER JUDGES MUST BE THE QUESTION THE USER IS LOOKING AT.

@@ -3,38 +3,38 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
-import { FET_WRITE_RETRY_CASCADE_MS, FET_WRITE_RETRY_LONG_CASCADE_MS } from '../../constants/timing';
+import { FET_WRITE_RETRY_CASCADE_MS, FET_WRITE_RETRY_LONG_CASCADE_MS } from '@shared/constants/timing';
 
-import { QuestionPayload } from '../../models/QuestionPayload.model';
-import { QuizQuestion } from '../../models/QuizQuestion.model';
+import { QuestionPayload } from '@shared/models/QuestionPayload.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../features/explanation/explanation-text.service';
-import { NextButtonStateService } from '../state/next-button-state.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { QuizContentLoaderService } from './quiz-content-loader.service';
 import { QuizDotStatusService } from './quiz-dot-status.service';
 import { QuizNavigationService } from './quiz-navigation.service';
 import { QuizOptionProcessingService } from './quiz-option-processing.service';
-import { QuizPersistenceService } from '../state/quiz-persistence.service';
+import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
 import { QuizResetService } from './quiz-reset.service';
-import { QuizService } from '../data/quiz.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 import { QuizSetupDataService } from './quiz-setup-data.service';
 import { QuizSetupRouteService } from './quiz-setup-route.service';
-import { QuizStateService } from '../state/quizstate.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
 import { QuizVisibilityRestoreService } from './quiz-visibility-restore.service';
-import { SelectedOptionService } from '../state/selectedoption.service';
-import { SelectionMessageService } from '../features/selection-message/selection-message.service';
-import { SharedVisibilityService } from '../ui/shared-visibility.service';
-import { TimerService } from '../features/timer/timer.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
+import { SharedVisibilityService } from '@shared/services/ui/shared-visibility.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
 import type { QuizComponent } from '../../../containers/quiz/quiz.component';
-import { SK_DISPLAY_MODE, SK_DOT_CONFIRMED, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP } from '../../constants/session-keys';
-import { removeSessionKey } from '../../utils/session-storage';
+import { SK_DISPLAY_MODE, SK_DOT_CONFIRMED, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP } from '@shared/constants/session-keys';
+import { removeSessionKey } from '@shared/utils/session-storage';
 
-import { QUESTION_ROUTE_REGEX } from '../../constants/route-patterns';
-import { isOptionCorrect } from '../../utils/is-option-correct';
-import { reportError, swallow } from '../../utils/error-logging';
-import { norm } from '../../utils/text-norm';
-import { resolveIsMultiAnswer } from '../../utils/question-type-authority';
+import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { reportError, swallow } from '@shared/utils/error-logging';
+import { norm } from '@shared/utils/text-norm';
+import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
 
 type Host = QuizComponent;
 

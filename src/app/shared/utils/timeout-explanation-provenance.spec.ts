@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { ExplanationFormatterService } from '../services/features/explanation/explanation-formatter.service';
+import { ExplanationFormatterService } from '@shared/services/features/explanation/explanation-formatter.service';
 import { buildHeadingInputs } from './heading-inputs';
 import { deriveHeadingHtml } from './heading-model';
 

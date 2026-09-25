@@ -1,24 +1,24 @@
 import { inject, Service } from '@angular/core';
 
-import { SK_DOT_CONFIRMED, SK_MULTI_PERFECT, SK_SEL_Q } from '../../../constants/session-keys';
-import { readSessionString } from '../../../utils/session-storage';
+import { SK_DOT_CONFIRMED, SK_MULTI_PERFECT, SK_SEL_Q } from '@shared/constants/session-keys';
+import { readSessionString } from '@shared/utils/session-storage';
 
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import type { QuestionVerdictState } from '../../features/verdict/question-verdict.types';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import type { QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
 import {
   allCorrectSelectedFromVerdict,
   authorizedCorrectTexts,
   selectedVerdictFor,
   verdictStateForDisplayIndex
-} from '../../features/verdict/authorized-correctness';
-import { QuizService } from '../../data/quiz.service';
-import { TopicQuizTypeRegistry } from '../../api/topic-quiz-type-registry.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
+} from '@shared/services/features/verdict/authorized-correctness';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
-import { isOptionCorrect } from '../../../utils/is-option-correct';
-import { declaredIsMultiAnswer } from '../../../utils/question-type-authority';
-import { norm } from '../../../utils/text-norm';
-import { swallow } from '../../../utils/error-logging';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * THREE AUTHORITIES, DELIBERATELY NOT ONE.

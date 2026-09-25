@@ -1,14 +1,14 @@
 import { inject, Service } from '@angular/core';
 
-import { Option } from '../../../../shared/models/Option.model';
-import { OptionBindings } from '../../../../shared/models/OptionBindings.model';
-import { SelectedOption } from '../../../../shared/models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { AnswerOptionsService } from './answer-options.service';
-import { QuestionVerdictService } from '../verdict/question-verdict.service';
-import { QuizService } from '../../data/quiz.service';
-import { verdictStateForDisplayIndex } from '../verdict/authorized-correctness';
-import { norm } from '../../../../shared/utils/text-norm';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { verdictStateForDisplayIndex } from '@shared/services/features/verdict/authorized-correctness';
+import { norm } from '@shared/utils/text-norm';
 
 @Service()
 export class AnswerBindingsService {

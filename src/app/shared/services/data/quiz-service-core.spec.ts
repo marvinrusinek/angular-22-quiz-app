@@ -21,12 +21,12 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { QuizStatus } from '../../models/quiz-status.enum';
+import { QuizStatus } from '@shared/models/quiz-status.enum';
 
-import { Option } from '../../models/Option.model';
-import { Quiz } from '../../models/Quiz.model';
+import { Option } from '@shared/models/Option.model';
+import { Quiz } from '@shared/models/Quiz.model';
 
-import { SK_USER_ANSWERS } from '../../constants/session-keys';
+import { SK_USER_ANSWERS } from '@shared/constants/session-keys';
 
 import { QuizService } from './quiz.service';
 

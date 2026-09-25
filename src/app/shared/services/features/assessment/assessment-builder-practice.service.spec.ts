@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 
 import { AssessmentBuilderService } from './assessment-builder.service';
-import { setQuizDataCache, getQuizData } from '../../../quiz-data-cache';
-import { ArrayUtils } from '../../../utils/array-utils';
-import { Quiz } from '../../../models/Quiz.model';
+import { setQuizDataCache, getQuizData } from '@shared/quiz-data-cache';
+import { ArrayUtils } from '@shared/utils/array-utils';
+import { Quiz } from '@shared/models/Quiz.model';
 // S6p (Angular Stage 14): src/assets/data/quiz.json was deleted — see
 // shared/testing/quiz-catalog-fixture.json (test-only, never bundled).
 //
@@ -11,7 +11,7 @@ import { Quiz } from '../../../models/Quiz.model';
 // explanation is freshly authored placeholder text, not sampled from the
 // canonical bank. Only quizId/milestone/difficulty/per-quiz question count
 // are real public catalog metadata.
-import quizData from '../../../testing/quiz-catalog-fixture.json';
+import quizData from '@shared/testing/quiz-catalog-fixture.json';
 
 const SYNTHETIC_CATALOG = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as Quiz[];
 

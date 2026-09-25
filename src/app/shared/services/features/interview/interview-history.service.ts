@@ -1,8 +1,8 @@
 import { computed, inject, Service, signal } from '@angular/core';
 
-import { InterviewResult } from '../../../models/InterviewResult.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
-import { QuestionType } from '../../../models/question-type.enum';
+import { InterviewResult } from '@shared/models/InterviewResult.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuestionType } from '@shared/models/question-type.enum';
 import {
   INTERVIEW_HISTORY_MAX,
   INTERVIEW_HISTORY_VERSION,
@@ -14,13 +14,13 @@ import {
   InterviewTrendDirection,
   InterviewTrendPoint,
   InterviewTrends
-} from '../../../models/interview-history.model';
+} from '@shared/models/interview-history.model';
 import {
   SK_INTERVIEW_HISTORY,
   SK_INTERVIEW_HISTORY_V1
-} from '../../../constants/session-keys';
-import { readLocalJson, removeLocalKey, writeLocalJson } from '../../../utils/local-storage';
-import type { SanitizedAttemptInput } from '../../interview/interview-result-history.adapter';
+} from '@shared/constants/session-keys';
+import { readLocalJson, removeLocalKey, writeLocalJson } from '@shared/utils/local-storage';
+import type { SanitizedAttemptInput } from '@shared/services/interview/interview-result-history.adapter';
 
 import { InterviewAnalyticsService } from './interview-analytics.service';
 

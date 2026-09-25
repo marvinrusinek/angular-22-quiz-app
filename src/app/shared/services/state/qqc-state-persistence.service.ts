@@ -1,7 +1,7 @@
 import { Service } from '@angular/core';
 
-import { Option } from '../../models/Option.model';
-import { swallow } from '../../utils/error-logging';
+import { Option } from '@shared/models/Option.model';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Parameters for saving QQC state to sessionStorage.

@@ -5,9 +5,9 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { AnswerSelectionService } from './answer-selection.service';
-import { QuizService } from '../../data/quiz.service';
-import { API_BASE_URL } from '../../../tokens/api-base-url.token';
-import { answerStateStub } from '../../../testing/answer-state-stub';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { answerStateStub } from '@shared/testing/answer-state-stub';
 
 /**
  * THE CLICK NO LONGER DECIDES COMPLETION.

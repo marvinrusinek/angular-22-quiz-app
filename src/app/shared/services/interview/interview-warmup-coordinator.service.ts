@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { catchError, finalize, map, Observable, of, shareReplay, tap } from 'rxjs';
 
-import { INTERVIEW_API_BASE_URL } from '../../tokens/api-base-url.token';
+import { INTERVIEW_API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 /**
  * App-lifecycle-scoped coordinator for the Spring free-tier container

@@ -1,4 +1,4 @@
-import { QuizDifficulty } from '../models/Quiz.model';
+import { QuizDifficulty } from '@shared/models/Quiz.model';
 
 /**
  * Pure difficulty-quota maths for Role-Based Interview Presets.

@@ -9,20 +9,20 @@ import {
   switchMap, take, tap, withLatestFrom
 } from 'rxjs/operators';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { CombinedQuestionDataType } from '../../../models/CombinedQuestionDataType.model';
-import { Option } from '../../../models/Option.model';
-import { QuestionPayload } from '../../../models/QuestionPayload.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { CombinedQuestionDataType } from '@shared/models/CombinedQuestionDataType.model';
+import { Option } from '@shared/models/Option.model';
+import { QuestionPayload } from '@shared/models/QuestionPayload.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { CqcQuestionNavService } from './cqc-question-nav.service';
-import { QuizDotStatusService } from '../../flow/quiz-dot-status.service';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
 
-import { TopicQuizTypeRegistry } from '../../api/topic-quiz-type-registry.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
 
-import { bannerCorrectCount } from '../../../utils/question-type-authority';
-import { swallow } from '../../../utils/error-logging';
+import { bannerCorrectCount } from '@shared/utils/question-type-authority';
+import { swallow } from '@shared/utils/error-logging';
 
 import type { CodelabQuizContentComponent } from '../../../../containers/quiz/quiz-content/codelab-quiz-content.component';
 

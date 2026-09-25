@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 
 import { QuestionResolutionService } from './question-resolution.service';
-import { QuizService } from '../../data/quiz.service';
-import { SelectedOptionService } from '../../state/selectedoption.service';
-import { QuestionVerdictService } from '../../features/verdict/question-verdict.service';
-import { TopicQuizTypeRegistry } from '../../api/topic-quiz-type-registry.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
 
 /**
  * THE REGRESSION: selecting 1 of 3 correct options on a multi-answer question

@@ -1,20 +1,20 @@
 import { inject, Service } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { PROMISE_RACE_TIMEOUT_MS } from '../../../constants/timing';
+import { PROMISE_RACE_TIMEOUT_MS } from '@shared/constants/timing';
 
-import { QuestionType } from '../../../models/question-type.enum';
+import { QuestionType } from '@shared/models/question-type.enum';
 
-import { FormattedExplanation } from '../../../models/FormattedExplanation.model';
-import { QuestionState } from '../../../models/QuestionState.model';
-import { QuizQuestion } from '../../../models/QuizQuestion.model';
+import { FormattedExplanation } from '@shared/models/FormattedExplanation.model';
+import { QuestionState } from '@shared/models/QuestionState.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { ExplanationTextService } from '../explanation/explanation-text.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QqcExplanationDisplayService } from './qqc-explanation-display.service';
 import { QqcExplanationManagerService } from './qqc-explanation-manager.service';
-import { QuizQuestionManagerService } from '../../flow/quizquestionmgr.service';
-import { QuizService } from '../../data/quiz.service';
-import { QuizStateService } from '../../state/quizstate.service';
+import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
 
 /**
  * Orchestrates explanation flow lifecycle for QQC.

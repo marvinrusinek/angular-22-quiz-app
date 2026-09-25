@@ -4,14 +4,14 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 
-import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '../../../shared/tokens/api-base-url.token';
+import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import { Observable, of, throwError } from 'rxjs';
 
-import { InterviewApiService } from '../../../shared/services/api/interview-api.service';
-import { InterviewWarmupCoordinatorService } from '../../../shared/services/interview/interview-warmup-coordinator.service';
-import { InterviewApiError } from '../../../shared/services/api/interview-api.errors';
-import { AssessmentBuilderService } from '../../../shared/services/features/assessment/assessment-builder.service';
-import type { CreatedInterviewSession } from '../../../shared/services/api/interview-api.service';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import { InterviewWarmupCoordinatorService } from '@shared/services/interview/interview-warmup-coordinator.service';
+import { InterviewApiError } from '@shared/services/api/interview-api.errors';
+import { AssessmentBuilderService } from '@shared/services/features/assessment/assessment-builder.service';
+import type { CreatedInterviewSession } from '@shared/services/api/interview-api.service';
 
 /**
  * A representative created-session fixture. Deliberately contains NO
@@ -38,11 +38,11 @@ const CREATED: CreatedInterviewSession = {
   }
 };
 
-import { Quiz, QuizDifficulty } from '../../../shared/models/Quiz.model';
-import { setQuizDataCache } from '../../../shared/quiz-data-cache';
+import { Quiz, QuizDifficulty } from '@shared/models/Quiz.model';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
 
-import { QuizDataService } from '../../../shared/services/data/quizdata.service';
-import { QuizStartSpinnerService } from '../../../shared/services/ui/quiz-start-spinner.service';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
+import { QuizStartSpinnerService } from '@shared/services/ui/quiz-start-spinner.service';
 
 import { BuildYourInterviewComponent } from './build-your-interview.component';
 /** The builder now reads topic metadata from the BACKEND, not the quiz bank. */

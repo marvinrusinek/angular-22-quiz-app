@@ -1,13 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { PerformanceInsights } from '../../shared/models/performance-insights.model';
+import { PerformanceInsights } from '@shared/models/performance-insights.model';
 import {
   buildPerformanceInsights,
   PerformanceInsightsInput,
   TopicRecordLike
-} from '../../shared/utils/performance-insights';
-import { calculateWeakTopics, TopicAttemptLike } from '../../shared/utils/weak-areas';
+} from '@shared/utils/performance-insights';
+import { calculateWeakTopics, TopicAttemptLike } from '@shared/utils/weak-areas';
 import { PerformanceInsightsComponent, TOPICS_COLLAPSED_COUNT } from './performance-insights.component';
 
 // ── factories ───────────────────────────────────────────────────────

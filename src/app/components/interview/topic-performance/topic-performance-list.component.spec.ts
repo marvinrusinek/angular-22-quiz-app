@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { InterviewAnalytics, TopicPerformance } from '../../../shared/models/interview-analytics.model';
+import { InterviewAnalytics, TopicPerformance } from '@shared/models/interview-analytics.model';
 import { TopicPerformanceListComponent } from './topic-performance-list.component';
 
 function tp(topicId: string, pct: number, band: TopicPerformance['band']): TopicPerformance {

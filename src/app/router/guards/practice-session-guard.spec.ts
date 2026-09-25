@@ -5,7 +5,7 @@ import { signal } from '@angular/core';
 
 import { PracticeSessionGuard } from './practice-session-guard';
 import { PracticeResultGuard } from './practice-result-guard';
-import { PracticeSessionService } from '../../shared/services/features/practice/practice-session.service';
+import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 import { QuizSelectionComponent } from '../../containers/quiz-selection/quiz-selection.component';
 import { routes } from '../quiz-routing.routes';
 

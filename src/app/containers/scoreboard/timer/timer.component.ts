@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { MatMenuModule } from '@angular/material/menu';
 
-import { TimerService } from '../../../shared/services/features/timer/timer.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
 enum TimerType {
   Countdown = 'countdown',

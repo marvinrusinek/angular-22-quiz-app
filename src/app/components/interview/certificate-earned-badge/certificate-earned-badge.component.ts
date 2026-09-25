@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { InterviewCertificateService } from '../../../shared/services/features/interview/interview-certificate.service';
+import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
 
 /**
  * Small "🎖 Certificate Earned" status badge. Renders NOTHING until the Angular

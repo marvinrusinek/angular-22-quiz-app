@@ -10,10 +10,10 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
-import { PracticeSessionService } from '../../../shared/services/features/practice/practice-session.service';
+import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 import { PracticeOptionsComponent } from '../../../components/practice/practice-options/practice-options.component';
-import { PracticeVerdictService } from '../../../shared/services/features/practice/practice-verdict.service';
-import { TopicQuizMetadataService } from '../../../shared/services/api/topic-quiz-metadata.service';
+import { PracticeVerdictService } from '@shared/services/features/practice/practice-verdict.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 import { ScrollDownIndicatorComponent } from '../../../components/scroll-down-indicator/scroll-down-indicator.component';
 

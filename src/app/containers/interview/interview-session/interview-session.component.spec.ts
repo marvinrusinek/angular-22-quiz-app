@@ -4,15 +4,15 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { of, Subject, throwError } from 'rxjs';
 
 import { InterviewSessionComponent } from './interview-session.component';
-import { BackendInterviewSessionService } from '../../../shared/services/interview/backend-interview-session.service';
-import { InterviewSessionReferenceStorage } from '../../../shared/services/interview/interview-session-reference.storage';
-import { InterviewApiService } from '../../../shared/services/api/interview-api.service';
-import { InterviewApiError } from '../../../shared/services/api/interview-api.errors';
-import { BackendInterviewTimerService } from '../../../shared/services/interview/backend-interview-timer.service';
-import { BackendInterviewResultService } from '../../../shared/services/interview/backend-interview-result.service';
-import { InterviewHistoryService } from '../../../shared/services/features/interview/interview-history.service';
-import type { InterviewResultViewModel, InterviewSessionViewModel } from '../../../shared/models/interview/interview-view-models';
-import type { SaveInterviewAnswerResponse } from '../../../shared/models/api/interview-api.dto';
+import { BackendInterviewSessionService } from '@shared/services/interview/backend-interview-session.service';
+import { InterviewSessionReferenceStorage } from '@shared/services/interview/interview-session-reference.storage';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import { InterviewApiError } from '@shared/services/api/interview-api.errors';
+import { BackendInterviewTimerService } from '@shared/services/interview/backend-interview-timer.service';
+import { BackendInterviewResultService } from '@shared/services/interview/backend-interview-result.service';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
+import type { InterviewResultViewModel, InterviewSessionViewModel } from '@shared/models/interview/interview-view-models';
+import type { SaveInterviewAnswerResponse } from '@shared/models/api/interview-api.dto';
 
 /**
  * The active session renders BACKEND-SAFE models only: no correctness, no

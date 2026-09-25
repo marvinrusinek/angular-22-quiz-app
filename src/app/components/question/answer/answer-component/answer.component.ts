@@ -13,27 +13,27 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 
-import { Option } from '../../../../shared/models/Option.model';
-import { OptionBindings } from '../../../../shared/models/OptionBindings.model';
-import { OptionClickedPayload } from '../../../../shared/models/OptionClickedPayload.model';
-import { QuizQuestion } from '../../../../shared/models/QuizQuestion.model';
-import { SelectedOption } from '../../../../shared/models/SelectedOption.model';
-import { SharedOptionConfig } from '../../../../shared/models/SharedOptionConfig.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { OptionClickedPayload } from '@shared/models/OptionClickedPayload.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
 
-import { AnswerBindingsService } from '../../../../shared/services/features/answer/answer-bindings.service';
-import { AnswerOptionsService } from '../../../../shared/services/features/answer/answer-options.service';
-import { AnswerSelectionService } from '../../../../shared/services/features/answer/answer-selection.service';
+import { AnswerBindingsService } from '@shared/services/features/answer/answer-bindings.service';
+import { AnswerOptionsService } from '@shared/services/features/answer/answer-options.service';
+import { AnswerSelectionService } from '@shared/services/features/answer/answer-selection.service';
 
-import { QqcQuestionLoaderService } from '../../../../shared/services/features/qqc/qqc-question-loader.service';
-import { QuizQuestionManagerService } from '../../../../shared/services/flow/quizquestionmgr.service';
-import { TopicQuizTypeRegistry } from '../../../../shared/services/api/topic-quiz-type-registry.service';
+import { QqcQuestionLoaderService } from '@shared/services/features/qqc/qqc-question-loader.service';
+import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
 
 import { SharedOptionComponent } from '../shared-option-component/shared-option.component';
 
 import { BaseQuestion } from '../../base/base-question';
 
-import { isOptionCorrect } from '../../../../shared/utils/is-option-correct';
-import { norm } from '../../../../shared/utils/text-norm';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
 
 @Component({
   selector: 'codelab-question-answer',

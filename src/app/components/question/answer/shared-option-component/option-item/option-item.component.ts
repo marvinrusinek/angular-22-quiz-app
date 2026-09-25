@@ -8,20 +8,20 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatIconModule } from '@angular/material/icon';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { FeedbackProps } from '../../../../../shared/models/FeedbackProps.model';
-import { Option } from '../../../../../shared/models/Option.model';
-import { OptionBindings } from '../../../../../shared/models/OptionBindings.model';
-import { SelectedOption } from '../../../../../shared/models/SelectedOption.model';
-import { SharedOptionConfig } from '../../../../../shared/models/SharedOptionConfig.model';
+import { FeedbackProps } from '@shared/models/FeedbackProps.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
 
-import { OptionService } from '../../../../../shared/services/options/view/option.service';
-import { QuestionResolutionService } from '../../../../../shared/services/options/engine/question-resolution.service';
-import { QuizService } from '../../../../../shared/services/data/quiz.service';
-import { SelectedOptionService } from '../../../../../shared/services/state/selectedoption.service';
-import { TimerService } from '../../../../../shared/services/features/timer/timer.service';
-import { FeedbackPolicyService } from '../../../../../shared/services/features/interview/feedback-policy.service';
+import { OptionService } from '@shared/services/options/view/option.service';
+import { QuestionResolutionService } from '@shared/services/options/engine/question-resolution.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { FeedbackPolicyService } from '@shared/services/features/interview/feedback-policy.service';
 
-import { OptionItemTimerStateService } from '../../../../../shared/services/options/view/option-item-timer-state.service';
+import { OptionItemTimerStateService } from '@shared/services/options/view/option-item-timer-state.service';
 
 import {
   hasAuthorizedCorrectSelection as hasAuthCorrectSelection,
@@ -29,11 +29,11 @@ import {
   isCurrentOptionCorrect as isOptCorrect,
   isTimeoutRevealAuthorized
 } from './helpers/option-item-correctness';
-import { TopicQuizTypeRegistry } from '../../../../../shared/services/api/topic-quiz-type-registry.service';
-import { QuestionVerdictService } from '../../../../../shared/services/features/verdict/question-verdict.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { isSelectedForCurrentQuestion as isSelForCurrentQ } from './helpers/option-item-selection-matcher';
 
-import { norm } from '../../../../../shared/utils/text-norm';
+import { norm } from '@shared/utils/text-norm';
 
 import { correctAnswerAnim } from '../../../../../animations/animations';
 import { HighlightOptionDirective } from '../../../../../directives/highlight-option.directive';

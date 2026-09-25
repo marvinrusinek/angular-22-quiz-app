@@ -1,3 +1,17 @@
+const path = require('path');
+const ts = require('typescript');
+const { pathsToModuleNameMapper } = require('ts-jest');
+
+// Jest does not read tsconfig `paths`, so derive its moduleNameMapper from the
+// same entry the compiler uses rather than restating it here. The root
+// tsconfig.json contains comments, so it is read with TypeScript's own reader.
+const tsconfigPath = path.join(__dirname, 'tsconfig.json');
+const { config: rootTsconfig } = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
+const aliasMapper = pathsToModuleNameMapper(
+  (rootTsconfig.compilerOptions && rootTsconfig.compilerOptions.paths) || {},
+  { prefix: '<rootDir>/' }
+);
+
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'jest-preset-angular',
@@ -15,5 +29,6 @@ module.exports = {
   ],
   moduleNameMapper: {
     '^src/(.*)$': '<rootDir>/src/$1',
+    ...aliasMapper,
   },
 };

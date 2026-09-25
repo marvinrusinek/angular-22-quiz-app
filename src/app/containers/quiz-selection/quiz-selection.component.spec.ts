@@ -6,19 +6,19 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
-import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '../../shared/tokens/api-base-url.token';
+import { API_BASE_URL, INTERVIEW_API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 import { QuizSelectionComponent } from './quiz-selection.component';
-import { QuizService } from '../../shared/services/data/quiz.service';
-import { AchievementService } from '../../shared/services/achievements/achievement.service';
-import { ProgressService } from '../../shared/services/progress/progress.service';
-import { BestScoreService } from '../../shared/services/progress/best-score.service';
-import { LearningPathService } from '../../shared/services/features/learning-path/learning-path.service';
-import { DifficultyRecommendationService } from '../../shared/services/features/learning-path/difficulty-recommendation.service';
-import { SessionEngagementService } from '../../shared/services/state/session-engagement.service';
-import { TopicQuizMetadataService } from '../../shared/services/api/topic-quiz-metadata.service';
-import { InterviewWarmupCoordinatorService } from '../../shared/services/interview/interview-warmup-coordinator.service';
-import { QuizStatus } from '../../shared/models/quiz-status.enum';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { AchievementService } from '@shared/services/achievements/achievement.service';
+import { ProgressService } from '@shared/services/progress/progress.service';
+import { BestScoreService } from '@shared/services/progress/best-score.service';
+import { LearningPathService } from '@shared/services/features/learning-path/learning-path.service';
+import { DifficultyRecommendationService } from '@shared/services/features/learning-path/difficulty-recommendation.service';
+import { SessionEngagementService } from '@shared/services/state/session-engagement.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { InterviewWarmupCoordinatorService } from '@shared/services/interview/interview-warmup-coordinator.service';
+import { QuizStatus } from '@shared/models/quiz-status.enum';
 
 /**
  * S6o bank-absence regression coverage for QuizSelectionComponent.

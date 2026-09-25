@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { InterviewCertificateService } from '../../../shared/services/features/interview/interview-certificate.service';
+import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
 import { CertificateEarnedBadgeComponent } from './certificate-earned-badge.component';
 
 // The service's `unlocked` is the single source of truth (it loads persisted

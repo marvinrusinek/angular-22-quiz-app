@@ -2,8 +2,8 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { InterviewCertificateProgress, InterviewCertificateRecord } from '../../../shared/models/interview-certificate.model';
-import { InterviewCertificateService } from '../../../shared/services/features/interview/interview-certificate.service';
+import { InterviewCertificateProgress, InterviewCertificateRecord } from '@shared/models/interview-certificate.model';
+import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
 import { InterviewCertificateStatusComponent } from './interview-certificate-status.component';
 
 const unlockedSig = signal(false);

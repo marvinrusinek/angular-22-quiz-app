@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivate, Router, UrlTree } from '@angular/router';
 
-import { BackendInterviewResultService } from '../../shared/services/interview/backend-interview-result.service';
+import { BackendInterviewResultService } from '@shared/services/interview/backend-interview-result.service';
 
 /**
  * Guards `/interview/results/:sessionId`.

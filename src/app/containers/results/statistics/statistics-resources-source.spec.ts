@@ -8,12 +8,12 @@ import { signal } from '@angular/core';
 import { of } from 'rxjs';
 
 import { StatisticsComponent } from './statistics.component';
-import { TopicQuizMetadataService } from '../../../shared/services/api/topic-quiz-metadata.service';
-import { TopicQuizResourcesService } from '../../../shared/services/api/topic-quiz-resources.service';
-import { QuizService } from '../../../shared/services/data/quiz.service';
-import { TimerService } from '../../../shared/services/features/timer/timer.service';
-import { API_BASE_URL } from '../../../shared/tokens/api-base-url.token';
-import * as quizDataCache from '../../../shared/quiz-data-cache';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { TopicQuizResourcesService } from '@shared/services/api/topic-quiz-resources.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import * as quizDataCache from '@shared/quiz-data-cache';
 
 /**
  * WHERE THE RESULTS-PAGE RESOURCE LINKS COME FROM.

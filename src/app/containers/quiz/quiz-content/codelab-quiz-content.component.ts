@@ -23,32 +23,32 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute, ParamMap } from '@angular/router';
 import { BehaviorSubject, Observable, of, Subscription } from 'rxjs';
 
-import { CombinedQuestionDataType } from '../../../shared/models/CombinedQuestionDataType.model';
-import { Option } from '../../../shared/models/Option.model';
-import { QuizQuestion } from '../../../shared/models/QuizQuestion.model';
+import { CombinedQuestionDataType } from '@shared/models/CombinedQuestionDataType.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { CqcOrchestratorService } from '../../../shared/services/features/quiz-content/cqc-orchestrator.service';
+import { CqcOrchestratorService } from '@shared/services/features/quiz-content/cqc-orchestrator.service';
 import {
   ExplanationTextService,
   FETPayload,
-} from '../../../shared/services/features/explanation/explanation-text.service';
-import { QuizContentDisplayService } from '../../../shared/services/features/quiz-content/quiz-content-display.service';
-import { QuizDataService } from '../../../shared/services/data/quizdata.service';
-import { QuizNavigationService } from '../../../shared/services/flow/quiz-navigation.service';
-import { QuizQuestionManagerService } from '../../../shared/services/flow/quizquestionmgr.service';
-import { QuizService } from '../../../shared/services/data/quiz.service';
-import { QuizStateService } from '../../../shared/services/state/quizstate.service';
-import { SelectedOptionService } from '../../../shared/services/state/selectedoption.service';
-import { TimerService } from '../../../shared/services/features/timer/timer.service';
-import { FeedbackPolicyService } from '../../../shared/services/features/interview/feedback-policy.service';
+} from '@shared/services/features/explanation/explanation-text.service';
+import { QuizContentDisplayService } from '@shared/services/features/quiz-content/quiz-content-display.service';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
+import { QuizNavigationService } from '@shared/services/flow/quiz-navigation.service';
+import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { FeedbackPolicyService } from '@shared/services/features/interview/feedback-policy.service';
 
 import { QuizQuestionComponent } from '../../../components/question/quiz-question/quiz-question.component';
 
-import { QuestionVerdictService } from '../../../shared/services/features/verdict/question-verdict.service';
-import { TopicQuizTypeRegistry } from '../../../shared/services/api/topic-quiz-type-registry.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
 
-import { buildHeadingInputs } from '../../../shared/utils/heading-inputs';
-import { deriveHeadingHtml, shouldShowFet } from '../../../shared/utils/heading-model';
+import { buildHeadingInputs } from '@shared/utils/heading-inputs';
+import { deriveHeadingHtml, shouldShowFet } from '@shared/utils/heading-model';
 
 @Component({
   selector: 'codelab-quiz-content',

@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { TitleCasePipe } from '@angular/common';
 import { Router } from '@angular/router';
 
-import { ProgressSummary } from '../../shared/models/progress.model';
-import { WeakAreasService } from '../../shared/services/progress/weak-areas.service';
-import { PracticeSessionService } from '../../shared/services/features/practice/practice-session.service';
+import { ProgressSummary } from '@shared/models/progress.model';
+import { WeakAreasService } from '@shared/services/progress/weak-areas.service';
+import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 
 /**
  * "Your Progress" panel for the Quiz Selection page. It renders an

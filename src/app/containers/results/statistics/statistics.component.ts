@@ -4,14 +4,14 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { QuizStatus } from '../../../shared/models/quiz-status.enum'
-import { QuizMetadata } from '../../../shared/models/QuizMetadata.model';
-import { Resource } from '../../../shared/models/Resource.model';
+import { QuizStatus } from '@shared/models/quiz-status.enum'
+import { QuizMetadata } from '@shared/models/QuizMetadata.model';
+import { Resource } from '@shared/models/Resource.model';
 
-import { TopicQuizMetadataService } from '../../../shared/services/api/topic-quiz-metadata.service';
-import { TopicQuizResourcesService } from '../../../shared/services/api/topic-quiz-resources.service';
-import { QuizService } from '../../../shared/services/data/quiz.service';
-import { TimerService } from '../../../shared/services/features/timer/timer.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { TopicQuizResourcesService } from '@shared/services/api/topic-quiz-resources.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
 import { ScoreVisualComponent } from './score-visual/score-visual.component';
 import { QuizResourcesComponent } from './quiz-resources/quiz-resources.component';

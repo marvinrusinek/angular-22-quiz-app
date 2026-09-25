@@ -11,11 +11,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { ActivatedRoute } from '@angular/router';
 
-import { QuizMetadata } from '../../../shared/models/QuizMetadata.model';
+import { QuizMetadata } from '@shared/models/QuizMetadata.model';
 
-import { TopicQuizMetadataService } from '../../../shared/services/api/topic-quiz-metadata.service';
-import { QuizService } from '../../../shared/services/data/quiz.service';
-import { TimerService } from '../../../shared/services/features/timer/timer.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
 @Component({
   selector: 'codelab-results-challenge',

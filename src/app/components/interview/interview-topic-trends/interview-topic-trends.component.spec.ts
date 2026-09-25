@@ -1,9 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { InterviewAttemptHistoryEntry, InterviewTopicHistoryEntry } from '../../../shared/models/interview-history.model';
-import { InterviewTopicTrendsResult } from '../../../shared/models/interview-topic-trends.model';
-import { calculateTopicTrends } from '../../../shared/services/features/interview/interview-topic-trends.service';
+import { InterviewAttemptHistoryEntry, InterviewTopicHistoryEntry } from '@shared/models/interview-history.model';
+import { InterviewTopicTrendsResult } from '@shared/models/interview-topic-trends.model';
+import { calculateTopicTrends } from '@shared/services/features/interview/interview-topic-trends.service';
 import { InterviewTopicTrendsComponent } from './interview-topic-trends.component';
 
 function tp(topicId: string, correct: number, total: number): InterviewTopicHistoryEntry {

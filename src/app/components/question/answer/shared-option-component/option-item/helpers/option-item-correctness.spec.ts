@@ -6,12 +6,12 @@ import {
   hasAuthorizedCorrectSelection,
   isCurrentOptionCorrect
 } from './option-item-correctness';
-import { QuestionVerdictService } from '../../../../../../shared/services/features/verdict/question-verdict.service';
-import { TOPIC_QUIZ_VERDICT_ADAPTER } from '../../../../../../shared/services/features/verdict/verdict-adapter';
-import { setQuizDataCache } from '../../../../../../shared/quiz-data-cache';
-import type { Quiz } from '../../../../../../shared/models/Quiz.model';
-import type { OptionBindings } from '../../../../../../shared/models/OptionBindings.model';
-import type { QuizService } from '../../../../../../shared/services/data/quiz.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { TOPIC_QUIZ_VERDICT_ADAPTER } from '@shared/services/features/verdict/verdict-adapter';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
+import type { Quiz } from '@shared/models/Quiz.model';
+import type { OptionBindings } from '@shared/models/OptionBindings.model';
+import type { QuizService } from '@shared/services/data/quiz.service';
 
 /**
  * Per-option highlighting, sourced from QuestionVerdictService.

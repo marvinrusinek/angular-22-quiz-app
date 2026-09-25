@@ -15,21 +15,21 @@ import { TitleCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Toolbar, ToolbarWidget, ToolbarWidgetGroup } from '@angular/aria/toolbar';
 
-import { formatDuration } from '../../../shared/utils/format-time';
-import { swallow } from '../../../shared/utils/error-logging';
-import { InterviewAttemptHistoryEntry } from '../../../shared/models/interview-history.model';
-import { interviewConfigLabel } from '../../../shared/models/interview-preset.model';
+import { formatDuration } from '@shared/utils/format-time';
+import { swallow } from '@shared/utils/error-logging';
+import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
+import { interviewConfigLabel } from '@shared/models/interview-preset.model';
 import {
   filterAttempts,
   InterviewHistoryFilter,
   InterviewHistoryService
-} from '../../../shared/services/features/interview/interview-history.service';
-import { InterviewSessionReferenceStorage } from '../../../shared/services/interview/interview-session-reference.storage';
+} from '@shared/services/features/interview/interview-history.service';
+import { InterviewSessionReferenceStorage } from '@shared/services/interview/interview-session-reference.storage';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 import { InterviewReadinessComponent } from '../../../components/interview/interview-readiness/interview-readiness.component';
-import { InterviewReadinessService } from '../../../shared/services/features/interview/interview-readiness.service';
+import { InterviewReadinessService } from '@shared/services/features/interview/interview-readiness.service';
 import { InterviewTopicTrendsComponent } from '../../../components/interview/interview-topic-trends/interview-topic-trends.component';
-import { InterviewTopicTrendsService } from '../../../shared/services/features/interview/interview-topic-trends.service';
+import { InterviewTopicTrendsService } from '@shared/services/features/interview/interview-topic-trends.service';
 import { ScrollDownIndicatorComponent } from '../../../components/scroll-down-indicator/scroll-down-indicator.component';
 
 interface HistoryCard {

@@ -13,23 +13,23 @@ import {
   SK_SEL_Q,
   SK_SELECTED_OPTIONS_MAP,
   SK_STARTED_QUIZ_IDS,
-} from '../../../shared/constants/session-keys';
+} from '@shared/constants/session-keys';
 import {
   readSessionJson,
   removeSessionKey,
   writeSessionJson,
-} from '../../../shared/utils/session-storage';
+} from '@shared/utils/session-storage';
 
-import { ExplanationTextService } from '../../../shared/services/features/explanation/explanation-text.service';
-import { QuizDotStatusService } from '../../../shared/services/flow/quiz-dot-status.service';
-import { QuizPersistenceService } from '../../../shared/services/state/quiz-persistence.service';
-import { QuestionTimingService } from '../../../shared/services/features/timer/question-timing.service';
-import { QuestionVerdictService } from '../../../shared/services/features/verdict/question-verdict.service';
-import { QuizService } from '../../../shared/services/data/quiz.service';
-import { SelectedOptionService } from '../../../shared/services/state/selectedoption.service';
-import { ThemeService } from '../../../shared/services/ui/theme.service';
-import { TimerService } from '../../../shared/services/features/timer/timer.service';
-import { swallow } from '../../../shared/utils/error-logging';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
+import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
+import { QuestionTimingService } from '@shared/services/features/timer/question-timing.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { ThemeService } from '@shared/services/ui/theme.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { swallow } from '@shared/utils/error-logging';
 
 @Component({
   selector: 'codelab-results-return',

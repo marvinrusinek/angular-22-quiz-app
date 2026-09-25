@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { QuizResolverService } from '../shared/services/flow/quiz-resolver.service';
+import { QuizResolverService } from '@shared/services/flow/quiz-resolver.service';
 
 import { IntroductionComponent } from
     '../containers/introduction/introduction.component';

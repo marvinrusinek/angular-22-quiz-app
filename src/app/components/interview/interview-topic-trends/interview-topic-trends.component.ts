@@ -8,8 +8,8 @@ import {
   TopicTrendDirection,
   TopicTrendFilter,
   TopicTrendPoint
-} from '../../../shared/models/interview-topic-trends.model';
-import { filterTopicTrends } from '../../../shared/services/features/interview/interview-topic-trends.service';
+} from '@shared/models/interview-topic-trends.model';
+import { filterTopicTrends } from '@shared/services/features/interview/interview-topic-trends.service';
 
 interface SparkGeometry {
   vb: string;

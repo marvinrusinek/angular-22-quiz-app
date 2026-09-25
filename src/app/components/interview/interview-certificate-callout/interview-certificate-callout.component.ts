@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { InterviewCertificateService } from '../../../shared/services/features/interview/interview-certificate.service';
+import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
 import {
   certificateAccessibleSummary,
   certificateInterviewsShown,
   certificateNextAction
-} from '../../../shared/utils/interview-certificate-progress';
+} from '@shared/utils/interview-certificate-progress';
 
 /**
  * Compact certificate progress callout for the Interview Builder — motivates

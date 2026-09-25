@@ -5,8 +5,8 @@ import {
   InsightSource,
   PerformanceInsights,
   SourceSummary
-} from '../../shared/models/performance-insights.model';
-import { WEAK_AREA_MIN_ANSWERED, WEAK_AREA_THRESHOLD } from '../../shared/utils/weak-areas';
+} from '@shared/models/performance-insights.model';
+import { WEAK_AREA_MIN_ANSWERED, WEAK_AREA_THRESHOLD } from '@shared/utils/weak-areas';
 
 /** What each source measures, shown next to its numbers so they are never read as one thing. */
 const SOURCE_META: Record<InsightSource, { name: string; basis: string }> = {

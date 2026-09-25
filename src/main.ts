@@ -14,13 +14,13 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { routes } from './app/router/quiz-routing.routes';
 import { AppComponent } from './app/app.component';
 import { AnswerComponent } from './app/components/question/answer/answer-component/answer.component';
-import { ANSWER_COMPONENT } from './app/shared/tokens/answer-component.token';
-import { PwaUpdateService } from './app/shared/services/pwa-update.service';
-import { GlobalErrorHandler, installGlobalErrorLogging } from './app/shared/utils/error-logging';
-import { provideApiBaseUrl, provideInterviewApiBaseUrl } from './app/shared/tokens/api-base-url.token';
-import { apiErrorInterceptor } from './app/shared/http/api-error.interceptor';
-import { provideApiTopicQuizVerdictAdapter } from './app/shared/services/features/verdict/verdict-adapter';
-import { InterviewSessionReferenceStorage } from './app/shared/services/interview/interview-session-reference.storage';
+import { ANSWER_COMPONENT } from '@shared/tokens/answer-component.token';
+import { PwaUpdateService } from '@shared/services/pwa-update.service';
+import { GlobalErrorHandler, installGlobalErrorLogging } from '@shared/utils/error-logging';
+import { provideApiBaseUrl, provideInterviewApiBaseUrl } from '@shared/tokens/api-base-url.token';
+import { apiErrorInterceptor } from '@shared/http/api-error.interceptor';
+import { provideApiTopicQuizVerdictAdapter } from '@shared/services/features/verdict/verdict-adapter';
+import { InterviewSessionReferenceStorage } from '@shared/services/interview/interview-session-reference.storage';
 
 installGlobalErrorLogging();
 

@@ -1,9 +1,9 @@
 import { inject, Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivate, Router, UrlTree } from '@angular/router';
 
-import { BackendInterviewResultService } from '../../shared/services/interview/backend-interview-result.service';
-import { BackendInterviewSessionService } from '../../shared/services/interview/backend-interview-session.service';
-import { InterviewSessionReferenceStorage } from '../../shared/services/interview/interview-session-reference.storage';
+import { BackendInterviewResultService } from '@shared/services/interview/backend-interview-result.service';
+import { BackendInterviewSessionService } from '@shared/services/interview/backend-interview-session.service';
+import { InterviewSessionReferenceStorage } from '@shared/services/interview/interview-session-reference.storage';
 
 /**
  * THE single hydration pipeline for `/interview/session/:sessionId`.

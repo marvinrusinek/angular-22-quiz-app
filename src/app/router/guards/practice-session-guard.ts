@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { CanActivate, Router, UrlTree } from '@angular/router';
 
-import { PracticeSessionService } from '../../shared/services/features/practice/practice-session.service';
+import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 
 /**
  * Protects the Weak Areas Practice route. Access requires a generated session

@@ -16,11 +16,11 @@ import { PerformanceInsightsComponent } from '../../components/performance-insig
 import { ProgressSummaryComponent } from '../../components/progress-summary/progress-summary.component';
 import { ScrollDownIndicatorComponent } from '../../components/scroll-down-indicator/scroll-down-indicator.component';
 import { ThemeToggleComponent } from '../../components/theme-toggle/theme-toggle.component';
-import { Quiz, QuizDifficulty } from '../../shared/models/Quiz.model';
-import { TopicQuizMetadataService } from '../../shared/services/api/topic-quiz-metadata.service';
-import { PerformanceInsightsService } from '../../shared/services/progress/performance-insights.service';
-import { ProgressService } from '../../shared/services/progress/progress.service';
-import { swallow } from '../../shared/utils/error-logging';
+import { Quiz, QuizDifficulty } from '@shared/models/Quiz.model';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { PerformanceInsightsService } from '@shared/services/progress/performance-insights.service';
+import { ProgressService } from '@shared/services/progress/progress.service';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Your Progress — aggregate performance across attempts and modes.

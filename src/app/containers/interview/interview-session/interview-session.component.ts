@@ -18,13 +18,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 
-import { swallow } from '../../../shared/utils/error-logging';
+import { swallow } from '@shared/utils/error-logging';
 
-import { AssessmentIntegrityService } from '../../../shared/services/features/interview/assessment-integrity.service';
-import { BackendInterviewResultService } from '../../../shared/services/interview/backend-interview-result.service';
-import { BackendInterviewSessionService } from '../../../shared/services/interview/backend-interview-session.service';
-import { BackendInterviewTimerService } from '../../../shared/services/interview/backend-interview-timer.service';
-import { toggleOption } from '../../../shared/services/interview/interview-answer-transitions';
+import { AssessmentIntegrityService } from '@shared/services/features/interview/assessment-integrity.service';
+import { BackendInterviewResultService } from '@shared/services/interview/backend-interview-result.service';
+import { BackendInterviewSessionService } from '@shared/services/interview/backend-interview-session.service';
+import { BackendInterviewTimerService } from '@shared/services/interview/backend-interview-timer.service';
+import { toggleOption } from '@shared/services/interview/interview-answer-transitions';
 import { AssessmentIntegrityWarningDialogComponent } from '../../../components/dialogs/assessment-integrity-warning-dialog/assessment-integrity-warning-dialog.component';
 import {
   KeyboardShortcutsDialogComponent,
@@ -39,7 +39,7 @@ import {
   InterviewSubmitDialogComponent,
   InterviewSubmitDialogData
 } from '../../../components/dialogs/interview-submit-dialog/interview-submit-dialog.component';
-import type { InterviewOptionViewModel } from '../../../shared/models/interview/interview-view-models';
+import type { InterviewOptionViewModel } from '@shared/models/interview/interview-view-models';
 
 /**
  * Interview session shell — BACKEND-BACKED.

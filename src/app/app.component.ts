@@ -4,9 +4,9 @@ import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
 import { GoogleSpinnerComponent } from './components/google-spinner/google-spinner.component';
-import { PwaUpdateService } from './shared/services/pwa-update.service';
-import { QuizStartSpinnerService } from './shared/services/ui/quiz-start-spinner.service';
-import { ThemeService } from './shared/services/ui/theme.service';
+import { PwaUpdateService } from '@shared/services/pwa-update.service';
+import { QuizStartSpinnerService } from '@shared/services/ui/quiz-start-spinner.service';
+import { ThemeService } from '@shared/services/ui/theme.service';
 
 @Component({
   selector: 'codelab-root',

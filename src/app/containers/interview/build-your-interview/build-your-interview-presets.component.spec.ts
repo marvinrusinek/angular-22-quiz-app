@@ -6,15 +6,15 @@ import { signal } from '@angular/core';
 
 import { of } from 'rxjs';
 
-import { INTERVIEW_API_BASE_URL } from '../../../shared/tokens/api-base-url.token';
-import { InterviewApiService } from '../../../shared/services/api/interview-api.service';
+import { INTERVIEW_API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
 
 import { BuildYourInterviewComponent } from './build-your-interview.component';
-import { InterviewCatalogService } from '../../../shared/services/interview/interview-catalog.service';
-import { QuizStartSpinnerService } from '../../../shared/services/ui/quiz-start-spinner.service';
-import { setQuizDataCache } from '../../../shared/quiz-data-cache';
-import { Quiz } from '../../../shared/models/Quiz.model';
-import { findInterviewPreset } from '../../../shared/models/interview-preset.model';
+import { InterviewCatalogService } from '@shared/services/interview/interview-catalog.service';
+import { QuizStartSpinnerService } from '@shared/services/ui/quiz-start-spinner.service';
+import { setQuizDataCache } from '@shared/quiz-data-cache';
+import { Quiz } from '@shared/models/Quiz.model';
+import { findInterviewPreset } from '@shared/models/interview-preset.model';
 // S6p (Angular Stage 14): src/assets/data/quiz.json was deleted — the
 // production client no longer bundles/fetches any answer-bearing bank. This
 // explicit, test-only fixture replaces it; it lives under shared/testing/,
@@ -25,7 +25,7 @@ import { findInterviewPreset } from '../../../shared/models/interview-preset.mod
 // freshly authored placeholder content, not sampled from the canonical bank.
 // Only quizId/milestone/difficulty/per-quiz question count are real public
 // catalog metadata (already served by GET /api/quizzes).
-import quizData from '../../../shared/testing/quiz-catalog-fixture.json';
+import quizData from '@shared/testing/quiz-catalog-fixture.json';
 
 const SYNTHETIC_CATALOG = ((quizData as { quizzes?: unknown[] }).quizzes ?? quizData) as Quiz[];
 

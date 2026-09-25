@@ -9,8 +9,8 @@ import {
 import { Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import { TopicQuizMetadataService } from '../../shared/services/api/topic-quiz-metadata.service';
-import { QuizService } from '../../shared/services/data/quiz.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 
 /**
  * S6h: index validation only, from the same API-backed metadata source the

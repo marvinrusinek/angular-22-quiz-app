@@ -8,7 +8,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
 
 import { ThemeToggleComponent } from './theme-toggle.component';
-import { ThemeService } from '../../shared/services/ui/theme.service';
+import { ThemeService } from '@shared/services/ui/theme.service';
 import { THEME_ICON_DARK_MODE, THEME_ICON_LIGHT_MODE } from './theme-icons';
 
 describe('ThemeToggleComponent', () => {

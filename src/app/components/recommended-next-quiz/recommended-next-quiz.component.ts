@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
 
-import { LearningPathState } from '../../shared/models/learning-path.model';
+import { LearningPathState } from '@shared/models/learning-path.model';
 
 /**
  * Compact "Recommended Next Quiz" card for Quiz Selection, shown beneath Your

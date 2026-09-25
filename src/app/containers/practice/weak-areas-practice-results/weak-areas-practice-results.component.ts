@@ -11,8 +11,8 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { PracticeSessionService } from '../../../shared/services/features/practice/practice-session.service';
-import { WeakAreasService } from '../../../shared/services/progress/weak-areas.service';
+import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
+import { WeakAreasService } from '@shared/services/progress/weak-areas.service';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 import { ScrollDownIndicatorComponent } from '../../../components/scroll-down-indicator/scroll-down-indicator.component';
 

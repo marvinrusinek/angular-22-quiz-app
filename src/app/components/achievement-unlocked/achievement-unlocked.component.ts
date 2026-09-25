@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-import { AchievementDefinition } from '../../shared/models/achievement.model';
+import { AchievementDefinition } from '@shared/models/achievement.model';
 
 /**
  * Announces the achievement(s) earned by the just-completed quiz on the Results

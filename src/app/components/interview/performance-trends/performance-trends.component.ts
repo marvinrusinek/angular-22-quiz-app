@@ -6,7 +6,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 
-import { InterviewTrendPoint, InterviewTrends } from '../../../shared/models/interview-history.model';
+import { InterviewTrendPoint, InterviewTrends } from '@shared/models/interview-history.model';
 
 // SVG canvas geometry (a viewBox — the element itself scales to its container,
 // so the chart is fully responsive without any JS resize handling).

@@ -4,9 +4,9 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter, Router } from '@angular/router';
 
 import { InterviewResultsComponent } from './interview-results.component';
-import type { InterviewResultViewModel } from '../../../shared/models/interview/interview-view-models';
-import { BackendInterviewResultService } from '../../../shared/services/interview/backend-interview-result.service';
-import { BackendInterviewSessionService } from '../../../shared/services/interview/backend-interview-session.service';
+import type { InterviewResultViewModel } from '@shared/models/interview/interview-view-models';
+import { BackendInterviewResultService } from '@shared/services/interview/backend-interview-result.service';
+import { BackendInterviewSessionService } from '@shared/services/interview/backend-interview-session.service';
 
 /**
  * Interview Results — navigation off this single attempt.

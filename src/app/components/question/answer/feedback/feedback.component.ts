@@ -4,19 +4,19 @@ import {
 import { NgClass } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 
-import { FeedbackProps } from '../../../../shared/models/FeedbackProps.model';
-import { Option } from '../../../../shared/models/Option.model';
-import { QuizQuestion } from '../../../../shared/models/QuizQuestion.model';
+import { FeedbackProps } from '@shared/models/FeedbackProps.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { FeedbackService } from '../../../../shared/services/features/feedback/feedback.service';
-import { QuestionVerdictService } from '../../../../shared/services/features/verdict/question-verdict.service';
-import { authorizedCorrectTexts, selectedVerdictFor, verdictStateForDisplayIndex } from '../../../../shared/services/features/verdict/authorized-correctness';
-import { QuizService } from '../../../../shared/services/data/quiz.service';
-import { SelectedOptionService } from '../../../../shared/services/state/selectedoption.service';
+import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { authorizedCorrectTexts, selectedVerdictFor, verdictStateForDisplayIndex } from '@shared/services/features/verdict/authorized-correctness';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
-import { QUESTION_ROUTE_REGEX } from '../../../../shared/constants/route-patterns';
-import { isOptionCorrect } from '../../../../shared/utils/is-option-correct';
-import { norm } from '../../../../shared/utils/text-norm';
+import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
+import { isOptionCorrect } from '@shared/utils/is-option-correct';
+import { norm } from '@shared/utils/text-norm';
 
 @Component({
   selector: 'codelab-quiz-feedback',

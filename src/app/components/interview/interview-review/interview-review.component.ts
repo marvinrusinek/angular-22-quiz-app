@@ -13,7 +13,7 @@ import { CodeSnippetComponent } from '../../code-snippet/code-snippet.component'
 import type {
   InterviewResultViewModel,
   InterviewReviewQuestionViewModel
-} from '../../../shared/models/interview/interview-view-models';
+} from '@shared/models/interview/interview-view-models';
 import {
   REVIEW_FILTERS,
   ReviewFilterDef,

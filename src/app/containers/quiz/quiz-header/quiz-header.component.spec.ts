@@ -3,8 +3,8 @@ import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 
 import { CodelabQuizHeaderComponent } from './quiz-header.component';
-import { TopicQuizMetadataService } from '../../../shared/services/api/topic-quiz-metadata.service';
-import { QuizService } from '../../../shared/services/data/quiz.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 
 /**
  * S6i — the header no longer reads QuizDataService.quizzesSig() (the

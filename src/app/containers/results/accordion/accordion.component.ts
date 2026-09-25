@@ -16,20 +16,20 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { Toolbar, ToolbarWidget, ToolbarWidgetGroup } from '@angular/aria/toolbar';
 
-import { SK_USER_ANSWERS } from '../../../shared/constants/session-keys';
+import { SK_USER_ANSWERS } from '@shared/constants/session-keys';
 
-import { Option } from '../../../shared/models/Option.model';
-import { QuizQuestion } from '../../../shared/models/QuizQuestion.model';
-import { Result } from '../../../shared/models/Result.model';
+import { Option } from '@shared/models/Option.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Result } from '@shared/models/Result.model';
 
-import { ExplanationTextService } from '../../../shared/services/features/explanation/explanation-text.service';
-import { QuizDataService } from '../../../shared/services/data/quizdata.service';
-import { QuizService } from '../../../shared/services/data/quiz.service';
-import { SelectedOptionService } from '../../../shared/services/state/selectedoption.service';
-import { TimerService } from '../../../shared/services/features/timer/timer.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
-import { norm } from '../../../shared/utils/text-norm';
-import { swallow } from '../../../shared/utils/error-logging';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 import { CodeSnippetComponent } from '../../../components/code-snippet/code-snippet.component';
 
 export type ReviewFilter = 'all' | 'incorrect' | 'correct';

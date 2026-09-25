@@ -10,7 +10,7 @@ import {
 import type {
   InterviewResultViewModel,
   InterviewReviewQuestionViewModel
-} from '../../../shared/models/interview/interview-view-models';
+} from '@shared/models/interview/interview-view-models';
 
 /**
  * Review renders the FROZEN backend review data.

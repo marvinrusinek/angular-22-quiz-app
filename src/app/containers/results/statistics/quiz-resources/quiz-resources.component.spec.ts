@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { QuizResourcesComponent } from './quiz-resources.component';
-import type { Resource } from '../../../../shared/models/Resource.model';
+import type { Resource } from '@shared/models/Resource.model';
 
 /**
  * The "Brush up your knowledge" panel.

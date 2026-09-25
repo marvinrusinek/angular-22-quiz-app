@@ -4,11 +4,11 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 
 import { ProgressPageComponent } from './progress-page.component';
-import { InterviewResult } from '../../shared/models/InterviewResult.model';
-import { API_BASE_URL } from '../../shared/tokens/api-base-url.token';
-import { InterviewHistoryService } from '../../shared/services/features/interview/interview-history.service';
-import { SessionEngagementService } from '../../shared/services/state/session-engagement.service';
-import { TopicPerformanceHistoryService } from '../../shared/services/progress/topic-performance-history.service';
+import { InterviewResult } from '@shared/models/InterviewResult.model';
+import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
+import { SessionEngagementService } from '@shared/services/state/session-engagement.service';
+import { TopicPerformanceHistoryService } from '@shared/services/progress/topic-performance-history.service';
 
 const API = 'http://test/api';
 

@@ -9,20 +9,20 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { CodeSnippetComponent } from '../../../components/code-snippet/code-snippet.component';
-import { QuestionType } from '../../../shared/models/question-type.enum';
-import { TopicQuizTypeRegistry } from '../../../shared/services/api/topic-quiz-type-registry.service';
-import { QuizService } from '../../../shared/services/data/quiz.service';
-import { QuizDataService } from '../../../shared/services/data/quizdata.service';
-import { ExplanationTextService } from '../../../shared/services/features/explanation/explanation-text.service';
-import { FeedbackPolicyService } from '../../../shared/services/features/interview/feedback-policy.service';
-import { CqcOrchestratorService } from '../../../shared/services/features/quiz-content/cqc-orchestrator.service';
-import { QuizContentDisplayService } from '../../../shared/services/features/quiz-content/quiz-content-display.service';
-import { TimerService } from '../../../shared/services/features/timer/timer.service';
-import { QuestionVerdictService } from '../../../shared/services/features/verdict/question-verdict.service';
-import { QuizNavigationService } from '../../../shared/services/flow/quiz-navigation.service';
-import { QuizQuestionManagerService } from '../../../shared/services/flow/quizquestionmgr.service';
-import { QuizStateService } from '../../../shared/services/state/quizstate.service';
-import { SelectedOptionService } from '../../../shared/services/state/selectedoption.service';
+import { QuestionType } from '@shared/models/question-type.enum';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
+import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
+import { FeedbackPolicyService } from '@shared/services/features/interview/feedback-policy.service';
+import { CqcOrchestratorService } from '@shared/services/features/quiz-content/cqc-orchestrator.service';
+import { QuizContentDisplayService } from '@shared/services/features/quiz-content/quiz-content-display.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizNavigationService } from '@shared/services/flow/quiz-navigation.service';
+import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { CodelabQuizContentComponent } from './codelab-quiz-content.component';
 
 /**

@@ -9,8 +9,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { KeyboardShortcutsDialogComponent } from '../../../components/dialogs/keyboard-shortcuts-dialog/keyboard-shortcuts-dialog.component';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 
-import { TopicQuizMetadataService } from '../../../shared/services/api/topic-quiz-metadata.service';
-import { QuizService } from '../../../shared/services/data/quiz.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 
 @Component({
   selector: 'codelab-quiz-header',

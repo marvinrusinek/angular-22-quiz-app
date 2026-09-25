@@ -2,9 +2,9 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { DifficultyRecommendation } from '../../shared/models/difficulty-recommendation.model';
-import { InterviewCertificateProgress } from '../../shared/models/interview-certificate.model';
-import { InterviewCertificateService } from '../../shared/services/features/interview/interview-certificate.service';
+import { DifficultyRecommendation } from '@shared/models/difficulty-recommendation.model';
+import { InterviewCertificateProgress } from '@shared/models/interview-certificate.model';
+import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
 import { DifficultyRecommendationComponent } from './difficulty-recommendation.component';
 
 const unlockedSig = signal(false);

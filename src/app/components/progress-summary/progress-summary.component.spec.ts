@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ProgressSummaryComponent } from './progress-summary.component';
-import { ProgressSummary } from '../../shared/models/progress.model';
+import { ProgressSummary } from '@shared/models/progress.model';
 
 function summary(overrides: Partial<ProgressSummary> = {}): ProgressSummary {
   return {

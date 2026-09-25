@@ -10,12 +10,12 @@ import {
 import { RouterLink } from '@angular/router';
 import { A11yModule } from '@angular/cdk/a11y';
 
-import { InterviewCertificateService } from '../../../shared/services/features/interview/interview-certificate.service';
+import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
 import {
   certificateAccessibleSummary,
   certificateInterviewsShown,
   certificateNextAction
-} from '../../../shared/utils/interview-certificate-progress';
+} from '@shared/utils/interview-certificate-progress';
 
 /**
  * Certificate status on the Interview Results page. When both requirements

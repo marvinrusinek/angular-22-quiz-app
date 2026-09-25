@@ -4,7 +4,7 @@ import { InterviewOptionsComponent } from './interview-options.component';
 import type {
   InterviewOptionViewModel,
   InterviewQuestionType
-} from '../../../shared/models/interview/interview-view-models';
+} from '@shared/models/interview/interview-view-models';
 
 /**
  * Backend-migration regression suite.

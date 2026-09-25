@@ -10,7 +10,7 @@ import {
   InterviewReadiness,
   InterviewReadinessBand,
   InterviewReadinessFactor,
-} from '../../../shared/models/interview-readiness.model';
+} from '@shared/models/interview-readiness.model';
 
 interface FactorRow {
   key: InterviewReadinessFactor;

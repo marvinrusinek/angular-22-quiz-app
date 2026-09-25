@@ -3,7 +3,7 @@ import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DomSanitizer } from '@angular/platform-browser';
 
-import { ThemeService } from '../../shared/services/ui/theme.service';
+import { ThemeService } from '@shared/services/ui/theme.service';
 import { registerThemeIcons } from './theme-icons';
 
 @Component({

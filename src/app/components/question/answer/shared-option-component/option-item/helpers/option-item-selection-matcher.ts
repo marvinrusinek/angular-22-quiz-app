@@ -1,10 +1,10 @@
-import { OptionBindings } from '../../../../../../shared/models/OptionBindings.model';
-import { SelectedOption } from '../../../../../../shared/models/SelectedOption.model';
-import { SelectedOptionService } from '../../../../../../shared/services/state/selectedoption.service';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
-import { QUESTION_ROUTE_REGEX } from '../../../../../../shared/constants/route-patterns';
-import { norm } from '../../../../../../shared/utils/text-norm';
-import { swallow } from '../../../../../../shared/utils/error-logging';
+import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * Resolve a usable question index when the input/service value lags behind

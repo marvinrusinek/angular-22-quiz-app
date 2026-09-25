@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { CanActivate, Router, UrlTree } from '@angular/router';
 
-import { PracticeSessionService } from '../../shared/services/features/practice/practice-session.service';
+import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 
 /**
  * Protects Practice Results. Access requires a SUBMITTED session carrying a

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
-import { Quiz } from '../../../../shared/models/Quiz.model';
-import { QuizMetadata } from '../../../../shared/models/QuizMetadata.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizMetadata } from '@shared/models/QuizMetadata.model';
 
 @Component({
   selector: 'codelab-summary-icons',

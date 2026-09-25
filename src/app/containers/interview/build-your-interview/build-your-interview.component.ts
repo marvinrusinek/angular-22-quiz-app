@@ -19,28 +19,28 @@ import {
   AssessmentQuestionCount,
   DURATION_SECONDS_BY_COUNT,
   InterviewDifficulty
-} from '../../../shared/models/AssessmentConfig.model';
+} from '@shared/models/AssessmentConfig.model';
 
-import { InterviewApiService } from '../../../shared/services/api/interview-api.service';
-import { InterviewWarmupCoordinatorService } from '../../../shared/services/interview/interview-warmup-coordinator.service';
-import type { CreatedInterviewSession } from '../../../shared/services/api/interview-api.service';
-import { InterviewApiError } from '../../../shared/services/api/interview-api.errors';
-import { InterviewCatalogService } from '../../../shared/services/interview/interview-catalog.service';
-import { BackendInterviewSessionService } from '../../../shared/services/interview/backend-interview-session.service';
-import { AssessmentIntegrityService } from '../../../shared/services/features/interview/assessment-integrity.service';
-import { buildInterviewSessionRequest } from '../../../shared/services/interview/interview-builder-request.mapper';
-import { isInterviewApiConfigured } from '../../../shared/tokens/api-base-url.token';
-import type { CreateInterviewSessionRequest } from '../../../shared/models/api/interview-api.dto';
-import { QuizStartSpinnerHandle, QuizStartSpinnerService } from '../../../shared/services/ui/quiz-start-spinner.service';
-import { swallow } from '../../../shared/utils/error-logging';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import { InterviewWarmupCoordinatorService } from '@shared/services/interview/interview-warmup-coordinator.service';
+import type { CreatedInterviewSession } from '@shared/services/api/interview-api.service';
+import { InterviewApiError } from '@shared/services/api/interview-api.errors';
+import { InterviewCatalogService } from '@shared/services/interview/interview-catalog.service';
+import { BackendInterviewSessionService } from '@shared/services/interview/backend-interview-session.service';
+import { AssessmentIntegrityService } from '@shared/services/features/interview/assessment-integrity.service';
+import { buildInterviewSessionRequest } from '@shared/services/interview/interview-builder-request.mapper';
+import { isInterviewApiConfigured } from '@shared/tokens/api-base-url.token';
+import type { CreateInterviewSessionRequest } from '@shared/models/api/interview-api.dto';
+import { QuizStartSpinnerHandle, QuizStartSpinnerService } from '@shared/services/ui/quiz-start-spinner.service';
+import { swallow } from '@shared/utils/error-logging';
 import {
   findInterviewPreset,
   INTERVIEW_PRESETS,
   InterviewPreset,
   InterviewPresetId,
   PRESET_DISCLAIMER
-} from '../../../shared/models/interview-preset.model';
-import { calculateDifficultyQuota } from '../../../shared/utils/difficulty-quota';
+} from '@shared/models/interview-preset.model';
+import { calculateDifficultyQuota } from '@shared/utils/difficulty-quota';
 import {
   INTERVIEW_TOPIC_CATEGORIES,
   INTERVIEW_TOPIC_OTHER_CATEGORY

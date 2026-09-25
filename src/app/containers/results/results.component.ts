@@ -11,14 +11,14 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NgOptimizedImage, NgTemplateOutlet } from '@angular/common';
-import { TopicPerformanceHistoryService } from '../../shared/services/progress/topic-performance-history.service';
+import { TopicPerformanceHistoryService } from '@shared/services/progress/topic-performance-history.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { QuizStatus } from '../../shared/models/quiz-status.enum';
+import { QuizStatus } from '@shared/models/quiz-status.enum';
 
 import {
   SK_COMPLETED_QUIZ_IDS,
@@ -29,26 +29,26 @@ import {
   SK_SHUFFLED_QUESTIONS,
   SK_STARTED_QUIZ_IDS,
   SK_USER_ANSWERS,
-} from '../../shared/constants/session-keys';
+} from '@shared/constants/session-keys';
 import {
   readSessionJson,
   writeSessionJson,
   writeSessionString,
-} from '../../shared/utils/session-storage';
+} from '@shared/utils/session-storage';
 
-import { FinalResult, ScoreAnalysisItem, toDurableFinalResult } from '../../shared/models/Final-Result.model';
-import { QuizQuestion } from '../../shared/models/QuizQuestion.model';
+import { FinalResult, ScoreAnalysisItem, toDurableFinalResult } from '@shared/models/Final-Result.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
-import { QuizDotStatusService } from '../../shared/services/flow/quiz-dot-status.service';
-import { QuizService } from '../../shared/services/data/quiz.service';
-import { QuizStateService } from '../../shared/services/state/quizstate.service';
-import { SelectedOptionService } from '../../shared/services/state/selectedoption.service';
-import { TimerService } from '../../shared/services/features/timer/timer.service';
-import { ScoreAnalysisService } from '../../shared/services/features/results/score-analysis.service';
-import { ThemeService } from '../../shared/services/ui/theme.service';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { ScoreAnalysisService } from '@shared/services/features/results/score-analysis.service';
+import { ThemeService } from '@shared/services/ui/theme.service';
 
-import { AchievementService } from '../../shared/services/achievements/achievement.service';
-import { AchievementCatalogEntry, AchievementDefinition, AchievementView } from '../../shared/models/achievement.model';
+import { AchievementService } from '@shared/services/achievements/achievement.service';
+import { AchievementCatalogEntry, AchievementDefinition, AchievementView } from '@shared/models/achievement.model';
 
 import { AccordionComponent } from './accordion/accordion.component';
 import { AchievementUnlockedComponent } from '../../components/achievement-unlocked/achievement-unlocked.component';
@@ -60,9 +60,9 @@ import { ReturnComponent } from './return/return.component';
 import { StatisticsComponent } from './statistics/statistics.component';
 import { SummaryReportComponent } from './summary-report/summary-report.component';
 
-import { TopicQuizMetadataService } from '../../shared/services/api/topic-quiz-metadata.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
 
-import { swallow } from '../../shared/utils/error-logging';
+import { swallow } from '@shared/utils/error-logging';
 
 @Component({
   selector: 'codelab-quiz-results',

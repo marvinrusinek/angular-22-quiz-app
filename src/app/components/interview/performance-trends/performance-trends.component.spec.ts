@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { InterviewAttemptHistoryEntry, InterviewTrends } from '../../../shared/models/interview-history.model';
-import { summarizeTrends } from '../../../shared/services/features/interview/interview-history.service';
+import { InterviewAttemptHistoryEntry, InterviewTrends } from '@shared/models/interview-history.model';
+import { summarizeTrends } from '@shared/services/features/interview/interview-history.service';
 import { PerformanceTrendsComponent } from './performance-trends.component';
 
 function entry(pct: number, i: number): InterviewAttemptHistoryEntry {

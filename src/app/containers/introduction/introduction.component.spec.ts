@@ -4,18 +4,18 @@ import { of, ReplaySubject, Subject } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { IntroductionComponent } from './introduction.component';
-import { Quiz, QuizDifficulty } from '../../shared/models/Quiz.model';
-import { QuizQuestion } from '../../shared/models/QuizQuestion.model';
-import { QuizDotStatusService } from '../../shared/services/flow/quiz-dot-status.service';
-import { TopicQuizMetadataService } from '../../shared/services/api/topic-quiz-metadata.service';
-import { QuizDataService } from '../../shared/services/data/quizdata.service';
-import { QuizNavigationService } from '../../shared/services/flow/quiz-navigation.service';
-import { QuizPersistenceService } from '../../shared/services/state/quiz-persistence.service';
-import { QuizService } from '../../shared/services/data/quiz.service';
-import { QuizShuffleService } from '../../shared/services/flow/quiz-shuffle.service';
-import { SelectedOptionService } from '../../shared/services/state/selectedoption.service';
-import { TimerService } from '../../shared/services/features/timer/timer.service';
-import { QuizStartSpinnerService } from '../../shared/services/ui/quiz-start-spinner.service';
+import { Quiz, QuizDifficulty } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { QuizDataService } from '@shared/services/data/quizdata.service';
+import { QuizNavigationService } from '@shared/services/flow/quiz-navigation.service';
+import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
+import { QuizStartSpinnerService } from '@shared/services/ui/quiz-start-spinner.service';
 
 /**
  * Stage 14 regression A: after Introduction moved to API-backed metadata

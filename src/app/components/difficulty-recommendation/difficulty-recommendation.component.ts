@@ -12,9 +12,9 @@ import { RouterLink } from '@angular/router';
 import {
   DifficultyAction,
   DifficultyRecommendation,
-} from '../../shared/models/difficulty-recommendation.model';
-import { InterviewCertificateService } from '../../shared/services/features/interview/interview-certificate.service';
-import { certificateNextAction } from '../../shared/utils/interview-certificate-progress';
+} from '@shared/models/difficulty-recommendation.model';
+import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
+import { certificateNextAction } from '@shared/utils/interview-certificate-progress';
 
 /**
  * Compact, advisory "Difficulty Recommendation" card for Quiz Selection.

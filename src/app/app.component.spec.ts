@@ -8,10 +8,10 @@ import { of } from 'rxjs';
 import { AppComponent } from './app.component';
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { BuildYourInterviewComponent } from './containers/interview/build-your-interview/build-your-interview.component';
-import { InterviewApiService } from './shared/services/api/interview-api.service';
-import { InterviewWarmupCoordinatorService } from './shared/services/interview/interview-warmup-coordinator.service';
-import { ThemeService } from './shared/services/ui/theme.service';
-import { INTERVIEW_API_BASE_URL } from './shared/tokens/api-base-url.token';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import { InterviewWarmupCoordinatorService } from '@shared/services/interview/interview-warmup-coordinator.service';
+import { ThemeService } from '@shared/services/ui/theme.service';
+import { INTERVIEW_API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 const KEY = 'quiz-app-theme';
 

@@ -3,8 +3,8 @@ import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree } from '@a
 import { of } from 'rxjs';
 
 import { QuizGuard } from './quiz-guard';
-import { TopicQuizMetadataService } from '../../shared/services/api/topic-quiz-metadata.service';
-import { QuizService } from '../../shared/services/data/quiz.service';
+import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { QuizService } from '@shared/services/data/quiz.service';
 
 /**
  * S6h — the guard no longer reads the bundled answer-bearing bank via

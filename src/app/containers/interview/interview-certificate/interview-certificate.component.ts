@@ -13,13 +13,13 @@ import {
   CERTIFICATE_REQUIRED_BAND,
   CERTIFICATE_TITLE,
   REQUIRED_CERTIFICATE_INTERVIEWS
-} from '../../../shared/models/interview-certificate.model';
+} from '@shared/models/interview-certificate.model';
 import {
   InterviewCertificateService,
   readinessBandLabel
-} from '../../../shared/services/features/interview/interview-certificate.service';
-import { InterviewReadinessService } from '../../../shared/services/features/interview/interview-readiness.service';
-import { InterviewHistoryService } from '../../../shared/services/features/interview/interview-history.service';
+} from '@shared/services/features/interview/interview-certificate.service';
+import { InterviewReadinessService } from '@shared/services/features/interview/interview-readiness.service';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 
 /**

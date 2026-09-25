@@ -10,7 +10,7 @@ import {
 import type {
   InterviewOptionViewModel,
   InterviewQuestionType
-} from '../../../shared/models/interview/interview-view-models';
+} from '@shared/models/interview/interview-view-models';
 
 /**
  * Self-contained option list for Interview Mode. Renders the current question's

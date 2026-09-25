@@ -13,20 +13,20 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 
-import { formatDuration } from '../../../shared/utils/format-time';
-import { swallow } from '../../../shared/utils/error-logging';
-import { InterviewResult } from '../../../shared/models/InterviewResult.model';
-import { InterviewDifficulty } from '../../../shared/models/AssessmentConfig.model';
-import { InterviewAttemptHistoryEntry } from '../../../shared/models/interview-history.model';
-import { InterviewHistoryService } from '../../../shared/services/features/interview/interview-history.service';
-import { InterviewAnalyticsService } from '../../../shared/services/features/interview/interview-analytics.service';
+import { formatDuration } from '@shared/utils/format-time';
+import { swallow } from '@shared/utils/error-logging';
+import { InterviewResult } from '@shared/models/InterviewResult.model';
+import { InterviewDifficulty } from '@shared/models/AssessmentConfig.model';
+import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
+import { InterviewAnalyticsService } from '@shared/services/features/interview/interview-analytics.service';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 import { TopicPerformanceListComponent } from '../../../components/interview/topic-performance/topic-performance-list.component';
 import { ScrollDownIndicatorComponent } from '../../../components/scroll-down-indicator/scroll-down-indicator.component';
 import { InterviewReviewComponent } from '../../../components/interview/interview-review/interview-review.component';
-import { InterviewSessionReferenceStorage } from '../../../shared/services/interview/interview-session-reference.storage';
-import { InterviewApiService } from '../../../shared/services/api/interview-api.service';
-import type { InterviewResultViewModel } from '../../../shared/models/interview/interview-view-models';
+import { InterviewSessionReferenceStorage } from '@shared/services/interview/interview-session-reference.storage';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import type { InterviewResultViewModel } from '@shared/models/interview/interview-view-models';
 
 /**
  * Read-only historical Interview summary. Reopens the details for ONE past

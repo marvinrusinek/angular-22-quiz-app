@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, input, output, signal } from '@angu
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import type { DifficultyFilter } from '../../shared/models/QuizFilter.type';
+import type { DifficultyFilter } from '@shared/models/QuizFilter.type';
 
 /**
  * Presentational difficulty FILTER: a compact Material select offering

@@ -4,20 +4,20 @@ import { of, throwError } from 'rxjs';
 
 import { BackendInterviewSessionGuard } from './backend-interview-session-guard';
 import { BackendInterviewResultGuard } from './backend-interview-result-guard';
-import { BackendInterviewResultService } from '../../shared/services/interview/backend-interview-result.service';
-import { BackendInterviewSessionService } from '../../shared/services/interview/backend-interview-session.service';
-import { InterviewSessionReferenceStorage } from '../../shared/services/interview/interview-session-reference.storage';
-import { InterviewHistoryService } from '../../shared/services/features/interview/interview-history.service';
-import { InterviewApiService } from '../../shared/services/api/interview-api.service';
+import { BackendInterviewResultService } from '@shared/services/interview/backend-interview-result.service';
+import { BackendInterviewSessionService } from '@shared/services/interview/backend-interview-session.service';
+import { InterviewSessionReferenceStorage } from '@shared/services/interview/interview-session-reference.storage';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
 import {
   InterviewApiError,
   type InterviewApiErrorCode
-} from '../../shared/services/api/interview-api.errors';
-import { SK_INTERVIEW_SESSION_REF } from '../../shared/models/interview/interview-session-reference.model';
+} from '@shared/services/api/interview-api.errors';
+import { SK_INTERVIEW_SESSION_REF } from '@shared/models/interview/interview-session-reference.model';
 import type {
   InterviewResultViewModel,
   InterviewSessionViewModel
-} from '../../shared/models/interview/interview-view-models';
+} from '@shared/models/interview/interview-view-models';
 
 /**
  * The guard is the ONLY hydration path for `/interview/session/:sessionId`, so

@@ -9,17 +9,17 @@ import { routes } from '../quiz-routing.routes';
 import { BackendInterviewSessionGuard } from './backend-interview-session-guard';
 import { BackendInterviewResultGuard } from './backend-interview-result-guard';
 import { InterviewSessionComponent } from '../../containers/interview/interview-session/interview-session.component';
-import { BackendInterviewSessionService } from '../../shared/services/interview/backend-interview-session.service';
-import { BackendInterviewResultService } from '../../shared/services/interview/backend-interview-result.service';
-import { BackendInterviewTimerService } from '../../shared/services/interview/backend-interview-timer.service';
-import { InterviewSessionReferenceStorage } from '../../shared/services/interview/interview-session-reference.storage';
-import { InterviewHistoryService } from '../../shared/services/features/interview/interview-history.service';
-import { InterviewApiService } from '../../shared/services/api/interview-api.service';
-import { InterviewApiError, type InterviewApiErrorCode } from '../../shared/services/api/interview-api.errors';
+import { BackendInterviewSessionService } from '@shared/services/interview/backend-interview-session.service';
+import { BackendInterviewResultService } from '@shared/services/interview/backend-interview-result.service';
+import { BackendInterviewTimerService } from '@shared/services/interview/backend-interview-timer.service';
+import { InterviewSessionReferenceStorage } from '@shared/services/interview/interview-session-reference.storage';
+import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
+import { InterviewApiService } from '@shared/services/api/interview-api.service';
+import { InterviewApiError, type InterviewApiErrorCode } from '@shared/services/api/interview-api.errors';
 import type {
   InterviewResultViewModel,
   InterviewSessionViewModel
-} from '../../shared/models/interview/interview-view-models';
+} from '@shared/models/interview/interview-view-models';
 
 /**
  * Can `InterviewSessionComponent` ever be CREATED while the session is already

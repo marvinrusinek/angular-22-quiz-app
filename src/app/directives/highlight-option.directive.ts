@@ -2,9 +2,9 @@ import {
   Directive, effect, ElementRef, inject, input, OnInit, output, Renderer2
 } from '@angular/core';
 
-import { Option } from '../shared/models/Option.model';
-import { OptionBindings } from '../shared/models/OptionBindings.model';
-import { SharedOptionConfig } from '../shared/models/SharedOptionConfig.model';
+import { Option } from '@shared/models/Option.model';
+import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
 
 @Directive({
   selector: '[appHighlightOption]',

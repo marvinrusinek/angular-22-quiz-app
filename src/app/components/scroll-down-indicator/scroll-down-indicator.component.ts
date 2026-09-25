@@ -8,7 +8,7 @@ import {
   signal
 } from '@angular/core';
 
-import { swallow } from '../../shared/utils/error-logging';
+import { swallow } from '@shared/utils/error-logging';
 
 /**
  * A subtle floating scroll cue pinned to the bottom-centre of the screen. Shown

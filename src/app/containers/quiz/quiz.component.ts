@@ -25,35 +25,35 @@ import { MatTooltip, MatTooltipModule } from '@angular/material/tooltip';
 import {
   SK_RESULTS_REACHED_ATTEMPT,
   SK_SAVED_QUESTION_INDEX,
-} from '../../shared/constants/session-keys';
+} from '@shared/constants/session-keys';
 
-import { Option } from '../../shared/models/Option.model';
-import { QuestionPayload } from '../../shared/models/QuestionPayload.model';
-import { Quiz } from '../../shared/models/Quiz.model';
-import { QuizQuestion } from '../../shared/models/QuizQuestion.model';
-import { QuizQuestionEvent } from '../../shared/models/QuizQuestionEvent.type';
-import { SelectedOption } from '../../shared/models/SelectedOption.model';
+import { Option } from '@shared/models/Option.model';
+import { QuestionPayload } from '@shared/models/QuestionPayload.model';
+import { Quiz } from '@shared/models/Quiz.model';
+import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizQuestionEvent } from '@shared/models/QuizQuestionEvent.type';
+import { SelectedOption } from '@shared/models/SelectedOption.model';
 
-import { NextButtonStateService } from '../../shared/services/state/next-button-state.service';
-import { QqcQuestionLoaderService } from '../../shared/services/features/qqc/qqc-question-loader.service';
-import { QuizDotStatusService } from '../../shared/services/flow/quiz-dot-status.service';
-import { QuizInitializationService } from '../../shared/services/flow/quiz-initialization.service';
-import { QuizNavigationService } from '../../shared/services/flow/quiz-navigation.service';
-import { QuizPersistenceService } from '../../shared/services/state/quiz-persistence.service';
-import { QuizResetService } from '../../shared/services/flow/quiz-reset.service';
-import { QuizRouteService } from '../../shared/services/flow/quiz-route.service';
-import { QuizService } from '../../shared/services/data/quiz.service';
-import { TopicQuizTypeRegistry } from '../../shared/services/api/topic-quiz-type-registry.service';
-import { QuizQuestionManagerService } from '../../shared/services/flow/quizquestionmgr.service';
-import { QuestionVerdictService } from '../../shared/services/features/verdict/question-verdict.service';
-import { QuizSetupService } from '../../shared/services/flow/quiz-setup.service';
-import { QuizStateService } from '../../shared/services/state/quizstate.service';
-import { SelectedOptionService } from '../../shared/services/state/selectedoption.service';
+import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
+import { QqcQuestionLoaderService } from '@shared/services/features/qqc/qqc-question-loader.service';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
+import { QuizInitializationService } from '@shared/services/flow/quiz-initialization.service';
+import { QuizNavigationService } from '@shared/services/flow/quiz-navigation.service';
+import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
+import { QuizResetService } from '@shared/services/flow/quiz-reset.service';
+import { QuizRouteService } from '@shared/services/flow/quiz-route.service';
+import { QuizService } from '@shared/services/data/quiz.service';
+import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
+import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';
+import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizSetupService } from '@shared/services/flow/quiz-setup.service';
+import { QuizStateService } from '@shared/services/state/quizstate.service';
+import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import {
   SHOW_RESULTS_MSG,
   SelectionMessageService,
-} from '../../shared/services/features/selection-message/selection-message.service';
-import { TimerService } from '../../shared/services/features/timer/timer.service';
+} from '@shared/services/features/selection-message/selection-message.service';
+import { TimerService } from '@shared/services/features/timer/timer.service';
 
 import { CodelabQuizContentComponent } from './quiz-content/codelab-quiz-content.component';
 import { CodelabQuizHeaderComponent } from './quiz-header/quiz-header.component';
@@ -66,12 +66,12 @@ import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
 import { CodeSnippetComponent } from '../../components/code-snippet/code-snippet.component';
 import { SharedOptionComponent } from '../../components/question/answer/shared-option-component/shared-option.component';
 
-import { QUESTION_ROUTE_REGEX } from '../../shared/constants/route-patterns';
+import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
 
 import { ChangeRouteAnimation } from '../../animations/animations';
-import { withCorrectCountBanner } from '../../shared/utils/correct-count-banner';
-import { norm } from '../../shared/utils/text-norm';
-import { swallow } from '../../shared/utils/error-logging';
+import { withCorrectCountBanner } from '@shared/utils/correct-count-banner';
+import { norm } from '@shared/utils/text-norm';
+import { swallow } from '@shared/utils/error-logging';
 
 const INFO_ICON_COLOR = '#1e90ff';
 

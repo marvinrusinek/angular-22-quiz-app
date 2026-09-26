@@ -1,5 +1,5 @@
 import { buildHeadingInputs } from './heading-inputs';
-import { QuestionType } from '@shared/models/question-type.enum';
+import { QuestionType } from '@shared/models';
 
 /**
  * THE CORRECT-COUNT BANNER IS DECLARED METADATA, NOT A LOCAL TALLY.

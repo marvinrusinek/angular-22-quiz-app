@@ -2,7 +2,7 @@ import { inject, Service, Injector, signal } from '@angular/core';
 
 import { SK_CORRECT_ANSWERS_COUNT, SK_SAVED_QUESTION_INDEX } from '@shared/constants/session-keys';
 
-import { QuizScore } from '@shared/models/QuizScore.model';
+import { QuizScore } from '@shared/models';
 
 import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';

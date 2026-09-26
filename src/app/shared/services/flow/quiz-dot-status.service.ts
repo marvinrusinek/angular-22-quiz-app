@@ -2,9 +2,7 @@ import { Service, inject } from '@angular/core';
 
 import { SK_DOT_CONFIRMED } from '@shared/constants/session-keys';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { Option, QuizQuestion, SelectedOption } from '@shared/models';
 
 import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
 import { QuizService } from '@shared/services/data/quiz.service';

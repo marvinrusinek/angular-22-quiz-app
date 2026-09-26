@@ -8,7 +8,7 @@ import { SelectedOptionService } from './selectedoption.service';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { TOPIC_QUIZ_VERDICT_ADAPTER } from '@shared/services/features/verdict/verdict-adapter';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
-import type { Quiz } from '@shared/models/Quiz.model';
+import type { Quiz } from '@shared/models';
 
 /**
  * THE QUESTION THE SERVER JUDGES MUST BE THE QUESTION THE USER IS LOOKING AT.

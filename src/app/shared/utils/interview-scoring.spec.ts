@@ -1,4 +1,4 @@
-import { Option } from '@shared/models/Option.model';
+import { Option } from '@shared/models';
 import { isAnswerCorrect } from './interview-scoring';
 
 /**

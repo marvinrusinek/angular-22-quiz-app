@@ -3,7 +3,7 @@ import {
   DifficultyDistribution,
   isValidDistribution
 } from './difficulty-quota';
-import { INTERVIEW_PRESETS } from '@shared/models/interview-preset.model';
+import { INTERVIEW_PRESETS } from '@shared/models';
 
 const dist = (b: number, i: number, a: number): DifficultyDistribution => ({
   beginner: b,

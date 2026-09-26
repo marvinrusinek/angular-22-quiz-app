@@ -2,9 +2,7 @@ import { inject, Service } from '@angular/core';
 
 import { SK_DOT_CONFIRMED } from '@shared/constants/session-keys';
 
-import { FeedbackConfig } from '@shared/models/FeedbackConfig.model';
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { FeedbackConfig, Option, QuizQuestion } from '@shared/models';
 
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 import { swallow } from '@shared/utils/error-logging';

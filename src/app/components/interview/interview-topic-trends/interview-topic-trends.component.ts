@@ -8,7 +8,7 @@ import {
   TopicTrendDirection,
   TopicTrendFilter,
   TopicTrendPoint
-} from '@shared/models/interview-topic-trends.model';
+} from '@shared/models';
 import { filterTopicTrends } from '@shared/services/features/interview/interview-topic-trends.service';
 
 interface SparkGeometry {

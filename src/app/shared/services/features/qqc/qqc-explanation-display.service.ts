@@ -4,10 +4,7 @@ import { catchError, filter, map, take, timeout } from 'rxjs/operators';
 
 import { PROMISE_RACE_TIMEOUT_MS } from '@shared/constants/timing';
 
-import { FormattedExplanation } from '@shared/models/FormattedExplanation.model';
-import { Option } from '@shared/models/Option.model';
-import { QuestionState } from '@shared/models/QuestionState.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { FormattedExplanation, Option, QuestionState, QuizQuestion } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QqcExplanationManagerService } from './qqc-explanation-manager.service';

@@ -1,12 +1,14 @@
 ﻿import { Service, inject } from '@angular/core';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import {
+  FeedbackProps,
+  Option,
+  OptionBindings,
+  QuestionType,
+  QuizQuestion,
+  SelectedOption
+} from '@shared/models';
 
-import { FeedbackProps } from '@shared/models/FeedbackProps.model';
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
 import { OptionClickHandlerService } from '@shared/services/options/engine/option-click-handler.service';

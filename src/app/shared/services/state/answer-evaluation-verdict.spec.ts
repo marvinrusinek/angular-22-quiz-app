@@ -14,8 +14,7 @@ import {
 import { QuestionVerdictError } from '@shared/services/features/verdict/question-verdict.types';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
-import type { Quiz } from '@shared/models/Quiz.model';
-import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import type { Quiz, QuizQuestion } from '@shared/models';
 
 /**
  * RESOLUTION STATUS from verdict state.

@@ -12,7 +12,7 @@ import { TOPIC_QUIZ_VERDICT_ADAPTER } from './verdict-adapter';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
-import type { Quiz } from '@shared/models/Quiz.model';
+import type { Quiz } from '@shared/models';
 
 /**
  * ASYNC DOT STATUS (Stage 10E).

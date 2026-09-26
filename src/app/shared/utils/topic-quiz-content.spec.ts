@@ -15,7 +15,7 @@ import {
   type TopicQuizQuestionView
 } from '@shared/services/api/topic-quiz-questions.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { QuestionType } from '@shared/models/question-type.enum';
+import { QuestionType } from '@shared/models';
 import * as quizDataCache from '@shared/quiz-data-cache';
 
 /**

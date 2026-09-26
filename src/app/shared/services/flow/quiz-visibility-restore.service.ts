@@ -1,8 +1,6 @@
 import { Service, WritableSignal, inject } from '@angular/core';
 
-import { Option } from '@shared/models/Option.model';
-import { QuestionPayload } from '@shared/models/QuestionPayload.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, QuestionPayload, QuizQuestion } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuizStateService } from '@shared/services/state/quizstate.service';

@@ -19,7 +19,7 @@
  * permutation so we can assert exact positions.
  */
 import { QuizShuffleService } from './quiz-shuffle.service';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizQuestion } from '@shared/models';
 import { ArrayUtils } from '@shared/utils/array-utils';
 
 function makeQuestions(): QuizQuestion[] {

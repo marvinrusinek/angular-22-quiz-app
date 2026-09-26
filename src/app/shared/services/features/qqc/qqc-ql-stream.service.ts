@@ -4,13 +4,15 @@ import { ActivatedRouteSnapshot, Router } from '@angular/router';
 import { firstValueFrom, forkJoin, lastValueFrom, of } from 'rxjs';
 import { catchError, filter, take, timeout } from 'rxjs/operators';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import {
+  Option,
+  QAPayload,
+  QuestionPayload,
+  QuestionType,
+  Quiz,
+  QuizQuestion
+} from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { QAPayload } from '@shared/models/QAPayload.model';
-import { QuestionPayload } from '@shared/models/QuestionPayload.model';
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuestionTimingService } from '@shared/services/features/timer/question-timing.service';

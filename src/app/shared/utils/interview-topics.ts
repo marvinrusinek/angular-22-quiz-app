@@ -1,4 +1,4 @@
-import { Quiz } from '@shared/models/Quiz.model';
+import { Quiz } from '@shared/models';
 
 /**
  * THE single definition of an "eligible Interview Mode topic": a catalogue quiz

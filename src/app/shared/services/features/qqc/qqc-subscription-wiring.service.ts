@@ -4,9 +4,7 @@ import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
 import { filter, skip, tap } from 'rxjs/operators';
 
-import { Option } from '@shared/models/Option.model';
-import { QuestionPayload } from '@shared/models/QuestionPayload.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, QuestionPayload, QuizQuestion } from '@shared/models';
 
 import { QuizNavigationService } from '@shared/services/flow/quiz-navigation.service';
 import { QuizService } from '@shared/services/data/quiz.service';

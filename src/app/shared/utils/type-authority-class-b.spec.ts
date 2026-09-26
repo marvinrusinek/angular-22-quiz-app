@@ -4,9 +4,8 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { QuestionType } from '@shared/models/question-type.enum';
-import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import type { SelectedOption } from '@shared/models/SelectedOption.model';
+import { QuestionType } from '@shared/models';
+import type { QuizQuestion, SelectedOption } from '@shared/models';
 
 import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
 import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';

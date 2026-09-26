@@ -13,8 +13,7 @@ import { MatSlideToggleChange, MatSlideToggleModule }
 import { EMPTY, firstValueFrom, TimeoutError } from 'rxjs';
 import { catchError, map, switchMap, tap, timeout } from 'rxjs/operators';
 
-import { Quiz, QuizDifficulty } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Quiz, QuizDifficulty, QuizQuestion } from '@shared/models';
 
 import { QuizDataService } from '@shared/services/data/quizdata.service';
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';

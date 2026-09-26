@@ -3,11 +3,8 @@ import { firstValueFrom } from 'rxjs';
 
 import { PROMISE_RACE_TIMEOUT_MS } from '@shared/constants/timing';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { FormattedExplanation, QuestionState, QuestionType, QuizQuestion } from '@shared/models';
 
-import { FormattedExplanation } from '@shared/models/FormattedExplanation.model';
-import { QuestionState } from '@shared/models/QuestionState.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QqcExplanationDisplayService } from './qqc-explanation-display.service';

@@ -9,7 +9,7 @@ import {
 
 import { FET_UNLOCK_WATCHDOG_MS } from '@shared/constants/timing';
 
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizQuestion } from '@shared/models';
 
 import { ExplanationFormatterService } from './explanation-formatter.service';
 import { ExplanationGateService } from './explanation-gate.service';

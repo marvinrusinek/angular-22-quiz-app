@@ -7,9 +7,7 @@ import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
 import { QuizStateService } from '@shared/services/state/quizstate.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
-import { QuestionType } from '@shared/models/question-type.enum';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { QuestionType, QuizQuestion, SelectedOption } from '@shared/models';
 
 /**
  * Stage 10 (Chokepoint #1 audit) — `buildCanonicalOptions` and

@@ -1,6 +1,6 @@
 import { Service, effect, untracked } from '@angular/core';
 
-import { Option } from '@shared/models/Option.model';
+import { Option } from '@shared/models';
 
 import type { SharedOptionComponent } from '../../../../components/question/answer/shared-option-component/shared-option.component';
 import { norm } from '@shared/utils/text-norm';

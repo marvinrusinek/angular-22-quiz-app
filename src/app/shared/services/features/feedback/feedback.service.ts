@@ -1,10 +1,7 @@
 ﻿import { forwardRef, inject, Service, Injector } from '@angular/core';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { Option, QuestionType, QuizQuestion, SelectedOption } from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
 import { pinAllOfTheAboveLast, pinnedIndex1Based } from '@shared/utils/all-of-the-above';

@@ -9,8 +9,8 @@ import {
 import {
   InterviewReadiness,
   InterviewReadinessBand,
-  InterviewReadinessFactor,
-} from '@shared/models/interview-readiness.model';
+  InterviewReadinessFactor
+} from '@shared/models';
 
 interface FactorRow {
   key: InterviewReadinessFactor;

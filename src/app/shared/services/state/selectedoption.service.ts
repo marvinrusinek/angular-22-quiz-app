@@ -3,11 +3,8 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, Subject } from 'rxjs';
 import { distinctUntilChanged, map, startWith } from 'rxjs/operators';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { Option, QuestionType, QuizQuestion, SelectedOption } from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
 import { norm } from '@shared/utils/text-norm';
 
 import { SK_DISPLAY_MODE, SK_IS_ANSWERED, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_USER_ANSWERS } from '@shared/constants/session-keys';

@@ -9,13 +9,15 @@ import { MatRadioModule, MatRadioChange } from '@angular/material/radio';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 
-import { FeedbackProps } from '@shared/models/FeedbackProps.model';
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { OptionClickedPayload } from '@shared/models/OptionClickedPayload.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
-import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
+import {
+  FeedbackProps,
+  Option,
+  OptionBindings,
+  OptionClickedPayload,
+  QuizQuestion,
+  SelectedOption,
+  SharedOptionConfig
+} from '@shared/models';
 
 import { OptionClickHandlerService } from '@shared/services/options/engine/option-click-handler.service';
 import { OptionFeedbackDisplayService } from '@shared/services/features/shared-option/option-feedback-display.service';

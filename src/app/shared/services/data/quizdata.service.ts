@@ -10,12 +10,9 @@ import {
   take,
 } from 'rxjs/operators';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { Option, QuestionType, Quiz, QuizQuestion } from '@shared/models';
 import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
 
-import { Option } from '@shared/models/Option.model';
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { TopicQuizQuestionsService } from '@shared/services/api/topic-quiz-questions.service';
 import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';

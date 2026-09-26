@@ -11,18 +11,24 @@ import { SK_COMPLETED_QUIZ_IDS, SK_QUIZ_SEARCH_TERM, SK_QUIZ_SORT_ALPHA, SK_QUIZ
 import { readSessionJson, readSessionString, writeSessionJson, writeSessionString } from '@shared/utils/session-storage';
 import { readLocalString, writeLocalString } from '@shared/utils/local-storage';
 
-import { QuizRoutes } from '@shared/models/quiz-routes.enum';
-import { QuizStatus } from '@shared/models/quiz-status.enum';
+import {
+  AchievementCatalogEntry,
+  AchievementId,
+  AlphaDirection,
+  AnimationState,
+  DifficultyDirection,
+  DifficultyFilter,
+  Quiz,
+  QuizDifficulty,
+  QuizProgress,
+  QuizRoutes,
+  QuizSelectionParams,
+  QuizStatus
+} from '@shared/models';
 
-import { AnimationState } from '@shared/models/AnimationState.type';
-import { Quiz, QuizDifficulty } from '@shared/models/Quiz.model';
-import { AlphaDirection, DifficultyDirection } from '@shared/models/QuizSort.type';
-import { DifficultyFilter } from '@shared/models/QuizFilter.type';
-import { QuizSelectionParams } from '@shared/models/QuizSelectionParams.model';
 
 import { QuizService } from '@shared/services/data/quiz.service';
 import { AchievementService } from '@shared/services/achievements/achievement.service';
-import { AchievementCatalogEntry, AchievementId } from '@shared/models/achievement.model';
 import { achievementCompletionMessage } from '@shared/utils/achievement-progress-message';
 import { CertificateEarnedBadgeComponent } from '../../components/interview/certificate-earned-badge/certificate-earned-badge.component';
 import { ProgressService } from '@shared/services/progress/progress.service';
@@ -33,7 +39,6 @@ import { DifficultyRecommendationService } from '@shared/services/features/learn
 import { SessionEngagementService } from '@shared/services/state/session-engagement.service';
 import { InterviewWarmupCoordinatorService } from '@shared/services/interview/interview-warmup-coordinator.service';
 
-import { QuizProgress } from '@shared/models/progress.model';
 
 import { AchievementsSummaryComponent } from '../../components/achievements-summary/achievements-summary.component';
 import { RecommendedNextQuizComponent } from '../../components/recommended-next-quiz/recommended-next-quiz.component';

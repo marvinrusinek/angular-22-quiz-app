@@ -1,6 +1,6 @@
 ﻿import { Service } from '@angular/core';
 
-import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { OptionBindings } from '@shared/models';
 
 @Service()
 export class OptionSelectionPolicyService {

@@ -1,6 +1,6 @@
 import { Directive, input } from '@angular/core';
 
-import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
+import { SharedOptionConfig } from '@shared/models';
 
 @Directive({
   selector: '[sharedOptionConfig]',

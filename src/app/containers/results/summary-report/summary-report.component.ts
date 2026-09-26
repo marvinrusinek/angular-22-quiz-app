@@ -6,8 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { QuizMetadata } from '@shared/models/QuizMetadata.model';
-import { QuizScore } from '@shared/models/QuizScore.model';
+import { QuizMetadata, QuizScore } from '@shared/models';
 
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
 import { QuizService } from '@shared/services/data/quiz.service';

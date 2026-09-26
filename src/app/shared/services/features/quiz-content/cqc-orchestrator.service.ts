@@ -9,12 +9,14 @@ import {
   switchMap, take, tap, withLatestFrom
 } from 'rxjs/operators';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import {
+  CombinedQuestionDataType,
+  Option,
+  QuestionPayload,
+  QuestionType,
+  QuizQuestion
+} from '@shared/models';
 
-import { CombinedQuestionDataType } from '@shared/models/CombinedQuestionDataType.model';
-import { Option } from '@shared/models/Option.model';
-import { QuestionPayload } from '@shared/models/QuestionPayload.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { CqcQuestionNavService } from './cqc-question-nav.service';
 import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AchievementsCatalogComponent } from './achievements-catalog.component';
-import { AchievementView } from '@shared/models/achievement.model';
+import { AchievementView } from '@shared/models';
 
 const VIEW: AchievementView[] = [
   { id: 'perfect-score', name: 'Perfect Score', description: 'Earn a 100% score on any quiz.', earned: true },

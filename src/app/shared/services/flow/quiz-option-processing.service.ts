@@ -1,8 +1,6 @@
 ﻿import { Service, inject } from '@angular/core';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { Option, QuizQuestion, SelectedOption } from '@shared/models';
 
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { QuizDotStatusService } from './quiz-dot-status.service';

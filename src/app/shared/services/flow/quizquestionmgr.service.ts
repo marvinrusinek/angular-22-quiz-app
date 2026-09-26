@@ -1,8 +1,7 @@
 import { Service } from '@angular/core';
 import { Observable, of } from 'rxjs';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, QuizQuestion } from '@shared/models';
 
 import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
 

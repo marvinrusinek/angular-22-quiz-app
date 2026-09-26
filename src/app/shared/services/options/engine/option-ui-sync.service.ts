@@ -2,11 +2,8 @@
 import { MatCheckboxChange } from '@angular/material/checkbox';
 import { MatRadioChange } from '@angular/material/radio';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { Option, OptionBindings, QuestionType, QuizQuestion } from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { SK_DISPLAY_MODE, SK_IS_ANSWERED, SK_MULTI_PERFECT } from '@shared/constants/session-keys';
 import { writeSessionString } from '@shared/utils/session-storage';

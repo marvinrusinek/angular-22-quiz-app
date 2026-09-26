@@ -6,12 +6,14 @@ import {
 } from 'rxjs';
 import { distinctUntilChanged, filter, observeOn } from 'rxjs/operators';
 
-import { FeedbackProps } from '@shared/models/FeedbackProps.model';
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
-import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
+import {
+  FeedbackProps,
+  Option,
+  OptionBindings,
+  QuizQuestion,
+  SelectedOption,
+  SharedOptionConfig
+} from '@shared/models';
 
 import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
 

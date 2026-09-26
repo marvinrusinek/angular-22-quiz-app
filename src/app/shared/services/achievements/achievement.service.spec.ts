@@ -2,9 +2,12 @@ import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { AchievementService } from './achievement.service';
-import { AchievementCatalogEntry } from '@shared/models/achievement.model';
+import {
+  AchievementCatalogEntry,
+  InterviewReadiness,
+  InterviewReadinessBand
+} from '@shared/models';
 import { SK_QUIZ_ACHIEVEMENTS, SK_QUIZ_BEST_SCORES } from '@shared/constants/session-keys';
-import { InterviewReadiness, InterviewReadinessBand } from '@shared/models/interview-readiness.model';
 import { InterviewReadinessService } from '@shared/services/features/interview/interview-readiness.service';
 import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
 

@@ -1,7 +1,4 @@
-import { Option } from '@shared/models/Option.model';
-import { Quiz, QuizDifficulty } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { AssessmentConfig } from '@shared/models/AssessmentConfig.model';
+import { AssessmentConfig, Option, Quiz, QuizDifficulty, QuizQuestion } from '@shared/models';
 
 import { getQuizData, setQuizDataCache } from '@shared/quiz-data-cache';
 import { ArrayUtils } from '@shared/utils/array-utils';

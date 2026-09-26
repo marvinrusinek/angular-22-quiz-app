@@ -5,7 +5,7 @@ import { MatSelect } from '@angular/material/select';
 import { MatTooltip } from '@angular/material/tooltip';
 
 import { QuizDifficultyFilterComponent } from './quiz-difficulty-filter.component';
-import type { DifficultyFilter } from '@shared/models/QuizFilter.type';
+import type { DifficultyFilter } from '@shared/models';
 
 /**
  * The difficulty FILTER is a compact Material select: "All Difficulties",

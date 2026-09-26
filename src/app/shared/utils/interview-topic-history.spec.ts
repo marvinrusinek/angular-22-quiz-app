@@ -1,4 +1,4 @@
-import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
+import { InterviewAttemptHistoryEntry } from '@shared/models';
 import { aggregateTopicPercentages } from './interview-topic-history';
 // Regression: the readiness service re-exports the SAME helper — proving the
 // extraction left Readiness's aggregation untouched.

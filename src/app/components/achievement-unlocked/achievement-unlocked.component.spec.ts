@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AchievementUnlockedComponent } from './achievement-unlocked.component';
-import { AchievementDefinition } from '@shared/models/achievement.model';
+import { AchievementDefinition } from '@shared/models';
 
 const PERFECT: AchievementDefinition = {
   id: 'perfect-score', name: 'Perfect Score', description: 'Earn a 100% score on any quiz.'

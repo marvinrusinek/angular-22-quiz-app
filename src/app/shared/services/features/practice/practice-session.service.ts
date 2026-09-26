@@ -1,8 +1,6 @@
 import { computed, inject, Service, signal } from '@angular/core';
 
-import { GeneratedAssessment } from '@shared/models/GeneratedAssessment.model';
-import { PracticeResult } from '@shared/models/PracticeResult.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { GeneratedAssessment, PracticeResult, QuizQuestion } from '@shared/models';
 import { SK_PRACTICE_SESSION } from '@shared/constants/session-keys';
 import { readSessionJson, removeSessionKey, writeSessionJson } from '@shared/utils/session-storage';
 import {

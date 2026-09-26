@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { InterviewReadiness } from '@shared/models/interview-readiness.model';
+import { InterviewReadiness } from '@shared/models';
 import { InterviewReadinessComponent } from './interview-readiness.component';
 
 function ready(over: Partial<InterviewReadiness> = {}): InterviewReadiness {

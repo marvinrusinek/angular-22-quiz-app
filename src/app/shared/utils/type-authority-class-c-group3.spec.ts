@@ -4,9 +4,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 
-import { QuestionType } from '@shared/models/question-type.enum';
-import type { Option } from '@shared/models/Option.model';
-import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuestionType } from '@shared/models';
+import type { Option, QuizQuestion } from '@shared/models';
 
 import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';
 import { QqcOrchQuestionLoadService } from '@shared/services/features/qqc/qqc-orch-question-load.service';

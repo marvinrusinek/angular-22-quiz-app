@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { InterviewAttemptHistoryEntry, InterviewTrends } from '@shared/models/interview-history.model';
+import { InterviewAttemptHistoryEntry, InterviewTrends } from '@shared/models';
 import { summarizeTrends } from '@shared/services/features/interview/interview-history.service';
 import { PerformanceTrendsComponent } from './performance-trends.component';
 

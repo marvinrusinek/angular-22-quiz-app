@@ -3,17 +3,20 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, firstValueFrom, from, Observable, of, Subject } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 
-import { QuizStatus } from '@shared/models/quiz-status.enum';
+import {
+  FinalResult,
+  Option,
+  QuestionPayload,
+  Quiz,
+  QuizQuestion,
+  QuizScore,
+  QuizSelectionParams,
+  QuizStatus,
+  Resource,
+  SelectedOption,
+  toDurableFinalResult
+} from '@shared/models';
 
-import { FinalResult, toDurableFinalResult } from '@shared/models/Final-Result.model';
-import { Option } from '@shared/models/Option.model';
-import { QuestionPayload } from '@shared/models/QuestionPayload.model';
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { QuizScore } from '@shared/models/QuizScore.model';
-import { QuizSelectionParams } from '@shared/models/QuizSelectionParams.model';
-import { Resource } from '@shared/models/Resource.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { QuizAnswerEvaluationService } from './quiz-answer-evaluation.service';
 import { QuizBannerService } from './quiz-banner.service';

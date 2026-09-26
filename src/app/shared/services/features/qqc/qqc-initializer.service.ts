@@ -4,9 +4,7 @@ import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import { Option } from '@shared/models/Option.model';
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, Quiz, QuizQuestion } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QqcQuestionLoaderService } from './qqc-question-loader.service';

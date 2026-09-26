@@ -17,8 +17,8 @@ import { QuizService } from '@shared/services/data/quiz.service';
 import { QuizStateService } from '@shared/services/state/quizstate.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { QuestionType } from '@shared/models/question-type.enum';
-import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuestionType } from '@shared/models';
+import type { QuizQuestion } from '@shared/models';
 import { answerStateStub } from '@shared/testing/answer-state-stub';
 
 /**

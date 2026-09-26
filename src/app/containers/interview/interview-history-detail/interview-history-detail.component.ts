@@ -15,9 +15,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { formatDuration } from '@shared/utils/format-time';
 import { swallow } from '@shared/utils/error-logging';
-import { InterviewResult } from '@shared/models/InterviewResult.model';
-import { InterviewDifficulty } from '@shared/models/AssessmentConfig.model';
-import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
+import { InterviewAttemptHistoryEntry, InterviewDifficulty, InterviewResult } from '@shared/models';
 import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
 import { InterviewAnalyticsService } from '@shared/services/features/interview/interview-analytics.service';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';

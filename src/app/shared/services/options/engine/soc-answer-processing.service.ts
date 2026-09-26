@@ -2,11 +2,8 @@ import { Service, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { filter, take } from 'rxjs/operators';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { FeedbackProps, Option, OptionBindings, QuestionType } from '@shared/models';
 
-import { FeedbackProps } from '@shared/models/FeedbackProps.model';
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
 
 import { SK_MULTI_PERFECT, SK_SEL_Q } from '@shared/constants/session-keys';
 import { isOptionCorrect } from '@shared/utils/is-option-correct';

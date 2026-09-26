@@ -13,12 +13,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { OptionClickedPayload } from '@shared/models/OptionClickedPayload.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
-import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
+import {
+  Option,
+  OptionBindings,
+  OptionClickedPayload,
+  QuizQuestion,
+  SelectedOption,
+  SharedOptionConfig
+} from '@shared/models';
 
 import { AnswerBindingsService } from '@shared/services/features/answer/answer-bindings.service';
 import { AnswerOptionsService } from '@shared/services/features/answer/answer-options.service';

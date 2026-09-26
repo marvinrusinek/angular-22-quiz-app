@@ -4,8 +4,8 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of, Subject } from 'rxjs';
 
-import { QuestionType } from '@shared/models/question-type.enum';
-import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuestionType } from '@shared/models';
+import type { QuizQuestion } from '@shared/models';
 
 import { OptionClickHandlerService } from '@shared/services/options/engine/option-click-handler.service';
 import { SharedOptionBindingService } from '@shared/services/options/engine/shared-option-binding.service';

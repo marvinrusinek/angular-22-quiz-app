@@ -1,9 +1,6 @@
 ﻿import { Service } from '@angular/core';
 
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { Option, OptionBindings, QuizQuestion, SelectedOption } from '@shared/models';
 
 import { FeedbackContext } from './shared-option-feedback.service';
 

@@ -1,8 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 
-import { QuizMetadata } from '@shared/models/QuizMetadata.model';
-import { QuizScore } from '@shared/models/QuizScore.model';
+import { QuizMetadata, QuizScore } from '@shared/models';
 
 @Component({
   selector: 'codelab-summary-stats',

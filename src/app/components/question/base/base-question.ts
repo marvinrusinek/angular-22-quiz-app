@@ -13,11 +13,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { filter } from 'rxjs/operators';
 
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
-import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
+import {
+  Option,
+  OptionBindings,
+  QuizQuestion,
+  SelectedOption,
+  SharedOptionConfig
+} from '@shared/models';
 
 import { DynamicComponentService } from '@shared/services/ui/dynamic-component.service';
 import { FeedbackService } from '@shared/services/features/feedback/feedback.service';

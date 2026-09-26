@@ -1,7 +1,6 @@
 import { Service, effect, inject, untracked } from '@angular/core';
 
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { OptionBindings, SelectedOption } from '@shared/models';
 
 import type { SharedOptionComponent } from '../../../../components/question/answer/shared-option-component/shared-option.component';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';

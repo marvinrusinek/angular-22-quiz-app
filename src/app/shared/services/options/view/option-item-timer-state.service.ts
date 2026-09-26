@@ -1,6 +1,6 @@
 import { inject, Service } from '@angular/core';
 
-import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { OptionBindings } from '@shared/models';
 
 import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
 import { QuizService } from '@shared/services/data/quiz.service';

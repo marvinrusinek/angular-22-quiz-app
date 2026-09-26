@@ -1,6 +1,6 @@
 import { Service, effect } from '@angular/core';
 
-import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { OptionBindings } from '@shared/models';
 
 import type { SharedOptionComponent } from '../../../../components/question/answer/shared-option-component/shared-option.component';
 

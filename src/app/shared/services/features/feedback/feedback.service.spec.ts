@@ -14,9 +14,7 @@
  */
 import { TestBed } from '@angular/core/testing';
 
-import { QuestionType } from '@shared/models/question-type.enum';
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, QuestionType, QuizQuestion } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { FeedbackService } from './feedback.service';

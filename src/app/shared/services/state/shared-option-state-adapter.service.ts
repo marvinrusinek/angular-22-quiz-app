@@ -1,9 +1,6 @@
 import { Service, WritableSignal } from '@angular/core';
 
-import { FeedbackProps } from '@shared/models/FeedbackProps.model';
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { FeedbackProps, Option, OptionBindings, QuizQuestion } from '@shared/models';
 
 import { OptionInteractionState } from '@shared/services/options/engine/option-interaction.service';
 

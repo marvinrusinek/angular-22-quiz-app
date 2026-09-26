@@ -1,7 +1,5 @@
-import { QuestionType } from '@shared/models/question-type.enum';
+import { Option, QuestionType, QuizQuestion } from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { ArrayUtils } from '@shared/utils/array-utils';
 

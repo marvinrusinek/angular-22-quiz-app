@@ -2,7 +2,7 @@ import { Service, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { FET_UNLOCK_WATCHDOG_MS } from '@shared/constants/timing';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizQuestion } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuestionStateResult } from './quiz-content-loader.service';

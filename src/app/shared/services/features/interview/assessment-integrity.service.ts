@@ -2,7 +2,7 @@ import { DestroyRef, Service, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { fromEvent, Subject } from 'rxjs';
 
-import { AssessmentIntegrityState } from '@shared/models/AssessmentIntegrityState.model';
+import { AssessmentIntegrityState } from '@shared/models';
 import { SK_ASSESSMENT_INTEGRITY } from '@shared/constants/session-keys';
 import { swallow } from '@shared/utils/error-logging';
 import { readSessionJson, removeSessionKey, writeSessionJson } from '@shared/utils/session-storage';

@@ -12,7 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
 
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizQuestion } from '@shared/models';
 
 import { QuizService } from '@shared/services/data/quiz.service';
 import { swallow } from '@shared/utils/error-logging';

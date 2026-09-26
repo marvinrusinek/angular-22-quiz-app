@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { ActivatedRoute } from '@angular/router';
 
-import { QuizMetadata } from '@shared/models/QuizMetadata.model';
+import { QuizMetadata } from '@shared/models';
 
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
 import { QuizService } from '@shared/services/data/quiz.service';

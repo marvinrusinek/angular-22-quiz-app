@@ -1,9 +1,7 @@
 ﻿import { Service } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { Option, QuizQuestion, SelectedOption } from '@shared/models';
 
 import type { QuizQuestionComponent } from '../../../../components/question/quiz-question/quiz-question.component';
 

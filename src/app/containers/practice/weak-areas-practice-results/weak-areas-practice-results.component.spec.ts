@@ -5,7 +5,7 @@ import { signal } from '@angular/core';
 import { WeakAreasPracticeResultsComponent } from './weak-areas-practice-results.component';
 import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 import { WeakAreasService } from '@shared/services/progress/weak-areas.service';
-import { PracticeResult } from '@shared/models/PracticeResult.model';
+import { PracticeResult } from '@shared/models';
 
 const RESULT: PracticeResult = {
   sessionId: 'wap_test',

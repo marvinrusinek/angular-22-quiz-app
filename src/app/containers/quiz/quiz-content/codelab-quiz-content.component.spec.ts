@@ -9,7 +9,7 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { CodeSnippetComponent } from '../../../components/code-snippet/code-snippet.component';
-import { QuestionType } from '@shared/models/question-type.enum';
+import { QuestionType } from '@shared/models';
 import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { QuizDataService } from '@shared/services/data/quizdata.service';

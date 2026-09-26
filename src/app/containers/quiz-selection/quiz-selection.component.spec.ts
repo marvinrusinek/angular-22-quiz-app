@@ -18,7 +18,7 @@ import { DifficultyRecommendationService } from '@shared/services/features/learn
 import { SessionEngagementService } from '@shared/services/state/session-engagement.service';
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
 import { InterviewWarmupCoordinatorService } from '@shared/services/interview/interview-warmup-coordinator.service';
-import { QuizStatus } from '@shared/models/quiz-status.enum';
+import { QuizStatus } from '@shared/models';
 
 /**
  * S6o bank-absence regression coverage for QuizSelectionComponent.

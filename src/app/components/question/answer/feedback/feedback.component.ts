@@ -4,9 +4,7 @@ import {
 import { NgClass } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 
-import { FeedbackProps } from '@shared/models/FeedbackProps.model';
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { FeedbackProps, Option, QuizQuestion } from '@shared/models';
 
 import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';

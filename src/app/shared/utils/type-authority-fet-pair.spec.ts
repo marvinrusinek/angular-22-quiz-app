@@ -4,8 +4,8 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { QuestionType } from '@shared/models/question-type.enum';
-import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuestionType } from '@shared/models';
+import type { QuizQuestion } from '@shared/models';
 
 import { QqcExplanationDisplayService } from '@shared/services/features/qqc/qqc-explanation-display.service';
 import { SharedOptionExplanationService } from '@shared/services/features/shared-option/shared-option-explanation.service';

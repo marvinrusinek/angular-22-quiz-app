@@ -8,7 +8,7 @@ import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import { TopicQuizTypeRegistry } from './topic-quiz-type-registry.service';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
-import type { Quiz } from '@shared/models/Quiz.model';
+import type { Quiz } from '@shared/models';
 
 /**
  * Explicit type REACHING the runtime.

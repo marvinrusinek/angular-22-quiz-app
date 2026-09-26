@@ -1,5 +1,4 @@
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { OptionBindings, SelectedOption } from '@shared/models';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
 import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';

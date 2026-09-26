@@ -18,9 +18,7 @@ import { Toolbar, ToolbarWidget, ToolbarWidgetGroup } from '@angular/aria/toolba
 
 import { SK_USER_ANSWERS } from '@shared/constants/session-keys';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { Result } from '@shared/models/Result.model';
+import { Option, QuizQuestion, Result } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuizDataService } from '@shared/services/data/quizdata.service';

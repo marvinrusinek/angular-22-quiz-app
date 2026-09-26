@@ -5,7 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideApiBaseUrl } from '@shared/tokens/api-base-url.token';
 
-import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
+import { InterviewAttemptHistoryEntry } from '@shared/models';
 import { SK_INTERVIEW_HISTORY } from '@shared/constants/session-keys';
 import { InterviewHistoryDetailComponent } from './interview-history-detail.component';
 

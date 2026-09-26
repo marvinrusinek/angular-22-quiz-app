@@ -6,7 +6,7 @@ import { of } from 'rxjs';
 
 import { QuizSessionManagerService, QuizSessionState } from './quiz-session-manager.service';
 import { QuizDataLoaderService } from './quiz-data-loader.service';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizQuestion } from '@shared/models';
 
 /**
  * RESTART MUST NOT DEPEND ON THE PRISTINE BANK (pre-S5a).

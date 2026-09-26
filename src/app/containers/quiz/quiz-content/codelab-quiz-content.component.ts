@@ -23,9 +23,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute, ParamMap } from '@angular/router';
 import { BehaviorSubject, Observable, of, Subscription } from 'rxjs';
 
-import { CombinedQuestionDataType } from '@shared/models/CombinedQuestionDataType.model';
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { CombinedQuestionDataType, Option, QuizQuestion } from '@shared/models';
 
 import { CqcOrchestratorService } from '@shared/services/features/quiz-content/cqc-orchestrator.service';
 import {

@@ -2,7 +2,7 @@ import { Service } from '@angular/core';
 
 import { SK_DOT_CONFIRMED, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP } from '@shared/constants/session-keys';
 
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { SelectedOption } from '@shared/models';
 
 import { norm } from '@shared/utils/text-norm';
 import { swallow } from '@shared/utils/error-logging';

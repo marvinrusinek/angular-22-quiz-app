@@ -8,7 +8,7 @@ import { SelectedOptionService } from '@shared/services/state/selectedoption.ser
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
-import type { Quiz } from '@shared/models/Quiz.model';
+import type { Quiz } from '@shared/models';
 
 /**
  * Verdict submission SEQUENCING.

@@ -1,7 +1,6 @@
 import { Service } from '@angular/core';
 
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { QuizQuestion, SelectedOption } from '@shared/models';
 
 /**
  * Manages scoring, progress calculation, and expected-correct-count

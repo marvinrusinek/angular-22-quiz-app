@@ -1,8 +1,6 @@
 ﻿import { Service, inject } from '@angular/core';
 
-import { FeedbackProps } from '@shared/models/FeedbackProps.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { FeedbackProps, OptionBindings, SelectedOption } from '@shared/models';
 
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { OptionClickHandlerService } from './option-click-handler.service';

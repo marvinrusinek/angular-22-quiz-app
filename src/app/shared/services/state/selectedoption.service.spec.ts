@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { SelectedOption } from '@shared/models';
 
 import { AnswerEvaluationService } from './answer-evaluation.service';
 import { NextButtonStateService } from './next-button-state.service';

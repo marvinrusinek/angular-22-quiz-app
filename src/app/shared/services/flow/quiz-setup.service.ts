@@ -5,8 +5,7 @@ import { filter } from 'rxjs/operators';
 
 import { FET_WRITE_RETRY_CASCADE_MS, FET_WRITE_RETRY_LONG_CASCADE_MS } from '@shared/constants/timing';
 
-import { QuestionPayload } from '@shared/models/QuestionPayload.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuestionPayload, QuizQuestion } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';

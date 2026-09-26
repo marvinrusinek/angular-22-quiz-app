@@ -3,9 +3,9 @@ import { TestBed } from '@angular/core/testing';
 import { OptionLockPolicyService } from './option-lock-policy.service';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
-import { QuestionType } from '@shared/models/question-type.enum';
+import { QuestionType } from '@shared/models';
+import type { OptionBindings } from '@shared/models';
 import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
-import type { OptionBindings } from '@shared/models/OptionBindings.model';
 
 /**
  * WHO DECIDES WHICH OPTIONS LOCK.

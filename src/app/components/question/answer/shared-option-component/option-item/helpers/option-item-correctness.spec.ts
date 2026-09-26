@@ -9,8 +9,7 @@ import {
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { TOPIC_QUIZ_VERDICT_ADAPTER } from '@shared/services/features/verdict/verdict-adapter';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
-import type { Quiz } from '@shared/models/Quiz.model';
-import type { OptionBindings } from '@shared/models/OptionBindings.model';
+import type { OptionBindings, Quiz } from '@shared/models';
 import type { QuizService } from '@shared/services/data/quiz.service';
 
 /**

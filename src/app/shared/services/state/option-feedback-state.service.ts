@@ -1,6 +1,6 @@
 import { Service, inject } from '@angular/core';
 
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { SelectedOption } from '@shared/models';
 
 import { OptionIdResolverService } from './option-id-resolver.service';
 

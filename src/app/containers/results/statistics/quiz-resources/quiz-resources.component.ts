@@ -3,7 +3,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 
-import { Resource } from '@shared/models/Resource.model';
+import { Resource } from '@shared/models';
 
 /**
  * Presentational-only "Brush up your knowledge…" resources panel: the

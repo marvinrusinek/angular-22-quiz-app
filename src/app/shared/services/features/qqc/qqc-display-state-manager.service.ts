@@ -1,10 +1,7 @@
 ﻿import { Service } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { QuestionPayload } from '@shared/models/QuestionPayload.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, OptionBindings, QuestionPayload, QuizQuestion } from '@shared/models';
 
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 

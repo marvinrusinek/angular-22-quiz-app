@@ -4,9 +4,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { QuizStatus } from '@shared/models/quiz-status.enum'
-import { QuizMetadata } from '@shared/models/QuizMetadata.model';
-import { Resource } from '@shared/models/Resource.model';
+import { QuizMetadata, QuizStatus, Resource } from '@shared/models';
 
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
 import { TopicQuizResourcesService } from '@shared/services/api/topic-quiz-resources.service';

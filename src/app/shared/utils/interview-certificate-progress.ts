@@ -1,4 +1,4 @@
-import { InterviewCertificateProgress } from '@shared/models/interview-certificate.model';
+import { InterviewCertificateProgress } from '@shared/models';
 
 /**
  * Pure presentation helpers for the certificate progress UI (Results + Interview

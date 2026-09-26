@@ -21,10 +21,8 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { QuizStatus } from '@shared/models/quiz-status.enum';
+import { Option, Quiz, QuizStatus } from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { Quiz } from '@shared/models/Quiz.model';
 
 import { SK_USER_ANSWERS } from '@shared/constants/session-keys';
 

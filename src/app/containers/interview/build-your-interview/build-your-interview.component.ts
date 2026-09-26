@@ -18,8 +18,13 @@ import { Router } from '@angular/router';
 import {
   AssessmentQuestionCount,
   DURATION_SECONDS_BY_COUNT,
-  InterviewDifficulty
-} from '@shared/models/AssessmentConfig.model';
+  findInterviewPreset,
+  INTERVIEW_PRESETS,
+  InterviewDifficulty,
+  InterviewPreset,
+  InterviewPresetId,
+  PRESET_DISCLAIMER
+} from '@shared/models';
 
 import { InterviewApiService } from '@shared/services/api/interview-api.service';
 import { InterviewWarmupCoordinatorService } from '@shared/services/interview/interview-warmup-coordinator.service';
@@ -33,13 +38,6 @@ import { isInterviewApiConfigured } from '@shared/tokens/api-base-url.token';
 import type { CreateInterviewSessionRequest } from '@shared/models/api/interview-api.dto';
 import { QuizStartSpinnerHandle, QuizStartSpinnerService } from '@shared/services/ui/quiz-start-spinner.service';
 import { swallow } from '@shared/utils/error-logging';
-import {
-  findInterviewPreset,
-  INTERVIEW_PRESETS,
-  InterviewPreset,
-  InterviewPresetId,
-  PRESET_DISCLAIMER
-} from '@shared/models/interview-preset.model';
 import { calculateDifficultyQuota } from '@shared/utils/difficulty-quota';
 import {
   INTERVIEW_TOPIC_CATEGORIES,

@@ -38,7 +38,7 @@ const CREATED: CreatedInterviewSession = {
   }
 };
 
-import { Quiz, QuizDifficulty } from '@shared/models/Quiz.model';
+import { Quiz, QuizDifficulty } from '@shared/models';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
 
 import { QuizDataService } from '@shared/services/data/quizdata.service';

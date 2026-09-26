@@ -17,7 +17,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizQuestion } from '@shared/models';
 import { QuizService } from './quiz.service';
 
 describe('QuizService display-order resolution (shuffle-aware)', () => {

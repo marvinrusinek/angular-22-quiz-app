@@ -2,10 +2,8 @@ import { Service, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { filter, take } from 'rxjs/operators';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { Option, QuestionType, QuizQuestion } from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import type { QuizQuestionComponent } from '../../../../components/question/quiz-question/quiz-question.component';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';

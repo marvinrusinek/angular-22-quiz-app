@@ -4,9 +4,7 @@ import { filter, take } from 'rxjs/operators';
 
 import { SK_SEL_Q } from '@shared/constants/session-keys';
 
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, OptionBindings, QuizQuestion } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';

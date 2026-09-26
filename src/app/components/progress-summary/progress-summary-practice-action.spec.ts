@@ -3,7 +3,7 @@ import { provideRouter, Router } from '@angular/router';
 import { signal } from '@angular/core';
 
 import { ProgressSummaryComponent } from './progress-summary.component';
-import { ProgressSummary } from '@shared/models/progress.model';
+import { ProgressSummary } from '@shared/models';
 import { WeakAreasService } from '@shared/services/progress/weak-areas.service';
 import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 import { WeakTopic } from '@shared/utils/weak-areas';

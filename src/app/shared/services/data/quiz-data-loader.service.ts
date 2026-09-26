@@ -5,10 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, from, Observable, of } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { QuizResource } from '@shared/models/QuizResource.model';
-import { Resource } from '@shared/models/Resource.model';
+import { Quiz, QuizQuestion, QuizResource, Resource } from '@shared/models';
 
 import { SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID } from '@shared/constants/session-keys';
 

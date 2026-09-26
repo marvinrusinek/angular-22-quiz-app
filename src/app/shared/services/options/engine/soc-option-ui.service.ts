@@ -3,8 +3,7 @@ import { Service, inject } from '@angular/core';
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
 
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { OptionBindings, SelectedOption } from '@shared/models';
 
 import { OptionLockService } from '@shared/services/options/policy/option-lock.service';
 import { OptionSelectionPolicyService } from '@shared/services/options/policy/option-selection-policy.service';

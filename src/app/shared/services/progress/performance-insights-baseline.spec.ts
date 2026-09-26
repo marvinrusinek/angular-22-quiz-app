@@ -5,10 +5,10 @@ import {
   SK_TOPIC_PERFORMANCE_HISTORY
 } from '@shared/constants/session-keys';
 import {
+  INTERVIEW_HISTORY_MAX,
   TOPIC_PERFORMANCE_HISTORY_MAX,
   TOPIC_PERFORMANCE_HISTORY_VERSION
-} from '@shared/models/topic-performance-history.model';
-import { INTERVIEW_HISTORY_MAX } from '@shared/models/interview-history.model';
+} from '@shared/models';
 import {
   calculateWeakTopics,
   WEAK_AREA_MAX_TOPICS,

@@ -1,5 +1,4 @@
-import { Quiz } from './models/Quiz.model';
-import { QuizResource } from './models/QuizResource.model';
+import { Quiz, QuizResource } from '@shared/models';
 
 // Module-level cache populated at bootstrap by the APP_INITIALIZER
 // in main.ts (which fetches assets/data/quiz.json once). Consumers read via

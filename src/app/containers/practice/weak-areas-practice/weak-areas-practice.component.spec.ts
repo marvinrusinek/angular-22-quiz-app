@@ -5,8 +5,7 @@ import { computed, signal } from '@angular/core';
 import { WeakAreasPracticeComponent } from './weak-areas-practice.component';
 import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 import { PracticeVerdictService } from '@shared/services/features/practice/practice-verdict.service';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { QuestionType } from '@shared/models/question-type.enum';
+import { QuestionType, QuizQuestion } from '@shared/models';
 import {
   canAdvanceFromQuestion,
   isQuestionResolved

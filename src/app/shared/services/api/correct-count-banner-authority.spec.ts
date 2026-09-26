@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { QuestionType } from '@shared/models/question-type.enum';
+import { QuestionType } from '@shared/models';
 import { TopicQuizTypeRegistry } from './topic-quiz-type-registry.service';
 import { withCorrectCountBanner } from '@shared/utils/correct-count-banner';
 import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';

@@ -13,8 +13,7 @@ import { SelectedOptionService } from '@shared/services/state/selectedoption.ser
 import { TimerService } from '@shared/services/features/timer/timer.service';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import type { Quiz } from '@shared/models/Quiz.model';
-import type { Option } from '@shared/models/Option.model';
+import type { Option, Quiz } from '@shared/models';
 
 /**
  * CONVERGENCE — `repaintOnVerdictArrival` must not keep rewriting bindings

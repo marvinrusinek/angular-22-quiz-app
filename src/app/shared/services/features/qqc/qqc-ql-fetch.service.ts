@@ -2,8 +2,7 @@ import { inject, Service } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, QuizQuestion } from '@shared/models';
 
 import { QuizService } from '@shared/services/data/quiz.service';
 

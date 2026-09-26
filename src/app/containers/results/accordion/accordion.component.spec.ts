@@ -6,7 +6,7 @@ import { QuizDataService } from '@shared/services/data/quizdata.service';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizQuestion } from '@shared/models';
 
 /**
  * Angular Aria Toolbar prototype coverage for the Quiz Review filter

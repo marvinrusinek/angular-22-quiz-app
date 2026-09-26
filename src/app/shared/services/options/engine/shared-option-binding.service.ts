@@ -1,10 +1,12 @@
 ﻿import { Service, inject } from '@angular/core';
 
-import { FeedbackProps } from '@shared/models/FeedbackProps.model';
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
-import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
+import {
+  FeedbackProps,
+  Option,
+  OptionBindings,
+  SelectedOption,
+  SharedOptionConfig
+} from '@shared/models';
 
 import { SK_SEL_Q } from '@shared/constants/session-keys';
 

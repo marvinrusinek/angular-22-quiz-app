@@ -1,4 +1,4 @@
-import { AttemptTally } from '@shared/models/performance-insights.model';
+import { AttemptTally } from '@shared/models';
 import { aggregateTopicPercentages } from './interview-topic-history';
 import {
   accuracyPercent,

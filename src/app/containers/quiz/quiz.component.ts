@@ -27,12 +27,14 @@ import {
   SK_SAVED_QUESTION_INDEX,
 } from '@shared/constants/session-keys';
 
-import { Option } from '@shared/models/Option.model';
-import { QuestionPayload } from '@shared/models/QuestionPayload.model';
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { QuizQuestionEvent } from '@shared/models/QuizQuestionEvent.type';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import {
+  Option,
+  QuestionPayload,
+  Quiz,
+  QuizQuestion,
+  QuizQuestionEvent,
+  SelectedOption
+} from '@shared/models';
 
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { QqcQuestionLoaderService } from '@shared/services/features/qqc/qqc-question-loader.service';

@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 
-import { InterviewResult, InterviewTopicScore } from '@shared/models/InterviewResult.model';
 import {
   INTERVIEW_HISTORY_MAX,
-  InterviewAttemptHistoryEntry
-} from '@shared/models/interview-history.model';
+  InterviewAttemptHistoryEntry,
+  InterviewResult,
+  InterviewTopicScore
+} from '@shared/models';
 import { SK_INTERVIEW_HISTORY } from '@shared/constants/session-keys';
 import {
   filterAttempts,

@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { InterviewCertificateProgress } from '@shared/models/interview-certificate.model';
+import { InterviewCertificateProgress } from '@shared/models';
 import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
 import { InterviewCertificateCalloutComponent } from './interview-certificate-callout.component';
 

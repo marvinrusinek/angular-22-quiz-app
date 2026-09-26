@@ -1,17 +1,16 @@
 import {
   AttemptTally,
   InsightSource,
+  INTERVIEW_HISTORY_MAX,
+  InterviewAttemptHistoryEntry,
   PerformanceComparison,
   PerformanceInsights,
   PerformanceWindow,
   SourceSummary,
-  TopicPerformanceInsight
-} from '@shared/models/performance-insights.model';
-import { INTERVIEW_HISTORY_MAX, InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
-import {
   TOPIC_PERFORMANCE_HISTORY_MAX,
+  TopicPerformanceInsight,
   TopicPerformanceRecord
-} from '@shared/models/topic-performance-history.model';
+} from '@shared/models';
 import {
   calculateWeakTopics,
   TopicAttemptLike,

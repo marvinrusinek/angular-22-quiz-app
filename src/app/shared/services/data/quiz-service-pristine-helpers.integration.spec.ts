@@ -35,8 +35,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuestionType } from '@shared/models/question-type.enum';
+import { QuestionType, Quiz } from '@shared/models';
 
 import { QuizService } from './quiz.service';
 

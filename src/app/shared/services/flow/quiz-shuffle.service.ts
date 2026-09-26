@@ -1,8 +1,6 @@
 import { Service } from '@angular/core';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { ShuffleState } from '@shared/models/ShuffleState.model';
+import { Option, QuizQuestion, ShuffleState } from '@shared/models';
 
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 import { norm } from '@shared/utils/text-norm';

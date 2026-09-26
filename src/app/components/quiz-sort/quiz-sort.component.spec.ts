@@ -4,7 +4,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { MatTooltip } from '@angular/material/tooltip';
 
 import { QuizSortComponent } from './quiz-sort.component';
-import type { AlphaDirection, DifficultyDirection } from '@shared/models/QuizSort.type';
+import type { AlphaDirection, DifficultyDirection } from '@shared/models';
 
 /**
  * The sort control is two compact toggle buttons — `[ Difficulty ↑ ]` and

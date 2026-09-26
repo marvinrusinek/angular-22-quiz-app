@@ -1,4 +1,4 @@
-import { Quiz } from '@shared/models/Quiz.model';
+import { Quiz } from '@shared/models';
 import { DifficultyRecommendationService } from './difficulty-recommendation.service';
 
 function quiz(quizId: string, difficulty: string): Quiz {

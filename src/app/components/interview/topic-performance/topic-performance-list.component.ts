@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, ViewEncapsulation } from '@angular/core';
 
-import { InterviewAnalytics } from '@shared/models/interview-analytics.model';
+import { InterviewAnalytics } from '@shared/models';
 
 /**
  * Presentational Topic Performance — the per-topic bands plus the Strongest /

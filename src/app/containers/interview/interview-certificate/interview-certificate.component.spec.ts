@@ -2,8 +2,11 @@ import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { InterviewCertificateRecord } from '@shared/models/interview-certificate.model';
-import { InterviewReadiness, InterviewReadinessBand } from '@shared/models/interview-readiness.model';
+import {
+  InterviewCertificateRecord,
+  InterviewReadiness,
+  InterviewReadinessBand
+} from '@shared/models';
 import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
 import { InterviewReadinessService } from '@shared/services/features/interview/interview-readiness.service';
 import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';

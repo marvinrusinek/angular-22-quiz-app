@@ -2,8 +2,7 @@ import { Service } from '@angular/core';
 
 import { declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, QuizQuestion } from '@shared/models';
 
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 

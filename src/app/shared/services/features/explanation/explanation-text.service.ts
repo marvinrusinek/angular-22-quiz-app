@@ -1,9 +1,7 @@
 import { inject, Service, WritableSignal } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 
-import { FormattedExplanation } from '@shared/models/FormattedExplanation.model';
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { FormattedExplanation, Option, QuizQuestion } from '@shared/models';
 
 
 import { ExplanationDisplayStateService, FETPayload } from './explanation-display-state.service';

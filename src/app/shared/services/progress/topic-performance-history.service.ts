@@ -6,7 +6,7 @@ import {
   TopicPerformanceRecord,
   TopicPerformanceSource,
   validateTopicPerformanceRecord
-} from '@shared/models/topic-performance-history.model';
+} from '@shared/models';
 import { SK_TOPIC_PERFORMANCE_HISTORY } from '@shared/constants/session-keys';
 import { readLocalJson, writeLocalJson } from '@shared/utils/local-storage';
 import { TopicAttemptLike } from '@shared/utils/weak-areas';

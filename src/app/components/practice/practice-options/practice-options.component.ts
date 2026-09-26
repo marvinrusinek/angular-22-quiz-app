@@ -7,7 +7,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 
-import { Option } from '@shared/models/Option.model';
+import { Option } from '@shared/models';
 import { pinAllOfTheAboveLast } from '@shared/utils/all-of-the-above';
 
 /** Matches the server's canonicalization closely enough to compare texts. */

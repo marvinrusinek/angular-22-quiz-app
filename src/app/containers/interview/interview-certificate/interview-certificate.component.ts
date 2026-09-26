@@ -13,7 +13,7 @@ import {
   CERTIFICATE_REQUIRED_BAND,
   CERTIFICATE_TITLE,
   REQUIRED_CERTIFICATE_INTERVIEWS
-} from '@shared/models/interview-certificate.model';
+} from '@shared/models';
 import {
   InterviewCertificateService,
   readinessBandLabel

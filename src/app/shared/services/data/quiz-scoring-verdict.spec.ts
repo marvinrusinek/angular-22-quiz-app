@@ -11,7 +11,7 @@ import { TOPIC_QUIZ_VERDICT_ADAPTER, type TopicQuizVerdictAdapter } from '@share
 import { QuestionVerdictError } from '@shared/services/features/verdict/question-verdict.types';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
-import type { Quiz } from '@shared/models/Quiz.model';
+import type { Quiz } from '@shared/models';
 
 /**
  * SCORING FROM VERDICT STATE (Stage 10I).

@@ -1,7 +1,6 @@
 import { getQuizData } from '@shared/quiz-data-cache';
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
-import type { Option } from '@shared/models/Option.model';
-import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import type { Option, QuizQuestion } from '@shared/models';
 import {
   QuestionVerdictError,
   type QuestionCheckResult,

@@ -1,12 +1,8 @@
 import { inject, Service, WritableSignal } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 
-import { QuizStatus } from '@shared/models/quiz-status.enum';
+import { Option, Quiz, QuizQuestion, QuizStatus, SelectedOption } from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { SK_DOT_CONFIRMED, SK_DISPLAY_MODE, SK_MULTI_PERFECT, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID, SK_USER_ANSWERS } from '@shared/constants/session-keys';
 

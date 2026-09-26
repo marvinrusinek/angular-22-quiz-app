@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { OptionBindingFactoryService } from './option-binding-factory.service';
-import type { Option } from '@shared/models/Option.model';
+import type { Option } from '@shared/models';
 
 /**
  * A binding must not claim correctness the user has not earned.

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { AlphaDirection, DifficultyDirection } from '@shared/models/QuizSort.type';
+import { AlphaDirection, DifficultyDirection } from '@shared/models';
 
 /**
  * Presentational sort control: two compact toggle buttons, `[ Difficulty ↑ ]`

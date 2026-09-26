@@ -6,8 +6,7 @@ import { debounceTime, tap } from 'rxjs/operators';
 import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
 import { SK_SEL_Q } from '@shared/constants/session-keys';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, QuizQuestion } from '@shared/models';
 
 import { CqcFetGuardService } from './cqc-fet-guard.service';
 

@@ -1,5 +1,8 @@
-import { InterviewAttemptHistoryEntry, InterviewTopicHistoryEntry } from '@shared/models/interview-history.model';
-import { TopicTrend } from '@shared/models/interview-topic-trends.model';
+import {
+  InterviewAttemptHistoryEntry,
+  InterviewTopicHistoryEntry,
+  TopicTrend
+} from '@shared/models';
 import {
   buildTopicTrend,
   buildTopicTrendPoints,

@@ -3,9 +3,7 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { Subject, Subscription, timer } from 'rxjs';
 import { finalize, takeUntil, tap } from 'rxjs/operators';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { Option, QuizQuestion, SelectedOption } from '@shared/models';
 
 import { QuizService } from '@shared/services/data/quiz.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';

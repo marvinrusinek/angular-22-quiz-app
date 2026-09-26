@@ -1,4 +1,4 @@
-import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { OptionBindings } from '@shared/models';
 
 import { QuizService } from '@shared/services/data/quiz.service';
 import type { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';

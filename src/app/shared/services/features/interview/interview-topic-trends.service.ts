@@ -1,14 +1,14 @@
 import { computed, inject, Service } from '@angular/core';
 
-import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
 import {
+  InterviewAttemptHistoryEntry,
   InterviewTopicTrendsResult,
   TopicStrengthBand,
   TopicTrend,
   TopicTrendDirection,
   TopicTrendFilter,
   TopicTrendPoint
-} from '@shared/models/interview-topic-trends.model';
+} from '@shared/models';
 import { aggregateTopicPercentages } from '@shared/utils/interview-topic-history';
 import { InterviewHistoryService } from './interview-history.service';
 

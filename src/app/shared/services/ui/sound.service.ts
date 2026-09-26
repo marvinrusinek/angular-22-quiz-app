@@ -1,7 +1,7 @@
 import { Service } from '@angular/core';
 import { Howl } from 'howler';
 
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { SelectedOption } from '@shared/models';
 
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 

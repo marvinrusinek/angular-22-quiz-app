@@ -17,7 +17,7 @@ import { BackendInterviewSessionService } from '@shared/services/interview/backe
 import { AssessmentIntegrityService } from '@shared/services/features/interview/assessment-integrity.service';
 import { InterviewAnalyticsService } from '@shared/services/features/interview/interview-analytics.service';
 import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
-import { interviewConfigLabel } from '@shared/models/interview-preset.model';
+import { interviewConfigLabel } from '@shared/models';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 import { InterviewReviewComponent } from '../../../components/interview/interview-review/interview-review.component';
 import { PerformanceTrendsComponent } from '../../../components/interview/performance-trends/performance-trends.component';

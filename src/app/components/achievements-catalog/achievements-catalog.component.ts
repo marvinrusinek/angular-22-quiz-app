@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 
-import { AchievementView } from '@shared/models/achievement.model';
+import { AchievementView } from '@shared/models';
 
 /**
  * Expandable "Achievements X / N" catalog for the Results screen.

@@ -27,7 +27,7 @@ import { SelectedOptionService } from '@shared/services/state/selectedoption.ser
 import { SelectionMessageService } from './selection-message.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
-import { QuestionType } from '@shared/models/question-type.enum';
+import { QuestionType } from '@shared/models';
 
 describe('SelectionMessageService integration', () => {
   let service: SelectionMessageService;

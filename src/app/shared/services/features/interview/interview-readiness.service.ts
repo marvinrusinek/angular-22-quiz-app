@@ -1,11 +1,11 @@
 import { computed, inject, Service } from '@angular/core';
 
-import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
 import {
+  InterviewAttemptHistoryEntry,
   InterviewReadiness,
   InterviewReadinessBand,
   InterviewReadinessFactor
-} from '@shared/models/interview-readiness.model';
+} from '@shared/models';
 import { aggregateTopicPercentages } from '@shared/utils/interview-topic-history';
 import { InterviewCatalogService } from '@shared/services/interview/interview-catalog.service';
 import { InterviewHistoryService } from './interview-history.service';

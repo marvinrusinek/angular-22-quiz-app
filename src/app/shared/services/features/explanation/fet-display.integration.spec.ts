@@ -18,9 +18,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
-import { QuestionType } from '@shared/models/question-type.enum';
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, QuestionType, QuizQuestion } from '@shared/models';
 
 import { ExplanationFormatterService } from './explanation-formatter.service';
 import { QuizService } from '@shared/services/data/quiz.service';

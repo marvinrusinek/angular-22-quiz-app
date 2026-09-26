@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { PerformanceInsights } from '@shared/models/performance-insights.model';
+import { PerformanceInsights } from '@shared/models';
 import {
   buildPerformanceInsights,
   PerformanceInsightsInput,

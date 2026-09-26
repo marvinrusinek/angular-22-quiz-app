@@ -1,8 +1,6 @@
 import { inject, Service } from '@angular/core';
 
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
+import { Option, OptionBindings, SelectedOption } from '@shared/models';
 
 import { AnswerOptionsService } from './answer-options.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';

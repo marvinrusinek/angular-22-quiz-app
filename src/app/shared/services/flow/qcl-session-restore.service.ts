@@ -1,8 +1,6 @@
 import { Service, inject } from '@angular/core';
 
-import { Option } from '@shared/models/Option.model';
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, Quiz, QuizQuestion } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuizQuestionDataService } from './quiz-question-data.service';

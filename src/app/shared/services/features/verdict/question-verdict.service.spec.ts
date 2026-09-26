@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { QuestionVerdictService } from './question-verdict.service';
 import { QuestionVerdictError } from './question-verdict.types';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
-import type { Quiz } from '@shared/models/Quiz.model';
+import type { Quiz } from '@shared/models';
 
 /**
  * The Topic Quiz correctness authority.

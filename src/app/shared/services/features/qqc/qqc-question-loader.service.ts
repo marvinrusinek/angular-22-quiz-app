@@ -1,9 +1,6 @@
 import { inject, Service } from '@angular/core';
 
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
+import { Option, OptionBindings, QuizQuestion, SharedOptionConfig } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';

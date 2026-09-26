@@ -1,5 +1,5 @@
-import { QuestionType } from '@shared/models/question-type.enum';
-import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuestionType } from '@shared/models';
+import type { QuizQuestion } from '@shared/models';
 
 /**
  * Whether a question is multi-answer, asked WITHOUT counting correct options.

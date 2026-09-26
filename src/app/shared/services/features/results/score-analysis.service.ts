@@ -1,8 +1,6 @@
 import { inject, Injector, Service } from '@angular/core';
 
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { Option } from '@shared/models/Option.model';
-import { ScoreAnalysisItem } from '@shared/models/Final-Result.model';
+import { Option, QuizQuestion, ScoreAnalysisItem } from '@shared/models';
 import { norm } from '@shared/utils/text-norm';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';

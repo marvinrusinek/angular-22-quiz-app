@@ -5,10 +5,8 @@ import { distinctUntilChanged, filter, take } from 'rxjs/operators';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { Option, QuestionType, QuizQuestion } from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 import { declaredIsMultiAnswer } from '@shared/utils/question-type-authority';

@@ -4,10 +4,7 @@ import { Router } from '@angular/router';
 import { EMPTY, firstValueFrom, of } from 'rxjs';
 import { catchError, switchMap, tap } from 'rxjs/operators';
 
-import { Option } from '@shared/models/Option.model';
-import { QuestionPayload } from '@shared/models/QuestionPayload.model';
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, QuestionPayload, Quiz, QuizQuestion } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';

@@ -1,12 +1,14 @@
 import { Service, inject } from '@angular/core';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import {
+  FeedbackProps,
+  Option,
+  OptionBindings,
+  QuestionType,
+  QuizQuestion,
+  SelectedOption
+} from '@shared/models';
 
-import { FeedbackProps } from '@shared/models/FeedbackProps.model';
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { SK_DOT_CONFIRMED, SK_MULTI_PERFECT } from '@shared/constants/session-keys';
 import { writeSessionString } from '@shared/utils/session-storage';

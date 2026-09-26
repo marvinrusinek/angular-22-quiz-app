@@ -3,12 +3,12 @@ import { Service } from '@angular/core';
 import {
   AssessmentConfig,
   AssessmentQuestionCount,
-  DURATION_SECONDS_BY_COUNT
-} from '@shared/models/AssessmentConfig.model';
-import { GeneratedAssessment } from '@shared/models/GeneratedAssessment.model';
-import { Option } from '@shared/models/Option.model';
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+  DURATION_SECONDS_BY_COUNT,
+  GeneratedAssessment,
+  Option,
+  Quiz,
+  QuizQuestion
+} from '@shared/models';
 
 import { getQuizData } from '@shared/quiz-data-cache';
 import { ArrayUtils } from '@shared/utils/array-utils';

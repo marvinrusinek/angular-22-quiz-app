@@ -18,7 +18,16 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { QuizStatus } from '@shared/models/quiz-status.enum';
+import {
+  AchievementCatalogEntry,
+  AchievementDefinition,
+  AchievementView,
+  FinalResult,
+  QuizQuestion,
+  QuizStatus,
+  ScoreAnalysisItem,
+  toDurableFinalResult
+} from '@shared/models';
 
 import {
   SK_COMPLETED_QUIZ_IDS,
@@ -36,8 +45,6 @@ import {
   writeSessionString,
 } from '@shared/utils/session-storage';
 
-import { FinalResult, ScoreAnalysisItem, toDurableFinalResult } from '@shared/models/Final-Result.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
 import { QuizService } from '@shared/services/data/quiz.service';
@@ -48,7 +55,6 @@ import { ScoreAnalysisService } from '@shared/services/features/results/score-an
 import { ThemeService } from '@shared/services/ui/theme.service';
 
 import { AchievementService } from '@shared/services/achievements/achievement.service';
-import { AchievementCatalogEntry, AchievementDefinition, AchievementView } from '@shared/models/achievement.model';
 
 import { AccordionComponent } from './accordion/accordion.component';
 import { AchievementUnlockedComponent } from '../../components/achievement-unlocked/achievement-unlocked.component';

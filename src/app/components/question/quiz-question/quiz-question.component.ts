@@ -23,15 +23,18 @@ import { Observable, of, Subscription } from 'rxjs';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 
-import { FeedbackKey, FeedbackConfig } from '@shared/models/FeedbackConfig.model';
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { QuestionPayload } from '@shared/models/QuestionPayload.model';
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { QuizQuestionEvent } from '@shared/models/QuizQuestionEvent.type';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
-import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
+import {
+  FeedbackConfig,
+  FeedbackKey,
+  Option,
+  OptionBindings,
+  QuestionPayload,
+  Quiz,
+  QuizQuestion,
+  QuizQuestionEvent,
+  SelectedOption,
+  SharedOptionConfig
+} from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';

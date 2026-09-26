@@ -6,9 +6,7 @@ import { catchError, distinctUntilChanged, filter } from 'rxjs/operators';
 import { SK_DOT_CONFIRMED, SK_SEL_Q } from '@shared/constants/session-keys';
 import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
 
-import { Option } from '@shared/models/Option.model';
-import { QuestionState } from '@shared/models/QuestionState.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, QuestionState, QuizQuestion } from '@shared/models';
 
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 import { swallow } from '@shared/utils/error-logging';

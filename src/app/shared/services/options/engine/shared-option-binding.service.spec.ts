@@ -1,8 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
+import { Option, OptionBindings } from '@shared/models';
 
 import { SK_SEL_Q } from '@shared/constants/session-keys';
 

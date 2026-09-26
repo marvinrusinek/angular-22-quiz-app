@@ -17,8 +17,7 @@ import { Toolbar, ToolbarWidget, ToolbarWidgetGroup } from '@angular/aria/toolba
 
 import { formatDuration } from '@shared/utils/format-time';
 import { swallow } from '@shared/utils/error-logging';
-import { InterviewAttemptHistoryEntry } from '@shared/models/interview-history.model';
-import { interviewConfigLabel } from '@shared/models/interview-preset.model';
+import { InterviewAttemptHistoryEntry, interviewConfigLabel } from '@shared/models';
 import {
   filterAttempts,
   InterviewHistoryFilter,

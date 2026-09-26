@@ -1,6 +1,6 @@
 import { Service } from '@angular/core';
 
-import { Option } from '@shared/models/Option.model';
+import { Option } from '@shared/models';
 import { swallow } from '@shared/utils/error-logging';
 
 /**

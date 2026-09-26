@@ -14,8 +14,7 @@ import {
   isCurrentOptionCorrect,
   isTimeoutRevealAuthorized
 } from '../../../../components/question/answer/shared-option-component/option-item/helpers/option-item-correctness';
-import type { Quiz } from '@shared/models/Quiz.model';
-import type { OptionBindings } from '@shared/models/OptionBindings.model';
+import type { OptionBindings, Quiz } from '@shared/models';
 
 /**
  * TIMEOUT REVEAL AUTHORITY (Stage 10F).

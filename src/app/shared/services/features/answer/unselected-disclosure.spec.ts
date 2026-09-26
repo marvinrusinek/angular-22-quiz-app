@@ -10,8 +10,7 @@ import { QuestionVerdictService } from '@shared/services/features/verdict/questi
 import { QuizService } from '@shared/services/data/quiz.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
-import type { OptionBindings } from '@shared/models/OptionBindings.model';
-import type { SelectedOption } from '@shared/models/SelectedOption.model';
+import type { OptionBindings, SelectedOption } from '@shared/models';
 
 /**
  * What a wrong answer is allowed to reveal about the options you did NOT pick.

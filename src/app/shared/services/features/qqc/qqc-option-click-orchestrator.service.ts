@@ -1,12 +1,9 @@
 ﻿import { inject, Service } from '@angular/core';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { Option, QuestionType, QuizQuestion, SelectedOption } from '@shared/models';
 
 import { SK_DOT_CONFIRMED } from '@shared/constants/session-keys';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { QuizService } from '@shared/services/data/quiz.service';

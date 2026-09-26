@@ -1,11 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import {
-  InsightSource,
-  PerformanceInsights,
-  SourceSummary
-} from '@shared/models/performance-insights.model';
+import { InsightSource, PerformanceInsights, SourceSummary } from '@shared/models';
 import { WEAK_AREA_MIN_ANSWERED, WEAK_AREA_THRESHOLD } from '@shared/utils/weak-areas';
 
 /** What each source measures, shown next to its numbers so they are never read as one thing. */

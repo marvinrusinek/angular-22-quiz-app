@@ -4,8 +4,7 @@ import { of, ReplaySubject, Subject } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { IntroductionComponent } from './introduction.component';
-import { Quiz, QuizDifficulty } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Quiz, QuizDifficulty, QuizQuestion } from '@shared/models';
 import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
 import { QuizDataService } from '@shared/services/data/quizdata.service';

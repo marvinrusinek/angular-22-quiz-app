@@ -1,8 +1,5 @@
-import { findInterviewPreset } from '@shared/models/interview-preset.model';
-import type {
-  InterviewCompletionReason,
-  InterviewTopicHistoryEntry
-} from '@shared/models/interview-history.model';
+import { findInterviewPreset } from '@shared/models';
+import type { InterviewCompletionReason, InterviewTopicHistoryEntry } from '@shared/models';
 import type { InterviewResultViewModel } from '@shared/models/interview/interview-view-models';
 
 /**

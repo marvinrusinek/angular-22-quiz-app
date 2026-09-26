@@ -1,15 +1,17 @@
 import { inject, Service } from '@angular/core';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import {
+  Option,
+  OptionClickedPayload,
+  QuestionType,
+  QuizQuestion,
+  SelectedOption
+} from '@shared/models';
 
 import { SK_DOT_CONFIRMED, SK_MULTI_PERFECT } from '@shared/constants/session-keys';
 import { writeSessionString } from '@shared/utils/session-storage';
 import { swallow } from '@shared/utils/error-logging';
 
-import { Option } from '@shared/models/Option.model';
-import { OptionClickedPayload } from '@shared/models/OptionClickedPayload.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { AnswerOptionsService } from './answer-options.service';
 import { QuizService } from '@shared/services/data/quiz.service';

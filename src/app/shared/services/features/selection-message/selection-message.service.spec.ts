@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of, Subject } from 'rxjs';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { QuestionType } from '@shared/models';
 
 import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
 import { QuizService } from '@shared/services/data/quiz.service';

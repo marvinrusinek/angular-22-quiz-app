@@ -1,9 +1,7 @@
 import { inject, Service } from '@angular/core';
 import { firstValueFrom, Subscription } from 'rxjs';
 
-import { FormattedExplanation } from '@shared/models/FormattedExplanation.model';
-import { QuestionState } from '@shared/models/QuestionState.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { FormattedExplanation, QuestionState, QuizQuestion } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuizService } from '@shared/services/data/quiz.service';

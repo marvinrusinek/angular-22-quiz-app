@@ -1,8 +1,5 @@
 import { computed, inject, Service, signal } from '@angular/core';
 
-import { InterviewResult } from '@shared/models/InterviewResult.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { QuestionType } from '@shared/models/question-type.enum';
 import {
   INTERVIEW_HISTORY_MAX,
   INTERVIEW_HISTORY_VERSION,
@@ -10,11 +7,14 @@ import {
   InterviewAttemptHistoryEntry,
   InterviewAttemptHistoryStore,
   InterviewCompletionReason,
+  InterviewResult,
   InterviewTopicHistoryEntry,
   InterviewTrendDirection,
   InterviewTrendPoint,
-  InterviewTrends
-} from '@shared/models/interview-history.model';
+  InterviewTrends,
+  QuestionType,
+  QuizQuestion
+} from '@shared/models';
 import {
   SK_INTERVIEW_HISTORY,
   SK_INTERVIEW_HISTORY_V1

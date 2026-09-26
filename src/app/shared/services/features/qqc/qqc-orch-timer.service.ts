@@ -2,7 +2,7 @@ import { inject, Service } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import { Option } from '@shared/models/Option.model';
+import { Option } from '@shared/models';
 
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';

@@ -2,11 +2,8 @@ import { inject, Service } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
 import { filter, map, take, timeout } from 'rxjs/operators';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { Option, OptionBindings, QuestionType, QuizQuestion } from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';

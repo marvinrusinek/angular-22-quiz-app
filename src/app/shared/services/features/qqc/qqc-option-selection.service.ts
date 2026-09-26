@@ -1,10 +1,7 @@
 ﻿import { inject, Service } from '@angular/core';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { Option, QuestionType, QuizQuestion, SelectedOption } from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { FeedbackService } from '@shared/services/features/feedback/feedback.service';

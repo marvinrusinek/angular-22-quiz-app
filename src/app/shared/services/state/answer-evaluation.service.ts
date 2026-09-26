@@ -1,10 +1,7 @@
 import { Injectable } from '@angular/core';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { Option, QuestionType, QuizQuestion, SelectedOption } from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
 
 import { OptionIdResolverService } from './option-id-resolver.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';

@@ -1,4 +1,4 @@
-import { Quiz } from '@shared/models/Quiz.model';
+import { Quiz } from '@shared/models';
 import { LearningPathService } from './learning-path.service';
 
 /**

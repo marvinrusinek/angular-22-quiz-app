@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuizQuestion } from '@shared/models';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { QuizService } from '@shared/services/data/quiz.service';

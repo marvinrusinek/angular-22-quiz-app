@@ -1,4 +1,4 @@
-import { AchievementDefinition } from '@shared/models/achievement.model';
+import { AchievementDefinition } from '@shared/models';
 
 /**
  * Single source of truth for achievement display metadata. Referenced by the

@@ -7,10 +7,10 @@ import { of } from 'rxjs';
 import { SelectionMessageService, SELECT_ALL_THAT_APPLY_MSG } from './selection-message.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { QuizService } from '@shared/services/data/quiz.service';
-import { QuestionType } from '@shared/models/question-type.enum';
+import { QuestionType } from '@shared/models';
+import type { Option } from '@shared/models';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
-import type { Option } from '@shared/models/Option.model';
 
 /**
  * The multi-answer selection message.

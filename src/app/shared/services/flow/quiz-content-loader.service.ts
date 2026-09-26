@@ -2,12 +2,8 @@ import { Service, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { Option, QuestionPayload, QuestionType, Quiz, QuizQuestion } from '@shared/models';
 
-import { Option } from '@shared/models/Option.model';
-import { QuestionPayload } from '@shared/models/QuestionPayload.model';
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { SK_DOT_CONFIRMED } from '@shared/constants/session-keys';
 

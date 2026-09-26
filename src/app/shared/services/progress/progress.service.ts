@@ -1,12 +1,13 @@
 import { inject, Service } from '@angular/core';
 
-import { Quiz, QuizDifficulty } from '@shared/models/Quiz.model';
 import {
   DifficultyProgress,
   ProgressSummary,
+  Quiz,
+  QuizDifficulty,
   QuizProgress,
   QuizProgressSummary
-} from '@shared/models/progress.model';
+} from '@shared/models';
 import { BestScoreService } from './best-score.service';
 
 /** Canonical difficulty order for display (matches the catalog stats row). */

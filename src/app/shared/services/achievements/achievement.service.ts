@@ -5,13 +5,11 @@ import {
   AchievementDefinition,
   AchievementId,
   AchievementView,
-  EarnedAchievement
-} from '@shared/models/achievement.model';
-import { ACHIEVEMENT_DEFINITIONS } from '@shared/constants/achievements';
-import {
   CERTIFICATE_MIN_SCORE,
-  CERTIFICATE_REQUIRED_BAND
-} from '@shared/models/interview-certificate.model';
+  CERTIFICATE_REQUIRED_BAND,
+  EarnedAchievement
+} from '@shared/models';
+import { ACHIEVEMENT_DEFINITIONS } from '@shared/constants/achievements';
 import { SK_QUIZ_ACHIEVEMENTS } from '@shared/constants/session-keys';
 import { readLocalJson, writeLocalJson } from '@shared/utils/local-storage';
 import { BestScores, BestScoreService } from '@shared/services/progress/best-score.service';

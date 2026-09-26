@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { InterviewAttemptHistoryEntry, InterviewCompletionReason } from '@shared/models/interview-history.model';
+import { InterviewAttemptHistoryEntry, InterviewCompletionReason } from '@shared/models';
 import { SK_INTERVIEW_HISTORY } from '@shared/constants/session-keys';
 import { InterviewReadinessService } from '@shared/services/features/interview/interview-readiness.service';
 import { InterviewHistoryComponent } from './interview-history.component';

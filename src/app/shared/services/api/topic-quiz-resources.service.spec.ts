@@ -8,7 +8,7 @@ import {
 import { TopicQuizResourcesService } from './topic-quiz-resources.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import * as quizDataCache from '@shared/quiz-data-cache';
-import type { Resource } from '@shared/models/Resource.model';
+import type { Resource } from '@shared/models';
 
 /**
  * Results-page resource links, from the API.

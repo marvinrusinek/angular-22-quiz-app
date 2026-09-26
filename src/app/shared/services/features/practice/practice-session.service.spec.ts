@@ -10,9 +10,7 @@ import { TopicQuizQuestionsService } from '@shared/services/api/topic-quiz-quest
 import { PracticeVerdictService } from './practice-verdict.service';
 import { SK_PRACTICE_SESSION, SK_TOPIC_PERFORMANCE_HISTORY } from '@shared/constants/session-keys';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
-import { Quiz } from '@shared/models/Quiz.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
-import { QuestionType } from '@shared/models/question-type.enum';
+import { QuestionType, Quiz, QuizQuestion } from '@shared/models';
 // S6p (Angular Stage 14): src/assets/data/quiz.json was deleted — see
 // shared/testing/quiz-catalog-fixture.json (test-only, never bundled).
 //

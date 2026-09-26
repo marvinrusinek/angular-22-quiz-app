@@ -1,7 +1,6 @@
 import { Service } from '@angular/core';
 
-import { Quiz } from '@shared/models/Quiz.model';
-import { LearningPathState, QuizRecommendation } from '@shared/models/learning-path.model';
+import { LearningPathState, Quiz, QuizRecommendation } from '@shared/models';
 
 /**
  * Suggests ONE helpful next topic quiz from the user's existing progress. Pure:

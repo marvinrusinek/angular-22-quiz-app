@@ -3,14 +3,14 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { QuestionType } from '@shared/models/question-type.enum';
+import { QuestionType } from '@shared/models';
+import type { QuizQuestion } from '@shared/models';
 import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
 import {
   declaredIsMultiAnswer,
   isDeclaredTrueFalse,
   resolveIsMultiAnswer
 } from './question-type-authority';
-import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 /**
  * Question TYPE must not be a function of the answer key.

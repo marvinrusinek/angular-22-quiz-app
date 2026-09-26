@@ -9,10 +9,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import {
-  DifficultyAction,
-  DifficultyRecommendation,
-} from '@shared/models/difficulty-recommendation.model';
+import { DifficultyAction, DifficultyRecommendation } from '@shared/models';
 import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
 import { certificateNextAction } from '@shared/utils/interview-certificate-progress';
 

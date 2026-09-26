@@ -4,7 +4,7 @@ import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import type { Resource } from '@shared/models/Resource.model';
+import type { Resource } from '@shared/models';
 
 /**
  * The Results-page "Brush up your knowledge" links, from the private API.

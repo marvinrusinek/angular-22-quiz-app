@@ -1,6 +1,6 @@
 import { computed, inject, Service, Signal } from '@angular/core';
 
-import { PerformanceInsights } from '@shared/models/performance-insights.model';
+import { PerformanceInsights } from '@shared/models';
 import { buildPerformanceInsights } from '@shared/utils/performance-insights';
 import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
 import { TopicPerformanceHistoryService } from './topic-performance-history.service';

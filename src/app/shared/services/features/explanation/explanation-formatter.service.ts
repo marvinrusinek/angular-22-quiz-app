@@ -3,11 +3,8 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { Observable, of } from 'rxjs';
 
-import { QuestionType } from '@shared/models/question-type.enum';
+import { FormattedExplanation, Option, QuestionType, QuizQuestion } from '@shared/models';
 
-import { FormattedExplanation } from '@shared/models/FormattedExplanation.model';
-import { Option } from '@shared/models/Option.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
 
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { authorizedCorrectTexts, authorizedExplanation } from '@shared/services/features/verdict/authorized-correctness';

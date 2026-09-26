@@ -5,7 +5,7 @@ import {
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
-import { Quiz, QuizDifficulty } from '@shared/models/Quiz.model';
+import { Quiz, QuizDifficulty } from '@shared/models';
 
 import { QuizService } from '@shared/services/data/quiz.service';
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';

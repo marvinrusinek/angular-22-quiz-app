@@ -1,8 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { AssessmentBuilderService } from './assessment-builder.service';
-import { QuestionType } from '@shared/models/question-type.enum';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuestionType, QuizQuestion } from '@shared/models';
 import { questionsFromApiViews } from '@shared/utils/topic-quiz-content';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
 

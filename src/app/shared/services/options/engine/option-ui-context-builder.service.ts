@@ -1,6 +1,6 @@
 ﻿import { Service } from '@angular/core';
 
-import { Option } from '@shared/models/Option.model';
+import { Option } from '@shared/models';
 
 import { OptionUiSyncContext } from '@shared/services/options/engine/option-ui-sync.service';
 

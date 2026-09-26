@@ -1,14 +1,14 @@
 import { computed, inject, Service, signal } from '@angular/core';
 
 import {
+  AchievementId,
   CERTIFICATE_ID_PREFIX,
   INTERVIEW_CERTIFICATE_VERSION,
   InterviewCertificateProgress,
   InterviewCertificateRecord,
+  InterviewReadinessBand,
   REQUIRED_CERTIFICATE_INTERVIEWS
-} from '@shared/models/interview-certificate.model';
-import { AchievementId } from '@shared/models/achievement.model';
-import { InterviewReadinessBand } from '@shared/models/interview-readiness.model';
+} from '@shared/models';
 import {
   SK_INTERVIEW_CERTIFICATE,
   SK_INTERVIEW_CERTIFICATE_QUAL

@@ -8,11 +8,13 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatIconModule } from '@angular/material/icon';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { FeedbackProps } from '@shared/models/FeedbackProps.model';
-import { Option } from '@shared/models/Option.model';
-import { OptionBindings } from '@shared/models/OptionBindings.model';
-import { SelectedOption } from '@shared/models/SelectedOption.model';
-import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
+import {
+  FeedbackProps,
+  Option,
+  OptionBindings,
+  SelectedOption,
+  SharedOptionConfig
+} from '@shared/models';
 
 import { OptionService } from '@shared/services/options/view/option.service';
 import { QuestionResolutionService } from '@shared/services/options/engine/question-resolution.service';

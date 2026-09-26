@@ -6,9 +6,7 @@ import {
   distinctUntilChanged, filter, map, skipWhile, switchMap, take, tap
 } from 'rxjs/operators';
 
-import { Option } from '@shared/models/Option.model';
-import { QuestionPayload } from '@shared/models/QuestionPayload.model';
-import { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { Option, QuestionPayload, QuizQuestion } from '@shared/models';
 
 import { shallowObjectEqual } from '@shared/utils/shallow-equal';
 

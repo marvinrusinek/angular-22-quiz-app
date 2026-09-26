@@ -3,8 +3,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { QuestionType } from '@shared/models/question-type.enum';
-import type { QuizQuestion } from '@shared/models/QuizQuestion.model';
+import { QuestionType } from '@shared/models';
+import type { QuizQuestion } from '@shared/models';
 
 import { questionsFromApiViews } from '@shared/utils/topic-quiz-content';
 import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';

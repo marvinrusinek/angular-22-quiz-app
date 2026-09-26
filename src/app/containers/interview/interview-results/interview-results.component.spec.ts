@@ -73,6 +73,37 @@ describe('InterviewResultsComponent — navigation actions', () => {
     expect(gateway()[0].getAttribute('href')).toBe('/interview/history');
   });
 
+  // ── Export Report ──────────────────────────────────────────────────
+
+  const exportLink = (): HTMLAnchorElement | undefined =>
+    Array.from(el.querySelectorAll<HTMLAnchorElement>('.interview-results__actions a')).find((a) => text(a) === 'Export Report');
+
+  it('offers "Export Report" for a finalized result, as a real link to that attempt report', () => {
+    const link = exportLink()!;
+    expect(link).toBeDefined();
+    expect(link.tagName).toBe('A');
+    expect(link.getAttribute('href')).toBe('/interview/report/is_test');
+  });
+
+  it('labels the Results action "Export Report" — the print wording belongs to the report page', () => {
+    const actions = Array.from(el.querySelectorAll('.interview-results__actions a, .interview-results__actions button')).map(text);
+    expect(actions).toContain('Export Report');
+    expect(actions.some((t) => /print|pdf/i.test(t))).toBe(false);
+  });
+
+  it('exporting is plain navigation: it does not end the session or drop the result', () => {
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    exportLink()!.click();
+    expect(clearSession).not.toHaveBeenCalled();
+    expect(clearResult).not.toHaveBeenCalled();
+    navigate.mockRestore();
+  });
+
+  it('leaves the existing Results actions untouched', () => {
+    const actions = Array.from(el.querySelectorAll('.interview-results__actions a, .interview-results__actions button')).map(text);
+    expect(actions).toEqual(['Review Answers', 'Export Report', 'Build Another Assessment', 'Return to Quiz Selection']);
+  });
+
   it('navigates to /progress WITHOUT ending the session or dropping the result — like the history link', () => {
     const navigateByUrl = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 

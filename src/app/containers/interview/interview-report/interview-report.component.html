@@ -1,0 +1,92 @@
+@if (result(); as r) {
+  <main class="rp">
+    <header class="rp__header">
+      <h1 #reportHeading class="rp__title" tabindex="-1" i18n>Interview Report</h1>
+      <p class="rp__subtitle">
+        <span class="rp__kind">{{ assessmentLabel() }}</span>
+        @if (difficulty(); as d) {
+          <span aria-hidden="true"> · </span><span class="rp__difficulty">{{ d }}</span>
+        }
+        <span aria-hidden="true"> · </span>
+        <time class="rp__date" [attr.datetime]="completedIso()">{{ completedOn() }}</time>
+      </p>
+    </header>
+
+    <!-- Report controls: on screen only, never printed. Back to Results is a plain
+         router link and does NOT end the session or drop the result. -->
+    <div class="rp__actions rp-noprint">
+      <button type="button" class="rp-btn rp-btn--primary" (click)="print()" i18n>
+        Print / Save as PDF
+      </button>
+      <a class="rp-btn" [routerLink]="['/interview/results', r.sessionId]" i18n>Back to Results</a>
+    </div>
+
+    @if (r.submittedByExpiry) {
+      <p class="rp__expiry" role="note" i18n>
+        Time's up. This assessment was submitted automatically.
+      </p>
+    }
+
+    <section class="rp__section" aria-labelledby="rp-summary-heading">
+      <h2 id="rp-summary-heading" class="rp__heading" i18n>Summary</h2>
+      <dl class="rp-summary">
+        <div><dt i18n>Score</dt><dd>{{ r.correct }} / {{ r.total }}</dd></div>
+        <div><dt i18n>Percentage</dt><dd>{{ r.percentage }}%</dd></div>
+        <div><dt i18n>Correct</dt><dd>{{ r.correct }}</dd></div>
+        <div><dt i18n>Incorrect</dt><dd>{{ r.incorrect }}</dd></div>
+        <div><dt i18n>Unanswered</dt><dd>{{ r.unanswered }}</dd></div>
+        <div><dt i18n>Total duration</dt><dd>{{ totalDuration() }}</dd></div>
+        <div><dt i18n>Time used</dt><dd>{{ timeUsed() }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="rp__section" aria-labelledby="rp-topics-heading">
+      <h2 id="rp-topics-heading" class="rp__heading" i18n>Performance by Topic</h2>
+      @if (r.byTopic.length) {
+        <table class="rp-topics">
+          <caption class="rp-sr" i18n>Correct, incorrect and unanswered questions for each topic</caption>
+          <thead>
+            <tr>
+              <th scope="col" i18n>Topic</th>
+              <th scope="col" i18n>Correct</th>
+              <th scope="col" i18n>Incorrect</th>
+              <th scope="col" i18n>Unanswered</th>
+              <th scope="col" i18n>Total</th>
+              <th scope="col" i18n>Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of r.byTopic; track t.topicId) {
+              <tr>
+                <th scope="row">{{ t.title }}</th>
+                <td>{{ t.correct }}</td>
+                <td>{{ t.incorrect }}</td>
+                <td>{{ t.unanswered }}</td>
+                <td>{{ t.total }}</td>
+                <td>{{ t.percentage }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="rp__empty" i18n>No topic breakdown is available for this assessment.</p>
+      }
+    </section>
+
+    <section class="rp__section rp__review" aria-labelledby="rp-review-heading">
+      <h2 id="rp-review-heading" class="rp__heading" i18n>Question Review</h2>
+      <app-interview-review [questions]="r.review" [result]="r" [embedded]="true" />
+    </section>
+  </main>
+} @else {
+  <main class="rp rp--unavailable">
+    <h1 #reportHeading class="rp__title" tabindex="-1" i18n>Interview Report</h1>
+    <p class="rp__empty" role="alert" i18n>
+      This report is no longer available. Reports can only be opened while the completed
+      assessment is still open in this tab.
+    </p>
+    <div class="rp__actions rp-noprint">
+      <a class="rp-btn rp-btn--primary" routerLink="/interview" i18n>Build an Assessment</a>
+    </div>
+  </main>
+}

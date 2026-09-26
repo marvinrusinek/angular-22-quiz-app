@@ -15,6 +15,8 @@ import { InterviewSessionComponent } from
 import { BackendInterviewSessionGuard } from './guards/backend-interview-session-guard';
 import { InterviewResultsComponent } from
     '../containers/interview/interview-results/interview-results.component';
+import { InterviewReportComponent } from
+    '../containers/interview/interview-report/interview-report.component';
 import { InterviewHistoryComponent } from
     '../containers/interview/interview-history/interview-history.component';
 import { InterviewHistoryDetailComponent } from
@@ -83,6 +85,16 @@ export const routes: Routes = [
   },
   // Id-less legacy path: nothing identifies which attempt to show.
   { path: 'interview/results', redirectTo: 'interview', pathMatch: 'full' },
+  // Interview Report — a print-friendly record of THIS finalized attempt. Behind the
+  // SAME guard as Results, so it inherits its fail-closed behaviour: an unfinished
+  // session is sent back to the session, an unauthorized or unknown one to the
+  // builder, and it can never be a way to read answers early. No new API.
+  {
+    path: 'interview/report/:sessionId',
+    component: InterviewReportComponent,
+    canActivate: [BackendInterviewResultGuard]
+  },
+  { path: 'interview/report', redirectTo: 'interview', pathMatch: 'full' },
   // Interview History — read-only record of past attempts. Deep-linkable (reads
   // the durable history store); no session/result required. `:id` reopens ONE
   // attempt's read-only summary. More specific path is listed first.

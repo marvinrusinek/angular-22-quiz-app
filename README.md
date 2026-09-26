@@ -46,30 +46,18 @@
 
 <hr>
 
-<h2>🏆 Engineering Highlights</h2>
-
-<ul>
-<li>Angular 22 architecture using standalone components, Signals, RxJS, Signal Forms, and focused service layers</li>
-<li>Spring Boot-powered Interview Mode with timed mixed-topic assessments, session persistence, answer submission, server-side scoring, and protected result retrieval</li>
-<li>Topic Quiz system supporting single-answer, multiple-answer, immediate feedback, explanations, timers, shuffling, and detailed results</li>
-<li>Performance analytics including interview history, performance trends, topic-level analysis, and Weak Areas Practice</li>
-<li>Backend-authoritative quiz architecture with PostgreSQL as the source of truth, server-side correctness evaluation, protected assessment data, strict CSP, and no answer-bearing quiz bank shipped with the Angular application</li>
-<li>Automated testing across the stack with Angular unit tests, Jest, Playwright, JUnit 5, MockMvc, Testcontainers, and Node/Spring API contract-parity testing</li>
-<li>PWA and responsive UI built with Angular Material and accessibility-conscious interaction patterns</li>
-<li>Dual-backend architecture with Node/Express and Spring Boot implementations sharing API contracts verified through cross-runtime parity testing</li>
-</ul>
-
-<hr>
-
 <h2>✨ Core Features</h2>
 
-<p><strong>Topic Quizzes</strong> — Single- and multiple-answer questions, code-snippet questions, timers, shuffling, immediate feedback, explanations, and detailed review.</p>
-<p><strong>Interview Mode</strong> — Configurable mixed-topic assessments with difficulty-based presets, timed sessions, deferred feedback, session persistence, and backend scoring.</p>
-<p><strong>Interview Analytics</strong> — Results, history, performance trends, and topic-level performance.</p>
-<p><strong>Weak Areas Practice</strong> — Analyzes previous quiz performance to identify weaker topics and generate targeted practice opportunities.</p>
-<p><strong>Progress & Achievements</strong> — Progress tracking and achievements across the learning experience.</p>
-<p><strong>Modern UX</strong> — Angular Material, responsive layouts, dark/light themes, keyboard navigation, accessibility-focused interactions, and PWA support.</p>
-<p><strong>Testing & Reliability</strong> — Automated frontend, backend, integration, contract-parity, and end-to-end testing across the Angular, Node/Express, and Spring Boot application stack.</p>
+<ul>
+  <li><strong>Topic Quizzes:</strong> Single- and multiple-answer questions, code snippets, per-question timers, option shuffling, immediate feedback, explanations, and detailed result review.</li>
+  <li><strong>Interview Mode:</strong> Configurable mixed-topic assessments with difficulty-based presets, timed sessions, deferred feedback, session recovery, server-side scoring, and protected result retrieval.</li>
+  <li><strong>Performance Insights:</strong> Interview history, performance trends, topic-level analysis, progress tracking, and achievements that help users understand their results over time.</li>
+  <li><strong>Weak Areas Practice:</strong> Uses previous performance data to identify weaker topics and generate targeted practice opportunities without affecting Interview Mode history.</li>
+  <li><strong>Modern Angular Architecture:</strong> Standalone components, Signals, RxJS, Signal Forms, zoneless change detection, modular application domains, and focused service layers.</li>
+  <li><strong>Secure Full-Stack Design:</strong> Node/Express powers Topic Quizzes, Spring Boot powers Interview Mode, and PostgreSQL serves as the authoritative data store. Correctness-sensitive data and scoring remain on the backend.</li>
+  <li><strong>Testing and Reliability:</strong> Automated coverage across Angular, Node/Express, Spring Boot, database integration, API contract parity, and end-to-end workflows using Jest, Playwright, JUnit 5, MockMvc, and Testcontainers.</li>
+  <li><strong>Accessible, Responsive Experience:</strong> Angular Material, keyboard navigation, accessibility-conscious interactions, mobile-responsive layouts, dark and light themes, and Progressive Web App support.</li>
+</ul>
 
 <hr>
 

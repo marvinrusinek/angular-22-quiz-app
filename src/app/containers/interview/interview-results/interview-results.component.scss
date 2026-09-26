@@ -84,6 +84,12 @@
     margin-top: 18px;
   }
 
+  // "Export Report" is a link styled as an action button; drop the browser's
+  // default anchor underline on this one control only.
+  &__export-report {
+    text-decoration: none;
+  }
+
   // Full-width section divider between the post-card analytics blocks. The child
   // sections drop their own faint top border here (below) so lines never double.
   .ir-rule {

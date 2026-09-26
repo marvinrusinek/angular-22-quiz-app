@@ -40,11 +40,9 @@
 
 <h2>🎯 Goal / Purpose</h2>
 
-<p>The goal of this project is to provide an interactive environment for learning, practicing, and assessing modern Angular knowledge while serving as a real-world demonstration of production-oriented Angular engineering.</p>
+<p>This project provides an interactive environment for learning, practicing, and assessing modern Angular knowledge through guided Topic Quizzes, timed interview-style assessments, and performance-based practice.</p>
 
-<p>Beyond traditional topic quizzes, the application includes a timed Interview Mode, performance analytics, weak-area practice, progress tracking, and detailed review workflows designed to support both learning and technical interview preparation.</p>
-
-<p>The project also serves as an evolving engineering platform for applying modern Angular patterns, improving application architecture, strengthening testing and accessibility, and exploring secure frontend/backend boundaries.</p>
+<p>It also serves as a production-oriented full-stack engineering project for applying modern Angular patterns, designing secure frontend/backend boundaries, building reliable assessment workflows, and improving architecture, testing, accessibility, and performance.</p>
 
 <hr>
 

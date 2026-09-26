@@ -208,11 +208,12 @@ npm install</code></pre>
 <hr>
 
 <h2>🗺️ Roadmap</h2>
+
 <ul>
-  <li>Introduce automated question-quality validation for quiz content</li>
-  <li>Expand Interview Mode reporting and performance analytics</li>
-  <li>Continue adopting modern Angular APIs and reactive patterns where they provide measurable architectural or UX improvements</li>
-  <li>Expand accessibility and mobile/responsive UX improvements</li>
+  <li>Expand the quiz bank with additional scenario-based and code-focused Angular questions</li>
+  <li>Continue improving accessibility, keyboard navigation, and mobile responsiveness</li>
+  <li>Expand automated security, performance, and cross-platform regression coverage</li>
+  <li>Adopt new Angular APIs and reactive patterns where they provide measurable architectural or user-experience improvements</li>
 </ul>
 
 <hr>

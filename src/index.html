@@ -31,6 +31,10 @@
                                              and the Scoreboard/Calligraphy @font-face
                                              files declared in _variables.scss
            cdn.jsdelivr.net                → quiz sound effects (howler)
+           static.cloudflareinsights.com   → Cloudflare Web Analytics beacon (script-src: the
+                                             exact file only; connect-src: cloudflareinsights.com,
+                                             its one endpoint). Loaded only on the production
+                                             host — see cloudflare-analytics.ts
 
          connect-src also lists BOTH of this app's permanent backend origins —
          Node/Topic Quiz and Spring/Interview Mode — plus both of their local
@@ -53,12 +57,12 @@
          needs no CSP change — Node's origin is already listed. -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self';
+      script-src 'self' https://static.cloudflareinsights.com/beacon.min.js;
       style-src 'self' 'unsafe-inline';
       font-src 'self' data: https://raw.githubusercontent.com;
       img-src 'self' data: https://raw.githubusercontent.com;
       media-src 'self' https://cdn.jsdelivr.net;
-      connect-src 'self' https://cdn.jsdelivr.net https://interview-api-spring.marvinrusinek.com https://interview-api-c842.onrender.com http://localhost:8080 http://127.0.0.1:8080 http://localhost:3000 http://127.0.0.1:3000;
+      connect-src 'self' https://cdn.jsdelivr.net https://interview-api-spring.marvinrusinek.com https://interview-api-c842.onrender.com http://localhost:8080 http://127.0.0.1:8080 http://localhost:3000 http://127.0.0.1:3000 https://cloudflareinsights.com;
       worker-src 'self';
       manifest-src 'self';
       object-src 'none';

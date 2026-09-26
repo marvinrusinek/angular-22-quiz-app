@@ -17,12 +17,16 @@ import { AnswerComponent } from './app/components/question/answer/answer-compone
 import { ANSWER_COMPONENT } from '@shared/tokens/answer-component.token';
 import { PwaUpdateService } from '@shared/services/pwa-update.service';
 import { GlobalErrorHandler, installGlobalErrorLogging } from '@shared/utils/error-logging';
+import { installCloudflareAnalytics } from '@shared/utils/cloudflare-analytics';
 import { provideApiBaseUrl, provideInterviewApiBaseUrl } from '@shared/tokens/api-base-url.token';
 import { apiErrorInterceptor } from '@shared/http/api-error.interceptor';
 import { provideApiTopicQuizVerdictAdapter } from '@shared/services/features/verdict/verdict-adapter';
 import { InterviewSessionReferenceStorage } from '@shared/services/interview/interview-session-reference.storage';
 
 installGlobalErrorLogging();
+// Non-critical and self-contained: loads the Cloudflare beacon on the production host only,
+// never throws, and does not wait on anything before Angular bootstraps.
+installCloudflareAnalytics();
 
 bootstrapApplication(AppComponent, {
   providers: [

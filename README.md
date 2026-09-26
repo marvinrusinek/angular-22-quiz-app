@@ -1,27 +1,31 @@
-<h1 align="center">🚀 Angular Quiz App</h1>
+<h1 align="center">🚀 Angular Quiz & Interview Platform</h1>
 
-<p>
-<strong>A full-featured Angular learning and interview-preparation platform built with Angular 22, TypeScript, Signals, RxJS, and Angular Material, with Node/Express powering Topic Quizzes and Spring Boot powering Interview Mode.</strong>
+<p align="center">
+  A full-stack Angular learning and interview-preparation platform featuring topic-based quizzes, timed assessments, performance analytics, targeted practice, and backend-authoritative scoring.
 </p>
 
-<p>
-The application combines topic-based Angular quizzes with a timed Interview Mode, performance analytics, weak-area practice, progress tracking, and detailed answer review. It demonstrates modern Angular architecture, reactive state management, backend-driven assessment sessions, automated testing, accessibility, and maintainable full-stack application design.
+<p align="center">
+  Built with Angular 22, TypeScript, Signals, RxJS, Angular Material, Node.js, Spring Boot, and PostgreSQL.
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Angular-22-red" alt="Angular 22">
   <img src="https://img.shields.io/badge/TypeScript-Enabled-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/RxJS-Reactive-purple" alt="RxJS">
-  <img src="https://img.shields.io/badge/Signals-Integrated-orange" alt="Angular Signals">
-  <img src="https://img.shields.io/badge/Status-Active%20Development-brightgreen" alt="Active Development">
+  <img src="https://img.shields.io/badge/Spring_Boot-Java_21-6DB33F" alt="Spring Boot with Java 21">
+  <img src="https://img.shields.io/badge/PostgreSQL-Database-4169E1" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Status-Active_Development-brightgreen" alt="Active Development">
 </p>
 
 <p align="center">
-  <a href="https://marvinrusinek.github.io/angular-22-quiz-app">▶ Live Demo</a>
+  <a href="https://marvinrusinek.github.io/angular-22-quiz-app/">▶ <strong>Live Demo</strong></a>
   ·
   <a href="#-screenshots">📸 Screenshots</a>
   ·
+  <a href="#-core-features">✨ Features</a>
+  ·
   <a href="#-architecture-overview">🧭 Architecture</a>
+  ·
+  <a href="#%EF%B8%8F-getting-started">⚙️ Getting Started</a>
 </p>
 
 <hr>

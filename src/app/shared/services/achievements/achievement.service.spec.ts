@@ -55,7 +55,9 @@ describe('AchievementService', () => {
     trendsSig.set({ best: null });
     TestBed.configureTestingModule({
       providers: [
-        { provide: InterviewReadinessService, useValue: { readiness: readinessSig } },
+        // coverageVerified: the catalogue-backed coverage proof Interview Master now
+        // requires; its own behaviour is pinned in achievement-interview-master-catalog.spec.ts.
+        { provide: InterviewReadinessService, useValue: { readiness: readinessSig, coverageVerified: signal(true), ensureCatalog: jest.fn(async () => undefined) } },
         { provide: InterviewHistoryService, useValue: { trends: trendsSig } }
       ]
     });

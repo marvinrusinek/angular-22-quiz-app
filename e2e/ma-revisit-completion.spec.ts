@@ -122,11 +122,14 @@ test('revisit — completing a partial multi-answer grays the remaining option',
   // the question, so complete-on-revisit uses correct picks only).
   for (let i = 0; i < corrects.length - 1; i++) await rows.nth(corrects[i]).click();
 
-  // Navigate forward then back to the multi-answer question (revisit).
-  await page.locator(NEXT_BTN).click();
-  await expect(page).toHaveURL(new RegExp(`/${M + 1}$`));
-  await rows.first().waitFor({ state: 'visible' });
+  // Navigate BACKWARD then forward back to the multi-answer question
+  // (revisit). A partial multi-answer question cannot be left FORWARD (the
+  // mandatory progression rule), so this leaves via the always-legitimate
+  // Previous instead — to Q1, which `gotoMulti` already answered correctly,
+  // so returning via Next from there is legitimate too.
   await page.locator(PREV_BTN).click();
+  await expect(page).toHaveURL(new RegExp(`/${M - 1}$`));
+  await page.locator(NEXT_BTN).click();
   await expect(page).toHaveURL(new RegExp(`/${M}$`));
   await rows.first().waitFor({ state: 'visible' });
 
@@ -148,11 +151,14 @@ test('remembered colors survive a multi-hop round-trip', async ({ page }) => {
   await rows.nth(wrongs[0]).click();
   await rows.nth(corrects[0]).click();
 
-  // Forward -> back -> back -> forward (multi-hop around the question).
-  await page.locator(NEXT_BTN).click();
-  await expect(page).toHaveURL(new RegExp(`/${M + 1}$`));
-  await rows.first().waitFor({ state: 'visible' });
+  // Back -> forward -> back -> forward (multi-hop around the question, ALL
+  // legitimate moves): a partial multi-answer question cannot be left
+  // FORWARD (the mandatory progression rule), so every hop away from M goes
+  // via the always-legitimate Previous, to Q1 (already resolved correct by
+  // `gotoMulti`), and every hop back via Next from there.
   await page.locator(PREV_BTN).click();
+  await expect(page).toHaveURL(new RegExp(`/${M - 1}$`));
+  await page.locator(NEXT_BTN).click();
   await expect(page).toHaveURL(new RegExp(`/${M}$`));
   await rows.first().waitFor({ state: 'visible' });
   await page.locator(PREV_BTN).click();
@@ -171,12 +177,14 @@ test('after completing on revisit, colors persist through a round-trip', async (
   expect(corrects.length).toBe(MULTI.correctCount);
   expect(wrongs.length).toBeGreaterThan(0);
 
-  // First visit: partial (all-but-one correct), then forward and back.
+  // First visit: partial (all-but-one correct), then back and forward. A
+  // partial multi-answer question cannot be left FORWARD (the mandatory
+  // progression rule), so this leaves via the always-legitimate Previous
+  // instead — to Q1, which `gotoMulti` already answered correctly.
   for (let i = 0; i < corrects.length - 1; i++) await rows.nth(corrects[i]).click();
-  await page.locator(NEXT_BTN).click();
-  await expect(page).toHaveURL(new RegExp(`/${M + 1}$`));
-  await rows.first().waitFor({ state: 'visible' });
   await page.locator(PREV_BTN).click();
+  await expect(page).toHaveURL(new RegExp(`/${M - 1}$`));
+  await page.locator(NEXT_BTN).click();
   await expect(page).toHaveURL(new RegExp(`/${M}$`));
   await rows.first().waitFor({ state: 'visible' });
 

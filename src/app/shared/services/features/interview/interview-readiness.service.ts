@@ -67,6 +67,22 @@ export class InterviewReadinessService {
     return [...seen];
   });
 
+  /**
+   * True only when the BACKEND catalogue has actually loaded, i.e. the coverage
+   * denominator is real. The history-derived fallback above is a display
+   * convenience and proves nothing about coverage, so anything that must not be
+   * decided from a guessed denominator (Interview Master, which is permanent)
+   * requires this.
+   */
+  readonly coverageVerified = computed(
+    () => this.catalog.status() === 'ready' && this.catalog.topics().length > 0
+  );
+
+  /** Loads the catalogue if needed (no-op when ready or already loading). */
+  ensureCatalog(): Promise<void> {
+    return this.catalog.load();
+  }
+
   /** null when there are no completed interviews (section is hidden). */
   readonly readiness = computed<InterviewReadiness | null>(() =>
     calculateReadiness(this.history.history(), this.eligibleTopicIds())

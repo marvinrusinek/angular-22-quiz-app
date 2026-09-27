@@ -61,7 +61,9 @@ function makeStubs(options: { practiceAgainSucceeds?: boolean; hasWeak?: boolean
   const session = {
     result: signal<PracticeResult | null>(RESULT),
     ensureRecorded: jest.fn(),
-    practiceAgain: jest.fn(() => options.practiceAgainSucceeds !== false),
+    // The real method returns Promise<boolean>; a synchronous stub hid the bug
+    // where the component treated the (always-truthy) Promise as the answer.
+    practiceAgain: jest.fn(() => Promise.resolve(options.practiceAgainSucceeds !== false)),
     clear: jest.fn()
   };
   const weakAreas = { hasWeakTopics: signal(options.hasWeak !== false) };
@@ -218,6 +220,81 @@ describe('WeakAreasPracticeResultsComponent — Practice Again', () => {
     const labels = buttons.map((b) => b.textContent!.trim());
     expect(labels).toContain('Back to Quizzes');
     expect(labels).not.toContain('Practice Again');
+  });
+});
+
+describe('WeakAreasPracticeResultsComponent — Practice Again (asynchronous session creation)', () => {
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (reason: unknown) => void;
+    const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+    return { promise, resolve, reject };
+  }
+
+  it('does not navigate while the session is still being created, then navigates once it exists', async () => {
+    const stubs = makeStubs();
+    const pending = deferred<boolean>();
+    stubs.session.practiceAgain.mockReturnValue(pending.promise);
+    const fixture = mount(stubs);
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    const run = fixture.componentInstance.practiceAgain();
+    await Promise.resolve();
+    expect(navigate).not.toHaveBeenCalled();          // session not created yet
+
+    pending.resolve(true);
+    await run;
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/practice/weak-areas']);
+  });
+
+  it('a resolved false never navigates and keeps the no-weak-areas state', async () => {
+    const stubs = makeStubs({ practiceAgainSucceeds: false });
+    const fixture = mount(stubs);
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    await fixture.componentInstance.practiceAgain();
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.noWeakAreasRemaining()).toBe(true);
+  });
+
+  it('rapid repeated activation creates ONE session and ONE navigation', async () => {
+    const stubs = makeStubs();
+    const pending = deferred<boolean>();
+    stubs.session.practiceAgain.mockReturnValue(pending.promise);
+    const fixture = mount(stubs);
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    const first = fixture.componentInstance.practiceAgain();
+    const second = fixture.componentInstance.practiceAgain();
+    const third = fixture.componentInstance.practiceAgain();
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('.wapr__actions button') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);               // the UI also refuses while pending
+
+    pending.resolve(true);
+    await Promise.all([first, second, third]);
+
+    expect(stubs.session.practiceAgain).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance.practiceAgainPending()).toBe(false);
+  });
+
+  it('a rejection does not navigate, is not an unhandled rejection, and re-enables the button', async () => {
+    const stubs = makeStubs();
+    stubs.session.practiceAgain.mockReturnValue(Promise.reject(new Error('boom')));
+    const fixture = mount(stubs);
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    await expect(fixture.componentInstance.practiceAgain()).resolves.toBeUndefined();
+    fixture.detectChanges();
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.noWeakAreasRemaining()).toBe(false);
+    expect(fixture.componentInstance.practiceAgainPending()).toBe(false);
+    const button = fixture.nativeElement.querySelector('.wapr__actions button') as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
   });
 });
 

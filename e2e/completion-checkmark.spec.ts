@@ -20,8 +20,14 @@ test('a non-perfect completion still shows the tile checkmark on Quiz Selection'
       .toBeGreaterThanOrEqual(0);
 
     const correct = correctIndexForHeading((await page.locator(HEADING).textContent()) ?? '');
-    // Deliberately get the FIRST question wrong → non-perfect (~90%).
-    const pick = i === 0 ? (correct === 0 ? 1 : 0) : correct;
+    // Deliberately get the LAST question wrong → non-perfect (~90%). Must be
+    // the last one: an intermediate question requires a resolved-CORRECT
+    // verdict to unlock Next (the mandatory progression rule — a wrong pick
+    // there would leave Next permanently disabled). The final question has
+    // its own, separate policy: Results is available after any selection,
+    // correct or not.
+    const isLast = i === total - 1;
+    const pick = isLast ? (correct === 0 ? 1 : 0) : correct;
     await rows.nth(pick).click();
 
     if (i < total - 1) {

@@ -1,6 +1,6 @@
 import { Service, inject, signal, type Signal } from '@angular/core';
 import { Observable, Subject, throwError } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { catchError, map, tap, timeout } from 'rxjs/operators';
 
 import { canonicalize } from './local-verdict.adapter';
 import { TOPIC_QUIZ_VERDICT_ADAPTER } from './verdict-adapter';
@@ -62,6 +62,18 @@ import {
  * is stored for an unanswered question, so the storage discloses exactly what
  * the player has already seen and nothing more.
  */
+/**
+ * How long a `/check` may stay outstanding before it is treated as failed.
+ *
+ * Without a bound, a request that never answers leaves the question in
+ * `checking` forever: the Results button stays hidden and nothing tells the user
+ * why. Generous enough for a cold-started free-tier API (tens of seconds), short
+ * enough that the user is not left staring at a dead end. A timeout takes exactly
+ * the same path as a network failure — the `error` phase, retryable — and
+ * unsubscribing from the request cancels it, so a late response cannot land.
+ */
+export const VERDICT_CHECK_TIMEOUT_MS = 20_000;
+
 @Service()
 export class QuestionVerdictService {
   /**
@@ -193,6 +205,7 @@ export class QuestionVerdictService {
     const generation = this.nextGeneration(quizId, questionText);
 
     return this.adapter.check(quizId, questionText, selectedOptionTexts).pipe(
+      timeout(VERDICT_CHECK_TIMEOUT_MS),
       tap((result) => {
         // A response that is no longer the latest is DROPPED, not applied. It
         // still reaches the subscriber — the caller asked for this specific
@@ -239,6 +252,7 @@ export class QuestionVerdictService {
     const generation = this.nextGeneration(quizId, questionText);
 
     return this.adapter.revealExpired(quizId, questionText).pipe(
+      timeout(VERDICT_CHECK_TIMEOUT_MS),
       map((result) => {
         if (this.isCurrent(quizId, questionText, generation)) {
           const existing = this.verdictFor(quizId, questionText);
@@ -272,22 +286,25 @@ export class QuestionVerdictService {
    * just cleared. Deleting would reset the count to zero and let it match.
    */
   /**
-   * Is any question's verdict still unresolved or failed?
+   * Is any question's verdict currently PENDING or FAILED anywhere in the
+   * quiz — a check in flight, or one that failed and has not yet been
+   * retried?
    *
-   * The finalization invariant: a quiz must not be scored while the answer to
-   * "was this right?" is still in flight or has failed. Before the API cutover
-   * that could not happen — the local adapter answers in the same tick — but
-   * once `/check` is a round trip, finalizing early would mean scoring from a
-   * superseded verdict, or falling back to the local answer key. Both are
-   * exactly what this migration removes.
+   * This is a defense-in-depth backstop, not the final question's own
+   * submission policy (that is `canSubmitFinalQuestion` in
+   * `progression-gate.ts`, applied by the caller for the CURRENT question
+   * specifically). With the intermediate-progression gate in place, an
+   * EARLIER question can no longer legitimately be left `checking` or
+   * `error` — the user could not have advanced past it — so this exists for
+   * the one path that still bypasses that gate (a direct route/URL to a
+   * question the user has not properly reached; see the audit's "direct-route
+   * bypass" finding) and for the final question's own in-flight/failed check.
    *
-   * `checking` blocks because the user's LATEST selection has not been judged.
-   * `error` blocks because guessing is worse than making the user retry —
-   * silently counting it wrong would be an invented score.
-   *
-   * `idle` does NOT block: a question the user never answered is a legitimate
-   * final state (skipped, or timed out before any click), and nothing is
-   * pending on it.
+   * Deliberately NOT a check on `incomplete` or a resolved-incorrect verdict:
+   * those are legitimate, completed backend answers for the FINAL question
+   * under its own selection-based policy, and — for an intermediate
+   * question — already refused by `blocksIntermediateProgression` before the
+   * user could ever leave one in that state.
    *
    * Scoped to one quiz when `quizId` is given, since state survives across a
    * session and another quiz's leftovers must not block this one.
@@ -300,6 +317,21 @@ export class QuestionVerdictService {
     for (const [key, state] of this._states()) {
       if (prefix !== null && !key.startsWith(prefix)) continue;
       if (state.phase === 'checking' || state.phase === 'error') return true;
+    }
+    return false;
+  }
+
+  /**
+   * Has any question's check FAILED (network error, rejected, or timed out)?
+   *
+   * A subset of `hasBlockingVerdicts`, split out so the UI can tell the user
+   * WHY Results is unavailable and offer a retry, rather than just hiding it.
+   */
+  hasFailedVerdicts(quizId?: string): boolean {
+    const prefix = quizId ? `${quizId}${QuestionVerdictService.KEY_SEPARATOR}` : null;
+    for (const [key, state] of this._states()) {
+      if (prefix !== null && !key.startsWith(prefix)) continue;
+      if (state.phase === 'error') return true;
     }
     return false;
   }
@@ -468,6 +500,34 @@ export class QuestionVerdictService {
       // The outstanding count IS current and still replaces the old one.
       const previous = this.verdictFor(quizId, questionText);
       const alreadyRevealed = previous.correctOptionTexts.length > 0;
+
+      // THE PHASE ITSELF IS A REVEAL TOO, ONCE EARNED.
+      //
+      // The empty-resubmission-on-revisit artifact described above can land
+      // on a question that was already resolved CORRECT (its options are
+      // disabled once correct — the user cannot actually deselect it — so an
+      // EMPTY selected set here is never a real choice). Downgrading `phase`
+      // from `resolved` to `incomplete` in that case would un-earn a correct
+      // answer for anything that gates on phase (Next, forward navigation,
+      // Results), even though nothing the player did caused it. This is the
+      // same principle already applied to `selectedVerdicts`/`correctOptionTexts`
+      // above, extended to the phase field itself.
+      // `isResolvedCorrect` survives the intervening `checking` phase
+      // (`markChecking` spreads the existing state, only overwriting `phase`
+      // and `selectedOptionTexts`), so this still reads `true` here even
+      // though `previous.phase` is `checking` by the time THIS response
+      // arrives — checking `isResolvedCorrect` directly, not `previous.phase`,
+      // is what makes the guard reachable. Restoring `phase` explicitly (not a
+      // bare early return) matters because `markChecking` already moved it to
+      // `checking` when this artifact request was dispatched; simply not
+      // writing would leave it stuck there instead of back at `resolved`.
+      // `selectedVerdicts`/`correctOptionTexts`/`explanation` were never
+      // touched by `markChecking`, so `previous` already carries the earned
+      // reveal — only `phase` needs restoring.
+      if (selected.length === 0 && previous.isResolvedCorrect === true) {
+        this.write(quizId, questionText, { ...previous, phase: 'resolved' });
+        return;
+      }
 
       const mergedVerdicts = new Map(previous.selectedVerdicts);
       for (const verdict of result.selectedVerdicts) {

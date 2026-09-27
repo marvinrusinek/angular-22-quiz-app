@@ -26,9 +26,13 @@ async function reachResultsWithMixedScore(page: import('@playwright/test').Page)
       .toBeGreaterThanOrEqual(0);
 
     const correct = correctIndexForHeading((await page.locator(HEADING).textContent()) ?? '');
-    // Deliberately get the FIRST question wrong so BOTH Correct and
-    // Incorrect filters have at least one matching item.
-    const pick = i === 0 ? (correct === 0 ? 1 : 0) : correct;
+    // Deliberately get the LAST question wrong so BOTH Correct and Incorrect
+    // filters have at least one matching item. Must be the LAST one: an
+    // intermediate question requires a resolved-CORRECT verdict to unlock
+    // Next (the mandatory progression rule); only the final question's
+    // separate policy allows Results after a wrong answer.
+    const isLast = i === total - 1;
+    const pick = isLast ? (correct === 0 ? 1 : 0) : correct;
     await rows.nth(pick).click();
 
     if (i < total - 1) {

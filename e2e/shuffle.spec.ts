@@ -78,19 +78,39 @@ test.describe('shuffle mode — explanation pipeline', () => {
     const prev = page.locator(PREV_BTN);
     const rows = page.locator('.option-row');
 
-    // Answer position 1.
-    let h = (await page.locator(HEADING).textContent()) ?? '';
-    let correct = await correctRowsForHeading(rows, tsQuiz, h);
-    await rows.nth(correct[0]).click();
+    // Answer position 1. The heading can render a beat after the option rows
+    // do; reading it immediately risked an empty/stale match — waited out via
+    // expect.poll rather than hoped past. Click EVERY correct option, not just
+    // the first: shuffle mode randomizes QUESTION order too, so the bank's one
+    // multi-answer question can land at position 1 or 2 — clicking only its
+    // first correct option is a genuine partial pick there, harmless under the
+    // old "any click enables Next" policy but now correctly left `incomplete`
+    // and blocked by the mandatory progression rule (live-reproduced: this is
+    // what intermittently failed here, not a production defect).
+    let h = '';
+    let correct: number[] = [];
+    await expect
+      .poll(async () => {
+        h = (await page.locator(HEADING).textContent()) ?? '';
+        correct = await correctRowsForHeading(rows, tsQuiz, h);
+        return correct.length;
+      }, { timeout: 8000 })
+      .toBeGreaterThan(0);
+    for (const c of correct) await rows.nth(c).click();
     await expect(next).toBeEnabled();
 
-    // Go to position 2 and answer it.
+    // Go to position 2 and answer it (same races as above).
     await next.click();
     await expect(page).toHaveURL(/\/2$/);
     await rows.first().waitFor({ state: 'visible' });
-    h = (await page.locator(HEADING).textContent()) ?? '';
-    correct = await correctRowsForHeading(rows, tsQuiz, h);
-    await rows.nth(correct[0]).click();
+    await expect
+      .poll(async () => {
+        h = (await page.locator(HEADING).textContent()) ?? '';
+        correct = await correctRowsForHeading(rows, tsQuiz, h);
+        return correct.length;
+      }, { timeout: 8000 })
+      .toBeGreaterThan(0);
+    for (const c of correct) await rows.nth(c).click();
     await expect(next).toBeEnabled();
 
     // Bounce: 2 -> 1 -> 2 (2nd visit), then 1 -> 2 (3rd visit).

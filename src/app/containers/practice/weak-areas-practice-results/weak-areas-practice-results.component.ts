@@ -13,6 +13,7 @@ import { Router } from '@angular/router';
 
 import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 import { WeakAreasService } from '@shared/services/progress/weak-areas.service';
+import { swallow } from '@shared/utils/error-logging';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 import { ScrollDownIndicatorComponent } from '../../../components/scroll-down-indicator/scroll-down-indicator.component';
 
@@ -58,6 +59,12 @@ export class WeakAreasPracticeResultsComponent {
    */
   readonly noWeakAreasRemaining = signal(false);
 
+  /**
+   * True while Practice Again is generating its session. Disables the button so
+   * repeated activation cannot start a second session or a second navigation.
+   */
+  readonly practiceAgainPending = signal(false);
+
   /** Whether more practice is currently available, used to word the action. */
   readonly hasWeakTopics = this.weakAreas.hasWeakTopics;
 
@@ -73,12 +80,25 @@ export class WeakAreasPracticeResultsComponent {
    * session. Never a replay of the completed one.
    */
   async practiceAgain(): Promise<void> {
-    if (!this.session.practiceAgain()) {
-      this.noWeakAreasRemaining.set(true);
-      return;
+    if (this.practiceAgainPending()) return;
+    this.practiceAgainPending.set(true);
+    try {
+      // The session is built asynchronously (API question pools). Navigate only
+      // once it EXISTS: PracticeSessionGuard admits /practice/weak-areas only for
+      // a live session, and would otherwise bounce back to these results.
+      const started = await this.session.practiceAgain();
+      if (!started) {
+        this.noWeakAreasRemaining.set(true);
+        return;
+      }
+      this.noWeakAreasRemaining.set(false);
+      await this.router.navigate(['/practice/weak-areas']);
+    } catch (err: unknown) {
+      // No session was confirmed: stay on the results, with Practice Again usable.
+      swallow('weak-areas-practice-results#practiceAgain', err);
+    } finally {
+      this.practiceAgainPending.set(false);
     }
-    this.noWeakAreasRemaining.set(false);
-    await this.router.navigate(['/practice/weak-areas']);
   }
 
   /**

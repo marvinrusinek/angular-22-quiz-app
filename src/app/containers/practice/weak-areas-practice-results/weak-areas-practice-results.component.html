@@ -111,7 +111,7 @@
 
   <div class="wapr__actions">
     @if (!noWeakAreasRemaining()) {
-      <button type="button" class="wapr__btn" (click)="practiceAgain()" i18n>
+      <button type="button" class="wapr__btn" [disabled]="practiceAgainPending()" (click)="practiceAgain()" i18n>
         Practice Again
       </button>
     }

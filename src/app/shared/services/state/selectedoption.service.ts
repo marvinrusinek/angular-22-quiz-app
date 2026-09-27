@@ -169,6 +169,34 @@ export class SelectedOptionService {
   }
 
   /**
+   * Retry a FAILED check for the question at this display position, resending
+   * the selection the failed request carried.
+   *
+   * `setUiSelectedTexts` deliberately ignores an unchanged selection, so an
+   * unchanged-selection retry can never come through it — hence this explicit
+   * path. It goes through the same submission (and so the same credit-on-arrival,
+   * completion and sound handling) as a first attempt.
+   *
+   * Only an `error` phase retries. `checking` means a request is already
+   * outstanding, so a second press cannot start a concurrent one. The selection
+   * is the one the verdict service last held; nothing is inferred client-side.
+   */
+  retryVerdict(questionIndex: number): boolean {
+    try {
+      const quizId = this.quizService?.quizId;
+      const questionText = questionTextForDisplayIndex(this.quizService, questionIndex);
+      if (!quizId || !questionText) return false;
+      const state = this.verdicts.verdictFor(quizId, questionText);
+      if (state.phase !== 'error') return false;
+      this.submitToVerdictService(questionIndex, new Set(state.selectedOptionTexts));
+      return true;
+    } catch (err: unknown) {
+      swallow('selectedoption.service#retryVerdict', err);
+      return false;
+    }
+  }
+
+  /**
    * Hand the current selection to the correctness authority.
    *
    * This is the ONLY place a Topic Quiz selection is submitted for evaluation,

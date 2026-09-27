@@ -1,0 +1,6 @@
+<div class="verdict-notice" role="alert">
+  <span class="verdict-notice__text">{{ message() }}</span>
+  @if (canRetry()) {
+    <button type="button" class="verdict-notice__retry" (click)="retry.emit()" i18n>Retry</button>
+  }
+</div>

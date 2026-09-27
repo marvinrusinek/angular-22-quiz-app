@@ -126,6 +126,15 @@
                 }
               </section>
 
+              <!-- A failed or timed-out answer check: say so, and offer a retry. -->
+              @if (verdictNotice(); as notice) {
+                <codelab-verdict-notice
+                  [message]="notice.message"
+                  [canRetry]="notice.canRetry"
+                  (retry)="retryVerdictCheck()"
+                />
+              }
+
               <!-- Show Results Button (when applicable) -->
               @if (shouldShowResultsButton) {
                 <section class="show-results-section">

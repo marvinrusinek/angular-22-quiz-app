@@ -1,0 +1,31 @@
+@use '../../../variables' as vars;
+
+.verdict-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  margin: 8px 16px;
+  padding: 8px 12px;
+  border: 1px solid vars.$red;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.verdict-notice__retry {
+  padding: 6px 16px;
+  border: 2px solid vars.$dodger-blue;
+  border-radius: 6px;
+  background: vars.$dodger-blue;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 3px solid vars.$dodger-blue;
+    outline-offset: 2px;
+  }
+}

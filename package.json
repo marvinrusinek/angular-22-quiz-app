@@ -14,7 +14,7 @@
     "dev:api": "npm --prefix backend run dev",
     "test:e2e-support": "jest --config jest.e2e-support.config.js",
     "verify:artifact": "node scripts/verify-no-bank-in-artifact.js",
-    "verify:artifact:selftest": "node scripts/verify-no-bank-in-artifact.test.js",
+    "verify:artifact:selftest": "node scripts/verify-no-bank-in-artifact.selftest.js",
     "stage:ghpages": "node scripts/stage-ghpages.js",
     "stage:ghpages:selftest": "node scripts/stage-ghpages.selftest.js",
     "test:parity": "node scripts/parity/run.js"
@@ -33,7 +33,6 @@
     "@angular/platform-browser-dynamic": "22.1.0",
     "@angular/router": "22.1.0",
     "@angular/service-worker": "22.1.0",
-    "angular-starter": "file:../angular-20-quiz-app-main",
     "howler": "^2.2.4",
     "prismjs": "1.29.0",
     "rxjs": "^7.8.1",

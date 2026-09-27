@@ -71,7 +71,7 @@ function walk(dir, out = []) {
 
 /**
  * Core scan, extracted from `main()` so it can run against a controlled test
- * fixture directory (see verify-no-bank-in-artifact.test.js) as well as a real
+ * fixture directory (see verify-no-bank-in-artifact.selftest.js) as well as a real
  * `dist`. Returns the same failure-message list `main()` prints.
  */
 function scanArtifact(distDir) {

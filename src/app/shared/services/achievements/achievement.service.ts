@@ -167,11 +167,36 @@ export class AchievementService {
   private isInterviewMaster(): boolean {
     const readiness = this.readiness.readiness();
     const best = this.interviewHistory.trends().best;
-    return (
+    const qualifies =
       readiness?.status === 'ready' &&
       readiness.band === CERTIFICATE_REQUIRED_BAND &&
-      (best ?? 0) >= CERTIFICATE_MIN_SCORE
-    );
+      (best ?? 0) >= CERTIFICATE_MIN_SCORE;
+    if (!qualifies) return false;
+
+    // Fail closed: the award is permanent, and Topic Coverage (20% of the score)
+    // is only real once the BACKEND catalogue is loaded. Until then the readiness
+    // figure may rest on a guessed denominator, so nothing is awarded or stored.
+    // A user who would otherwise qualify triggers the (deduplicated) catalogue
+    // load, and the award is re-evaluated once coverage is proven.
+    if (!this.readiness.coverageVerified()) {
+      this.reevaluateWhenCatalogLoads();
+      return false;
+    }
+    return true;
+  }
+
+  private catalogRequest: Promise<void> | null = null;
+
+  private reevaluateWhenCatalogLoads(): void {
+    if (this.catalogRequest) return;                 // one request in flight at a time
+    this.catalogRequest = this.readiness
+      .ensureCatalog()
+      .catch(() => undefined)                        // a failed load simply stays unverified
+      .then(() => {
+        this.catalogRequest = null;
+        // `[]` is the same safe empty catalogue evaluateInterviewAchievements() uses.
+        if (this.readiness.coverageVerified()) this.evaluate([]);
+      });
   }
 
   // ── persisted state (safe reads) ───────────────────────────────

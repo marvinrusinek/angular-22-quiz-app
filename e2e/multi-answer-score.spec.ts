@@ -90,12 +90,14 @@ test('completing a multi-answer ON REVISIT credits the score ON THE CLICK', asyn
   }
   await expect(page.locator(SCORE).first()).toContainText('1/');
 
-  // Leave forward, then return (revisit). Score still 1.
-  await page.locator(NEXT_BTN).click();
-  await expect(page).toHaveURL(new RegExp(`/${MULTI.index + 1}$`));
-  await rows.first().waitFor({ state: 'visible' });
-  await expect(page.locator(SCORE).first()).toContainText('1/');
+  // Leave BACKWARD, then return (revisit). Score still 1. A partial
+  // multi-answer question cannot be left FORWARD (the mandatory progression
+  // rule) — Q1 is already resolved correct, so Previous/Next around it is
+  // the legitimate way to revisit.
   await page.locator(PREV_BTN).click();
+  await expect(page).toHaveURL(new RegExp(`/${MULTI.index - 1}$`));
+  await expect(page.locator(SCORE).first()).toContainText('1/');
+  await page.locator(NEXT_BTN).click();
   await expect(page).toHaveURL(new RegExp(`/${MULTI.index}$`));
   await rows.first().waitFor({ state: 'visible' });
 
@@ -168,11 +170,17 @@ async function walkToMulti(page: Page): Promise<{ heading: string; position: num
   for (let pos = 1; pos <= total; pos++) {
     const heading = (await page.locator(HEADING).first().textContent()) ?? '';
     const corrects = await correctRowsForHeading(rows, diQuiz, heading);
-    if (corrects.length === MULTI.correctCount) return { heading, position: pos };
+    // pos > 1 only: `leaveAndReturn` always leaves via Previous, which needs a
+    // backward target — if shuffle happens to land the multi-answer question
+    // at position 1 itself, walk PAST it (answering it fully, like any other
+    // question on the way) and keep looking for a later occurrence instead.
+    if (corrects.length === MULTI.correctCount && pos > 1) return { heading, position: pos };
     if (pos < total) {
-      // In shuffle mode Next is disabled until the current (single-answer)
-      // question is answered, so answer it (any option) before advancing.
-      await rows.nth(0).click();
+      // The mandatory progression rule requires the EXACT correct set (never
+      // just "any option") to unlock Next, for single- and multi-answer
+      // questions alike — so select every correct option this question has,
+      // whichever type it turns out to be.
+      for (const c of corrects) await rows.nth(c).click();
       await expect(page.locator(NEXT_BTN)).toBeEnabled({ timeout: 5000 });
       await page.locator(NEXT_BTN).click();
       await rows.first().waitFor({ state: 'visible' });
@@ -182,16 +190,18 @@ async function walkToMulti(page: Page): Promise<{ heading: string; position: num
   return { heading: '', position: -1 };
 }
 
-// Leave the current question and return to it (a revisit). Position-aware so it
-// works even when the (shuffled) multi-answer question is the LAST one — where
-// there is no Next button — by going backward instead.
-async function leaveAndReturn(page: Page, rows: Locator, position: number): Promise<void> {
-  const total = diQuiz.questions.length;
-  const [away, back] = position < total ? [NEXT_BTN, PREV_BTN] : [PREV_BTN, NEXT_BTN];
-  await page.locator(away).click();
+// Leave the current (PARTIAL) multi-answer question and return to it (a
+// revisit). Always leaves via Previous: the mandatory progression rule means a
+// partial multi-answer question can never be left FORWARD, and `walkToMulti`
+// guarantees `position > 1` (it walks PAST the multi-answer question if
+// shuffle puts it at position 1, since there would be no backward target),
+// so a backward target always exists here and returning via Next from it is
+// legitimate.
+async function leaveAndReturn(page: Page, rows: Locator, _position: number): Promise<void> {
+  await page.locator(PREV_BTN).click();
   await rows.first().waitFor({ state: 'visible' });
   await page.waitForTimeout(300);
-  await page.locator(back).click();
+  await page.locator(NEXT_BTN).click();
   await rows.first().waitFor({ state: 'visible' });
   await page.waitForTimeout(300);
 }

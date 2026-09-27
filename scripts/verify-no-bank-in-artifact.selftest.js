@@ -5,7 +5,7 @@
  * Plain Node + `assert`, matching this directory's existing convention (no
  * new test framework for one-off operator/CI scripts). Run directly:
  *
- *   node scripts/verify-no-bank-in-artifact.test.js
+ *   node scripts/verify-no-bank-in-artifact.selftest.js
  *
  * Builds small, disposable fixture directories under a temp dir — never the
  * real repository or a real `dist` — so each scenario is deterministic and

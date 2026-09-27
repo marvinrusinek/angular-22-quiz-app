@@ -105,6 +105,10 @@ describe('checking blocks finalization', () => {
     const second = beginCheck(QUIZ, Q2, ['A pipe']);
     expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(true);
 
+    // Answered-WRONG is a completed response, not a pending/failed one — the
+    // SERVICE-level backstop only tracks checking/error (the final question's
+    // OWN selection-based submission policy, which resolved-incorrect DOES
+    // satisfy, lives at the component level — see progression-gate.ts).
     second.flush({ status: 'resolved', correct: false, correctOptionTexts: ['x'], explanation: 'e' });
     expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(false);
   });
@@ -136,9 +140,11 @@ describe('states that do NOT block', () => {
     expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(false);
   });
 
-  it('an INCOMPLETE verdict does not block', () => {
-    // A partially answered multi is a legitimate final state to leave — it
-    // simply does not score. Nothing is pending on it.
+  it('an INCOMPLETE verdict does not block the SERVICE-level backstop', () => {
+    // A completed 'incomplete' response is not pending or failed — it is a
+    // real, answered backend result. Whether it may leave an INTERMEDIATE
+    // question (no) or submit the FINAL one (yes, given a selection) is the
+    // component-level policy in progression-gate.ts, not this quiz-wide check.
     const req = beginCheck(QUIZ, Q1, ['map']);
     req.flush({ status: 'incomplete', selectedVerdicts: [], remainingCorrectCount: 1 });
 

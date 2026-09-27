@@ -173,8 +173,17 @@ test.describe('multi-answer incremental highlighting (3-correct question)', () =
 
     await page.locator(PREV_BTN).click({ timeout: 15_000 });
     await page.waitForTimeout(800);
-    await page.locator('.option-row').first().click({ timeout: 15_000 }); // answer Q2 so Next unlocks
-    await page.waitForTimeout(800);
+
+    // Fully answer Q2 so Next unlocks — Q2 is ALSO multi-answer here, and the
+    // mandatory progression rule requires the exact correct set (a single
+    // pick, right or wrong, is not enough) to leave an intermediate question.
+    const q2Heading = (await page.locator(HEADING).first().textContent()) ?? '';
+    const q2Correct = correctIndicesForHeading(diQuiz, q2Heading);
+    for (const i of q2Correct) {
+      await page.locator('.option-row').nth(i).click({ timeout: 15_000 });
+      await page.waitForTimeout(400);
+    }
+    await expect(page.locator(NEXT_BTN)).toBeEnabled({ timeout: 10_000 });
     await page.locator(NEXT_BTN).click({ timeout: 15_000 });
     await page.waitForTimeout(1200);
 

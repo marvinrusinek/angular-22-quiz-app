@@ -3,7 +3,7 @@
  * Regression coverage for scripts/stage-ghpages.js.
  *
  * Plain Node + `assert`, matching this directory's convention (see
- * verify-no-bank-in-artifact.test.js). Named `.selftest.js`, not `.test.js`, so
+ * verify-no-bank-in-artifact.selftest.js). Named `.selftest.js`, not `.test.js`, so
  * Jest's default matcher does not collect it as an (assertion-less) suite. Run directly:
  *
  *   node scripts/stage-ghpages.selftest.js

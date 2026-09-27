@@ -74,6 +74,10 @@ import { ChangeRouteAnimation } from '../../animations/animations';
 import { withCorrectCountBanner } from '@shared/utils/correct-count-banner';
 import { norm } from '@shared/utils/text-norm';
 import { swallow } from '@shared/utils/error-logging';
+import { verdictStateForDisplayIndex } from '@shared/services/features/verdict/authorized-correctness';
+import { buildVerdictNotice, type VerdictNotice } from '@shared/utils/verdict-notice';
+import { blocksIntermediateProgression, canSubmitFinalQuestion } from '@shared/services/features/verdict/progression-gate';
+import { VerdictNoticeComponent } from '../../components/verdict-notice/verdict-notice.component';
 
 const INFO_ICON_COLOR = '#1e90ff';
 
@@ -92,6 +96,7 @@ type AnimationState = 'animationStarted' | 'none';
     CodelabQuizContentComponent,
     ScoreboardComponent,
     CodeSnippetComponent,
+    VerdictNoticeComponent,
   ],
   templateUrl: './quiz.component.html',
   styleUrls: ['./quiz.component.scss'],
@@ -146,6 +151,107 @@ export class QuizComponent implements OnInit, AfterViewInit {
   readonly questionsList = this.quizService.questionsSig;
   readonly answers = signal<Option[]>([]);
   readonly selectionMessage = this.selectionMessageService.selectionMessageSig;
+
+  /**
+   * The CURRENT question's backend verdict state, or null if it has none yet.
+   *
+   * `this.verdicts.states()` is read FIRST, unconditionally, purely to put
+   * QuestionVerdictService's reactive state signal into this computed's
+   * dependency set before anything else runs. `verdictStateForDisplayIndex`
+   * below reads `quizService.quizId`/`getQuestionsInDisplayOrder()` as plain,
+   * NON-reactive property/method access and early-returns `null` when either
+   * is momentarily unavailable (e.g. a brief window right after Restart, while
+   * the route/quizId is still settling) — a computed's dependency set is only
+   * what it read on its LAST run, so if that early return fires on the FIRST
+   * evaluation, `_states` is never read at all, and the verdict later
+   * resolving correctly can never invalidate this memo again: Next stays
+   * stuck on whatever this computed decided that one time, forever. Reading
+   * the signal unconditionally first — regardless of which branch the helper
+   * below then takes — guarantees this computed re-evaluates on every future
+   * verdict change no matter how the FIRST evaluation went.
+   */
+  private readonly currentVerdictState = computed(() => {
+    this.verdicts.states();
+    return verdictStateForDisplayIndex(this.quizService, this.currentQuestionIndex(), this.verdicts);
+  });
+
+  /**
+   * May the user move past this INTERMEDIATE question — Next, keyboard
+   * advancement, and a forward dot-jump all read exactly this. Backend-verdict
+   * only: never `option.correct`, never any other client-side answer data.
+   *
+   * A DIFFERENT, deliberately separate policy governs the FINAL question's
+   * own submission — see `finalQuestionCanSubmit` below. Conflating the two
+   * would make either "a partial multi-answer question is not a permitted way
+   * to leave THIS question" (here) or "Results does not require the last
+   * answer to be correct" (there) an unreadable special case of the other.
+   *
+   * See `blocksIntermediateProgression` for the phase-by-phase rule: only a
+   * resolved-CORRECT verdict, or a server-confirmed `expired` phase, may
+   * unblock. There is no "leave a partial multi-answer question and finish it
+   * on revisit" exception — the correctness rule wins over that prior
+   * behavior, by explicit product decision.
+   *
+   * Timer expiry is checked FIRST, ahead of the verdict, for the same reason
+   * the keyboard handler already carried its own `timerExpired` check
+   * (quiz-setup.service.ts): once the countdown has run out for this question,
+   * progression must not wait on `revealExpiredQuestion()` — which may still be
+   * pending, or could itself fail — that request only fetches the reveal text,
+   * it does not gate advancing. This preserves the existing timer-expiry
+   * behavior unchanged; it does not introduce a new bypass, because expiry is
+   * server-authorized (the signed per-question deadline), not a client claim.
+   */
+  readonly currentVerdictBlocksProgression = computed<boolean>(() => {
+    if (this.currentQuestionTimerExpired()) return false;
+    const state = this.currentVerdictState();
+    return blocksIntermediateProgression(state?.phase, state?.isResolvedCorrect ?? null);
+  });
+
+  /**
+   * May the FINAL question submit to Results? A SEPARATE, already-established
+   * policy from `currentVerdictBlocksProgression`: "Show Results only after at
+   * least one option has been selected" — correctness is NOT required here.
+   * A resolved-incorrect, or a completed `incomplete` (partial multi-answer)
+   * response, both allow Results as long as the user made a selection and the
+   * backend has actually responded; only `checking`/`error`/no-selection
+   * block. Scoring itself stays backend-authoritative regardless of this
+   * question's own outcome. See `canSubmitFinalQuestion`'s own doc comment for
+   * why `incomplete` counts as a completed response, not a pending one.
+   */
+  readonly finalQuestionCanSubmit = computed<boolean>(() => {
+    if (this.currentQuestionTimerExpired()) return true;
+    const state = this.currentVerdictState();
+    return canSubmitFinalQuestion(state?.phase, (state?.selectedOptionTexts.length ?? 0) > 0);
+  });
+
+  /**
+   * Has the timer already run out for the CURRENT question? Read directly by
+   * both computeds above (not only through one of them), so Next and Results
+   * share the identical expiry carve-out.
+   */
+  private currentQuestionTimerExpired(): boolean {
+    return this.timerService.expiredForQuestionIndexSig() === this.quizService.getCurrentQuestionIndex();
+  }
+
+  /**
+   * Recovery notice for a FAILED (or timed-out) answer check.
+   *
+   * A failed `/check` is never a verdict — nothing is scored and nothing
+   * advances — but silently leaving the question blocked was a dead end. This
+   * says so, and offers a retry of the CURRENT question's unchanged selection.
+   * When the failure is on another question, it says that instead (Results stays
+   * unavailable until that one is retried). Null when nothing has failed.
+   */
+  readonly verdictNotice = computed<VerdictNotice | null>(() => {
+    const current = this.currentVerdictState();
+    const quizId = this.quizId() || this.quizService.quizId || undefined;
+    return buildVerdictNotice(current?.phase, this.verdicts.hasFailedVerdicts(quizId));
+  });
+
+  /** Resend the failed check for the current question. No-op unless it actually failed. */
+  retryVerdictCheck(): void {
+    this.selectedOptionService.retryVerdict(this.currentQuestionIndex());
+  }
   combinedQuestionData = signal<QuestionPayload | null>(null);
   readonly questionIndex = signal<number>(0);
   readonly currentQuestionIndex = signal<number>(0);
@@ -163,7 +269,16 @@ export class QuizComponent implements OnInit, AfterViewInit {
   readonly previousIndex = signal<number | null>(null);
   readonly isNavigatedByUrl = signal<boolean>(false);
   readonly navigatingToResults = signal<boolean>(false);
-  readonly nextButtonEnabled = this.nextButtonStateService.isButtonEnabled;
+  /**
+   * Clicking an option enables the legacy `isButtonEnabled` signal on its own
+   * (single: deterministic on first click; multi: on any selection) — before
+   * the backend has said anything about correctness. `currentVerdictBlocksProgression`
+   * is the override: it is backend-verdict-only and wins whenever it says no,
+   * regardless of what the click-time signal already set.
+   */
+  readonly nextButtonEnabled = computed(
+    () => this.nextButtonStateService.isButtonEnabled() && !this.currentVerdictBlocksProgression()
+  );
   animationStateSig = signal<AnimationState>('none');
 
   combinedQuestionDataView = computed(() => {
@@ -419,9 +534,20 @@ export class QuizComponent implements OnInit, AfterViewInit {
    * Delegates to the verdict service, which owns the state — scoring readiness
    * must not be re-derived per call site or the two gates could disagree.
    */
+  /**
+   * May Results NOT be shown/submitted right now?
+   *
+   * Two layers: a quiz-wide BACKSTOP (any question's check still in flight or
+   * failed — see `QuestionVerdictService.hasBlockingVerdicts`'s own doc for
+   * why this should be unreachable for an EARLIER question once the
+   * intermediate gate is in place, and exists mainly for the acknowledged
+   * direct-route bypass), and the FINAL question's own selection-based
+   * submission policy (`finalQuestionCanSubmit` — correctness NOT required).
+   */
   private hasBlockingVerdicts(): boolean {
     const quizId = this.quizId() || this.quizService.quizId || undefined;
-    return this.verdicts.hasBlockingVerdicts(quizId);
+    if (this.verdicts.hasBlockingVerdicts(quizId)) return true;
+    return !this.finalQuestionCanSubmit();
   }
 
   public get shouldShowResultsButton(): boolean {
@@ -595,6 +721,9 @@ export class QuizComponent implements OnInit, AfterViewInit {
   }
 
   public async advanceToNextQuestion(): Promise<void> {
+    // Independently enforced — never relies solely on the button's disabled
+    // attribute, since the keyboard path (ArrowRight/Enter) calls this directly.
+    if (this.currentVerdictBlocksProgression()) return;
     await this.quizSetupService.advanceQuestion(this, 'next');
     this.scrollToTop();
   }
@@ -774,11 +903,16 @@ export class QuizComponent implements OnInit, AfterViewInit {
     void this.quizNavigationService.navigateToQuestion(index).then(() => this.scrollToTop());
   }
 
+  /**
+   * Backward and same-index dot navigation is always allowed — revisiting an
+   * earlier question never bypasses anything, and a question left `error` or
+   * unresolved stays visibly recoverable there (`verdictNotice` recomputes for
+   * whichever question is current). A FORWARD jump is exactly the same act as
+   * clicking Next, so it shares the identical gate.
+   */
   isDotClickable(index: number): boolean {
-    if (index === this.currentQuestionIndex()) return true;
-    const status = this.getQuestionStatus(index);
-    if (status === 'correct' || status === 'wrong') return true;
-    return true;
+    if (index <= this.currentQuestionIndex()) return true;
+    return !this.currentVerdictBlocksProgression();
   }
 
   // Read the URL question index — used as a fallback when

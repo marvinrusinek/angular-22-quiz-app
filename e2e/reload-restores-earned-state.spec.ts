@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-import { diQuiz, correctIndicesForHeading, HEADING } from './helpers';
+import { diQuiz, tsQuiz, correctIndicesForHeading, HEADING, startQuizViaUi, advanceToQuestion } from './helpers';
 
 /**
  * A RELOAD MUST NOT REVEAL WHAT THE USER DID NOT EARN.
@@ -47,8 +47,15 @@ async function classesOf(page: Page) {
   );
 }
 
+/**
+ * Reaches the shared 3-correct multi-answer question (fixture-gadgets Q3)
+ * legitimately — Start + progress through Q1-Q2 — rather than a direct
+ * `page.goto` straight to it, which QuizGuard now correctly redirects on a
+ * fresh attempt (Root Cause B, direct-route P1; see helpers.ts).
+ */
 async function openDiMulti(page: Page): Promise<number[]> {
-  await page.goto('/quiz/question/fixture-gadgets/3');
+  await startQuizViaUi(page, 'fixture-gadgets', /fixture gadgets/i);
+  await advanceToQuestion(page, diQuiz, 3);
   await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
   const heading = (await page.locator(HEADING).first().textContent()) ?? '';
   const correct = correctIndicesForHeading(diQuiz, heading);
@@ -138,8 +145,14 @@ test.describe('earned state survives a reload', () => {
    * reverse, an explanation appearing for a question the user has not resolved.
    */
   test('a reload does not surface an explanation the user has not earned', async ({ page }) => {
-    // Q2 is never answered in this test.
-    await page.goto('/quiz/question/fixture-widgets/2');
+    // A direct goto straight to question 2 with no prior progress is now
+    // correctly redirected by QuizGuard on a fresh attempt (it would have
+    // landed on question 1 instead, silently testing the wrong question) —
+    // found via Gate 5's repeat static audit. Reach question 2 legitimately
+    // (Q1 answered correctly) instead, WITHOUT answering Q2 itself — the
+    // test's own original intent, preserved exactly.
+    await startQuizViaUi(page, 'fixture-widgets', /fixture widgets/i);
+    await advanceToQuestion(page, tsQuiz, 2);
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
 
     await reload(page);

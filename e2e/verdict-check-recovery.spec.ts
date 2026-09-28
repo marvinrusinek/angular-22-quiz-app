@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { quizData, correctIndicesForHeading, HEADING, NEXT_BTN, RESULTS_BTN } from './helpers';
+import { quizData, correctIndicesForHeading, HEADING, NEXT_BTN, RESULTS_BTN, startQuizViaUi } from './helpers';
 
 /**
  * A FAILED answer check is recoverable — and never a verdict.
@@ -52,7 +52,12 @@ test('a failed /check shows a message, keeps the selection, retries the same ans
     await route.continue();
   });
 
-  await page.goto(`/quiz/question/${QUIZ_ID}/1`);
+  // Public UI, not a direct goto — this test's own Next-loop to Results
+  // needs a real attempt to persist each unlock (Root Cause A, direct-route
+  // P1; found via Gate 5's static review — this test's failure in the
+  // interrupted full run was masked by the tail-end memory-exhaustion
+  // crash, so it was never individually diagnosed until this pass).
+  await startQuizViaUi(page, QUIZ_ID, /fixture thingamajigs/i);
   await page.locator(ROW).first().waitFor({ state: 'visible', timeout: 30_000 });
 
   const picked = await correctRowFor(page);

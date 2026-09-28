@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { NEXT_BTN, PREV_BTN, HEADING, diQuiz, correctRowsForHeading } from './helpers';
+import { NEXT_BTN, PREV_BTN, HEADING, diQuiz, correctRowsForHeading, startQuizViaUi } from './helpers';
 
 /**
  * Regression guard for revisit clickability — updated 2026-07-05 for the
@@ -15,9 +15,10 @@ import { NEXT_BTN, PREV_BTN, HEADING, diQuiz, correctRowsForHeading } from './he
  */
 
 test('revisit — remembered pick is read-only, unselected options stay clickable', async ({ page }) => {
-  await page.goto('/quiz/question/fixture-gadgets/1');
+  // Public UI, not a direct goto — see achievements.spec.ts's comment on
+  // Root Cause A (direct-route P1).
+  await startQuizViaUi(page, 'fixture-gadgets', /fixture gadgets/i);
   const rows = page.locator('.option-row');
-  await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
   // Answer Q1 so Next is enabled, then go to Q2 (multi-answer).
   await rows.nth(0).click();

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { HEADING, FEEDBACK, correctIndexForHeading, tsQuiz, diQuiz, correctRowsForHeading, findMultiAnswerQuestion } from './helpers';
+import { HEADING, FEEDBACK, correctIndexForHeading, tsQuiz, diQuiz, correctRowsForHeading, findMultiAnswerQuestion, startQuizViaUi, advanceToQuestion } from './helpers';
 
 /**
  * COLD-START PRELOAD — scoreboard/congratulations font + sound cues.
@@ -119,7 +119,11 @@ test.describe('cold-start preload — scoreboard font + sound cues', () => {
 
   test('no regression: multi-answer incremental highlighting, completion and timer-stop remain correct on this same first attempt', async ({ page }) => {
     const MULTI = findMultiAnswerQuestion(diQuiz);
-    await page.goto(`/quiz/question/fixture-gadgets/${MULTI.index}`);
+    // A direct goto straight to the multi-answer question is now correctly
+    // redirected by QuizGuard on a fresh attempt — reach it via Start +
+    // legitimate progression instead (Root Cause B, direct-route P1).
+    await startQuizViaUi(page, 'fixture-gadgets', /fixture gadgets/i);
+    await advanceToQuestion(page, diQuiz, MULTI.index);
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20000 });
 
     const rows = page.locator('.option-row');

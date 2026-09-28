@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
+import { QuizProgressionService } from '@shared/services/flow/quiz-progression.service';
 import { ReturnComponent } from './return.component';
 
 /**
@@ -60,5 +61,33 @@ describe('ReturnComponent — Results actions', () => {
     expect(navigateByUrl.mock.calls[0][0].toString()).toBe('/progress');
     expect(restart).not.toHaveBeenCalled();
     expect(select).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * DIRECT-ROUTE PROGRESSION BYPASS FIX — this Restart path is the one that
+ * does NOT mint a new attemptId (see resetQuizRuntimeState's own comment), so
+ * it must clear the furthest-unlocked marker EXPLICITLY rather than relying
+ * on attempt-id invalidation the way the in-quiz Restart button can.
+ */
+describe('ReturnComponent — Restart clears the progression marker', () => {
+  let fixture: ComponentFixture<ReturnComponent>;
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    TestBed.configureTestingModule({ imports: [ReturnComponent], providers: [provideRouter([])] });
+    fixture = TestBed.createComponent(ReturnComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => sessionStorage.clear());
+
+  it('restartQuiz() calls QuizProgressionService.clear()', () => {
+    const clearSpy = jest.spyOn(TestBed.inject(QuizProgressionService), 'clear');
+    jest.spyOn(Router.prototype, 'navigate').mockResolvedValue(true);
+
+    fixture.componentInstance.restartQuiz();
+
+    expect(clearSpy).toHaveBeenCalledTimes(1);
   });
 });

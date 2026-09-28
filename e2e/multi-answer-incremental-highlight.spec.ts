@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-import { diQuiz, correctIndicesForHeading, HEADING, NEXT_BTN, PREV_BTN } from './helpers';
+import { diQuiz, correctIndicesForHeading, HEADING, NEXT_BTN, PREV_BTN, startQuizViaUi, advanceToQuestion } from './helpers';
 
 /**
  * THE REGRESSION: on a multi-answer question with 3 correct options, picking
@@ -38,8 +38,15 @@ import { diQuiz, correctIndicesForHeading, HEADING, NEXT_BTN, PREV_BTN } from '.
 
 const MSG = '.instructions-message';
 
+/**
+ * Reaches the shared 3-correct multi-answer question (fixture-gadgets Q3)
+ * legitimately — Start + progress through Q1-Q2 — rather than a direct
+ * `page.goto` straight to it, which QuizGuard now correctly redirects on a
+ * fresh attempt (Root Cause B, direct-route P1; see helpers.ts).
+ */
 async function openDiMulti(page: Page): Promise<number[]> {
-  await page.goto('/quiz/question/fixture-gadgets/3');
+  await startQuizViaUi(page, 'fixture-gadgets', /fixture gadgets/i);
+  await advanceToQuestion(page, diQuiz, 3);
   await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
   const heading = (await page.locator(HEADING).first().textContent()) ?? '';
   const correct = correctIndicesForHeading(diQuiz, heading);
@@ -174,15 +181,15 @@ test.describe('multi-answer incremental highlighting (3-correct question)', () =
     await page.locator(PREV_BTN).click({ timeout: 15_000 });
     await page.waitForTimeout(800);
 
-    // Fully answer Q2 so Next unlocks — Q2 is ALSO multi-answer here, and the
-    // mandatory progression rule requires the exact correct set (a single
-    // pick, right or wrong, is not enough) to leave an intermediate question.
-    const q2Heading = (await page.locator(HEADING).first().textContent()) ?? '';
-    const q2Correct = correctIndicesForHeading(diQuiz, q2Heading);
-    for (const i of q2Correct) {
-      await page.locator('.option-row').nth(i).click({ timeout: 15_000 });
-      await page.waitForTimeout(400);
-    }
+    // Q2 is ALREADY fully answered correctly here — `openDiMulti` legitimately
+    // walks through it (Root Cause B, direct-route P1: reaching Q3 via
+    // `advanceToQuestion` answers every intermediate question along the way,
+    // where the old direct `page.goto('.../3')` skipped Q2 entirely). Its
+    // correct option(s) are therefore already selected AND locked read-only
+    // (revisit-disable.spec.ts's "remembered pick is read-only" contract —
+    // `pointer-events: none` by design), so re-clicking them here would only
+    // ever time out waiting for an intentionally-unclickable element. Next is
+    // already enabled from that earlier, legitimate completion.
     await expect(page.locator(NEXT_BTN)).toBeEnabled({ timeout: 10_000 });
     await page.locator(NEXT_BTN).click({ timeout: 15_000 });
     await page.waitForTimeout(1200);

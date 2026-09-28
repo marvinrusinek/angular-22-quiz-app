@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { NEXT_BTN, PREV_BTN, HEADING, diQuiz, correctRowsForHeading, findMultiAnswerQuestion } from './helpers';
+import { NEXT_BTN, PREV_BTN, HEADING, diQuiz, correctRowsForHeading, findMultiAnswerQuestion, startQuizViaUi } from './helpers';
 
 /**
  * Repro + regression guard for the "multi-answer completion lock on REVISIT" bug.
@@ -22,8 +22,12 @@ const M = MULTI.index;
 
 // Navigate Q1 -> the multi-answer question. Returns the correct/wrong DOM row
 // indices resolved by visible text (shuffle-immune).
+//
+// Public UI, not a direct goto — this walk's own Next click(s) need a real
+// attempt to persist their unlock (Root Cause A, direct-route P1; see
+// helpers.ts's startQuizViaUi doc comment).
 async function gotoMulti(page: Page) {
-  await page.goto('/quiz/question/fixture-gadgets/1');
+  await startQuizViaUi(page, 'fixture-gadgets', /fixture gadgets/i);
   const rows = page.locator('.option-row');
   await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 

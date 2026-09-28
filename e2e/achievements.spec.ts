@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { HEADING, NEXT_BTN, RESULTS_BTN, diQuiz, correctRowsForHeading } from './helpers';
+import { HEADING, NEXT_BTN, RESULTS_BTN, diQuiz, correctRowsForHeading, startQuizViaUi } from './helpers';
 
 /**
  * End-to-end: completing a quiz with a perfect score unlocks the "Perfect Score"
@@ -15,7 +15,14 @@ const UNLOCKED = '.achievement-unlocked';
 test('perfect quiz unlocks an achievement on results, and it does not re-appear after refresh', async ({ page }) => {
   // Playwright gives each test a fresh browser context (empty localStorage), so
   // no achievement is earned yet at the start of this run.
-  await page.goto('/quiz/question/fixture-gadgets/1');
+  //
+  // Started through the public UI (tile -> Introduction -> Start), not a
+  // direct `page.goto` to question 1: that used to reach the exact same
+  // visual state but skipped Introduction's Start button, the only thing
+  // that mints an attemptId — QuizProgressionService.unlockThrough() then
+  // silently no-opped, and every Next click after Q1 got redirected right
+  // back to it (the direct-route P1's "Root Cause A", fixed 2026-09-28).
+  await startQuizViaUi(page, 'fixture-gadgets', /fixture gadgets/i);
   const total = diQuiz.questions.length;
 
   // Answer every question with ALL its correct options (multi-answer aware) → 100%.

@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-import { NEXT_BTN, PREV_BTN } from './helpers';
+import { NEXT_BTN, PREV_BTN, startQuizViaUi } from './helpers';
 
 /**
  * The single-answer selection-message lifecycle.
@@ -133,7 +133,11 @@ test.describe('single-answer selection message', () => {
 
 test.describe('selection message survives revisit', () => {
   test('Next then Previous shows the answered message, never the wrong-answer one', async ({ page }) => {
-    await gotoQuestion(page, 'fixture-widgets', 1);
+    // Public UI, not a direct goto — this test's own Next click needs a real
+    // attempt to persist its unlock (Root Cause A, direct-route P1; found
+    // via Gate 5's static review — see verdict-check-recovery.spec.ts's
+    // comment for why this was missed in the earlier diagnosis pass).
+    await startQuizViaUi(page, 'fixture-widgets', /fixture widgets/i);
 
     await page.locator('.option-row').nth(0).click();
     await expect(page.locator(MSG)).toHaveText(NEXT_MSG, { timeout: 15_000 });
@@ -151,7 +155,9 @@ test.describe('selection message survives revisit', () => {
   });
 
   test('a second revisit still never shows the wrong-answer instruction', async ({ page }) => {
-    await gotoQuestion(page, 'fixture-widgets', 1);
+    // Public UI, not a direct goto — see the previous test's comment
+    // (Root Cause A, direct-route P1).
+    await startQuizViaUi(page, 'fixture-widgets', /fixture widgets/i);
 
     await page.locator('.option-row').nth(0).click();
     await expect(page.locator(MSG)).toHaveText(NEXT_MSG, { timeout: 15_000 });
@@ -166,7 +172,9 @@ test.describe('selection message survives revisit', () => {
   });
 
   test('an unanswered question asks for a selection, not a correction', async ({ page }) => {
-    await gotoQuestion(page, 'fixture-widgets', 1);
+    // Public UI, not a direct goto — see the previous test's comment
+    // (Root Cause A, direct-route P1).
+    await startQuizViaUi(page, 'fixture-widgets', /fixture widgets/i);
 
     await page.locator('.option-row').nth(0).click();
     await expect(page.locator(MSG)).toHaveText(NEXT_MSG, { timeout: 15_000 });

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { startQuizViaUi } from './helpers';
 
 /**
  * Stage 14 regression repair — refresh after a FET reveal must not lose it.
@@ -67,7 +68,9 @@ test.describe('Refresh after a legitimate FET reveal restores the FET, from dura
 
   test('2. expire -> Next -> Previous still shows the question, not the FET (revisit is not a reveal, unaffected by the fix)', async ({ page }) => {
     test.setTimeout(90_000);
-    await page.goto('/quiz/question/fixture-doohickeys/1');
+    // Public UI, not a direct goto — the Next click after expiry needs a
+    // real attempt to persist its unlock (Root Cause A, direct-route P1).
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -87,7 +90,9 @@ test.describe('Refresh after a legitimate FET reveal restores the FET, from dura
 
   test('3. expire -> refresh (FET restored) -> Next -> Previous: still question text, not a leaked FET from the restore', async ({ page }) => {
     test.setTimeout(90_000);
-    await page.goto('/quiz/question/fixture-doohickeys/1');
+    // Public UI, not a direct goto — the Next click needs a real attempt to
+    // persist its unlock (Root Cause A, direct-route P1).
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -146,7 +151,10 @@ test.describe('Refresh after a legitimate FET reveal restores the FET, from dura
 
   test('6. restarting the quiz clears the durable expiry/FET state — Q1 is fresh again', async ({ page }) => {
     test.setTimeout(90_000);
-    await page.goto('/quiz/question/fixture-doohickeys/1');
+    // Public UI, not a direct goto — the Next click (to reach Q2, where the
+    // Restart button first renders) needs a real attempt to persist its
+    // unlock (Root Cause A, direct-route P1).
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
     const rows = page.locator('.option-row');
     await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 

@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-import { HEADING, NEXT_BTN, PREV_BTN } from './helpers';
+import { HEADING, NEXT_BTN, PREV_BTN, startQuizViaUi } from './helpers';
 
 /**
  * The composed FET must survive leaving and returning to the tab.
@@ -153,7 +153,10 @@ test.describe('revisit navigation does not leak explanations', () => {
    * RIGHT question's text and never to another question's explanation.
    */
   test('Next then Previous returns to this question, with no foreign FET', async ({ page }) => {
-    await gotoQuestion(page, 'fixture-widgets', 1);
+    // Public UI, not a direct goto — this test's own Next click needs a real
+    // attempt to persist its unlock (Root Cause A, direct-route P1); see
+    // achievements.spec.ts's comment for the full explanation.
+    await startQuizViaUi(page, 'fixture-widgets', /fixture widgets/i);
 
     const questionText = (await page.locator(HEADING).textContent())?.trim() ?? '';
 

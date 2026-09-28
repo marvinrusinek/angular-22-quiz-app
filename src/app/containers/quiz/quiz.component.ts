@@ -42,6 +42,7 @@ import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.serv
 import { QuizInitializationService } from '@shared/services/flow/quiz-initialization.service';
 import { QuizNavigationService } from '@shared/services/flow/quiz-navigation.service';
 import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
+import { QuizProgressionService } from '@shared/services/flow/quiz-progression.service';
 import { QuizResetService } from '@shared/services/flow/quiz-reset.service';
 import { QuizRouteService } from '@shared/services/flow/quiz-route.service';
 import { QuizService } from '@shared/services/data/quiz.service';
@@ -118,6 +119,7 @@ export class QuizComponent implements OnInit, AfterViewInit {
   public readonly quizInitializationService = inject(QuizInitializationService);
   private readonly quizNavigationService = inject(QuizNavigationService);
   private readonly quizPersistence = inject(QuizPersistenceService);
+  private readonly progressionService = inject(QuizProgressionService);
   public readonly quizQuestionLoaderService = inject(QqcQuestionLoaderService);
   private readonly quizResetService = inject(QuizResetService);
   private readonly quizRouteService = inject(QuizRouteService);
@@ -724,8 +726,32 @@ export class QuizComponent implements OnInit, AfterViewInit {
     // Independently enforced — never relies solely on the button's disabled
     // attribute, since the keyboard path (ArrowRight/Enter) calls this directly.
     if (this.currentVerdictBlocksProgression()) return;
+    this.unlockNextQuestion();
     await this.quizSetupService.advanceQuestion(this, 'next');
     this.scrollToTop();
+  }
+
+  /**
+   * Record that the CURRENT question has been legitimately passed, unlocking
+   * the route for the one immediately after it. The single call site shared
+   * by Next, keyboard advancement (both call this method) and a forward
+   * dot-jump (see `navigateToDot`) — never mutated independently, so the
+   * marker can only ever grow by one at a time, regardless of how far a click
+   * superficially targets. Guarded by the SAME `currentVerdictBlocksProgression`
+   * this method already checked, so a call here always means the shared
+   * progression gate just agreed to let the user leave.
+   */
+  private unlockNextQuestion(): void {
+    const quizId = this.quizId() || this.quizService.quizId || undefined;
+    if (!quizId) return;
+    const total = Math.max(
+      this.totalQuestions(),
+      this.quizService.questions?.length ?? 0,
+      1
+    );
+    // currentQuestionIndex() is 0-based; the route is 1-based, and the index
+    // being UNLOCKED is the one right after the current route position.
+    this.progressionService.unlockThrough(quizId, this.currentQuestionIndex() + 2, total);
   }
   public async advanceToPreviousQuestion(): Promise<void> {
     await this.quizSetupService.advanceQuestion(this, 'previous');
@@ -798,6 +824,10 @@ export class QuizComponent implements OnInit, AfterViewInit {
       // High Scores row. This only resets the active attempt; the persistent
       // highScoresLocal history is intentionally left untouched.
       this.quizService.startNewAttempt();
+      // A restarted attempt must relock every question past 1 — the new
+      // attemptId alone already makes the OLD marker invalid on read, but
+      // clearing it too avoids leaving a stale, unreadable record behind.
+      this.progressionService.clear();
       this.quizSetupService.restartQuiz(this);
     });
   }
@@ -893,6 +923,12 @@ export class QuizComponent implements OnInit, AfterViewInit {
 
   navigateToDot(index: number): void {
     if (!this.isDotClickable(index)) return;
+    // A FORWARD jump is exactly the same act as clicking Next, so it shares
+    // the same one-at-a-time unlock — never the target dot's own index, no
+    // matter how far ahead it is. `QuizGuard` is the actual backstop if the
+    // route this produces still turns out to be locked (e.g. a multi-step
+    // forward dot click past a question that was never truly finished).
+    if (index > this.currentQuestionIndex()) this.unlockNextQuestion();
     this.dotStatusService.clearForIndex(index);
     this.selectedOptionService.lastClickedCorrectByQuestion.clear();
     this.quizPersistence.clearPersistedDotStatus(this.quizId(), index);

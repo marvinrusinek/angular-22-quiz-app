@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading } from './helpers';
+import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading, startQuizViaUi } from './helpers';
 
 /**
  * Angular Aria Toolbar prototype — keyboard coverage for the Quiz Review
@@ -13,7 +13,9 @@ import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading } from '
  */
 
 async function reachResultsWithMixedScore(page: import('@playwright/test').Page): Promise<void> {
-  await page.goto('/quiz/question/fixture-widgets/1');
+  // Public UI, not a direct goto — this walk's own Next clicks need a real
+  // attempt to persist each unlock (Root Cause A, direct-route P1).
+  await startQuizViaUi(page, 'fixture-widgets', /fixture widgets/i);
   const total = tsQuiz.questions.length;
 
   for (let i = 0; i < total; i++) {

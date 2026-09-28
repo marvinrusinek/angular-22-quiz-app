@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { quizData, HEADING, NEXT_BTN, PREV_BTN } from './helpers';
+import { quizData, HEADING, NEXT_BTN, PREV_BTN, startQuizViaUi } from './helpers';
 
 const cdQuiz = (quizData as any[]).find((q) => (q.quizId || q.id) === 'fixture-doohickeys');
 
@@ -49,7 +49,9 @@ test.describe.configure({ timeout: 300_000 });
 const ROW = '.option-row';
 
 async function letQ1Expire(page: any) {
-  await page.goto('quiz/question/fixture-doohickeys/1');
+  // Public UI, not a direct goto — the Next click after expiry needs a real
+  // attempt to persist its unlock (Root Cause A, direct-route P1).
+  await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
   const rows = page.locator(ROW);
   await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
   await expect(page.locator(HEADING)).toContainText(/correct because/i, { timeout: 60_000 });
@@ -97,7 +99,10 @@ test('CASE A: unanswered timeout -> Next -> Previous: no manufactured reveal, st
 });
 
 test('CASE B: partial selection before timeout -> Next -> Previous: restores exactly the pre-timeout pick, stays locked', async ({ page }) => {
-  await page.goto('quiz/question/fixture-gadgets/1');
+  // Public UI, not a direct goto — this test's own Next clicks (to reach Q3,
+  // then past it) need a real attempt to persist their unlock (Root Cause A,
+  // direct-route P1).
+  await startQuizViaUi(page, 'fixture-gadgets', /fixture gadgets/i);
   const rows = page.locator(ROW);
   await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -162,7 +167,9 @@ test('CASE B: partial selection before timeout -> Next -> Previous: restores exa
 
 test('CASE C: normal completed question -> Next -> Previous: established revisit behavior unaffected', async ({ page }) => {
   const rows = await (async () => {
-    await page.goto('quiz/question/fixture-doohickeys/1');
+    // Public UI, not a direct goto — the Next click needs a real attempt to
+    // persist its unlock (Root Cause A, direct-route P1).
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
     const r = page.locator(ROW);
     await r.first().waitFor({ state: 'visible', timeout: 20_000 });
     return r;

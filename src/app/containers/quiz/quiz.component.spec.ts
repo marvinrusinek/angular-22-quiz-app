@@ -1,12 +1,14 @@
 import { NgClass } from '@angular/common';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { NEVER, Observable, of, Subject } from 'rxjs';
 
 import { QuizService } from '@shared/services/data/quiz.service';
+import { QuizProgressionService } from '@shared/services/flow/quiz-progression.service';
 import { QuizSetupService } from '@shared/services/flow/quiz-setup.service';
 import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
@@ -75,6 +77,9 @@ let verdicts: QuestionVerdictService;
 let selected: SelectedOptionService;
 let timer: TimerService;
 let retrySpy: jest.SpyInstance;
+let progression: { getFurthestUnlocked: jest.Mock; unlockThrough: jest.Mock; clear: jest.Mock };
+/** What the mocked restart confirm dialog resolves with — set per-test. */
+let dialogConfirmResult: boolean;
 
 /** A controllable Observable-returning channel, shared by check() and revealExpired(). */
 function channel(sink: Ch[]) {
@@ -95,6 +100,7 @@ async function mountQuiz(): Promise<void> {
   expiries = [];
   sessionStorage.clear();
   localStorage.clear();
+  dialogConfirmResult = true;
 
   const adapter = {
     check: (_quiz: string, _q: string, texts: readonly string[]) => channel(checks)(texts),
@@ -156,6 +162,27 @@ async function mountQuiz(): Promise<void> {
           selectionMessageSig: signal(''),
           isCompletedInSession: () => true
         })
+      },
+      // The direct-route bypass fix's own service: a bare spy here, distinct
+      // from its real (sessionStorage-backed) unit tests in
+      // quiz-progression.service.spec.ts — this file only asserts that the
+      // COMPONENT calls it correctly (right quizId/index/total, right call
+      // sites), never its own persistence/fail-closed behavior.
+      {
+        provide: QuizProgressionService,
+        useValue: {
+          getFurthestUnlocked: jest.fn().mockReturnValue(1),
+          unlockThrough: jest.fn(),
+          clear: jest.fn()
+        }
+      },
+      // restartQuiz() opens a themed confirm dialog; stub it so the test
+      // controls the confirm/cancel outcome without a real Overlay/CDK stack.
+      {
+        provide: MatDialog,
+        useValue: {
+          open: jest.fn(() => ({ afterClosed: () => of(dialogConfirmResult) }))
+        }
       }
     ]
   });
@@ -171,6 +198,7 @@ async function mountQuiz(): Promise<void> {
   selected = TestBed.inject(SelectedOptionService);
   timer = TestBed.inject(TimerService);
   retrySpy = jest.spyOn(selected, 'retryVerdict');
+  progression = TestBed.inject(QuizProgressionService) as unknown as typeof progression;
 
   // A one-question quiz, on its (last) question, with the question rendered.
   component.totalQuestions.set(1);
@@ -604,5 +632,143 @@ describe('QuizComponent — final question submission policy (Results)', () => {
     pick();
     resolve(0, RESOLVED_INCORRECT);
     expect(resultsButton()).not.toBeNull();
+  });
+});
+
+/**
+ * DIRECT-ROUTE PROGRESSION BYPASS FIX — the component-side half of
+ * QuizProgressionService's contract: it must call `unlockThrough` at every
+ * legitimate forward-progress call site (Next/keyboard via
+ * `advanceToNextQuestion`, and a forward dot-jump via `navigateToDot`), with
+ * the correct 1-based target index, and must call `clear()` on Restart. The
+ * guard-side half (redirecting a locked direct request) is covered in
+ * `quiz-guard.spec.ts`; the service's own persistence/fail-closed behavior is
+ * covered in `quiz-progression.service.spec.ts`.
+ */
+describe('QuizComponent — progression unlock call sites', () => {
+  beforeEach(() => {
+    component.totalQuestions.set(3);
+    component.currentQuestionIndex.set(0);
+    TestBed.inject(NextButtonStateService).isButtonEnabled.set(true);
+    fixture.detectChanges();
+  });
+
+  it('25. advanceToNextQuestion() unlocks the NEXT 1-based index once the current question resolves correct', async () => {
+    pick();
+    resolve(0, RESOLVED_CORRECT);
+
+    await component.advanceToNextQuestion();
+
+    // currentQuestionIndex()=0 (0-based) → route position 1 → unlock 2.
+    expect(progression.unlockThrough).toHaveBeenCalledWith(QUIZ, 2, 3);
+  });
+
+  it('26. advanceToNextQuestion() does NOT unlock anything while the verdict still blocks progression', async () => {
+    pick();
+    fixture.detectChanges(); // still `checking`
+
+    await component.advanceToNextQuestion();
+
+    expect(progression.unlockThrough).not.toHaveBeenCalled();
+  });
+
+  /**
+   * GATE 2, items 6–10 — the production fix's lazy attempt creation lives
+   * entirely inside `unlockThrough()`, reached ONLY through
+   * `advanceToNextQuestion()`'s existing `currentVerdictBlocksProgression()`
+   * gate (unchanged by this fix). These prove that gate still keeps every
+   * non-approved verdict state from ever reaching `unlockThrough()` — so
+   * none of them can create an attempt or unlock anything, exactly as
+   * before the fix.
+   */
+  it('6. a PENDING (checking) verdict cannot create an attempt or unlock (same gate as #26)', async () => {
+    pick();
+    fixture.detectChanges();
+    await component.advanceToNextQuestion();
+    expect(progression.unlockThrough).not.toHaveBeenCalled();
+  });
+
+  it('7. an INCOMPLETE (partial multi-answer) verdict cannot create an attempt or unlock', async () => {
+    component.currentQuestionIndex.set(1); // the multi-answer question
+    fixture.detectChanges();
+    pick(['map'], MULTI_QUESTION);
+    resolve(0, INCOMPLETE_MULTI);
+
+    await component.advanceToNextQuestion();
+
+    expect(progression.unlockThrough).not.toHaveBeenCalled();
+  });
+
+  it('8. a resolved-INCORRECT verdict cannot create an attempt or unlock', async () => {
+    pick();
+    resolve(0, RESOLVED_INCORRECT);
+
+    await component.advanceToNextQuestion();
+
+    expect(progression.unlockThrough).not.toHaveBeenCalled();
+  });
+
+  it('9. an ERROR / retry-pending verdict cannot create an attempt or unlock', async () => {
+    pick();
+    failCheck(0);
+    await component.advanceToNextQuestion();
+    expect(progression.unlockThrough).not.toHaveBeenCalled();
+
+    retryButton()!.click();
+    fixture.detectChanges(); // retry now pending (checking again)
+    await component.advanceToNextQuestion();
+    expect(progression.unlockThrough).not.toHaveBeenCalled();
+  });
+
+  it('10. EXPIRY unlocks through the approved expiry path — even with no selection and no resolved verdict', async () => {
+    expect(phase()).toBe('idle');
+    expireCurrentQuestion();
+
+    await component.advanceToNextQuestion();
+
+    expect(progression.unlockThrough).toHaveBeenCalledWith(QUIZ, 2, 3);
+  });
+
+  it('27a. a forward dot-jump unlocks through the target the same way Next does', () => {
+    pick();
+    resolve(0, RESOLVED_CORRECT); // unblocks isDotClickable for a forward index
+
+    component.navigateToDot(2);
+
+    expect(progression.unlockThrough).toHaveBeenCalledWith(QUIZ, 2, 3);
+  });
+
+  it('27b. a backward dot-jump never calls unlockThrough — only forward jumps are progression-relevant', () => {
+    component.currentQuestionIndex.set(2);
+    fixture.detectChanges();
+
+    component.navigateToDot(0);
+
+    expect(progression.unlockThrough).not.toHaveBeenCalled();
+  });
+
+  it('a blocked forward dot-jump neither unlocks nor navigates', () => {
+    pick();
+    fixture.detectChanges(); // still `checking` — isDotClickable(forward) is false
+
+    component.navigateToDot(2);
+
+    expect(progression.unlockThrough).not.toHaveBeenCalled();
+  });
+
+  it('confirming Restart clears the progression marker (a new attempt inherits nothing)', () => {
+    component.restartQuiz();
+    fixture.detectChanges();
+
+    expect(progression.clear).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancelling the Restart dialog leaves the progression marker untouched', () => {
+    dialogConfirmResult = false;
+
+    component.restartQuiz();
+    fixture.detectChanges();
+
+    expect(progression.clear).not.toHaveBeenCalled();
   });
 });

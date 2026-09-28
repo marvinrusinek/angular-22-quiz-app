@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { diQuiz, correctIndicesForHeading, HEADING } from './helpers';
+import { diQuiz, correctIndicesForHeading, HEADING, startQuizViaUi, advanceToQuestion } from './helpers';
 
 /**
  * THE REGRESSION: Topic Quiz displayed the literal text "Checking…" for
@@ -60,9 +60,17 @@ test.describe('Topic Quiz shows no request-status text while /check is pending',
   });
 
   test('multi-answer: neutral pending on the first-ever pick, no request-status text', async ({ page }) => {
+    // A direct goto straight to question 3 is now correctly redirected by
+    // QuizGuard on a fresh attempt — reach it via Start + legitimate
+    // progression instead (Root Cause B, direct-route P1). The pending-check
+    // interceptor is installed AFTER arriving, not before: installing it
+    // first would also hold up the setup walk's own /check calls through
+    // questions 1-2, and this test only means to hold the one on question 3.
+    await startQuizViaUi(page, 'fixture-gadgets', /fixture gadgets/i);
+    await advanceToQuestion(page, diQuiz, 3);
+
     const release = await holdCheckPending(page);
 
-    await page.goto('/quiz/question/fixture-gadgets/3');
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30000 });
     const heading = (await page.locator(HEADING).first().textContent()) ?? '';
     const correct = correctIndicesForHeading(diQuiz, heading);

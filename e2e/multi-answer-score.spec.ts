@@ -1,5 +1,5 @@
 import { test, expect, Page, Locator } from '@playwright/test';
-import { NEXT_BTN, PREV_BTN, HEADING, diQuiz, correctRowsForHeading, findMultiAnswerQuestion, norm } from './helpers';
+import { NEXT_BTN, PREV_BTN, HEADING, diQuiz, correctRowsForHeading, findMultiAnswerQuestion, norm, startQuizViaUi } from './helpers';
 
 /**
  * A multi-answer question's score must increment the MOMENT all correct answers
@@ -20,7 +20,10 @@ const optText = async (row: Locator): Promise<string> =>
  * `.option-row` locator, positioned on the multi-answer question.
  */
 async function reachMultiAnswerQuestion(page: Page): Promise<Locator> {
-  await page.goto('/quiz/question/fixture-gadgets/1');
+  // Public UI, not a direct goto — this walk's own Next click(s) need a real
+  // attempt to persist their unlock (Root Cause A, direct-route P1; see
+  // helpers.ts's startQuizViaUi doc comment).
+  await startQuizViaUi(page, 'fixture-gadgets', /fixture gadgets/i);
   const rows = page.locator('.option-row');
   await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 

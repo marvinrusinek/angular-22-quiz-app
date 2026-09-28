@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { HEADING, NEXT_BTN } from './helpers';
+import { HEADING, NEXT_BTN, startQuizViaUi } from './helpers';
 
 // The FET (explanation) must appear when the question timer expires on EVERY
 // question, not just Q1. Regression: a spurious restartForQuestion() after the
@@ -7,7 +7,9 @@ import { HEADING, NEXT_BTN } from './helpers';
 const FET_RE = /correct because/i;
 
 async function navTo(page: any, target: number) {
-  await page.goto('/quiz/question/fixture-doohickeys/1');
+  // Public UI, not a direct goto — the Next clicks after each timeout need a
+  // real attempt to persist their unlock (Root Cause A, direct-route P1).
+  await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
   const rows = page.locator('.option-row');
   await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
   for (let i = 1; i < target; i++) {

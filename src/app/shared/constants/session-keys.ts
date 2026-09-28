@@ -17,6 +17,14 @@ export const SK_IS_ANSWERED = 'isAnswered';
 // a new attemptId, so a stale marker stops matching without any explicit clear.
 export const SK_RESULTS_REACHED_ATTEMPT = 'resultsReachedAttempt';
 export const SK_SAVED_QUESTION_INDEX = 'savedQuestionIndex';
+// The FURTHEST 1-based question index the current attempt has legitimately
+// unlocked (QuizGuard's own source of truth for the direct-route progression
+// bypass fix). One record only — this app has one quiz in progress at a time,
+// same convention as `currentAttemptId`. Bound to quizId + attemptId + a schema
+// version; anything else (missing, corrupt, wrong quiz, wrong/old attempt,
+// non-integer, out of range) fails closed to question 1. See
+// quiz-progression.service.ts.
+export const SK_FURTHEST_UNLOCKED = 'furthestUnlockedQuestion:v1';
 export const SK_SELECTED_OPTIONS_MAP = 'selectedOptionsMap';
 export const SK_SHUFFLED_QUESTIONS = 'shuffledQuestions';
 export const SK_SHUFFLED_QUESTIONS_QUIZ_ID = 'shuffledQuestionsQuizId';

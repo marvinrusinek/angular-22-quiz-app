@@ -25,6 +25,7 @@ import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.serv
 import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
 import { QuestionTimingService } from '@shared/services/features/timer/question-timing.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { QuizProgressionService } from '@shared/services/flow/quiz-progression.service';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { ThemeService } from '@shared/services/ui/theme.service';
@@ -46,6 +47,7 @@ export class ReturnComponent implements OnInit {
   private readonly quizPersistence = inject(QuizPersistenceService);
   private readonly questionTimingService = inject(QuestionTimingService);
   private readonly questionVerdictService = inject(QuestionVerdictService);
+  private readonly progressionService = inject(QuizProgressionService);
   private readonly quizService = inject(QuizService);
   private readonly selectedOptionService = inject(SelectedOptionService);
   private readonly themeService = inject(ThemeService);
@@ -180,6 +182,16 @@ export class ReturnComponent implements OnInit {
     // sessionStorage mirror are dropped — leaving the mirror would restore the
     // same state on the next reload.
     this.questionVerdictService.clearAll();
+
+    // THE PRIOR ATTEMPT'S UNLOCKED RANGE IS NOT THIS ATTEMPT'S.
+    //
+    // This restart path does not mint a new attemptId (unlike the in-quiz
+    // Restart button), so the furthest-unlocked marker's own attemptId check
+    // alone would not invalidate it — clear it explicitly, the same reason
+    // `questionVerdictService.clearAll()` above cannot rely on identity
+    // matching either.
+    this.progressionService.clear();
+
     const restartingQuizId = this.quizId();
     if (restartingQuizId) {
       this.questionVerdictService.clearEarnedVerdicts(restartingQuizId);

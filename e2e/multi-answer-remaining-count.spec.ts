@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-import { diQuiz, correctIndicesForHeading, HEADING, NEXT_BTN, PREV_BTN } from './helpers';
+import { diQuiz, correctIndicesForHeading, HEADING, NEXT_BTN, PREV_BTN, startQuizViaUi, advanceToQuestion } from './helpers';
 
 /**
  * THE REMAINING-CORRECT COUNT MUST TRACK EVERY PICK.
@@ -38,8 +38,15 @@ const ANSWERED = 'Answered ✓ Click Next to continue...';
 const remainingMsg = (n: number) =>
   `Select ${n} more correct answer${n === 1 ? '' : 's'} to continue...`;
 
+/**
+ * Reaches the shared 3-correct multi-answer question (fixture-gadgets Q3)
+ * legitimately — Start + progress through Q1-Q2 — rather than a direct
+ * `page.goto` straight to it, which QuizGuard now correctly redirects on a
+ * fresh attempt (Root Cause B, direct-route P1; see helpers.ts).
+ */
 async function openDiMulti(page: Page): Promise<number[]> {
-  await page.goto('/quiz/question/fixture-gadgets/3');
+  await startQuizViaUi(page, 'fixture-gadgets', /fixture gadgets/i);
+  await advanceToQuestion(page, diQuiz, 3);
   await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
   const heading = (await page.locator(HEADING).first().textContent()) ?? '';
   const correct = correctIndicesForHeading(diQuiz, heading);

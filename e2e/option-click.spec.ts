@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { formsQuiz, findMultiAnswerQuestion, correctRowsForHeading } from './helpers';
+import { formsQuiz, findMultiAnswerQuestion, correctRowsForHeading, startQuizViaUi, advanceToQuestion } from './helpers';
 
 /**
  * Behavioral safety net for OptionInteractionService.handleOptionClick and
@@ -57,14 +57,20 @@ test.describe('multi-answer click', () => {
   const MULTI = findMultiAnswerQuestion(formsQuiz);
 
   test('shows the "N answers are correct" banner before any selection', async ({ page }) => {
-    await gotoQuestion(page, 'fixture-gizmos', MULTI.index);
+    // A direct goto straight to the multi-answer question (rather than
+    // legitimately progressing there) is now correctly redirected by
+    // QuizGuard on a fresh attempt — reach it via Start + real progression
+    // instead (Root Cause B, direct-route P1; see helpers.ts's own comment).
+    await startQuizViaUi(page, 'fixture-gizmos', /fixture gizmos/i);
+    await advanceToQuestion(page, formsQuiz, MULTI.index);
     await expect(page.locator('.correct-count')).toBeVisible();
     await expect(page.locator('.correct-count'))
       .toContainText(new RegExp(`${MULTI.correctCount} answers are correct`, 'i'));
   });
 
   test('gates the explanation until ALL correct answers are selected', async ({ page }) => {
-    await gotoQuestion(page, 'fixture-gizmos', MULTI.index);
+    await startQuizViaUi(page, 'fixture-gizmos', /fixture gizmos/i);
+    await advanceToQuestion(page, formsQuiz, MULTI.index);
     const rows = page.locator('.option-row');
     const heading = (await page.locator(HEADING).first().textContent()) ?? '';
     const corrects = await correctRowsForHeading(rows, formsQuiz, heading);
@@ -83,7 +89,9 @@ test.describe('multi-answer click', () => {
 
 test.describe('FET gate across navigation', () => {
   test('explanation does not leak from Q1 into Q2', async ({ page }) => {
-    await gotoQuestion(page, 'fixture-widgets', 1);
+    // Public UI, not a direct goto — this test's own Next click needs a real
+    // attempt to persist its unlock (Root Cause A, direct-route P1).
+    await startQuizViaUi(page, 'fixture-widgets', /fixture widgets/i);
     await page.locator('.option-row').nth(0).click();
     await expect(page.locator(HEADING)).toContainText(/is correct because/i);
 
@@ -95,7 +103,9 @@ test.describe('FET gate across navigation', () => {
   });
 
   test('selected option rehydrates when navigating back', async ({ page }) => {
-    await gotoQuestion(page, 'fixture-widgets', 1);
+    // Public UI, not a direct goto — this test's own Next click needs a real
+    // attempt to persist its unlock (Root Cause A, direct-route P1).
+    await startQuizViaUi(page, 'fixture-widgets', /fixture widgets/i);
     await page.locator('.option-row').nth(0).click();
     await expect(page.locator('.option-row').nth(0)).toHaveClass(/selected/);
 

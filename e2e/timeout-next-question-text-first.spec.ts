@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { HEADING, NEXT_BTN } from './helpers';
+import { HEADING, NEXT_BTN, startQuizViaUi } from './helpers';
 
 // After a question's timer expires (FET shown), navigating to the NEXT question
 // must show that question's TEXT first — its FET may only appear once it is
@@ -10,7 +10,11 @@ const FET_RE = /correct because/i;
 
 test('timed-out question -> Next shows the next question TEXT first, not its FET', async ({ page }) => {
   test.setTimeout(180_000);
-  await page.goto('/quiz/question/fixture-gadgets/1');
+  // Public UI, not a direct goto — the Next clicks after each expiry need a
+  // real attempt to persist their unlock (Root Cause A, direct-route P1;
+  // found via Gate 5's static review — see verdict-check-recovery.spec.ts's
+  // comment for why this was missed in the earlier diagnosis pass).
+  await startQuizViaUi(page, 'fixture-gadgets', /fixture gadgets/i);
   const rows = page.locator('.option-row');
   await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
 

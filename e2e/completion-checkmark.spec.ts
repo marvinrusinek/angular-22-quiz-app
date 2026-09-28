@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading } from './helpers';
+import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading, startQuizViaUi } from './helpers';
 
 /**
  * Finishing a quiz marks its Quiz Selection tile with the "done" checkmark
@@ -7,7 +7,10 @@ import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading } from '
  * (The 100% distinction is surfaced separately via achievements.)
  */
 test('a non-perfect completion still shows the tile checkmark on Quiz Selection', async ({ page }) => {
-  await page.goto('/quiz/question/fixture-widgets/1');
+  // Public UI, not a direct goto — see achievements.spec.ts's comment on
+  // why a direct `page.goto('/quiz/question/.../1')` no longer suffices to
+  // let this test progress past question 1 (Root Cause A, direct-route P1).
+  await startQuizViaUi(page, 'fixture-widgets', /fixture widgets/i);
   const total = tsQuiz.questions.length;
 
   for (let i = 0; i < total; i++) {

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { HEADING, NEXT_BTN, RESULTS_BTN, correctIndicesForHeading, diQuiz } from './helpers';
+import { HEADING, NEXT_BTN, RESULTS_BTN, correctIndicesForHeading, diQuiz, startQuizViaUi } from './helpers';
 
 /**
  * The Results-page "Brush up your knowledge" panel, end to end.
@@ -43,9 +43,10 @@ test('the Results resources panel is served by the API, not the local asset', as
     if (url.includes('assets/data/quiz.json')) localAssetCalls.push(url);
   });
 
-  await page.goto(`/quiz/question/${QUIZ}/1`);
+  // Public UI, not a direct goto — see achievements.spec.ts's comment on
+  // Root Cause A (direct-route P1).
+  await startQuizViaUi(page, QUIZ, /fixture gadgets/i);
   const rows = page.locator('.option-row');
-  await rows.first().waitFor({ state: 'visible', timeout: 30_000 });
 
   // Play the quiz through, answering correctly, to reach the Results page.
   const total = diQuiz.questions.length;

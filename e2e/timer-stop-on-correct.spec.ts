@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { HEADING, correctIndexForHeading, diQuiz, correctRowsForHeading, findMultiAnswerQuestion } from './helpers';
+import { HEADING, correctIndexForHeading, diQuiz, correctRowsForHeading, findMultiAnswerQuestion, startQuizViaUi, advanceToQuestion } from './helpers';
 
 /**
  * TOPIC QUIZ TIMER STOPS ON CORRECT COMPLETION — regression guard.
@@ -88,7 +88,13 @@ test.describe('single-answer', () => {
 test.describe('multi-answer', () => {
   test('a partial correct selection does NOT stop the timer; the final required pick does', async ({ page }) => {
     const MULTI = findMultiAnswerQuestion(diQuiz);
-    await page.goto(`/quiz/question/fixture-gadgets/${MULTI.index}`);
+    // A direct goto straight to the multi-answer question is now correctly
+    // redirected by QuizGuard on a fresh attempt — reach it via Start +
+    // legitimate progression instead (Root Cause B, direct-route P1; found
+    // via Gate 5's static review — see verdict-check-recovery.spec.ts's
+    // comment for why this was missed in the earlier diagnosis pass).
+    await startQuizViaUi(page, 'fixture-gadgets', /fixture gadgets/i);
+    await advanceToQuestion(page, diQuiz, MULTI.index);
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20000 });
 
     const rows = page.locator('.option-row');

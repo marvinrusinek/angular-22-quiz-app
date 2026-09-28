@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { quizData, correctRowsForHeading } from './helpers';
+import { quizData, correctRowsForHeading, startQuizViaUi, advanceToQuestion } from './helpers';
 
 /**
  * Code snippet — end-to-end coverage (Topic Quiz + Interview Mode).
@@ -40,9 +40,21 @@ async function gotoQuestion(page: Page, quiz: string, n: number) {
   await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
 }
 
+/**
+ * A direct navigation to a question > 1 with no prior progression is a
+ * Root-Cause-B direct-route bypass, now correctly redirected by QuizGuard —
+ * reach it via Start + legitimate progression instead.
+ */
+async function gotoQuestionLegitimately(page: Page, quiz: string, n: number): Promise<void> {
+  await startQuizViaUi(page, quiz, /fixture whatsits/i);
+  if (n > 1) await advanceToQuestion(page, codeQuiz, n);
+}
+
 /** Complete the whole fixture-whatsits topic quiz and land on Results. */
 async function completeCodeQuiz(page: Page) {
-  await gotoQuestion(page, 'fixture-whatsits', 1);
+  // Public UI, not a direct goto — this walk's own Next clicks need a real
+  // attempt to persist each unlock (Root Cause A, direct-route P1).
+  await startQuizViaUi(page, 'fixture-whatsits', /fixture whatsits/i);
   for (let i = 0; i < codeQuiz.questions.length; i++) {
     const heading = (await page.locator(HEADING).first().textContent()) ?? '';
     const rows = page.locator('.option-row');
@@ -137,7 +149,7 @@ test.describe('Code snippet — Topic Quiz', () => {
   });
 
   test('a question with no code snippet renders no code-snippet element', async ({ page }) => {
-    await gotoQuestion(page, 'fixture-whatsits', 3);
+    await gotoQuestionLegitimately(page, 'fixture-whatsits', 3);
     await expect(page.locator(HEADING)).toContainText('feature 3');
     await expect(page.locator(SNIPPET)).toHaveCount(0);
   });
@@ -179,7 +191,7 @@ test.describe('Code snippet — Topic Quiz', () => {
     expect(withSnippet.optionRowCount).toBeGreaterThan(0);
 
     // A question with NO snippet gets no empty snippet area inside its box.
-    await gotoQuestion(page, 'fixture-whatsits', 3);
+    await gotoQuestionLegitimately(page, 'fixture-whatsits', 3);
     const withoutSnippet = await page.evaluate(() => {
       const box = document.querySelector('.question-box');
       return {
@@ -319,7 +331,7 @@ test.describe('Code snippet — Interview Mode', () => {
     await page.goto('about:blank');
     expect(await page.evaluate(() => (window as any).__CODE_SNIPPET_E2E_XSS__)).toBeUndefined();
 
-    await gotoQuestion(page, 'fixture-whatsits', 2);
+    await gotoQuestionLegitimately(page, 'fixture-whatsits', 2);
     await expect(page.locator(SNIPPET)).toBeVisible();
 
     await expect(page.locator(`${SNIPPET} .code-snippet__code`)).toContainText(

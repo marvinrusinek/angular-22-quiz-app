@@ -1,4 +1,4 @@
-import type { Locator } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -134,4 +134,106 @@ export async function correctRowsForHeading(
     }
   }
   return out;
+}
+
+// ─── legitimate attempt/progression setup (direct-route bypass P1) ─────────
+//
+// The direct-route progression-bypass fix (QuizGuard + QuizProgressionService)
+// made two long-standing E2E shortcuts obsolete:
+//
+//   Root Cause A (fixed in production, 2026-09-28): `page.goto` straight to
+//   question 1 skips Introduction's Start button, the only thing (besides
+//   in-quiz Restart) that mints a session's attemptId. QuizProgressionService
+//   now lazily mints one on the first approved unlock, so this specific
+//   shape is no longer required to be worked around in tests — but going
+//   through the real Start button remains the more faithful simulation of an
+//   actual user, and is what `startQuizViaUi` below does.
+//
+//   Root Cause B (unchanged, working as designed): `page.goto` straight to a
+//   FUTURE question index — e.g. the shared multi-answer question at
+//   `/fixture-gadgets/3` — with no prior progression is a direct-route
+//   bypass attempt, and QuizGuard correctly redirects it. A test that wants
+//   to reach that question must progress there legitimately, via
+//   `advanceToQuestion` below.
+//
+// Neither helper writes to sessionStorage/localStorage, sets a hidden test
+// flag, or reads any answer key from a browser API response — every step is
+// a click a real user could make, and every "correct" option is resolved
+// from the SAME synthetic fixture the seeded backend already serves.
+
+/**
+ * Starts a fresh attempt the way a real user does: quiz-selection tile →
+ * Introduction → the same "Start the Quiz!" click every user makes. Ends on
+ * question 1, with the quiz id and index verified against the URL.
+ */
+export async function startQuizViaUi(page: Page, quizId: string, tileMatcher: RegExp): Promise<void> {
+  await page.goto('/quiz');
+  await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 30_000 });
+
+  const tile = page.locator('.quiz-tile').filter({ hasText: tileMatcher }).first();
+  await tile.scrollIntoViewIfNeeded();
+  await tile.click();
+  await page.waitForTimeout(1200); // Introduction's own settle — matches every existing spec's pattern
+
+  const start = page.locator('.start-btn').first();
+  if ((await start.count()) > 0) await start.click();
+
+  await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 30_000 });
+  await expect(page, `startQuizViaUi: expected to land on ${quizId}/1`).toHaveURL(
+    new RegExp(`/quiz/question/${quizId}/1$`),
+    { timeout: 15_000 }
+  );
+}
+
+/** The 1-based question index from the current URL, or -1 if not on a question route. */
+function questionIndexFromUrl(page: Page): number {
+  const m = page.url().match(/\/quiz\/question\/[^/]+\/(\d+)/);
+  return m ? Number(m[1]) : -1;
+}
+
+/**
+ * Progresses sequentially from wherever the page is now — a legitimately
+ * unlocked question, e.g. right after `startQuizViaUi` — up to `targetIndex`
+ * (1-based). Answers every intermediate question with ALL of its correct
+ * options (single- or multi-answer alike, resolved by visible option TEXT
+ * against `quiz`, shuffle-immune), waits for the real backend-authoritative
+ * verdict (Next actually becomes enabled) before each click, asserts the
+ * resulting URL transition, and stops exactly at `targetIndex` — it never
+ * jumps ahead of it. Throws a clear error if the target cannot be reached
+ * (e.g. Next never enables, or no correct option resolves for a heading).
+ */
+export async function advanceToQuestion(page: Page, quiz: any, targetIndex: number): Promise<void> {
+  const rows = page.locator('.option-row');
+  await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
+
+  let current = questionIndexFromUrl(page);
+  if (current < 1) {
+    throw new Error(`advanceToQuestion: not on a question route (${page.url()})`);
+  }
+  if (current > targetIndex) {
+    throw new Error(`advanceToQuestion: already past the target (at ${current}, target ${targetIndex})`);
+  }
+
+  while (current < targetIndex) {
+    await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
+    const heading = (await page.locator(HEADING).first().textContent()) ?? '';
+    const corrects = await correctRowsForHeading(rows, quiz, heading);
+    if (corrects.length === 0) {
+      throw new Error(
+        `advanceToQuestion: no correct option resolved for heading "${heading}" at question ${current} of ${quiz?.quizId ?? quiz?.id}`
+      );
+    }
+    for (const idx of corrects) {
+      await rows.nth(idx).click({ timeout: 10_000 });
+      await page.waitForTimeout(300); // let each click's own verdict settle before the next
+    }
+
+    await expect(page.locator(NEXT_BTN), `advanceToQuestion: Next never enabled at question ${current}`).toBeEnabled({
+      timeout: 20_000
+    });
+    await page.locator(NEXT_BTN).click();
+    await expect(page).toHaveURL(new RegExp(`/${current + 1}$`), { timeout: 15_000 });
+    current += 1;
+    await rows.first().waitFor({ state: 'visible', timeout: 20_000 });
+  }
 }

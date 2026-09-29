@@ -177,7 +177,18 @@ export class ResultsComponent implements OnInit {
       if (this.hasSnapshot()) return;
       const r = this.finalResultStream();
       if (!r) return;
-      if (r.quizId) this.quizId.set(r.quizId);
+
+      // finalResultSig is a public, externally-writable signal on QuizService
+      // (not something only this component controls) — a value that lands
+      // here can belong to ANY quiz, not necessarily the one this route is
+      // showing. Never adopt it, persist it, record topic performance, or
+      // evaluate achievements for a quiz other than the current route's —
+      // same principle as QuizResultGuard / hasValidResultFor: the route's
+      // quizId is ground truth, never an incoming result's own quizId. (Also
+      // stop trusting r.quizId to SET this.quizId — that was the same
+      // "adopt whatever the payload claims" pattern.)
+      if (!r.quizId || r.quizId !== this.quizId()) return;
+
       this.finalResult.set(r);
       this.applyFinalResultSnapshot(r);
       this.updateHeaderLabel(r.total);

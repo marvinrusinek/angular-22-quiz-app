@@ -36,18 +36,15 @@
   <img src="screenshots/quiz-selection.png" alt="Quiz Selection with catalog statistics, difficulty filter, and quiz cards" width="800">
 </p>
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="screenshots/topic-quiz.png" alt="Dependency Injection Topic Quiz with score, question number, and timer" width="420"><br>
-      <strong>Topic Quiz</strong>
-    </td>
-    <td align="center">
-      <img src="screenshots/interview-builder.png" alt="Interview Builder showing a Mid-Level preset and assessment preview" width="420"><br>
-      <strong>Interview Builder</strong>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="screenshots/topic-quiz.png" alt="Dependency Injection Topic Quiz with score, question number, and timer" width="800"><br>
+  <strong>Topic Quiz</strong>
+</p>
+
+<p align="center">
+  <img src="screenshots/interview-builder.png" alt="Interview Builder showing a Mid-Level preset and assessment preview" width="560"><br>
+  <strong>Interview Builder</strong>
+</p>
 
 <p align="center">
   <img src="screenshots/mobile-selection.png" alt="Mobile Quiz Selection with filters and responsive quiz cards" width="260"><br>

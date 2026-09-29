@@ -25,6 +25,7 @@ import { InterviewCertificateComponent } from
     '../containers/interview/interview-certificate/interview-certificate.component';
 
 import { QuizGuard } from './guards/quiz-guard';
+import { QuizResultGuard } from './guards/quiz-result-guard';
 import { PracticeSessionGuard } from './guards/practice-session-guard';
 import { PracticeResultGuard } from './guards/practice-result-guard';
 import { WeakAreasPracticeComponent } from '../containers/practice/weak-areas-practice/weak-areas-practice.component';
@@ -55,7 +56,9 @@ export const routes: Routes = [
   },
   {
     path: 'quiz/results/:quizId',
-    component: ResultsComponent
+    component: ResultsComponent,
+    canActivate: [QuizResultGuard],
+    runGuardsAndResolvers: 'always'
   },
 
   // Interview Mode — Build Your Interview configuration page.

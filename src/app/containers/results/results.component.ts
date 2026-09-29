@@ -159,6 +159,15 @@ export class ResultsComponent implements OnInit {
   // Tracks whether ngOnInit already applied a synchronous snapshot, so the
   // finalResult$ effect skips re-applying when the observable later emits.
   private readonly hasSnapshot = signal(false);
+
+  // Whether the CURRENT route's quizId has a legitimate completed result
+  // (see QuizService.hasValidResultFor). Computed once per quizId by
+  // setCompletedQuiz(), BEFORE it writes anything, and read afterward to gate
+  // building a fresh snapshot and recording a High Score — so a direct/stale
+  // results URL can never borrow another quiz's live score. QuizResultGuard
+  // is the primary defense (this route never mounts for an invalid quizId);
+  // this is a second, independent check at the write site itself.
+  private routeResultIsValid = false;
   private readonly finalResultStream = toSignal(this.quizService.finalResult$, {
     initialValue: null as FinalResult | null,
   });
@@ -225,16 +234,31 @@ export class ResultsComponent implements OnInit {
       this.quizService.totalQuestions() || this.detailedSummaryQuestions().length
     );
 
+    const routeQuizId = this.quizId();
+
     // Try in-memory snapshot first
     let snapshot = this.quizService.getFinalResultSnapshot();
 
-    // If no snapshot exists, build one from current service state. This is the
-    // FRESH-completion path: the live selection maps + timer are still valid, so
-    // capture the per-question review analysis and the elapsed time NOW — both
-    // get wiped when the user leaves Results, and the persisted snapshot is what
-    // a revisit reads. (On revisit, getFinalResultSnapshot() returns the saved
-    // snapshot and this branch is skipped, preserving the captured data.)
-    if (!snapshot && this.quizService.totalQuestions() > 0) {
+    // A snapshot exists but belongs to a DIFFERENT quiz than this route — never
+    // show or credit another quiz's result under this URL (QuizResultGuard
+    // normally prevents reaching this state at all; this is the second,
+    // independent check at the read/write site itself).
+    if (snapshot && routeQuizId && snapshot.quizId !== routeQuizId) {
+      snapshot = null;
+    }
+
+    // If no matching snapshot exists, build one from current service state.
+    // Only when this route's quiz genuinely just finished (routeResultIsValid,
+    // set by setCompletedQuiz() from the results-reached marker the real
+    // last-question flow wrote for THIS exact quiz+attempt) — never from
+    // whatever quiz happens to be live in memory for an unrelated route id.
+    // This is the FRESH-completion path: the live selection maps + timer are
+    // still valid, so capture the per-question review analysis and the
+    // elapsed time NOW — both get wiped when the user leaves Results, and the
+    // persisted snapshot is what a revisit reads. (On revisit,
+    // getFinalResultSnapshot() returns the saved snapshot and this branch is
+    // skipped, preserving the captured data.)
+    if (!snapshot && this.routeResultIsValid && this.quizService.totalQuestions() > 0) {
       const correct = this.quizService.correctAnswersCountSig();
       const total = this.quizService.totalQuestions();
 
@@ -275,12 +299,18 @@ export class ResultsComponent implements OnInit {
       // re-created on every results-section switch, so it appended a duplicate
       // row each time. recordCompletedQuizScore is idempotent, so re-viewing /
       // refreshing the results does not duplicate the row.
-      this.quizService.recordCompletedQuizScore(
-        snapshot.quizId,
-        snapshot.percentage,
-        snapshot.total,
-        this.quizService.getCurrentAttemptId()
-      );
+      //
+      // Gated on routeResultIsValid: never write a High Score for this route's
+      // quizId unless it was independently validated as a legitimate completed
+      // result for that exact quiz (see setCompletedQuiz()).
+      if (this.routeResultIsValid) {
+        this.quizService.recordCompletedQuizScore(
+          snapshot.quizId,
+          snapshot.percentage,
+          snapshot.total,
+          this.quizService.getCurrentAttemptId()
+        );
+      }
     }
     // No snapshot: the constructor effect picks up finalResult$ emissions.
 
@@ -444,42 +474,54 @@ export class ResultsComponent implements OnInit {
 
   private setCompletedQuiz(): void {
     const id = this.quizId();
-    if (id) {
-      this.quizService.setCompletedQuizId(id);
-      this.quizService.setQuizId(id); // ensure service has correct ID for high scores
-      this.quizService.setQuizStatus(QuizStatus.COMPLETED);
+    if (!id) {
+      this.routeResultIsValid = false;
+      return;
+    }
 
-      // S6o: persist completion to sessionStorage — the authoritative status
-      // source Quiz Selection's catalog projection reads (consumeCompletedQuizIds
-      // via SK_COMPLETED_QUIZ_IDS). This replaces the previous
-      // QuizDataService.updateQuizStatus() call, which only mutated the
-      // in-memory, bank-loaded quizzesSig array (no persistence of its own) —
-      // that worked only while quizzesSig stayed alive as a root singleton
-      // across the Quiz → Results → Selection navigation, and was silently lost
-      // on a hard refresh before the user ever clicked "Select a different quiz"
-      // (selectQuiz(), the only other site that wrote this key). Mirrors the
-      // exact write selectQuiz()/return.component.ts already perform.
-      try {
-        const existing = readSessionJson<string[]>(SK_COMPLETED_QUIZ_IDS, []);
-        if (!existing.includes(id)) {
-          existing.push(id);
-          writeSessionJson(SK_COMPLETED_QUIZ_IDS, existing);
-        }
-      } catch (err: unknown) { swallow('results.component.ts#setCompletedQuiz', err); }
+    // Validate BEFORE touching any state: does this route's quizId correspond
+    // to an actually-completed attempt (a persisted snapshot for this exact
+    // quiz, or the results-reached marker the real last-question flow just
+    // wrote for this exact quiz+attempt)? A direct/stale navigation to a
+    // DIFFERENT quiz's results URL must never mark it completed or borrow
+    // whatever quiz happens to be live in memory right now.
+    this.routeResultIsValid = this.quizService.hasValidResultFor(id);
+    if (!this.routeResultIsValid) return;
 
-      // Reaching Results IS the proof that this attempt finished the last
-      // question. Recording it here (not only on the way out of the quiz)
-      // means browser Back can restore the last question's Show Results
-      // button + message no matter which path led here. Attempt-scoped, so
-      // Restart / a new attempt invalidates it without an explicit clear.
-      try {
-        sessionStorage.setItem(
-          SK_RESULTS_REACHED_ATTEMPT,
-          `${id}|${this.quizService.getCurrentAttemptId()}`
-        );
-      } catch (err: unknown) {
-        swallow('results.component#markResultsReached', err);
+    this.quizService.setCompletedQuizId(id);
+    this.quizService.setQuizId(id); // ensure service has correct ID for high scores
+    this.quizService.setQuizStatus(QuizStatus.COMPLETED);
+
+    // S6o: persist completion to sessionStorage — the authoritative status
+    // source Quiz Selection's catalog projection reads (consumeCompletedQuizIds
+    // via SK_COMPLETED_QUIZ_IDS). This replaces the previous
+    // QuizDataService.updateQuizStatus() call, which only mutated the
+    // in-memory, bank-loaded quizzesSig array (no persistence of its own) —
+    // that worked only while quizzesSig stayed alive as a root singleton
+    // across the Quiz → Results → Selection navigation, and was silently lost
+    // on a hard refresh before the user ever clicked "Select a different quiz"
+    // (selectQuiz(), the only other site that wrote this key). Mirrors the
+    // exact write selectQuiz()/return.component.ts already perform.
+    try {
+      const existing = readSessionJson<string[]>(SK_COMPLETED_QUIZ_IDS, []);
+      if (!existing.includes(id)) {
+        existing.push(id);
+        writeSessionJson(SK_COMPLETED_QUIZ_IDS, existing);
       }
+    } catch (err: unknown) { swallow('results.component.ts#setCompletedQuiz', err); }
+
+    // Reaching Results IS the proof that this attempt finished the last
+    // question. Recording it here (not only on the way out of the quiz)
+    // means browser Back can restore the last question's Show Results
+    // button + message no matter which path led here. Attempt-scoped, so
+    // Restart / a new attempt invalidates it without an explicit clear.
+    try {
+      sessionStorage.setItem(
+        SK_RESULTS_REACHED_ATTEMPT,
+        `${id}|${this.quizService.getCurrentAttemptId()}`
+      );
+    } catch (err: unknown) {
+      swallow('results.component#markResultsReached', err);
     }
   }
 

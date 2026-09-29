@@ -31,7 +31,7 @@ import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-regi
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { QuizStateService } from '@shared/services/state/quizstate.service';
 
-import { SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID, SK_USER_ANSWERS } from '@shared/constants/session-keys';
+import { SK_RESULTS_REACHED_ATTEMPT, SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID, SK_USER_ANSWERS } from '@shared/constants/session-keys';
 
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 import { norm } from '@shared/utils/text-norm';
@@ -1405,6 +1405,33 @@ export class QuizService {
     } catch (err: unknown) {
       console.error('QuizService.getFinalResultSnapshot sessionStorage parse failed:', err);
       return null;
+    }
+  }
+
+  /**
+   * True when `quizId` has a legitimate completed result to show or record —
+   * either a persisted/in-memory snapshot whose OWN `quizId` matches, or the
+   * results-reached marker the real last-question flow writes for this exact
+   * quiz+attempt (`quiz.component.ts#markResultsReached`), for a completion
+   * that hasn't been snapshotted yet. Used to stop a direct or stale
+   * `/quiz/results/:quizId` navigation from borrowing whatever quiz happens
+   * to be live in memory for a DIFFERENT id.
+   */
+  hasValidResultFor(quizId: string): boolean {
+    if (!quizId) return false;
+
+    const snapshot = this.getFinalResultSnapshot();
+    if (snapshot?.quizId === quizId) return true;
+    if (snapshot) return false; // a real snapshot exists, but for another quiz
+
+    if (this.totalQuestions() <= 0) return false;
+    try {
+      const attemptId = this.getCurrentAttemptId();
+      if (!attemptId) return false;
+      return sessionStorage.getItem(SK_RESULTS_REACHED_ATTEMPT) === `${quizId}|${attemptId}`;
+    } catch (err: unknown) {
+      swallow('quiz.service.ts#hasValidResultFor', err);
+      return false;
     }
   }
 

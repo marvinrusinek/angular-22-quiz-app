@@ -3,7 +3,13 @@
 mat-card {
   height: auto;
   padding: 0;
-  margin-top: -20px !important;
+  // Measured against the rendered page (not guessed): at -20px the subtitle-
+  // to-scoreboard gap was only ~11px. -11px yields the intended ~20px without
+  // touching the subtitle (quiz-header.component.scss) again — two prior
+  // attempts there (adding, then removing, subtitle padding) never changed
+  // the rendered gap, because this negative margin was what actually
+  // determined it either way.
+  margin-top: -11px !important;
   margin-bottom: -10px !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -87,7 +93,10 @@ mat-card-content {
 /* shrink internal spacing on small screens */
 @media (max-width: 600px) {
   mat-card {
-    margin-top: 10px !important;
+    // Measured against the rendered page: +10px gave ~40px, -10px gave
+    // ~13.5px (the relationship isn't 1:1 — mobile's flex row layout responds
+    // more than the raw margin change). -5px measured at ~20px.
+    margin-top: -5px !important;
     margin-bottom: 0 !important;
     overflow: visible;
   }

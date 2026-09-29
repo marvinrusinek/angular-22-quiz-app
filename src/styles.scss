@@ -755,21 +755,6 @@ button.mat-mdc-menu-trigger {
 
 // Mobile: scoreboard overrides
 @media (max-width: 600px) {
-  // Score/Timer values hug their labels
-  codelab-scoreboard-score .scoreboard-score,
-  codelab-scoreboard-timer .scoreboard-timer {
-    margin-top: -5px !important;
-  }
-
-  // Score/Timer positioning handled in component scss
-
-  // Constrain mat-toolbar width inside score
-  codelab-scoreboard-score mat-toolbar,
-  codelab-scoreboard-timer mat-toolbar {
-    width: auto !important;
-    min-width: 0 !important;
-  }
-
   // Badge: Q 1 of 6 on one line, evenly spaced
   codelab-scoreboard .scoreboard__badge {
     display: flex !important;

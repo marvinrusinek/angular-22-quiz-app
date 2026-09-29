@@ -1,41 +1,37 @@
-<ng-container class="score-toolbar">
-  <div class="mat-menu">
-    <mat-toolbar>
-      <button
-        mat-button
-        [matMenuTriggerFor]="displayScoreMenu"
-        aria-label="Score display menu"
-        i18n-aria-label
-      >
-        <span class="leader" i18n>Score&#x25BC;</span>
-      </button>
-      <mat-menu #displayScoreMenu="matMenu" xPosition="before">
-        <button
-          mat-menu-item
-          name="numerical"
-          aria-label="Display numerical score"
-          i18n-aria-label
-          (click)="toggleScoreDisplay('numerical')"
-          i18n="@@numerical"
-        >
-          Numerical
-        </button>
-        <button
-          mat-menu-item
-          name="percentage"
-          aria-label="Display percentage score"
-          i18n-aria-label
-          (click)="toggleScoreDisplay('percentage')"
-          i18n="@@percentage"
-        >
-          Percentage
-        </button>
-      </mat-menu>
-    </mat-toolbar>
-  </div>
-  <section class="scoreboard-score">
-    <span class="scoreboard" i18n>
-      {{ displayedScore() || 0 }}
-    </span>
-  </section>
-</ng-container>
+<div class="score-menu-container">
+  <button
+    mat-button
+    [matMenuTriggerFor]="displayScoreMenu"
+    aria-label="Score display menu"
+    i18n-aria-label
+  >
+    <span class="leader" i18n>Score&#x25BC;</span>
+  </button>
+  <mat-menu #displayScoreMenu="matMenu" xPosition="before">
+    <button
+      mat-menu-item
+      name="numerical"
+      aria-label="Display numerical score"
+      i18n-aria-label
+      (click)="toggleScoreDisplay('numerical')"
+      i18n="@@numerical"
+    >
+      Numerical
+    </button>
+    <button
+      mat-menu-item
+      name="percentage"
+      aria-label="Display percentage score"
+      i18n-aria-label
+      (click)="toggleScoreDisplay('percentage')"
+      i18n="@@percentage"
+    >
+      Percentage
+    </button>
+  </mat-menu>
+</div>
+<section class="scoreboard-score">
+  <span class="scoreboard" i18n>
+    {{ displayedScore() || 0 }}
+  </span>
+</section>

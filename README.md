@@ -39,11 +39,11 @@
 <table>
   <tr>
     <td align="center">
-      <img src="screenshots/topic-quiz.png" alt="Dependency Injection Topic Quiz with score, question number, and timer" width="580"><br>
+      <img src="screenshots/topic-quiz.png" alt="Dependency Injection Topic Quiz with score, question number, and timer" width="450"><br>
       <strong>Topic Quiz</strong>
     </td>
     <td align="center">
-      <img src="screenshots/interview-builder.png" alt="Interview Builder showing a Mid-Level preset and assessment preview" width="300"><br>
+      <img src="screenshots/interview-builder.png" alt="Interview Builder showing a Mid-Level preset and assessment preview" width="450"><br>
       <strong>Interview Builder</strong>
     </td>
   </tr>

@@ -10,7 +10,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatToolbarModule } from '@angular/material/toolbar';
 
 import { QuizQuestion } from '@shared/models';
 
@@ -20,7 +19,7 @@ import { swallow } from '@shared/utils/error-logging';
 @Component({
   selector: 'codelab-scoreboard-score',
   standalone: true,
-  imports: [MatButtonModule, MatMenuModule, MatToolbarModule],
+  imports: [MatButtonModule, MatMenuModule],
   templateUrl: './score.component.html',
   styleUrls: ['./score.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

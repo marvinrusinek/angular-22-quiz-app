@@ -1,73 +1,33 @@
 @use '../../../../_variables' as vars;
-// @use '../../../../_mixins' as mixins;
 
-.score-toolbar {
-  float: left;
-  margin-left: 2rem;
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
-  .mat-menu {
-    margin-left: -40px;
-
-    .leader,
-    span.scoreboard {
-      margin: 0 0 0 40px;
-    }
-  }
+.score-menu-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
 }
 
 .scoreboard-score {
-  margin-left: -60px;
-  margin-top: -10px;
+  margin: 0;
 }
 
-mat-toolbar {
-  background: var(--bg-card, vars.$white);
-  color: var(--text-primary, inherit);
-  margin-left: -30px;
-}
-
-mat-toolbar:hover {
-  background-color: var(--bg-card, vars.$white) !important;
-}
-mat-toolbar .leader {
-  // margin-left: -35px !important;
-}
 button {
   outline: none;
   text-transform: uppercase;
   font-family: vars.$font-stack;
-  padding: 5px 10px;
+  height: 38px;
+  padding: 0 10px;
 }
 
 @media (max-width: 600px) {
-  .score-toolbar {
-    float: none;
-    margin-left: 0;
-
-    .mat-menu {
-      margin-left: 0;
-
-      .leader,
-      span.scoreboard {
-        margin: 0;
-      }
-    }
-  }
-
-  .scoreboard-score {
-    margin-left: 0;
-    margin-top: -8px !important;
-  }
-
-  mat-toolbar {
-    margin-left: 0;
-    min-width: 0;
-    padding: 0 !important;
-    margin-bottom: -5px !important;
-  }
-
   button {
-    padding: 2px 5px;
+    padding: 0 5px;
     font-size: 12px;
   }
 }

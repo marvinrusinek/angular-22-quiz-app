@@ -17,23 +17,14 @@ mat-card-content {
 
 .scoreboard {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  justify-content: space-between;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   width: 100%;
   height: auto;
-  // padding: 0 15px;
   margin: 0;
-  margin-bottom: -10px !important;
-  // box-sizing: border-box;
 
   .scoreboard__score {
     margin: 0;
-  }
-
-  .scoreboard__timer {
-    margin-top: 15px;
-    margin-right: -50px;
   }
 
   .scoreboard__score,
@@ -42,6 +33,7 @@ mat-card-content {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    margin: 0;
   }
 
   .scoreboard__badge {
@@ -137,7 +129,7 @@ mat-card-content {
       min-width: 0 !important;
       overflow: visible;
       text-align: center !important;
-      margin: 10px 0 0 0 !important;
+      margin: 0 !important;
       padding: 0 !important;
     }
   }

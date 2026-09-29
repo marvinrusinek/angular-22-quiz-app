@@ -1,44 +1,36 @@
 @use '../../../../_variables' as vars;
-// @use '../../../../_mixins' as mixins;
 
-.timer-container {
-  float: right;
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.timer-menu-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
 
   button {
-    margin: 5px;
+    margin: 0;
     text-transform: uppercase;
     font-family: vars.$font-stack;
-
-    .timer-menu-button-text {
-      margin-left: -35px;
-      padding: 5px 10px;
-      text-transform: uppercase;
-      font-family: vars.$font-stack;
-    }
+    height: 38px;
+    padding: 0 10px;
   }
 
-  .mat-menu {
-    margin-left: -40px;
-
-    .timer-menu-button-text,
-    span.scoreboard-timer-text {
-      margin: 0 0 0 40px;
-    }
-  }
-
-  .scoreboard-timer {
-    margin-left: 5px;
-    margin-top: 20px !important;
+  .timer-menu-button-text {
+    text-transform: uppercase;
+    font-family: vars.$font-stack;
   }
 }
 
-/* Countdown timer turns red AND pulses when 5 or fewer seconds remain.
- * Light-mode color override lives here; the dark-mode color override
- * lives in styles.scss (alongside the global dark-mode span.scoreboard
- * rule it must out-specify). The animation here applies in BOTH modes
- * — no global rule overrides the `animation` property. Opacity-only
- * pulse avoids scale/layout issues caused by the global
- * `display: block !important` on span.scoreboard. */
+.scoreboard-timer {
+  margin: 0;
+}
+
+/* Keep the timer warning visible in both themes. */
 @keyframes timer-low-pulse {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.3; }
@@ -50,7 +42,6 @@ span.scoreboard.low-time {
   will-change: opacity;
 }
 
-/* Remove the MDC focus/selection 1px border from all mat-button */
 .mat-mdc-button {
   --mdc-text-button-outline-color: transparent !important;
   --mdc-text-button-hover-state-layer-color: transparent !important;
@@ -59,7 +50,6 @@ span.scoreboard.low-time {
   --mdc-text-button-focus-indicator-color: transparent !important;
 }
 
-/* Also destroys residual border that appears on click/focus */
 .mat-mdc-button:focus,
 .mat-mdc-button:focus-visible,
 .mat-mdc-button:active {
@@ -69,31 +59,8 @@ span.scoreboard.low-time {
 }
 
 @media (max-width: 600px) {
-  .timer-container {
-    float: none;
-
-    button {
-      padding: 2px 5px;
-      font-size: 12px;
-
-      .timer-menu-button-text {
-        margin-left: 0;
-      }
-    }
-
-    .mat-menu {
-      margin-left: 0;
-
-      .timer-menu-button-text,
-      span.scoreboard-timer-text {
-        margin: 0;
-      }
-    }
-
-    .scoreboard-timer {
-      margin-left: 0;
-      margin-top: -5px !important;
-    }
+  .timer-menu-container button {
+    padding: 0 5px;
+    font-size: 12px;
   }
 }
-

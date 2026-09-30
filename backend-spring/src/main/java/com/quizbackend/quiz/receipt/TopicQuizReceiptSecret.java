@@ -30,13 +30,46 @@ import org.springframework.stereotype.Component;
  * at all" question is environment-gated in Node, and this class removes
  * that gate rather than weakening the length check.
  *
+ * <p><b>Known-dev-default rejection (final-audit Issue 3):</b> Node's own
+ * {@code parseReceiptSecret} additionally refuses to let {@code
+ * DEV_RECEIPT_SECRET} — a FIXED, PUBLIC constant committed in {@code
+ * backend/src/config.ts}, deliberately long enough (47 characters) to clear
+ * a plain length check — reach production ({@code isProduction &&
+ * value === DEV_RECEIPT_SECRET}). This class had no equivalent check: since
+ * it has no "production" flag at all (see above), it accepted that exact
+ * public value unconditionally, in every profile, as long as it met the
+ * length requirement — which it does. Both deploy docs instruct an operator
+ * to copy Node's exact configured value into this service's env var; if
+ * Node's own value were ever misconfigured to the dev default (e.g. by
+ * mistake, or a copy-paste from local `.env`), this bean would have
+ * silently accepted it too, and every Topic Quiz receipt this service
+ * issues or verifies — including the reveal-gating check — would be
+ * forgeable by anyone who has read Node's public source.
+ * {@link #KNOWN_NODE_DEV_DEFAULT} is that exact literal, rejected
+ * unconditionally (no profile gate — this class already has none), and
+ * MUST be kept byte-identical to {@code DEV_RECEIPT_SECRET} in {@code
+ * backend/src/config.ts} for this check to mean anything.
+ *
  * <p>Never logged, never included in {@link #toString()}, never echoed in
- * an error message.
+ * an error message — including this one: the constant is compared, never
+ * printed, so an error caused by it reveals nothing a reader of Node's own
+ * public source does not already know.
  */
 @Component
 public class TopicQuizReceiptSecret {
 
     public static final int MIN_LENGTH = 32;
+
+    /**
+     * MUST stay byte-identical to {@code DEV_RECEIPT_SECRET} in {@code
+     * backend/src/config.ts}. A mismatch here silently reopens the exact gap
+     * this class exists to close — this is a direct port of a public value,
+     * not a new secret, so keeping the literal in sync manually (rather than
+     * sharing it some other way across two independent runtimes/languages)
+     * is the same accepted trade-off {@link #MIN_LENGTH} already makes
+     * against {@code MIN_RECEIPT_SECRET_LENGTH}.
+     */
+    public static final String KNOWN_NODE_DEV_DEFAULT = "dev-only-insecure-topic-quiz-receipt-secret-000";
 
     private final String value;
 
@@ -50,6 +83,10 @@ public class TopicQuizReceiptSecret {
             // actual length — the latter would narrow a brute-force search.
             throw new IllegalStateException(
                     "TOPIC_QUIZ_RECEIPT_SECRET must be at least " + MIN_LENGTH + " characters");
+        }
+        if (value.equals(KNOWN_NODE_DEV_DEFAULT)) {
+            throw new IllegalStateException(
+                    "TOPIC_QUIZ_RECEIPT_SECRET must not be the publicly known Node development default");
         }
         this.value = value;
     }

@@ -226,7 +226,7 @@ Names only — no values are recorded anywhere in this document.
 | `SPRING_DATASOURCE_URL` | JDBC URL **only** — scheme, host, port, database, query params. No embedded credentials: `jdbc:postgresql://<pooled-host>/<database>?sslmode=require`. `sslmode=require` is the JDBC equivalent of Node's `ssl: { rejectUnauthorized: false }` posture (encrypted, no certificate-chain validation) — not `disable` (unencrypted) and not `verify-full` (adds validation Node doesn't do either). |
 | `SPRING_DATASOURCE_USERNAME` | Separate from the URL — Spring's datasource properties reject/mishandle a JDBC URL with embedded credentials. |
 | `SPRING_DATASOURCE_PASSWORD` | Same as above. |
-| `TOPIC_QUIZ_RECEIPT_SECRET` | Same variable **name** and must be the same **value** as Node's, for cross-runtime receipt/contract compatibility (§1, §2). ≥32 characters; the app refuses to start otherwise. |
+| `TOPIC_QUIZ_RECEIPT_SECRET` | Same variable **name** and must be the same **value** as Node's, for cross-runtime receipt/contract compatibility (§1, §2). ≥32 characters; must not equal Node's known `DEV_RECEIPT_SECRET` development default (`backend/src/config.ts`) either — rejected unconditionally, in every profile except the dedicated `test` profile; the app refuses to start otherwise. |
 | `ALLOWED_ORIGINS` | Same variable name as Node, same format (below). |
 
 - **Shared receipt secret**: `TOPIC_QUIZ_RECEIPT_SECRET` must hold the

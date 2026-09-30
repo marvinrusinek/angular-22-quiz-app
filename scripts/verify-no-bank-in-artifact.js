@@ -77,16 +77,89 @@ const SCANNED_EXT = new Set(['.js', '.json', '.mjs', '.txt', '.html', '.css']);
  *   - the boolean literal `true` for the isCorrect/is_correct aliases
  *     (mirrors `correct`; `isCorrect: false`/a computed boolean expression is
  *     real app code and must not match);
- *   - a NON-EMPTY array/object/string starting with a quote or a digit for
- *     the data-bearing aliases (`correctOptionIds: []` is the legitimate
- *     scrub/durable shape and must not match; `correctOptionIds: e` — a bare
- *     identifier/property read — structurally cannot match either, since
- *     there is no literal-opening character right after the colon).
+ *   - a NON-EMPTY array/object/string starting with a quote (single or
+ *     double) or a digit for the data-bearing aliases (`correctOptionIds: []`
+ *     is the legitimate scrub/durable shape and must not match;
+ *     `correctOptionIds: e` — a bare identifier/property read — structurally
+ *     cannot match either, since there is no literal-opening character right
+ *     after the colon).
  * `correctAnswers`/`correct_answers` additionally need a word boundary after
  * the name so this never fires on the unrelated, legitimate
  * `correctAnswersCount`/`correctAnswersText` identifiers already used
- * throughout the scoreboard/statistics code.
+ * throughout the scoreboard/statistics code. Every marker below requires a
+ * colon to appear IMMEDIATELY (mod whitespace) after the name — this is also
+ * what keeps `isCorrectlyFormatted:`/`answerKeyword:`-style unrelated
+ * identifiers from matching, with no separate check needed: `\s*:` simply
+ * never matches against the extra trailing identifier characters.
+ *
+ * MINIFIED BOOLEANS — verified, not assumed: `{ correct: true }` does NOT
+ * survive the real production minifier as `correct:true`. Checked directly
+ * against esbuild (the minifier Angular's production builder uses) via a
+ * synthetic fixture kept OUTSIDE this repo's tracked source: `true` becomes
+ * `!0` and `false` becomes `!1`. Cross-checked against this repo's own real
+ * `dist/demo/browser/main-*.js`: it contains zero occurrences of `:true` and
+ * hundreds of `:!0`. So `!0` is matched everywhere `true` is, for `correct`,
+ * `isCorrect`, and `is_correct` alike (their quoted-key JSON form can still
+ * legitimately contain the word `true`, e.g. a re-added `assets/data/*.json`
+ * bank, so that check is kept too, not replaced).
+ *
+ * `correct`'S OWN FALSE POSITIVE (found by running the widened check against
+ * this repo's REAL dist/demo, not assumed away): unlike `isCorrect`/
+ * `is_correct` (zero occurrences of `:true`/`:!0` anywhere in the real
+ * bundle), the bare field name `correct` is ALSO the one the app's own LOCAL
+ * verdict-computation code (`LocalTopicQuizVerdictAdapter` and its
+ * `assignOptionActiveStates` helper — bundled, even though the DI-wired
+ * production adapter is the API one) legitimately uses for a COMPUTED
+ * RESULT, e.g. `{status:'resolved',correct:!0}` or
+ * `{optionId:p.optionId,text:p.text,correct:!0}` — the latter's `text` value
+ * is itself `p.text`, a property read, not a baked-in string. Requiring
+ * `\bcorrect\s*:\s*(?:true|!0)\b` alone now matches these (it did not before
+ * this change, only because it never recognised `!0` at all — this was a
+ * pre-existing gap the new check made newly visible, not something this
+ * change introduced). A REAL leaked bank entry always pairs `correct` with a
+ * sibling `text` key whose OWN value is ALSO a literal quoted string (the
+ * actual baked-in option text, e.g. `{text:"What is DI?",correct:true}`) —
+ * that second literal is what the legitimate computed-result shapes above
+ * never have (their `text`, when present at all, is a variable/property
+ * read). So the `correct` boolean markers additionally require a literal
+ * `text:"…"` (either quote style, quoted or unquoted key) within 120
+ * characters before or after the match — verified against all 4 real
+ * occurrences in this repo's own dist/demo (none now match) and against a
+ * genuine leaked-bank-shape fixture (still matches). `isCorrect`/
+ * `is_correct` keep the simple, unqualified check: verified to have zero
+ * real-bundle occurrences today, and narrowing a check that isn't causing a
+ * false positive would only reduce coverage without evidence it is needed.
+ *
+ * KNOWN REMAINING LIMIT (regex, not a parser — accepted, matching this
+ * script's existing "defence in depth" scope): `!0`/`true` embedded inside a
+ * larger boolean EXPRESSION rather than standing alone as the entire value
+ * — e.g. `isCorrect: someFlag === true` or `isCorrect: !0 && check(x)` —
+ * matches even though the actual assigned value is computed, not the literal
+ * `true` itself. No occurrence of that shape exists anywhere in this app's
+ * current source (verified by grep) or its real dist/demo output (verified
+ * by inspection), and esbuild's own syntax minification would simplify a
+ * literal `true && x`/`x === true` written directly in source before this
+ * scanner ever sees it, so this is a theoretical edge rather than an
+ * observed one — documented rather than "fixed" with a heavier parser this
+ * script deliberately does not carry. The same caveat applies in principle
+ * to `correct`'s new `text:"…"`-proximity requirement — a hypothetical bank
+ * entry using a field name other than `text` for the option's display text
+ * would not be caught by this specific refinement — but `text` is this
+ * codebase's own actual, long-standing field name for it (see the existing
+ * "hashed copy" self-test below), so this matches the shape that would
+ * really reappear, not a hypothetical one.
  */
+const ARRAY_LITERAL_START = '(?:"|\'|\\d)'; // a quoted string (either quote style) or a digit
+const STRING_LITERAL = '(?:"[^"]+"|\'[^\']+\')'; // a non-empty quoted string, either quote style
+
+// A literal `text:"…"` (or `"text":"…"`) key/value pair — real leaked bank
+// option entries always carry one; legitimate computed-result code that
+// happens to use the field name `correct` never has BOTH `correct` and a
+// LITERAL (not variable/property-read) `text` value together.
+const TEXT_LITERAL_KEY = '"?text"?\\s*:\\s*(?:"[^"]+"|\'[^\']+\')';
+const TEXT_LITERAL_NEARBY_BEFORE = `(?<=${TEXT_LITERAL_KEY}[\\s\\S]{0,120})`;
+const TEXT_LITERAL_NEARBY_AFTER = `(?=[\\s\\S]{0,120}${TEXT_LITERAL_KEY})`;
+
 const ANSWER_KEY_ALIAS_ARRAY_NAMES = [
   'correctOptionIds', 'correct_option_ids',
   'expectedAnswers', 'expected_answers',
@@ -94,31 +167,45 @@ const ANSWER_KEY_ALIAS_ARRAY_NAMES = [
 ];
 
 const CORRECTNESS_MARKERS = [
-  /"correct"\s*:\s*true/i,
+  // correct: true/!0 — quoted key, requires a literal text:"…" nearby.
+  new RegExp(`${TEXT_LITERAL_NEARBY_BEFORE}"correct"\\s*:\\s*true`, 'i'),
+  new RegExp(`"correct"\\s*:\\s*true${TEXT_LITERAL_NEARBY_AFTER}`, 'i'),
+  new RegExp(`${TEXT_LITERAL_NEARBY_BEFORE}"correct"\\s*:\\s*!0\\b`, 'i'),
+  new RegExp(`"correct"\\s*:\\s*!0\\b${TEXT_LITERAL_NEARBY_AFTER}`, 'i'),
+  // correct: true/!0 — unquoted key, same requirement.
+  new RegExp(`${TEXT_LITERAL_NEARBY_BEFORE}\\bcorrect\\s*:\\s*true\\b`),
+  new RegExp(`\\bcorrect\\s*:\\s*true\\b${TEXT_LITERAL_NEARBY_AFTER}`),
+  new RegExp(`${TEXT_LITERAL_NEARBY_BEFORE}\\bcorrect\\s*:\\s*!0\\b`),
+  new RegExp(`\\bcorrect\\s*:\\s*!0\\b${TEXT_LITERAL_NEARBY_AFTER}`),
+
   /"correctCount"\s*:\s*\d+\s*,\s*"options"/i,
-  /\bcorrect\s*:\s*true\b/,
   /\bcorrectCount\s*:\s*\d+\s*,\s*options\s*:/,
 
-  // isCorrect / is_correct — boolean literal, same shape as `correct`.
+  // isCorrect / is_correct — boolean literal, same shape as `correct`,
+  // including the minified `!0` shorthand for `true`.
   /"isCorrect"\s*:\s*true/i,
   /"is_correct"\s*:\s*true/i,
   /\bisCorrect\s*:\s*true\b/,
   /\bis_correct\s*:\s*true\b/,
+  /"isCorrect"\s*:\s*!0\b/i,
+  /"is_correct"\s*:\s*!0\b/i,
+  /\bisCorrect\s*:\s*!0\b/,
+  /\bis_correct\s*:\s*!0\b/,
 
   // correctOptionIds / expectedAnswers / correctAnswers (+ snake_case) — a
-  // NON-EMPTY array whose first element is a literal (quoted string or
-  // digit), never a bare identifier/property read or an empty `[]`.
+  // NON-EMPTY array whose first element is a literal (either quote style, or
+  // a digit), never a bare identifier/property read or an empty `[]`.
   ...ANSWER_KEY_ALIAS_ARRAY_NAMES.flatMap((name) => [
-    new RegExp(`"${name}"\\s*:\\s*\\[\\s*(?:"|\\d)`, 'i'),
-    new RegExp(`\\b${name}\\s*:\\s*\\[\\s*(?:"|\\d)`),
+    new RegExp(`"${name}"\\s*:\\s*\\[\\s*${ARRAY_LITERAL_START}`, 'i'),
+    new RegExp(`\\b${name}\\s*:\\s*\\[\\s*${ARRAY_LITERAL_START}`),
   ]),
 
   // answerKey / answer_key — may legitimately hold an object, an array, or a
-  // string; same non-empty-literal requirement.
-  /"answerKey"\s*:\s*(?:\{(?!\s*\})|\[\s*(?:"|\d)|"[^"]+")/i,
-  /"answer_key"\s*:\s*(?:\{(?!\s*\})|\[\s*(?:"|\d)|"[^"]+")/i,
-  /\banswerKey\s*:\s*(?:\{(?!\s*\})|\[\s*(?:"|\d)|"[^"]+"|'[^']+')/,
-  /\banswer_key\s*:\s*(?:\{(?!\s*\})|\[\s*(?:"|\d)|"[^"]+"|'[^']+')/,
+  // string; same non-empty-literal requirement, either quote style.
+  new RegExp(`"answerKey"\\s*:\\s*(?:\\{(?!\\s*\\})|\\[\\s*${ARRAY_LITERAL_START}|${STRING_LITERAL})`, 'i'),
+  new RegExp(`"answer_key"\\s*:\\s*(?:\\{(?!\\s*\\})|\\[\\s*${ARRAY_LITERAL_START}|${STRING_LITERAL})`, 'i'),
+  new RegExp(`\\banswerKey\\s*:\\s*(?:\\{(?!\\s*\\})|\\[\\s*${ARRAY_LITERAL_START}|${STRING_LITERAL})`),
+  new RegExp(`\\banswer_key\\s*:\\s*(?:\\{(?!\\s*\\})|\\[\\s*${ARRAY_LITERAL_START}|${STRING_LITERAL})`),
 ];
 
 function walk(dir, out = []) {

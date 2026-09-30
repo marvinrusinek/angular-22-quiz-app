@@ -267,6 +267,217 @@ test('answerKey:{} (an empty placeholder object) passes', () => {
   assert.deepEqual(failures, []);
 });
 
+// ── Follow-up: minified `!0` booleans + single-quoted array elements ──────
+//
+// Independent testing found both of these embedded-answer-data fixtures
+// incorrectly PASSED the prior version of the scanner:
+//   var q = { isCorrect: !0 };
+//   var q = { correctOptionIds: ['a'] };
+//
+// Verified directly against esbuild — the same minifier Angular's production
+// builder uses — via a synthetic fixture OUTSIDE this repo's tracked source
+// (never committed): `{ correct: true }` minifies to `{correct:!0}`, and
+// `{ correct: false }` to `{correct:!1}`. Cross-checked against this repo's
+// OWN real dist/demo/browser/main-*.js: it contains 495 occurrences of
+// `:!0` and ZERO of `:true`. So the ORIGINAL `correct:true` unquoted-JS
+// marker (Stage 16) has apparently never matched a single real production
+// bundle either — this was a pre-existing gap the new aliases only made
+// newly visible, not something introduced by them.
+
+test('minified !0 for "correct" (quoted key) is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var q={"correct":!0,text:"x"};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('minified !0 for correct (unquoted key) is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var q={correct:!0,text:"x"};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('minified !0 for "isCorrect" (quoted key) is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var q={"isCorrect":!0};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('minified isCorrect:!0 (unquoted key) is caught — the exact reported miss', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var q={isCorrect:!0};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('minified !0 for "is_correct" (quoted key) is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var q={"is_correct":!0};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('minified is_correct:!0 (unquoted key) is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var q={is_correct:!0};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('minified isCorrect:!0 with extra whitespace around the colon/braces is still caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var q = { isCorrect  :  !0 , text : "x" };');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('correctOptionIds:[\'a\'] (single-quoted array element) is caught — the exact reported miss', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', "var q={correctOptionIds:['a']};");
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('correct_option_ids with single-quoted elements (snake_case) is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', "var q={correct_option_ids:['a','b']};");
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('expectedAnswers with single-quoted elements is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', "var q={expectedAnswers:['map']};");
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('expected_answers with single-quoted elements (snake_case) is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', "var q={expected_answers:['x']};");
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('correctAnswers with single-quoted elements is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', "var q={correctAnswers:['a']};");
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('correct_answers with single-quoted elements (snake_case) is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', "var q={correct_answers:['a']};");
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('answerKey assigned a single-quoted string is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', "var b={answerKey:'single-quoted-secret',id:1};");
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('answer_key (snake_case) assigned a single-quoted string is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', "var b={answer_key:'secret'};");
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('answerKey assigned a single-quoted ARRAY is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', "var b={answerKey:['a','b']};");
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('single-quoted array elements with extra whitespace throughout are still caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', "var q = { correctOptionIds : [ 'a' , 'b' ] , text : 'x' };");
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+// ── Additional benign/negative coverage for the new patterns above ────────
+
+test('isCorrect:!1 (minified FALSE — a real, non-leaking evaluation result) passes', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'function evaluate(){return{isCorrect:!1,count:0}}');
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+test('isCorrectlyFormatted / isCorrected (unrelated identifiers with "isCorrect" as a prefix) never trigger the isCorrect marker', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var x={isCorrectlyFormatted:!0,isCorrected:!0,other:1};');
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+test('correctOptionIdsList / answerKeyword (unrelated identifiers with an alias name as a prefix) never trigger any alias marker', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', "var x={correctOptionIdsList:['a'],answerKeyword:'z'};");
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+// ── `correct`'s own false positive against this app's REAL local verdict
+//    code — caught when this file's own scanner was first run against the
+//    real dist/demo build with the widened !0 check above, BEFORE assuming
+//    it was clean. Each fixture below is the exact shape found (or the same
+//    shape, minimally reduced) in dist/demo/browser/chunk-*.js, from the
+//    bundled (never DI-wired in production) LocalTopicQuizVerdictAdapter and
+//    its assignOptionActiveStates() helper — genuine computed-result code,
+//    never an embedded bank. These must stay green for `correct:!0`/
+//    `correct:true` to remain usable at all. ─────────────────────────────
+
+test('correct:!0 on a verdict-result object with NO text sibling (real shape: {status:\'resolved\',correct:!0}) passes', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', "function check(){return{status:'resolved',correct:!0}}");
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+test('correct:!0 where the nearby "text" value is itself a property READ, not a literal (real shape: {text:p.text,correct:!0}) passes', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'c.push(Y(Z({},l),{optionId:p.optionId,text:p.text,correct:!0}));');
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+test('a ternary ending in a property read (n.correct) immediately before a literal !0 branch (real shape: t?n.correct:!0) passes', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var r={active:t?n.correct:!0,feedback:t&&!n.correct?`x`:void 0};');
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+test('correct:true with no text anywhere in the file passes', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'function r(){return{status:"resolved",correct:true}}');
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+test('a genuine leaked-bank shape with correct BEFORE a literal text (key order reversed from the usual fixture) is still caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var o={correct:true,text:"What is DI?"};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('a genuine leaked-bank shape with correct:!0 and a literal text more than a few fields away is still caught (within the 120-char window)', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var o={optionId:3,displayOrder:1,text:"What is DI?",correct:!0};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
 // ── Runner ────────────────────────────────────────────────────────────────
 
 let failed = 0;

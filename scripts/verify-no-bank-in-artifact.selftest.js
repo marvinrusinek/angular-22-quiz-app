@@ -119,6 +119,154 @@ test('a non-scanned extension (e.g. an image) is never read as text, so binary c
   assert.deepEqual(failures, []);
 });
 
+// ── Answer-key ALIAS coverage (the gap the final audit flagged: the bank's
+//    own `ANSWER_KEY_FIELDS` list has five aliases the scanner never checked
+//    for) ──────────────────────────────────────────────────────────────────
+
+test('a QUOTED "isCorrect":true marker (JSON shape) is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'data.json', '{"options":[{"text":"a","isCorrect":true}]}');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('an UNQUOTED isCorrect:true marker (post-minification JS shape) is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk-abc123.js', 'var o={isCorrect:true,text:"x"};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('a snake_case QUOTED "is_correct":true marker is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'data.json', '{"options":[{"text":"a","is_correct":true}]}');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('a QUOTED "correctOptionIds":[...] marker with real (literal) ids is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'data.json', '{"quizId":"x","correctOptionIds":[101,205]}');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('an UNQUOTED correctOptionIds:[...] marker with real (literal) ids is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var q={correctOptionIds:[101,205],text:"x"};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('a snake_case "correct_option_ids":[...] marker with string ids is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'data.json', '{"correct_option_ids":["a","b"]}');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('a QUOTED "answerKey" marker (object value) is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'data.json', '{"answerKey":{"q1":"a"}}');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('an UNQUOTED answerKey marker (string value) is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var b={answerKey:"secret-answer",id:1};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('a snake_case "answer_key" marker is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'data.json', '{"answer_key":["map"]}');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('an UNQUOTED expectedAnswers:[...] marker is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var e={expectedAnswers:["map","filter"]};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('a snake_case "expected_answers" marker is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'data.json', '{"expected_answers":[1,2]}');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('an UNQUOTED correctAnswers:[...] marker is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var c={correctAnswers:[1,2],id:9};');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+test('a snake_case "correct_answers" marker is caught', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'data.json', '{"correct_answers":["a"]}');
+  const { failures } = scanArtifact(dir);
+  assert.ok(failures.some((f) => f.startsWith('CORRECTNESS MARKER')));
+});
+
+// ── Benign runtime references that must NOT false-positive — every one of
+//    these is a REAL shape already present in this app's own current,
+//    audited, clean production bundle ─────────────────────────────────────
+
+test('isCorrect:false (a real, non-leaking evaluation result) passes', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'function evaluate(){return{isCorrect:false,count:0,answerIds:[]}}');
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+test('isCorrect assigned a COMPUTED expression (not a literal) passes', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var r={isCorrect:e.length>0&&t(e,n),other:1};');
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+test('correctOptionIds:[] — the legitimate scrubbed/durable-snapshot shape — passes', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var r={selectedOptionIds:[1,2],correctOptionIds:[]};');
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+test('correctOptionIds assigned a bare identifier/property read (real API data flowing through, not baked-in) passes', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var x={correctOptionIds:e.correctOptionIds,isCorrect:a&&b(e,e.correctOptionIds)};');
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+test('correctAnswersCount / correctAnswersText (unrelated real identifiers) never trigger the correctAnswers marker', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var s={correctAnswersCount:5,correctAnswersText:"5/10"};');
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+test('a quoted string ARRAY of field names (a scrub/allow-list, not key:value data) never triggers any alias marker', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var FORBIDDEN=["questions","options","correct","isCorrect","correctOptionIds","answerKey"];');
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
+test('answerKey:{} (an empty placeholder object) passes', () => {
+  const dir = makeFixtureDir();
+  write(dir, 'chunk.js', 'var cfg={answerKey:{},id:1};');
+  const { failures } = scanArtifact(dir);
+  assert.deepEqual(failures, []);
+});
+
 // ── Runner ────────────────────────────────────────────────────────────────
 
 let failed = 0;

@@ -73,26 +73,38 @@ services:
       - key: DATABASE_URL
         sync: false
 
-      # ── Certificate claims (DISABLED here; not yet deployable on THIS
-      #    plan — see below) ──────────────────────────────────────────────
+      # ── Certificate claims (DISABLED here) ──────────────────────────────
       #
       # Entries below are kept commented out deliberately, not merely unset
-      # like DATABASE_URL: this service is on `plan: free`, and Render's own
-      # official policy (render.com/changelog/free-web-services-will-no-
-      # longer-allow-outbound-traffic-to-smtp-ports, effective 2025-09-26)
-      # blocks ALL outbound traffic on SMTP ports 25, 465 and 587 from free
-      # web services — a platform-level network block, not a configuration
-      # problem. CERTIFICATE_SMTP_HOST/PORT/TLS_MODE/USERNAME/PASSWORD can
-      # be set correctly here and this service will still be unable to
-      # reach any SMTP server at all until this service is upgraded to a
-      # paid instance type. Verified directly against Winhost's mail
-      # service (m07.internetmailserver.net:587, confirmed via this
-      # domain's own MX record and a live STARTTLS handshake) from outside
-      # Render — that confirms the SMTP server itself works, not that
-      # Render can reach it on this plan.
+      # like DATABASE_URL — this feature stays off until a deliberate
+      # decision to enable it. Two real senders exist
+      # (backend/src/certificate/{smtp,postmark}-email-sender.ts); which one
+      # is actually usable on THIS service depends on its plan:
       #
-      # Once upgraded, uncomment and set each `sync: false` value in the
-      # Render dashboard — never a real value in this committed file:
+      #   - SMTP: this service is on `plan: free`, and Render's own official
+      #     policy (render.com/changelog/free-web-services-will-no-longer-
+      #     allow-outbound-traffic-to-smtp-ports, effective 2025-09-26)
+      #     blocks ALL outbound traffic on SMTP ports 25, 465 and 587 from
+      #     free web services — a platform-level network block, not a
+      #     configuration problem. CERTIFICATE_SMTP_* can be set correctly
+      #     here and this service will still be unable to reach any SMTP
+      #     server at all until upgraded to a paid instance type. Verified
+      #     directly against Winhost's mail service
+      #     (m07.internetmailserver.net:587, confirmed via this domain's own
+      #     MX record and a live STARTTLS handshake) from OUTSIDE Render —
+      #     that confirms the SMTP server itself works, not that Render can
+      #     reach it on this plan.
+      #   - Postmark: ordinary outbound HTTPS, NOT subject to the SMTP-port
+      #     block above — this is the one that can actually work on the
+      #     current free plan. Requires a Postmark account for
+      #     marvinrusinek.com with DKIM/Return-Path verified (done) and the
+      #     account past Postmark's own approval/sending-limit/suppression
+      #     gates for a new account — see docs/certificate-claims-runbook.md's
+      #     setup checklist.
+      #
+      # To enable with Postmark (no plan upgrade needed), uncomment and set
+      # each `sync: false` value in the Render dashboard — never a real
+      # value in this committed file:
       #   - key: CERTIFICATE_CLAIMS_ENABLED
       #     value: "true"
       #   - key: EMAIL_FROM_ADDRESS
@@ -103,16 +115,17 @@ services:
       #     value: https://marvinrusinek.github.io
       #   - key: CERTIFICATE_OUTBOX_ENCRYPTION_KEY
       #     sync: false
-      #   - key: CERTIFICATE_SMTP_HOST
+      #   - key: CERTIFICATE_EMAIL_PROVIDER
+      #     value: postmark
+      #   - key: CERTIFICATE_POSTMARK_SERVER_TOKEN
       #     sync: false
-      #   - key: CERTIFICATE_SMTP_PORT
-      #     value: "587"
-      #   - key: CERTIFICATE_SMTP_TLS_MODE
-      #     value: starttls
-      #   - key: CERTIFICATE_SMTP_USERNAME
-      #     sync: false
-      #   - key: CERTIFICATE_SMTP_PASSWORD
-      #     sync: false
+      #   - key: CERTIFICATE_POSTMARK_MESSAGE_STREAM
+      #     value: outbound
+      #
+      # To use SMTP instead, upgrade this service's plan first, then set
+      # CERTIFICATE_EMAIL_PROVIDER=smtp and the five CERTIFICATE_SMTP_*
+      # variables (host/port/tlsMode/username/password — see
+      # backend/.env.example for the full list) the same way.
 
   # Spring Boot migration target for the same Interview API. Runs ALONGSIDE
   # interview-api (Node), not in place of it — Node remains the production

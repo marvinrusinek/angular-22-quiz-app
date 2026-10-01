@@ -52,35 +52,55 @@ export interface CertificateSmtpConfig {
   readonly password: string;
 }
 
+/**
+ * Server token only — NEVER an account token. Postmark's own docs
+ * distinguish the two (X-Postmark-Server-Token vs X-Postmark-Account-
+ * Token); an account token has broader privileges than sending mail needs,
+ * so this type has no field for one at all. messageStream defaults to
+ * "outbound" (Postmark's own default transactional stream) when not set —
+ * see parsePostmarkConfig.
+ */
+export interface CertificatePostmarkConfig {
+  /** NEVER logged, NEVER included in a ConfigError message. */
+  readonly serverToken: string;
+  readonly messageStream: string;
+}
+
+export type CertificateEmailProvider = 'smtp' | 'postmark';
+
+interface CertificateClaimsCommonConfig {
+  readonly emailFromAddress: string;
+  readonly ownerNotificationEmail: string;
+  readonly publicAppUrl: string;
+  /**
+   * Raw hex, exactly 64 characters (32 bytes) — AES-256-GCM key for a
+   * claimant_verify outbox row's short-lived retry payload. See
+   * certificate-outbox-crypto.ts and certificate-notification-
+   * dispatcher.ts's doc comment for why this exists: so a retry resends
+   * the exact original verification link rather than a freshly minted
+   * one — a stable link across retries, regardless of which provider is
+   * selected below. Neither SMTP nor Postmark documents a provider-side
+   * idempotency/deduplication guarantee this system can rely on instead
+   * (checked directly against each provider's own docs, not assumed).
+   */
+  readonly outboxEncryptionKeyHex: string;
+}
+
+/**
+ * Discriminated on `emailProvider`, which makes an inconsistent state
+ * (e.g. emailProvider: 'postmark' but an smtp field populated instead of
+ * postmark) a compile error, not just a runtime possibility. `emailProvider:
+ * undefined` is the local-dev, fake-sender case — server.ts wires
+ * InMemoryEmailSender then, with a loud warning — and parseCertificateClaims
+ * makes it IMPOSSIBLE in production (see that function's own doc comment).
+ * Postmark selection never requires SMTP credentials, and vice versa — each
+ * variant below carries ONLY the config its own provider needs.
+ */
 export type CertificateClaimsConfig =
   | { readonly enabled: false }
-  | {
-      readonly enabled: true;
-      readonly emailFromAddress: string;
-      readonly ownerNotificationEmail: string;
-      readonly publicAppUrl: string;
-      /**
-       * Raw hex, exactly 64 characters (32 bytes) — AES-256-GCM key for a
-       * claimant_verify outbox row's short-lived retry payload. See
-       * certificate-outbox-crypto.ts and certificate-notification-
-       * dispatcher.ts's doc comment for why this exists: so a retry resends
-       * the exact original verification link rather than a freshly minted
-       * one — still valuable for SMTP (a stable link, no excess token
-       * proliferation) even though SMTP has no provider-side idempotency to
-       * satisfy the way the originally-intended Resend adapter would have.
-       */
-      readonly outboxEncryptionKeyHex: string;
-      /**
-       * undefined ONLY outside production, and only when NONE of the five
-       * SMTP variables are set — server.ts then wires InMemoryEmailSender
-       * for local manual testing, with a loud startup warning. Any ONE
-       * variable present forces all five to be validated (a partial SMTP
-       * config is always a mistake, never a signal to fall back silently).
-       * parseCertificateClaims makes this undefined IMPOSSIBLE in
-       * production — see that function's own doc comment.
-       */
-      readonly smtp: CertificateSmtpConfig | undefined;
-    };
+  | (CertificateClaimsCommonConfig & { readonly enabled: true; readonly emailProvider: undefined })
+  | (CertificateClaimsCommonConfig & { readonly enabled: true; readonly emailProvider: 'smtp'; readonly smtp: CertificateSmtpConfig })
+  | (CertificateClaimsCommonConfig & { readonly enabled: true; readonly emailProvider: 'postmark'; readonly postmark: CertificatePostmarkConfig });
 
 /** Long enough that guessing is hopeless; short enough to be typeable. */
 export const MIN_RECEIPT_SECRET_LENGTH = 32;
@@ -236,31 +256,27 @@ const SMTP_VAR_NAMES = [
 
 /**
  * Parses the five CERTIFICATE_SMTP_* variables into a validated
- * CertificateSmtpConfig, or returns undefined when NONE of them are set at
- * all (the local-dev, fake-sender case). A PARTIAL set — some present, some
- * not — is always an error, in dev or production: that shape is far more
- * likely to be a typo'd variable name than a deliberate choice, and should
- * never be silently treated as "not configured."
- *
- * `required` forces all five even when none are set — passed `true` only
- * for production (see parseCertificateClaims).
+ * CertificateSmtpConfig. Only ever called when CERTIFICATE_EMAIL_PROVIDER=
+ * smtp (see parseCertificateClaims), so all five are unconditionally
+ * required here — there is no "none set" case to tolerate at this layer. A
+ * PARTIAL set (some present, some not) gets its own distinct error rather
+ * than being folded into "missing": that shape is far more likely to be a
+ * typo'd variable name than anything else.
  */
-function parseSmtpConfig(env: NodeJS.ProcessEnv, required: boolean): CertificateSmtpConfig | undefined {
+function parseSmtpConfig(env: NodeJS.ProcessEnv): CertificateSmtpConfig {
   const present = SMTP_VAR_NAMES.filter((name) => (env[name] ?? '').trim().length > 0);
-  if (present.length === 0 && !required) return undefined;
   if (present.length > 0 && present.length < SMTP_VAR_NAMES.length) {
     const missing = SMTP_VAR_NAMES.filter((name) => !present.includes(name));
     throw new ConfigError(
       `Partial SMTP configuration: ${present.join(', ')} ${present.length === 1 ? 'is' : 'are'} set but ` +
       `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not. Set all five CERTIFICATE_SMTP_* ` +
-      'variables together, or none at all.'
+      'variables together.'
     );
   }
-  if (present.length === 0 && required) {
+  if (present.length === 0) {
     throw new ConfigError(
-      `${SMTP_VAR_NAMES.join(', ')} are all required when CERTIFICATE_CLAIMS_ENABLED=true in production — ` +
-      'no real EmailSender can be configured without them, and this feature must never silently fall back ' +
-      'to InMemoryEmailSender there.'
+      `${SMTP_VAR_NAMES.join(', ')} are all required when CERTIFICATE_EMAIL_PROVIDER=smtp — no real ` +
+      'EmailSender can be configured without them.'
     );
   }
 
@@ -293,6 +309,32 @@ function parseSmtpConfig(env: NodeJS.ProcessEnv, required: boolean): Certificate
   return { host, port, tlsMode: tlsModeRaw, username, password };
 }
 
+const DEFAULT_POSTMARK_MESSAGE_STREAM = 'outbound';
+
+/**
+ * Parses the Postmark variables. Unlike parseSmtpConfig, there is no
+ * "all five or none" shape to detect here — only CERTIFICATE_POSTMARK_
+ * SERVER_TOKEN is strictly required (no sensible default for a secret);
+ * CERTIFICATE_POSTMARK_MESSAGE_STREAM defaults to "outbound" (Postmark's
+ * own default transactional stream) when blank, matching the project's
+ * explicit request for "a configured transactional MessageStream (default
+ * outbound)" rather than requiring it unconditionally.
+ */
+function parsePostmarkConfig(env: NodeJS.ProcessEnv): CertificatePostmarkConfig {
+  const serverToken = (env['CERTIFICATE_POSTMARK_SERVER_TOKEN'] ?? '').trim();
+  if (serverToken.length === 0) {
+    throw new ConfigError(
+      'CERTIFICATE_POSTMARK_SERVER_TOKEN is required when CERTIFICATE_EMAIL_PROVIDER=postmark — use a ' +
+      'SERVER token from the Postmark dashboard, never an account token.'
+    );
+  }
+
+  const messageStreamRaw = (env['CERTIFICATE_POSTMARK_MESSAGE_STREAM'] ?? '').trim();
+  const messageStream = messageStreamRaw.length > 0 ? messageStreamRaw : DEFAULT_POSTMARK_MESSAGE_STREAM;
+
+  return { serverToken, messageStream };
+}
+
 /**
  * SAFE ROLLOUT: disabled unless CERTIFICATE_CLAIMS_ENABLED is exactly
  * "true". This is the ONLY gate on requiring the other variables — while
@@ -302,25 +344,26 @@ function parseSmtpConfig(env: NodeJS.ProcessEnv, required: boolean): Certificate
  * before; missing email configuration can never break an unrelated,
  * already-shipping service.
  *
- * Once enabled, the non-SMTP variables become required and fail closed —
- * the same "name the missing variable, never accept a silent default"
- * discipline as parseReceiptSecret. The five SMTP variables are handled
- * separately by parseSmtpConfig: required in production, optional (but
- * all-or-nothing) outside it — see that function's own doc comment.
+ * Once enabled, the non-provider variables become required and fail
+ * closed — the same "name the missing variable, never accept a silent
+ * default" discipline as parseReceiptSecret.
  *
- * PRODUCTION GUARD: server.ts's wireCertificateClaims now selects a real
- * SmtpEmailSender WHENEVER the five SMTP variables below are present and
- * valid (see smtp-email-sender.ts), falling back to InMemoryEmailSender
- * only when they are absent — which this function makes impossible in
- * production, by requiring them below exactly like every other
- * certificate-claim variable. A production deploy can therefore never
- * silently end up with the in-memory sender: either the five SMTP
- * variables are present and valid (real sending), or parsing throws here
- * before the process ever reaches server.ts's wiring at all. If a SECOND
- * real provider is ever added, replace this single required-SMTP-config
- * check with an explicit provider-selection variable (e.g.
- * EMAIL_SENDER_IMPL) instead of just adding a parallel set of fields —
- * production must still never have an ambiguous or silent fallback path.
+ * PROVIDER SELECTION: CERTIFICATE_EMAIL_PROVIDER picks exactly one of
+ * 'smtp' or 'postmark' and gates which OTHER variables get read at all —
+ * selecting 'postmark' means the five CERTIFICATE_SMTP_* variables are
+ * never even looked at, and selecting 'smtp' means CERTIFICATE_POSTMARK_*
+ * is never looked at. This is deliberately a single required selector, not
+ * "infer the provider from whichever block of variables happens to be
+ * set" (the SMTP-only design this replaced) — inference does not scale
+ * cleanly past one real provider, and an explicit selector makes "which
+ * provider is this deployment actually using" a single, grep-able answer.
+ *
+ * PRODUCTION GUARD: CERTIFICATE_EMAIL_PROVIDER is REQUIRED in production —
+ * left unset there, this throws before the process ever reaches server.ts's
+ * wiring. Outside production, leaving it unset is the deliberate, supported
+ * local-dev path: server.ts wires InMemoryEmailSender with a loud warning.
+ * A production deploy can therefore never silently end up with the
+ * in-memory sender.
  */
 function parseCertificateClaims(env: NodeJS.ProcessEnv, isProduction: boolean): CertificateClaimsConfig {
   const enabledRaw = (env['CERTIFICATE_CLAIMS_ENABLED'] ?? '').trim().toLowerCase();
@@ -357,16 +400,25 @@ function parseCertificateClaims(env: NodeJS.ProcessEnv, isProduction: boolean): 
     );
   }
 
-  const smtp = parseSmtpConfig(env, isProduction);
+  const common = { emailFromAddress, ownerNotificationEmail, publicAppUrl, outboxEncryptionKeyHex };
 
-  return {
-    enabled: true,
-    emailFromAddress,
-    ownerNotificationEmail,
-    publicAppUrl,
-    outboxEncryptionKeyHex,
-    smtp
-  };
+  const providerRaw = (env['CERTIFICATE_EMAIL_PROVIDER'] ?? '').trim().toLowerCase();
+  if (providerRaw.length === 0) {
+    if (isProduction) {
+      throw new ConfigError(
+        'CERTIFICATE_EMAIL_PROVIDER is required when CERTIFICATE_CLAIMS_ENABLED=true in production — must ' +
+        'be "smtp" or "postmark". This feature must never silently fall back to InMemoryEmailSender there.'
+      );
+    }
+    return { enabled: true, ...common, emailProvider: undefined };
+  }
+  if (providerRaw === 'smtp') {
+    return { enabled: true, ...common, emailProvider: 'smtp', smtp: parseSmtpConfig(env) };
+  }
+  if (providerRaw === 'postmark') {
+    return { enabled: true, ...common, emailProvider: 'postmark', postmark: parsePostmarkConfig(env) };
+  }
+  throw new ConfigError(`CERTIFICATE_EMAIL_PROVIDER must be "smtp" or "postmark" — received "${providerRaw}"`);
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {

@@ -938,7 +938,7 @@ describe('feature flag — safe rollout', () => {
     expect(() => loadConfig({ CERTIFICATE_CLAIMS_ENABLED: 'true' })).toThrow(ConfigError);
   });
 
-  it('parses a fully valid enabled configuration (dev, no SMTP set — the fake-sender case)', () => {
+  it('parses a fully valid enabled configuration (dev, no CERTIFICATE_EMAIL_PROVIDER set — the fake-sender case)', () => {
     const config = loadConfig({
       CERTIFICATE_CLAIMS_ENABLED: 'true',
       EMAIL_FROM_ADDRESS: 'certificates@example.com',
@@ -952,17 +952,18 @@ describe('feature flag — safe rollout', () => {
       ownerNotificationEmail: 'owner@example.com',
       publicAppUrl: 'https://example.com',
       outboxEncryptionKeyHex: TEST_OUTBOX_ENCRYPTION_KEY_HEX,
-      smtp: undefined
+      emailProvider: undefined
     });
   });
 
-  it('parses a fully valid enabled configuration WITH SMTP — real-sender case, works outside production too', () => {
+  it('parses a fully valid enabled configuration WITH CERTIFICATE_EMAIL_PROVIDER=smtp — real-sender case, works outside production too', () => {
     const config = loadConfig({
       CERTIFICATE_CLAIMS_ENABLED: 'true',
       EMAIL_FROM_ADDRESS: 'certificates@example.com',
       OWNER_NOTIFICATION_EMAIL: 'owner@example.com',
       CERTIFICATE_CLAIM_BASE_URL: 'https://example.com',
       CERTIFICATE_OUTBOX_ENCRYPTION_KEY: TEST_OUTBOX_ENCRYPTION_KEY_HEX,
+      CERTIFICATE_EMAIL_PROVIDER: 'smtp',
       CERTIFICATE_SMTP_HOST: 'smtp.example.test',
       CERTIFICATE_SMTP_PORT: '587',
       CERTIFICATE_SMTP_TLS_MODE: 'starttls',
@@ -975,6 +976,7 @@ describe('feature flag — safe rollout', () => {
       ownerNotificationEmail: 'owner@example.com',
       publicAppUrl: 'https://example.com',
       outboxEncryptionKeyHex: TEST_OUTBOX_ENCRYPTION_KEY_HEX,
+      emailProvider: 'smtp',
       smtp: {
         host: 'smtp.example.test',
         port: 587,
@@ -982,6 +984,27 @@ describe('feature flag — safe rollout', () => {
         username: 'certificates@example.com',
         password: 'super-secret-not-logged'
       }
+    });
+  });
+
+  it('parses a fully valid enabled configuration WITH CERTIFICATE_EMAIL_PROVIDER=postmark — never requires any SMTP variable', () => {
+    const config = loadConfig({
+      CERTIFICATE_CLAIMS_ENABLED: 'true',
+      EMAIL_FROM_ADDRESS: 'certificates@example.com',
+      OWNER_NOTIFICATION_EMAIL: 'owner@example.com',
+      CERTIFICATE_CLAIM_BASE_URL: 'https://example.com',
+      CERTIFICATE_OUTBOX_ENCRYPTION_KEY: TEST_OUTBOX_ENCRYPTION_KEY_HEX,
+      CERTIFICATE_EMAIL_PROVIDER: 'postmark',
+      CERTIFICATE_POSTMARK_SERVER_TOKEN: 'pm-server-token-not-logged'
+    });
+    expect(config.certificateClaims).toEqual({
+      enabled: true,
+      emailFromAddress: 'certificates@example.com',
+      ownerNotificationEmail: 'owner@example.com',
+      publicAppUrl: 'https://example.com',
+      outboxEncryptionKeyHex: TEST_OUTBOX_ENCRYPTION_KEY_HEX,
+      emailProvider: 'postmark',
+      postmark: { serverToken: 'pm-server-token-not-logged', messageStream: 'outbound' } // default stream
     });
   });
 
@@ -997,13 +1020,26 @@ describe('feature flag — safe rollout', () => {
     expect(() => loadConfig({ ...base, CERTIFICATE_OUTBOX_ENCRYPTION_KEY: 'zz'.repeat(32) })).toThrow(ConfigError); // not hex
   });
 
+  it('rejects an unrecognized CERTIFICATE_EMAIL_PROVIDER value', () => {
+    const base = {
+      CERTIFICATE_CLAIMS_ENABLED: 'true',
+      EMAIL_FROM_ADDRESS: 'certificates@example.com',
+      OWNER_NOTIFICATION_EMAIL: 'owner@example.com',
+      CERTIFICATE_CLAIM_BASE_URL: 'https://example.com',
+      CERTIFICATE_OUTBOX_ENCRYPTION_KEY: TEST_OUTBOX_ENCRYPTION_KEY_HEX
+    };
+    expect(() => loadConfig({ ...base, CERTIFICATE_EMAIL_PROVIDER: 'sendgrid' })).toThrow(ConfigError);
+    expect(() => loadConfig({ ...base, CERTIFICATE_EMAIL_PROVIDER: 'resend' })).toThrow(ConfigError);
+  });
+
   describe('SMTP configuration validation', () => {
     const baseNonProd = {
       CERTIFICATE_CLAIMS_ENABLED: 'true',
       EMAIL_FROM_ADDRESS: 'certificates@example.com',
       OWNER_NOTIFICATION_EMAIL: 'owner@example.com',
       CERTIFICATE_CLAIM_BASE_URL: 'https://example.com',
-      CERTIFICATE_OUTBOX_ENCRYPTION_KEY: TEST_OUTBOX_ENCRYPTION_KEY_HEX
+      CERTIFICATE_OUTBOX_ENCRYPTION_KEY: TEST_OUTBOX_ENCRYPTION_KEY_HEX,
+      CERTIFICATE_EMAIL_PROVIDER: 'smtp'
     };
     const fullSmtp = {
       CERTIFICATE_SMTP_HOST: 'smtp.example.test',
@@ -1016,6 +1052,10 @@ describe('feature flag — safe rollout', () => {
     it('a PARTIAL SMTP config (some vars set, not all) is always an error, in dev or production', () => {
       expect(() => loadConfig({ ...baseNonProd, CERTIFICATE_SMTP_HOST: 'smtp.example.test' })).toThrow(ConfigError);
       expect(() => loadConfig({ ...baseNonProd, CERTIFICATE_SMTP_HOST: 'smtp.example.test', CERTIFICATE_SMTP_PORT: '587' })).toThrow(ConfigError);
+    });
+
+    it('throws when provider=smtp but NO SMTP variable is set at all', () => {
+      expect(() => loadConfig(baseNonProd)).toThrow(ConfigError);
     });
 
     it('rejects a non-numeric or out-of-range SMTP port', () => {
@@ -1047,7 +1087,52 @@ describe('feature flag — safe rollout', () => {
     });
   });
 
-  describe('production requires real SMTP config — no silent fallback to the fake sender', () => {
+  describe('Postmark configuration validation', () => {
+    const baseNonProd = {
+      CERTIFICATE_CLAIMS_ENABLED: 'true',
+      EMAIL_FROM_ADDRESS: 'certificates@example.com',
+      OWNER_NOTIFICATION_EMAIL: 'owner@example.com',
+      CERTIFICATE_CLAIM_BASE_URL: 'https://example.com',
+      CERTIFICATE_OUTBOX_ENCRYPTION_KEY: TEST_OUTBOX_ENCRYPTION_KEY_HEX,
+      CERTIFICATE_EMAIL_PROVIDER: 'postmark'
+    };
+
+    it('throws when provider=postmark but CERTIFICATE_POSTMARK_SERVER_TOKEN is missing — no default exists for a secret', () => {
+      expect(() => loadConfig(baseNonProd)).toThrow(ConfigError);
+    });
+
+    it('defaults CERTIFICATE_POSTMARK_MESSAGE_STREAM to "outbound" when unset', () => {
+      const config = loadConfig({ ...baseNonProd, CERTIFICATE_POSTMARK_SERVER_TOKEN: 'token-123' });
+      expect(config.certificateClaims.enabled).toBe(true);
+      if (config.certificateClaims.enabled && config.certificateClaims.emailProvider === 'postmark') {
+        expect(config.certificateClaims.postmark.messageStream).toBe('outbound');
+      }
+    });
+
+    it('honours an explicit, non-default CERTIFICATE_POSTMARK_MESSAGE_STREAM', () => {
+      const config = loadConfig({ ...baseNonProd, CERTIFICATE_POSTMARK_SERVER_TOKEN: 'token-123', CERTIFICATE_POSTMARK_MESSAGE_STREAM: 'certificate-notifications' });
+      expect(config.certificateClaims.enabled).toBe(true);
+      if (config.certificateClaims.enabled && config.certificateClaims.emailProvider === 'postmark') {
+        expect(config.certificateClaims.postmark.messageStream).toBe('certificate-notifications');
+      }
+    });
+
+    it('provider=postmark never requires ANY CERTIFICATE_SMTP_* variable', () => {
+      expect(() => loadConfig({ ...baseNonProd, CERTIFICATE_POSTMARK_SERVER_TOKEN: 'token-123' })).not.toThrow();
+    });
+
+    it("a ConfigError thrown for missing Postmark config never includes a server-token-shaped string", () => {
+      try {
+        loadConfig(baseNonProd); // no server token at all
+        throw new Error('expected loadConfig to throw');
+      } catch (err: unknown) {
+        expect(err).toBeInstanceOf(ConfigError);
+        expect((err as Error).message.toLowerCase()).not.toContain('token-123');
+      }
+    });
+  });
+
+  describe('production requires an explicit, real email provider — no silent fallback to the fake sender', () => {
     const prodBase = {
       NODE_ENV: 'production',
       ALLOWED_ORIGINS: 'https://example.com',
@@ -1060,13 +1145,14 @@ describe('feature flag — safe rollout', () => {
       CERTIFICATE_OUTBOX_ENCRYPTION_KEY: TEST_OUTBOX_ENCRYPTION_KEY_HEX
     };
 
-    it('refuses to enable in PRODUCTION without SMTP configuration — every non-SMTP var present is not enough', () => {
+    it('refuses to enable in PRODUCTION without CERTIFICATE_EMAIL_PROVIDER — every other var present is not enough', () => {
       expect(() => loadConfig(prodBase)).toThrow(ConfigError);
     });
 
-    it('SUCCEEDS in production once real SMTP configuration is also present — this is the whole point of a real adapter existing now', () => {
+    it('SUCCEEDS in production with CERTIFICATE_EMAIL_PROVIDER=smtp and full SMTP configuration', () => {
       const config = loadConfig({
         ...prodBase,
+        CERTIFICATE_EMAIL_PROVIDER: 'smtp',
         CERTIFICATE_SMTP_HOST: 'm07.internetmailserver.net',
         CERTIFICATE_SMTP_PORT: '587',
         CERTIFICATE_SMTP_TLS_MODE: 'starttls',
@@ -1074,7 +1160,7 @@ describe('feature flag — safe rollout', () => {
         CERTIFICATE_SMTP_PASSWORD: 'not-a-real-password'
       });
       expect(config.certificateClaims.enabled).toBe(true);
-      if (config.certificateClaims.enabled) {
+      if (config.certificateClaims.enabled && config.certificateClaims.emailProvider === 'smtp') {
         expect(config.certificateClaims.smtp).toEqual({
           host: 'm07.internetmailserver.net',
           port: 587,
@@ -1082,6 +1168,18 @@ describe('feature flag — safe rollout', () => {
           username: 'marvin@marvinrusinek.com',
           password: 'not-a-real-password'
         });
+      }
+    });
+
+    it('SUCCEEDS in production with CERTIFICATE_EMAIL_PROVIDER=postmark and a server token — never requires SMTP vars', () => {
+      const config = loadConfig({
+        ...prodBase,
+        CERTIFICATE_EMAIL_PROVIDER: 'postmark',
+        CERTIFICATE_POSTMARK_SERVER_TOKEN: 'prod-server-token'
+      });
+      expect(config.certificateClaims.enabled).toBe(true);
+      if (config.certificateClaims.enabled && config.certificateClaims.emailProvider === 'postmark') {
+        expect(config.certificateClaims.postmark).toEqual({ serverToken: 'prod-server-token', messageStream: 'outbound' });
       }
     });
   });

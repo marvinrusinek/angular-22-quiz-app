@@ -10,6 +10,7 @@ import { CertificateClaimService } from './certificate/certificate-claim.service
 import { NotificationDispatcher } from './certificate/certificate-notification-dispatcher';
 import { InMemoryEmailSender, type EmailSender } from './certificate/email-sender';
 import { describeSmtpConfig, SmtpEmailSender } from './certificate/smtp-email-sender';
+import { describePostmarkConfig, PostmarkEmailSender } from './certificate/postmark-email-sender';
 import { parseOutboxEncryptionKey } from './certificate/certificate-outbox-crypto';
 
 /**
@@ -131,14 +132,18 @@ async function loadQuizRepositoryOrExit(
  * never even reads any certificate-claim variable, so their absence is a
  * complete non-event.
  *
- * EMAIL SENDER SELECTION: real SmtpEmailSender whenever
- * config.certificateClaims.smtp is present, InMemoryEmailSender otherwise.
- * config.ts's parseCertificateClaims makes `smtp` undefined IMPOSSIBLE in
- * production (see its own doc comment) — so this function can select
- * purely on that one field's presence, with no separate production check
- * needed here. Outside production, `smtp` being undefined is a deliberate,
- * supported local-dev choice (manual testing with the fake sender), hence
- * the loud warning rather than a thrown error.
+ * EMAIL SENDER SELECTION: switches on config.certificateClaims.emailProvider
+ * — 'smtp' selects SmtpEmailSender (Nodemailer), 'postmark' selects
+ * PostmarkEmailSender (Postmark's HTTP Email API), and `undefined` selects
+ * InMemoryEmailSender. config.ts's parseCertificateClaims makes
+ * `emailProvider` undefined IMPOSSIBLE in production (see its own doc
+ * comment) — so this function never needs a separate production check of
+ * its own. Outside production, `emailProvider` being undefined is a
+ * deliberate, supported local-dev choice (manual testing with the fake
+ * sender), hence the loud warning rather than a thrown error. The two real
+ * senders exist side by side specifically because the production Node
+ * service runs on Render's free tier, which blocks outbound SMTP ports
+ * entirely but not outbound HTTPS — see docs/certificate-claims-runbook.md.
  */
 function wireCertificateClaims(
   database: DatabaseHandle,
@@ -148,15 +153,18 @@ function wireCertificateClaims(
 
   const claimsConfig = config.certificateClaims;
   let emailSender: EmailSender;
-  if (claimsConfig.smtp) {
+  if (claimsConfig.emailProvider === 'smtp') {
     console.log(`[certificate-claims] sending via SMTP: ${describeSmtpConfig(claimsConfig.smtp)}`);
     emailSender = new SmtpEmailSender({ smtp: claimsConfig.smtp, fromAddress: claimsConfig.emailFromAddress });
+  } else if (claimsConfig.emailProvider === 'postmark') {
+    console.log(`[certificate-claims] sending via Postmark: ${describePostmarkConfig(claimsConfig.postmark)}`);
+    emailSender = new PostmarkEmailSender({ postmark: claimsConfig.postmark, fromAddress: claimsConfig.emailFromAddress });
   } else {
     console.warn(
-      '[certificate-claims] ENABLED, but no CERTIFICATE_SMTP_* configuration is set — ' +
+      '[certificate-claims] ENABLED, but no CERTIFICATE_EMAIL_PROVIDER is set — ' +
       'using an IN-MEMORY sender that delivers nothing. This is only ever reached outside ' +
-      'production (parseCertificateClaims requires SMTP config there); fine for local manual ' +
-      'testing, never acceptable for a real deployment.'
+      'production (parseCertificateClaims requires an explicit provider there); fine for local ' +
+      'manual testing, never acceptable for a real deployment.'
     );
     emailSender = new InMemoryEmailSender();
   }

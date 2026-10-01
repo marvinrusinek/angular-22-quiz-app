@@ -19,20 +19,35 @@
  * for claimant_verify, the SAME rendered payload. This was ORIGINALLY
  * designed around Resend's HTTP API, whose idempotency-key contract
  * (checked directly against its docs, not assumed) returns the ORIGINAL
- * result for a repeated key only when the request body also matches. THE
- * ACTUAL IMPLEMENTED PROVIDER IS SMTP (smtp-email-sender.ts, Nodemailer) —
- * plain SMTP has NO equivalent concept at all: once a message is accepted,
- * there is no way to ask the server later whether a retry is "the same
- * request." `idempotencyKey` is still passed through to the SMTP sender
- * (as a forensic `X-Certificate-Idempotency-Key` header, never functional
- * dedup) and the byte-identical-payload mechanism is still preserved for
- * its OTHER benefit — a stable verification link across retries — but see
- * smtp-email-sender.ts's own doc comment for the honest, undiluted
- * statement of what this design can and cannot guarantee over SMTP: a
- * crash between the server accepting a message and this process recording
- * that fact CAN still produce a duplicate physical email. Exactly-once
- * delivery is never claimed.
+ * result for a repeated key only when the request body also matches.
+ * NEITHER OF THE TWO IMPLEMENTED PROVIDERS SHARES THAT GUARANTEE — checked
+ * directly against each one's own docs, not assumed:
+ *   - SMTP (smtp-email-sender.ts, Nodemailer): plain SMTP has no
+ *     idempotency concept at all. Once a message is accepted, there is no
+ *     way to ask the server later whether a retry is "the same request."
+ *   - Postmark (postmark-email-sender.ts): its HTTP Email API docs
+ *     document no idempotency key, deduplication mechanism, or retry-
+ *     safety guarantee of any kind for repeated requests.
+ * `idempotencyKey` is still passed to both as a forensic trace header
+ * only, never functional dedup, and the byte-identical-payload mechanism
+ * is still preserved for its OTHER benefit — a stable verification link
+ * across retries — regardless of which provider is selected. See each
+ * sender's own doc comment for the honest, undiluted statement of what
+ * this design can and cannot guarantee: a crash between the provider
+ * accepting a message and this process recording that fact CAN still
+ * produce a duplicate physical email, with either provider. Exactly-once
+ * delivery is never claimed. Provider ACCEPTANCE is also never proof of
+ * actual INBOX delivery — a provider's own result only means it took
+ * responsibility for the message, not that it reached the recipient.
  */
+
+/**
+ * Shared classification vocabulary across every concrete EmailSender —
+ * both SmtpSendError and PostmarkSendError use this same set, so a caller
+ * (or a log line) never has to know which provider is behind an error to
+ * make sense of its `kind`.
+ */
+export type EmailSendErrorKind = 'auth' | 'timeout' | 'transient' | 'permanent' | 'unknown';
 
 export type CertificateNotificationKind = 'claimant_verify' | 'owner_claim_notice';
 

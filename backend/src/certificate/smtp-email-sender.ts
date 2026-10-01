@@ -2,7 +2,8 @@ import nodemailer, { type Transporter } from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 import type { CertificateSmtpConfig } from '../config';
-import type { ClaimantVerifyTemplateData, EmailSender, EmailSendResult, OutboundEmail, OwnerClaimNoticeTemplateData } from './email-sender';
+import type { EmailSender, EmailSendErrorKind, EmailSendResult, OutboundEmail } from './email-sender';
+import { renderEmail } from './email-render';
 
 /**
  * Production email delivery via authenticated SMTP (Nodemailer). Built for
@@ -77,7 +78,8 @@ export function describeSmtpConfig(config: CertificateSmtpConfig): string {
   return `${config.host}:${config.port} (${config.tlsMode})`;
 }
 
-export type SmtpSendErrorKind = 'auth' | 'timeout' | 'transient' | 'permanent' | 'unknown';
+/** @deprecated use EmailSendErrorKind (email-sender.ts) directly — kept as an alias so existing imports/tests keep working. */
+export type SmtpSendErrorKind = EmailSendErrorKind;
 
 /**
  * Classified SMTP failure. `kind` is derived from Nodemailer's own error
@@ -121,56 +123,6 @@ function toSmtpSendError(err: unknown): SmtpSendError {
     if (responseCode >= 500) return new SmtpSendError('permanent', `SMTP server returned a permanent error (${responseCode}): ${message}`);
   }
   return new SmtpSendError('unknown', `SMTP send failed: ${message}`);
-}
-
-/** Strips header-injection-relevant control characters — defense in depth; see email-sender.ts's own doc comment for why structured fields are the actual elimination of the vulnerability class. */
-function stripControlChars(value: string): string {
-  return value.replace(/[\r\n\0]/g, '');
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function renderEmail(message: OutboundEmail): { readonly subject: string; readonly text: string; readonly html: string } {
-  if (message.kind === 'claimant_verify') {
-    const data = message.templateData as ClaimantVerifyTemplateData;
-    const name = stripControlChars(data.recipientName);
-    const url = stripControlChars(data.verificationUrl);
-    return {
-      subject: 'Confirm your Angular Interview Master certificate',
-      text:
-        `Hi ${name},\n\n` +
-        `Confirm your Angular Interview Master certificate by opening this link:\n${url}\n\n` +
-        'This confirms you control this email address. Your name and email will be shared ' +
-        "with the app owner once confirmed. If you didn't request this, you can ignore this email.",
-      html:
-        `<p>Hi ${escapeHtml(name)},</p>` +
-        `<p>Confirm your Angular Interview Master certificate by opening this link:</p>` +
-        `<p><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></p>` +
-        '<p>This confirms you control this email address. Your name and email will be shared ' +
-        "with the app owner once confirmed. If you didn't request this, you can ignore this email.</p>"
-    };
-  }
-
-  const data = message.templateData as OwnerClaimNoticeTemplateData;
-  const claimedName = stripControlChars(data.claimedName);
-  const claimedEmail = stripControlChars(data.claimedEmail);
-  const certificateId = stripControlChars(data.certificateId);
-  return {
-    subject: `Certificate issued: ${certificateId}`,
-    text: `A certificate was issued.\n\nName: ${claimedName}\nEmail: ${claimedEmail}\nCertificate ID: ${certificateId}`,
-    html:
-      '<p>A certificate was issued.</p>' +
-      `<ul><li>Name: ${escapeHtml(claimedName)}</li>` +
-      `<li>Email: ${escapeHtml(claimedEmail)}</li>` +
-      `<li>Certificate ID: ${escapeHtml(certificateId)}</li></ul>`
-  };
 }
 
 export interface SmtpEmailSenderOptions {

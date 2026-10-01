@@ -7,7 +7,7 @@ import {
   MAX_OUTSTANDING_TOKENS_PER_CLAIM,
   type CertificateClaimRepository
 } from '../src/certificate/certificate-claim.repository';
-import { CertificateClaimService } from '../src/certificate/certificate-claim.service';
+import { CertificateClaimService, CertificateRetrievalService } from '../src/certificate/certificate-claim.service';
 import { NotificationDispatcher } from '../src/certificate/certificate-notification-dispatcher';
 import { InMemoryEmailSender } from '../src/certificate/email-sender';
 import { CertificateClaimError } from '../src/certificate/certificate-claim.types';
@@ -948,6 +948,7 @@ describe('feature flag — safe rollout', () => {
     });
     expect(config.certificateClaims).toEqual({
       enabled: true,
+      retrievalEnabled: true,
       emailFromAddress: 'certificates@example.com',
       ownerNotificationEmail: 'owner@example.com',
       publicAppUrl: 'https://example.com',
@@ -972,6 +973,7 @@ describe('feature flag — safe rollout', () => {
     });
     expect(config.certificateClaims).toEqual({
       enabled: true,
+      retrievalEnabled: true,
       emailFromAddress: 'certificates@example.com',
       ownerNotificationEmail: 'owner@example.com',
       publicAppUrl: 'https://example.com',
@@ -999,6 +1001,7 @@ describe('feature flag — safe rollout', () => {
     });
     expect(config.certificateClaims).toEqual({
       enabled: true,
+      retrievalEnabled: true,
       emailFromAddress: 'certificates@example.com',
       ownerNotificationEmail: 'owner@example.com',
       publicAppUrl: 'https://example.com',
@@ -1030,6 +1033,21 @@ describe('feature flag — safe rollout', () => {
     };
     expect(() => loadConfig({ ...base, CERTIFICATE_EMAIL_PROVIDER: 'sendgrid' })).toThrow(ConfigError);
     expect(() => loadConfig({ ...base, CERTIFICATE_EMAIL_PROVIDER: 'resend' })).toThrow(ConfigError);
+  });
+
+  it('retrievalEnabled is false by default, alongside enabled, with no env vars set at all', () => {
+    const config = loadConfig({});
+    expect(config.certificateClaims).toEqual({ enabled: false, retrievalEnabled: false });
+  });
+
+  it('CERTIFICATE_RETRIEVAL_ENABLED=true keeps retrieval on even when CERTIFICATE_CLAIMS_ENABLED is false — the rollback lever', () => {
+    const config = loadConfig({ CERTIFICATE_RETRIEVAL_ENABLED: 'true' });
+    expect(config.certificateClaims).toEqual({ enabled: false, retrievalEnabled: true });
+  });
+
+  it('an unset or non-"true" CERTIFICATE_RETRIEVAL_ENABLED leaves retrieval off when claims are also disabled', () => {
+    expect(loadConfig({ CERTIFICATE_RETRIEVAL_ENABLED: 'false' }).certificateClaims).toEqual({ enabled: false, retrievalEnabled: false });
+    expect(loadConfig({ CERTIFICATE_RETRIEVAL_ENABLED: 'yes' }).certificateClaims).toEqual({ enabled: false, retrievalEnabled: false });
   });
 
   describe('SMTP configuration validation', () => {
@@ -1202,5 +1220,99 @@ describe('feature flag — app-level behaviour when disabled', () => {
     const res = await request(app()).get('/api/totally-unrelated-path');
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: { code: 'NOT_FOUND', message: 'Resource not found' } });
+  });
+
+  it('GET /certificates/me also 503s when no retrieval service is wired either', async () => {
+    const res = await request(app()).get('/api/certificates/me').set('Authorization', 'Bearer whatever');
+    expect(res.status).toBe(503);
+  });
+});
+
+/**
+ * Proves the split demanded by the production-readiness review: an
+ * email-provider outage or a deliberate rollback (CERTIFICATE_CLAIMS_ENABLED
+ * set back to false) must stop new submissions/resends/verification and the
+ * outbox dispatcher WITHOUT also cutting off someone retrieving a
+ * certificate they already hold. CertificateRetrievalService is
+ * constructed here directly from the repository — exactly as
+ * wireCertificateClaims does when retrievalEnabled is true and enabled is
+ * false — never touching an email sender or dispatcher at all.
+ */
+describe('certificate retrieval — separable from new-claim submission/dispatch (rollback lever)', () => {
+  const quizRepository = { stats: { quizCount: 0, questionCount: 0, optionCount: 0 } } as unknown as QuizRepository;
+  const config = loadConfig({});
+
+  async function mintRetrievalToken(now: number) {
+    const repository = await makeRepository();
+    const created = await repository.createClaim({
+      claimedName: 'Katherine Johnson',
+      emailNormalized: 'katherine@example.com',
+      eligibilitySnapshot: SNAPSHOT,
+      now
+    });
+    const claimId = (created as { claim: { id: string } }).claim.id;
+    const verifyToken = (await repository.mintVerificationToken(claimId, ONE_HOUR_MS, now)) as { rawToken: string };
+    const confirmed = await repository.confirmVerificationToken(verifyToken.rawToken, now + 10);
+    if (confirmed.kind !== 'issued') throw new Error('test setup failed: expected issuance');
+    const retrieval = await repository.mintRetrievalToken(confirmed.certificate.id, ONE_HOUR_MS, now);
+    return { repository, certificateId: confirmed.certificate.id, rawToken: retrieval.rawToken };
+  }
+
+  it('retrieval succeeds through a dedicated retrieval-only service while claimsService is undefined (claims disabled)', async () => {
+    const now = 1_700_000_000_000;
+    const { repository, certificateId, rawToken } = await mintRetrievalToken(now);
+    const retrievalService = new CertificateRetrievalService({ repository, now: () => now + 5 });
+    const app = createApp(config, { quizRepository, certificateClaimService: undefined, certificateRetrievalService: retrievalService });
+
+    // New-claim submission stays off — this is the whole point of the split.
+    const submitRes = await request(app).post('/api/certificate-claims').send({ name: 'x', email: 'x@example.com' });
+    expect(submitRes.status).toBe(503);
+
+    // But retrieval of an ALREADY-ISSUED certificate still works.
+    const meRes = await request(app).get('/api/certificates/me').set('Authorization', `Bearer ${rawToken}`);
+    expect(meRes.status).toBe(200);
+    expect(meRes.body).toEqual({ certificateId, recipientName: 'Katherine Johnson', issuedAt: expect.any(Number) });
+  });
+
+  it('an EXPIRED retrieval token is still rejected in retrieval-only mode — same validation as the full service', async () => {
+    const now = 1_700_000_000_000;
+    const { repository, rawToken } = await mintRetrievalToken(now);
+    // ONE_HOUR_MS past the token's own 1-hour TTL minted in mintRetrievalToken.
+    const retrievalService = new CertificateRetrievalService({ repository, now: () => now + ONE_HOUR_MS + ONE_HOUR_MS });
+    const app = createApp(config, { quizRepository, certificateClaimService: undefined, certificateRetrievalService: retrievalService });
+
+    const res = await request(app).get('/api/certificates/me').set('Authorization', `Bearer ${rawToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('a REVOKED retrieval token is still rejected in retrieval-only mode', async () => {
+    const now = 1_700_000_000_000;
+    const { repository, rawToken } = await mintRetrievalToken(now);
+    // No revoke mutation is exposed yet (see certificate-claim.repository.ts's
+    // own doc comment on resolveRetrievalToken checking revoked_at) — this
+    // wraps the repository to return exactly what resolveRetrievalToken
+    // returns once that column IS set, proving the retrieval-only path
+    // respects the same null-on-revoked contract as the full service.
+    const revokedRepository: CertificateClaimRepository = {
+      ...repository,
+      async resolveRetrievalToken() {
+        return null; // exactly what resolveRetrievalToken returns once revoked_at is set — see certificate-claim.repository.ts
+      }
+    };
+    const retrievalService = new CertificateRetrievalService({ repository: revokedRepository, now: () => now + 5 });
+    const app = createApp(config, { quizRepository, certificateClaimService: undefined, certificateRetrievalService: retrievalService });
+
+    const res = await request(app).get('/api/certificates/me').set('Authorization', `Bearer ${rawToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('a well-formed but UNKNOWN retrieval token is rejected, not treated as a different user’s certificate', async () => {
+    const now = 1_700_000_000_000;
+    const { repository } = await mintRetrievalToken(now);
+    const retrievalService = new CertificateRetrievalService({ repository, now: () => now + 5 });
+    const app = createApp(config, { quizRepository, certificateClaimService: undefined, certificateRetrievalService: retrievalService });
+
+    const res = await request(app).get('/api/certificates/me').set('Authorization', `Bearer ${'B'.repeat(43)}`);
+    expect(res.status).toBe(404);
   });
 });

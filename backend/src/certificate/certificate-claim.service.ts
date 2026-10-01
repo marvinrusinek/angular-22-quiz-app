@@ -83,8 +83,43 @@ export interface CertificateClaimServiceOptions {
   readonly retrievalTokenTtlMs: number;
 }
 
+export interface CertificateRetrievalServiceOptions {
+  readonly repository: Pick<CertificateClaimRepository, 'resolveRetrievalToken'>;
+  readonly now: () => number;
+}
+
+/**
+ * Deliberately separable from CertificateClaimService: constructing this
+ * needs only the repository and a clock — no dispatcher, no email sender,
+ * no provider configuration at all. That is what lets server.ts wire
+ * authenticated certificate retrieval independently of whether new-claim
+ * submission/dispatch is enabled (see wireCertificateClaims in server.ts and
+ * docs/certificate-claims-runbook.md §7.3) — retrieval keeps working through
+ * an email-provider outage or a deliberate rollback of new issuance, with
+ * the EXACT SAME token validation (expiry + revocation, both checked inside
+ * resolveRetrievalToken) as when the full feature is enabled.
+ */
+export class CertificateRetrievalService {
+  constructor(private readonly options: CertificateRetrievalServiceOptions) {}
+
+  async getCertificateByRetrievalToken(rawTokenRaw: unknown): Promise<Omit<ConfirmedCertificate, 'retrievalToken'>> {
+    const rawToken = requireTokenString(rawTokenRaw);
+    const certificate = await this.options.repository.resolveRetrievalToken(rawToken, this.options.now());
+    if (!certificate) throw new CertificateClaimError('RETRIEVAL_INVALID', 'Invalid or expired retrieval credential');
+    return {
+      certificateId: certificate.id,
+      recipientName: certificate.recipientName,
+      issuedAt: certificate.issuedAt
+    };
+  }
+}
+
 export class CertificateClaimService {
-  constructor(private readonly options: CertificateClaimServiceOptions) {}
+  private readonly retrieval: CertificateRetrievalService;
+
+  constructor(private readonly options: CertificateClaimServiceOptions) {
+    this.retrieval = new CertificateRetrievalService({ repository: options.repository, now: options.now });
+  }
 
   async submitClaim(input: SubmitClaimInput): Promise<ClaimSubmissionResult> {
     const name = validateName(input.name);
@@ -182,14 +217,7 @@ export class CertificateClaimService {
   }
 
   async getCertificateByRetrievalToken(rawTokenRaw: unknown): Promise<Omit<ConfirmedCertificate, 'retrievalToken'>> {
-    const rawToken = requireTokenString(rawTokenRaw);
-    const certificate = await this.options.repository.resolveRetrievalToken(rawToken, this.options.now());
-    if (!certificate) throw new CertificateClaimError('RETRIEVAL_INVALID', 'Invalid or expired retrieval credential');
-    return {
-      certificateId: certificate.id,
-      recipientName: certificate.recipientName,
-      issuedAt: certificate.issuedAt
-    };
+    return this.retrieval.getCertificateByRetrievalToken(rawTokenRaw);
   }
 
   private async issueVerificationEmail(claimId: string, opts: { resend: boolean }): Promise<void> {

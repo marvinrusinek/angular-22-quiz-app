@@ -95,12 +95,19 @@ interface CertificateClaimsCommonConfig {
  * makes it IMPOSSIBLE in production (see that function's own doc comment).
  * Postmark selection never requires SMTP credentials, and vice versa — each
  * variant below carries ONLY the config its own provider needs.
+ *
+ * `retrievalEnabled` is INDEPENDENT of `enabled` — see parseCertificateClaims'
+ * own doc comment and docs/certificate-claims-runbook.md §7.3. `enabled`
+ * gates new-claim submission/resend/verification AND the outbox
+ * dispatcher/email sender; `retrievalEnabled` gates only GET /certificates/me.
+ * It is legal (and the intended rollback lever) for `enabled` to be false
+ * while `retrievalEnabled` is true.
  */
 export type CertificateClaimsConfig =
-  | { readonly enabled: false }
-  | (CertificateClaimsCommonConfig & { readonly enabled: true; readonly emailProvider: undefined })
-  | (CertificateClaimsCommonConfig & { readonly enabled: true; readonly emailProvider: 'smtp'; readonly smtp: CertificateSmtpConfig })
-  | (CertificateClaimsCommonConfig & { readonly enabled: true; readonly emailProvider: 'postmark'; readonly postmark: CertificatePostmarkConfig });
+  | { readonly enabled: false; readonly retrievalEnabled: boolean }
+  | (CertificateClaimsCommonConfig & { readonly enabled: true; readonly retrievalEnabled: boolean; readonly emailProvider: undefined })
+  | (CertificateClaimsCommonConfig & { readonly enabled: true; readonly retrievalEnabled: boolean; readonly emailProvider: 'smtp'; readonly smtp: CertificateSmtpConfig })
+  | (CertificateClaimsCommonConfig & { readonly enabled: true; readonly retrievalEnabled: boolean; readonly emailProvider: 'postmark'; readonly postmark: CertificatePostmarkConfig });
 
 /** Long enough that guessing is hopeless; short enough to be typeable. */
 export const MIN_RECEIPT_SECRET_LENGTH = 32;
@@ -364,11 +371,27 @@ function parsePostmarkConfig(env: NodeJS.ProcessEnv): CertificatePostmarkConfig 
  * local-dev path: server.ts wires InMemoryEmailSender with a loud warning.
  * A production deploy can therefore never silently end up with the
  * in-memory sender.
+ *
+ * RETRIEVAL IS A SEPARATE GATE: CERTIFICATE_RETRIEVAL_ENABLED is read here
+ * independently of CERTIFICATE_CLAIMS_ENABLED. It defaults to following the
+ * claims flag — an operator who has never touched either variable sees
+ * today's behavior unchanged (both off, or both on together). Setting
+ * CERTIFICATE_RETRIEVAL_ENABLED=true while CERTIFICATE_CLAIMS_ENABLED=false
+ * is the explicit rollback lever: it stops new submissions/resends/
+ * verification and the outbox dispatcher, while GET /certificates/me (an
+ * existing certificate holder retrieving what they already have) keeps
+ * working with the exact same token validation. See
+ * docs/certificate-claims-runbook.md §7.3.
  */
 function parseCertificateClaims(env: NodeJS.ProcessEnv, isProduction: boolean): CertificateClaimsConfig {
   const enabledRaw = (env['CERTIFICATE_CLAIMS_ENABLED'] ?? '').trim().toLowerCase();
-  if (enabledRaw !== 'true') {
-    return { enabled: false };
+  const claimsEnabled = enabledRaw === 'true';
+
+  const retrievalEnabledRaw = (env['CERTIFICATE_RETRIEVAL_ENABLED'] ?? '').trim().toLowerCase();
+  const retrievalEnabled = claimsEnabled || retrievalEnabledRaw === 'true';
+
+  if (!claimsEnabled) {
+    return { enabled: false, retrievalEnabled };
   }
 
   const emailFromAddress = (env['EMAIL_FROM_ADDRESS'] ?? '').trim();
@@ -410,13 +433,13 @@ function parseCertificateClaims(env: NodeJS.ProcessEnv, isProduction: boolean): 
         'be "smtp" or "postmark". This feature must never silently fall back to InMemoryEmailSender there.'
       );
     }
-    return { enabled: true, ...common, emailProvider: undefined };
+    return { enabled: true, retrievalEnabled, ...common, emailProvider: undefined };
   }
   if (providerRaw === 'smtp') {
-    return { enabled: true, ...common, emailProvider: 'smtp', smtp: parseSmtpConfig(env) };
+    return { enabled: true, retrievalEnabled, ...common, emailProvider: 'smtp', smtp: parseSmtpConfig(env) };
   }
   if (providerRaw === 'postmark') {
-    return { enabled: true, ...common, emailProvider: 'postmark', postmark: parsePostmarkConfig(env) };
+    return { enabled: true, retrievalEnabled, ...common, emailProvider: 'postmark', postmark: parsePostmarkConfig(env) };
   }
   throw new ConfigError(`CERTIFICATE_EMAIL_PROVIDER must be "smtp" or "postmark" — received "${providerRaw}"`);
 }

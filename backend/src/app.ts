@@ -68,7 +68,16 @@ export function createApp(config: AppConfig, dependencies: AppDependencies): Exp
   // certificate-claims.route.ts) so the route paths exist and respond
   // predictably whether or not CERTIFICATE_CLAIMS_ENABLED is set, rather
   // than falling through to a generic 404 that looks like a routing bug.
-  app.use('/api', createCertificateClaimsRouter(dependencies.certificateClaimService));
+  //
+  // The retrieval half falls back to certificateClaimService itself when no
+  // dedicated certificateRetrievalService is supplied — CertificateClaimService
+  // implements the same getCertificateByRetrievalToken method, so a caller
+  // that only wires the one full service (every test and deployment before
+  // this split) keeps retrieval working exactly as before.
+  app.use('/api', createCertificateClaimsRouter(
+    dependencies.certificateClaimService,
+    dependencies.certificateRetrievalService ?? dependencies.certificateClaimService
+  ));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler({ isProduction: config.isProduction }));

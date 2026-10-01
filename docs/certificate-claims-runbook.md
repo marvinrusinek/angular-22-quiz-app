@@ -483,18 +483,53 @@ This migration cannot lock or block access to `quizzes`, `questions`,
 
 ### 6.3 Exact deployment order
 
-**Phase 1 — code + schema only, feature still OFF (low-risk, reversible):**
-1. Merge this branch (or deploy it directly) to `interview-api` on Render.
+Five phases: publish the reviewed source, deploy the backend with claims
+OFF, deploy the frontend through the documented procedure, configure and
+activate, then smoke-test before real traffic. Each phase is independently
+reversible — see §7 for exactly what each rollback step does and does not
+undo.
+
+**Phase 0 — publish and merge the reviewed source:**
+1. Push `feature/certificate-claims` to the remote (`git push`), confirming
+   the exact commit SHA being promoted matches what was reviewed and tested
+   in this runbook's validation record.
+2. Open and merge the pull request into `main`. Nothing deploys itself on
+   merge — Render's `interview-api` is deployed from `main` on a push, but
+   GitHub Pages is a **separate, manual** step (6.3 Phase 2 below), not
+   triggered by this merge at all.
+
+**Phase 1 — Render backend deploy + migration, feature still OFF
+(low-risk, reversible):**
+3. Deploy `main` to `interview-api` on Render (a push to `main` auto-deploys
+   it per `render.yaml`; `interview-api-spring`'s `autoDeploy: false` is
+   unaffected and untouched by this feature either way).
    `CERTIFICATE_CLAIMS_ENABLED` is NOT set. Migration 009 applies
-   automatically on boot. **Zero user-visible behavior change** — the
-   disabled-feature 503 handler covers all five certificate-claim paths,
-   and every existing Topic Quiz / Interview Mode route is untouched.
-2. Confirm the health check passes and `GET /api/quizzes` (or any existing
+   automatically on boot — see 6.1/6.2. **No certificate-claim route
+   changes behavior yet**: every one of the five paths still 503s exactly
+   as before this deploy, and every existing Topic Quiz / Interview Mode
+   route is untouched.
+4. Confirm the health check passes and `GET /api/quizzes` (or any existing
    route) still works normally — proves the deploy succeeded and the new,
    unused tables didn't disturb anything.
 
-**Phase 2 — enable the feature, still no real claimant traffic:**
-3. In the Render dashboard (never in `render.yaml`), set the five
+**Phase 2 — GitHub Pages frontend deploy, via the documented procedure
+(see §6.4 for what this step alone makes visible):**
+5. Follow `docs/github-pages-deploy.md`'s procedure exactly — build from
+   the exact `main` commit (`ng build --configuration=production` +
+   `npm run verify:artifact`, requiring exit code 0), stage with
+   `npm run stage:ghpages -- --clone <short-path-clone>` (never `npm run
+   deploy`/`ngh` on Windows — see that doc's own note on why), commit and
+   fast-forward push to `gh-pages`, then confirm `<site>/ngsw/state` shows
+   `Driver state: NORMAL`.
+6. This step alone — independent of the backend flag — changes what a
+   newly-eligible user sees on the certificate surfaces (callout, badge,
+   status card, and the certificate page itself): no more automatic local
+   unlock, only an explicit "claim your certificate" prompt. **Read §6.4
+   before treating this as a no-op step.**
+
+**Phase 3 — final configuration and activation, still no real claimant
+traffic:**
+7. In the Render dashboard (never in `render.yaml`), set the five
    non-secret-shaped values from §3/render.yaml's commented block
    (`EMAIL_FROM_ADDRESS`, `OWNER_NOTIFICATION_EMAIL`,
    `CERTIFICATE_CLAIM_BASE_URL` — **with the `/angular-22-quiz-app` path,
@@ -503,16 +538,129 @@ This migration cannot lock or block access to `quizzes`, `questions`,
    (`CERTIFICATE_OUTBOX_ENCRYPTION_KEY`, freshly generated;
    `CERTIFICATE_POSTMARK_SERVER_TOKEN`, from Postmark's dashboard) as
    `sync: false` values, entered directly in the dashboard.
-4. Set `CERTIFICATE_CLAIMS_ENABLED=true` last, after every other variable
+   `CERTIFICATE_RETRIEVAL_ENABLED` can be left unset here — it follows
+   `CERTIFICATE_CLAIMS_ENABLED` by default (see §7.3); set it explicitly
+   only when using the rollback lever later.
+8. Set `CERTIFICATE_CLAIMS_ENABLED=true` last, after every other variable
    above is already in place — restart/redeploy to pick them up.
-5. Confirm the startup log shows `[certificate-claims] sending via
+9. Confirm the startup log shows `[certificate-claims] sending via
    Postmark: message stream "outbound"` — NOT the in-memory-sender warning.
+   **From this moment, the claim form is reachable by any visitor to the
+   public site, not only the operator — see §6.5 and §8 before assuming
+   otherwise.**
 
-**Phase 3 — controlled smoke test, then real traffic:**
-6. Run the exact smoke test in §8, using only an email address the
-   operator controls.
-7. Only after that succeeds does the claim form become safe to expose to
-   real users.
+**Phase 4 — controlled smoke test, then real traffic:**
+10. Run the exact smoke test in §8. Read §6.5 first: the form is public the
+    instant step 9 completes, the smoke test does not make it private.
+11. Only after §8 succeeds should the claim form be treated as ready for
+    real users — "ready" here means verified working, not "newly
+    restricted"; it was already open to everyone since step 9.
+
+### 6.4 What becomes visible the moment the new frontend is deployed —
+independent of the backend flag
+
+This is a real, user-visible behavior change that Phase 2 alone causes,
+whether or not `CERTIFICATE_CLAIMS_ENABLED` is ever set. It must not be
+read as "zero user-visible change" the way Phase 1 (backend-only) is.
+
+**Before this feature**: `InterviewCertificateComponent` and the compact
+certificate surfaces (`CertificateEarnedBadgeComponent`,
+`InterviewCertificateCalloutComponent`, `InterviewCertificateStatusComponent`,
+and the certificate callout inside `DifficultyRecommendationComponent`) were
+driven by `InterviewCertificateService.unlock()`, called automatically once
+a user became eligible — a locally-generated certificate record appeared
+the moment the page was next viewed, with no explicit action.
+
+**After this feature**: `unlock()` still exists (so an existing legacy
+record stays readable — see §1 "Legacy preservation"), but **nothing in
+the codebase calls it anymore** (confirmed directly — zero call sites).
+`InterviewCertificateComponent`'s own doc comment states this explicitly:
+eligibility now shows an explicit "Claim your certificate" CTA
+(`/interview/certificate/claim`) instead of an automatic unlock.
+
+**The consequence for the rollout window specifically**: between Phase 2
+(frontend live) and Phase 3 completing (claims enabled), a user who becomes
+newly eligible during that window gets **no certificate at all — not even
+a legacy-style local one** — only a CTA that, if clicked and submitted,
+receives `FEATURE_DISABLED` ("Certificate claiming is not available right
+now.", mapped cleanly in `certificate-claim-api.errors.ts` from the
+backend's 503 — not a crash, but not a certificate either). This is a real,
+if narrow, gap for anyone who crosses the eligibility threshold in exactly
+that window; it resolves itself once Phase 3 completes, and nothing about
+it is destructive (the user becomes eligible to claim again the moment
+claims are enabled — eligibility itself is recomputed live, never
+consumed).
+
+**Fix applied in this review** (not previously present): three components
+call the shared pure helper `certificateNextAction()`
+(`src/app/shared/utils/interview-certificate-progress.ts`) —
+`InterviewCertificateCalloutComponent` (Interview Builder),
+`DifficultyRecommendationComponent` (Quiz Selection), and
+`InterviewCertificateStatusComponent` (Interview Results). The helper
+previously returned an **empty string** for an eligible-but-unclaimed user.
+The first two surfaces went silently blank where a prompt should be;
+`InterviewCertificateStatusComponent` was unaffected because it already had
+its own dedicated `awaitingClaim` branch with a real CTA link that bypasses
+this helper entirely for that case. `certificateNextAction()` now returns
+"Claim your certificate now." for the eligible-but-unclaimed case, closing
+the blank-text gap in the two affected surfaces. This does not add a
+clickable link to those compact surfaces (they are motivational widgets;
+the actual claim link lives on the pages that already had one, and on
+`InterviewCertificateStatusComponent`'s own unaffected CTA), and it does
+not shorten or remove the Phase-2/Phase-3 gap described above — it only
+stops the two affected surfaces from going silent during it.
+
+**Recommendation**: keep Phase 2 and Phase 3 close together in practice —
+nothing technically requires it, but the longer the gap, the more newly-
+eligible users land in the no-certificate window above. `CERTIFICATE_
+RETRIEVAL_ENABLED` (§7.3) is NOT a mitigation for this specific window — it
+only helps someone who already HOLDS a certificate, not a user who becomes
+newly eligible during the gap. There is no existing lever that shortens
+this window; closing it fully would mean reintroducing some form of
+automatic local issuance, which is exactly what this feature was built to
+replace, so this review did not do that.
+
+### 6.5 Does enabling claims restrict the form to the operator?
+
+**No.** `CERTIFICATE_CLAIMS_ENABLED=true` makes `POST /certificate-claims`
+reachable to **any visitor to the public site** — there is no
+authentication, no invite code, and no server-side eligibility check on
+this path. Confirmed directly in both places that would enforce it:
+
+- **Routing**: `interview/certificate/claim`
+  (`src/app/router/quiz-routing.routes.ts`) has no route guard at all —
+  unlike, for example, the guarded Weak Areas Practice route.
+- **Backend**: `CertificateClaimService.submitClaim` validates only that
+  `name` and `email` are well-formed strings; `eligibilitySnapshot` is
+  stored strictly for **audit purposes** and is "never inspected,
+  re-derived, or used to authorize anything" — the service module's own
+  doc comment, and confirmed by reading `submitClaim`'s actual body (§6
+  of the original review did not re-litigate this; it is unchanged from
+  how this feature was designed from the start).
+
+**This is not a new weakness introduced by this review or this feature —
+it is a continuation of the pre-existing trust model.** Before this
+feature, "eligibility" was always browser-reported and the resulting
+certificate was always purely local (`InterviewCertificateService`'s own
+doc comment: "NOT anti-tamper... the certificate is a personal portfolio
+artifact, not a credential a third party can verify"). What genuinely
+changes with this feature: a fabricated claim is no longer invisible to
+only the person who faked it — it is now **backend-recorded**, triggers a
+**real owner-notification email** (to `OWNER_NOTIFICATION_EMAIL`) claiming
+someone completed the curriculum, and is retrievable by anyone holding its
+retrieval token — all while still requiring no proof of actual
+achievement, only control of an email inbox. Rate limiting (10 submissions
+per IP per 30s burst, 5 per email per 60s — see
+`certificate-claims.route.ts`) bounds **volume** abuse; it does not
+prevent a single illegitimate claim.
+
+**Practical implication for §8's smoke test**: it is accurate to say the
+operator submits using an email address they control. It would NOT be
+accurate to say the test is "restricted" to that email in the sense of
+excluding other submitters — the form is open to the public for the same
+entire window the operator is testing in, and that is correct, expected
+behavior for a feature intended to go live to real users, not a leak to
+fix before testing.
 
 ---
 
@@ -542,34 +690,50 @@ not drop these tables as part of a code rollback** — there is no reason to,
 and doing so would destroy any already-issued certificates' data for no
 benefit.
 
-### 7.3 The feature flag — precise effect, NOT a single on/off for everything
+### 7.3 The feature flag — precise effect, and the SEPARATE retrieval lever
 
 Setting `CERTIFICATE_CLAIMS_ENABLED=false` (or unsetting it) and
-redeploying/restarting causes `wireCertificateClaims()` to return `null`
-entirely — **verified directly in code, not assumed, exactly because this
-task asked not to assume the flag stops both new submissions and existing
-access identically:**
+redeploying/restarting causes `wireCertificateClaims()`'s `actions` half to
+be absent entirely — **verified directly in code, not assumed, exactly
+because an earlier pass of this review found that it ALSO cut off
+retrieval, and this pass fixed that**:
 
-| Effect | Stopped by disabling? | Why |
+| Effect | Stopped by `CERTIFICATE_CLAIMS_ENABLED=false`? | Why |
 |---|---|---|
 | New claim submission (`POST /certificate-claims`) | **Yes** | The disabled-feature 503 handler covers this exact path. |
 | Resend (`POST /certificate-claims/resend`) | **Yes** | Same mechanism. |
 | Confirmation (`POST /certificate-claims/verify/confirm`) | **Yes** | Same mechanism — a claimant mid-flow with an unconfirmed link cannot complete it while disabled. |
-| **Outbox dispatch/retry (the 30-second poller)** | **Yes** | `wireCertificateClaims()` returning `null` means `server.ts` never starts the poller at all. **Any already-pending or retry-scheduled notification is frozen in place — not merely delayed — until the feature is re-enabled.** It resumes exactly where it left off once re-enabled (the outbox row's own state is untouched by the flag). |
-| **Retrieving an already-issued certificate (`GET /certificates/me`)** | **Yes** | This path is ALSO covered by the same disabled-feature 503 handler (confirmed directly in `certificate-claims.route.ts`) — a user on a new device/browser, or anyone whose local `localStorage` state was cleared, CANNOT re-fetch their certificate via its retrieval token while the feature is disabled. A user who already has it cached in their OWN browser's `localStorage` still sees it fine (`CertificateClaimService#refresh()` swallows the failure and keeps the last-known state) — but that is a client-side cache, not the server confirming anything. |
-| Already-issued certificate DATA in Postgres | **No — never** | The flag only gates HTTP reachability. No issued certificate, claim, or outbox row is ever deleted or modified by disabling the feature. |
+| **Outbox dispatch/retry (the 30-second poller)** | **Yes** | The dispatcher is only constructed as part of `actions`, which requires `enabled`. **Any already-pending or retry-scheduled notification is frozen in place — not merely delayed — until `CERTIFICATE_CLAIMS_ENABLED` is set back to `true`.** It resumes exactly where it left off (the outbox row's own state is untouched by either flag). |
+| **Retrieving an already-issued certificate (`GET /certificates/me`)** | **Depends on `CERTIFICATE_RETRIEVAL_ENABLED` — see below.** | `retrievalEnabled` in `config.ts` is `claimsEnabled \|\| CERTIFICATE_RETRIEVAL_ENABLED === 'true'`. Left unset, it silently follows `CERTIFICATE_CLAIMS_ENABLED`, so an operator who does nothing extra sees the OLD behavior (retrieval also stops). Setting `CERTIFICATE_RETRIEVAL_ENABLED=true` explicitly is what keeps it working — see the fix description below. |
+| Already-issued certificate DATA in Postgres | **No — never** | Neither flag ever deletes or modifies an issued certificate, claim, or outbox row — they only gate HTTP reachability. |
 
-**This is a deliberate design trade-off, not an oversight, flagged here for
-an explicit decision rather than silently changed**: the "all-or-nothing"
-gate is simple and matches this codebase's existing fail-closed
-conventions, but it means an emergency rollback (e.g., disabling due to a
-security concern in the CONFIRM path specifically) also removes
-RETRIEVAL access for anyone who needs their certificate from a new device
-during the outage. If "stop new issuance/confirmation but keep retrieval
-working" is ever wanted, that requires constructing the repository/
-retrieval-serving path independently of whether `emailProvider` is
-configured — a real, separable change, not made here without that explicit
-decision.
+**Fix applied in this review**: `CertificateRetrievalService`
+(`backend/src/certificate/certificate-claim.service.ts`) is a new class
+needing only the repository and a clock — no dispatcher, no email sender,
+no provider configuration. `wireCertificateClaims` (`server.ts`) now
+constructs it whenever `config.certificateClaims.retrievalEnabled` is true,
+**independently** of whether `actions` (submission/dispatch) is built.
+`certificate-claims.route.ts`'s router takes the two services as separate
+parameters, so `GET /certificates/me` 503s or serves based on its own
+service's presence, not the claims service's. Token validation for
+retrieval is **unchanged** — the same `resolveRetrievalToken` call,
+checking both expiry and `revoked_at`, runs whether reached through the
+full service or the retrieval-only one (see
+`backend/test/certificate-claim.test.ts`'s "certificate retrieval —
+separable from new-claim submission/dispatch" suite, which proves an
+expired, revoked, or unknown token is rejected identically either way).
+
+**To use this as the actual rollback lever** during an email-provider
+outage or an emergency disable of new issuance: set
+`CERTIFICATE_CLAIMS_ENABLED=false` **and** `CERTIFICATE_RETRIEVAL_ENABLED=
+true` together. This stops new submissions, resend, verification, and the
+outbox dispatcher, while `GET /certificates/me` keeps serving anyone who
+already holds a retrieval token (a new device, a cleared browser, a
+different claimant) with the exact same validation as before. Leaving
+`CERTIFICATE_RETRIEVAL_ENABLED` unset during a rollback reproduces the OLD,
+coupled behavior (retrieval also stops) — that is still a legitimate choice
+for a rollback severe enough that even retrieval should pause, just no
+longer the ONLY option.
 
 ### 7.4 Pending outbox work during a rollback
 
@@ -599,14 +763,19 @@ whether a specific link happened to expire.
 
 ## 8. Controlled production smoke test
 
-Uses only an email address the operator controls — no real claimant
-traffic until this succeeds.
+The operator submits using an email address they control, to verify the
+flow end to end before relying on it for real users. This is **not** an
+access restriction — per §6.5, the form is reachable by any visitor to the
+public site for the entire window `CERTIFICATE_CLAIMS_ENABLED=true` is set,
+smoke test or not. "Controlled" here means "the operator knows the
+credentials of one specific test submission," not "no one else can submit
+one."
 
 1. In the Render dashboard, enter the production configuration exactly as
-   in §6.3 Phase 2, with `CERTIFICATE_CLAIMS_ENABLED` left at its LAST
+   in §6.3 Phase 3, with `CERTIFICATE_CLAIMS_ENABLED` left at its LAST
    step.
 2. Set `CERTIFICATE_CLAIMS_ENABLED=true` and redeploy/restart.
-3. Confirm the startup log line from §6.3 step 5.
+3. Confirm the startup log line from §6.3 step 9.
 4. From the live site (`https://marvinrusinek.github.io/angular-22-quiz-app/`),
    navigate to the claim form and submit with an email address you
    personally control.

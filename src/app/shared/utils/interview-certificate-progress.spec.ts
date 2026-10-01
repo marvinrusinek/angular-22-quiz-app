@@ -44,9 +44,13 @@ describe('certificateNextAction', () => {
     expect(msg).toBe('Continue earning achievements and completing interviews.');
   });
 
-  it('is empty when eligible or already unlocked (no next action)', () => {
-    expect(certificateNextAction(progress({ angularExplorerEarned: true, qualifyingInterviewsCompleted: 5 }))).toBe('');
+  it('is empty only when already unlocked (no next action)', () => {
     expect(certificateNextAction(progress({ isUnlocked: true }))).toBe('');
+  });
+
+  it('prompts to claim when eligible but not yet unlocked — never silently blank', () => {
+    const msg = certificateNextAction(progress({ angularExplorerEarned: true, qualifyingInterviewsCompleted: 5 }));
+    expect(msg).toBe('Claim your certificate now.');
   });
 });
 

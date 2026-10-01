@@ -12,33 +12,66 @@ import { createRateLimiter, type RateLimiter } from '../shared/rate-limit';
  * interview-sessions.route.ts: parse input, call the service, translate
  * known errors. No validation, token, or persistence logic lives here.
  *
- * FEATURE-FLAGGED: when the service is undefined (feature disabled — see
- * dependencies.ts), every route responds 503 immediately, before touching
- * anything else. This is what lets the feature ship disabled by default
- * with zero risk to Topic Quiz / Interview Mode, and with no email
- * configuration required at all while off.
+ * FEATURE-FLAGGED, and in TWO INDEPENDENT HALVES:
+ *
+ *   - `claimsService` gates new submission/resend/verification (preview +
+ *     confirm) — undefined (feature disabled, or rolled back) makes those
+ *     four routes respond 503 immediately, before touching anything else.
+ *   - `retrievalService` gates ONLY GET /certificates/me — undefined makes
+ *     that one route 503 instead. It can be present even when
+ *     `claimsService` is undefined: see wireCertificateClaims in server.ts
+ *     and docs/certificate-claims-runbook.md §7.3. This is what lets an
+ *     already-issued certificate stay retrievable (same token validation —
+ *     expiry + revocation, both enforced in resolveRetrievalToken) through
+ *     an email-provider outage or a deliberate rollback of new issuance.
+ *
+ * Either half missing costs nothing beyond its own flag check — no email
+ * configuration is required at all while both are off.
  */
-export function createCertificateClaimsRouter(service: CertificateClaimService | undefined): Router {
+export function createCertificateClaimsRouter(
+  claimsService: CertificateClaimService | undefined,
+  retrievalService: Pick<CertificateClaimService, 'getCertificateByRetrievalToken'> | undefined
+): Router {
   const router = Router();
 
-  if (!service) {
-    // Registered on each EXACT path this router otherwise defines — never a
-    // bare router.use(), which would match every request reaching this
-    // router regardless of path and swallow unrelated /api/* 404s (and
-    // worse, path-traversal-probe routes that existing tests specifically
-    // assert still 404 through notFoundHandler, not a certificate-claims
-    // response) behind a misleading 503.
-    const disabled: RequestHandler = (_req, res) => {
-      res.status(503).json({ error: { code: 'BAD_REQUEST', message: 'Certificate claims are not available' } });
-    };
+  // Registered on each EXACT path this router otherwise defines — never a
+  // bare router.use(), which would match every request reaching this
+  // router regardless of path and swallow unrelated /api/* 404s (and worse,
+  // path-traversal-probe routes that existing tests specifically assert
+  // still 404 through notFoundHandler, not a certificate-claims response)
+  // behind a misleading 503.
+  const disabled: RequestHandler = (_req, res) => {
+    res.status(503).json({ error: { code: 'BAD_REQUEST', message: 'Certificate claims are not available' } });
+  };
+
+  if (!claimsService) {
     router.post('/certificate-claims', disabled);
     router.post('/certificate-claims/resend', disabled);
     router.post('/certificate-claims/verify/preview', disabled);
     router.post('/certificate-claims/verify/confirm', disabled);
-    router.get('/certificates/me', disabled);
-    return router;
+  } else {
+    wireClaimsRoutes(router, claimsService);
   }
 
+  if (!retrievalService) {
+    router.get('/certificates/me', disabled);
+  } else {
+    router.get('/certificates/me', async (req, res, next) => {
+      setResponsePolicy(res, 'CERTIFICATE_CLAIM');
+      try {
+        const token = extractBearerRetrievalToken(req.header('authorization'));
+        const certificate = await retrievalService.getCertificateByRetrievalToken(token);
+        res.status(200).json(certificate);
+      } catch (err: unknown) {
+        next(translate(err));
+      }
+    });
+  }
+
+  return router;
+}
+
+function wireClaimsRoutes(router: Router, service: CertificateClaimService): void {
   // Two independent limiters per write endpoint: by IP (the only signal
   // available before we know whether the email is even well-formed) AND by
   // normalized email (so one email cannot be hammered from many
@@ -136,19 +169,6 @@ export function createCertificateClaimsRouter(service: CertificateClaimService |
       }
     }
   );
-
-  router.get('/certificates/me', async (req, res, next) => {
-    setResponsePolicy(res, 'CERTIFICATE_CLAIM');
-    try {
-      const token = extractBearerRetrievalToken(req.header('authorization'));
-      const certificate = await service.getCertificateByRetrievalToken(token);
-      res.status(200).json(certificate);
-    } catch (err: unknown) {
-      next(translate(err));
-    }
-  });
-
-  return router;
 }
 
 function extractBearerRetrievalToken(header: string | undefined): string | undefined {

@@ -131,6 +131,16 @@ services:
       #   - key: CERTIFICATE_POSTMARK_MESSAGE_STREAM
       #     value: outbound
       #
+      # ROLLBACK LEVER (independent of the flag above): CERTIFICATE_RETRIEVAL_
+      # ENABLED gates ONLY GET /certificates/me. Leaving it unset makes it
+      # follow CERTIFICATE_CLAIMS_ENABLED (today's behavior — both on or both
+      # off together). Setting it to "true" while CERTIFICATE_CLAIMS_ENABLED
+      # is "false" stops new submissions/resend/verification and the outbox
+      # dispatcher while an already-issued certificate stays retrievable —
+      # see docs/certificate-claims-runbook.md §7.3.
+      #   - key: CERTIFICATE_RETRIEVAL_ENABLED
+      #     value: "true"
+      #
       # To use SMTP instead, upgrade this service's plan first, then set
       # CERTIFICATE_EMAIL_PROVIDER=smtp and the five CERTIFICATE_SMTP_*
       # variables (host/port/tlsMode/username/password — see

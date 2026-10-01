@@ -6,7 +6,7 @@ import { migrate } from './db/migrate';
 import { createSessionRepository } from './interview/session.repository';
 import { InterviewSessionService } from './interview/session.service';
 import { createCertificateClaimRepository } from './certificate/certificate-claim.repository';
-import { CertificateClaimService } from './certificate/certificate-claim.service';
+import { CertificateClaimService, CertificateRetrievalService } from './certificate/certificate-claim.service';
 import { NotificationDispatcher } from './certificate/certificate-notification-dispatcher';
 import { InMemoryEmailSender, type EmailSender } from './certificate/email-sender';
 import { describeSmtpConfig, SmtpEmailSender } from './certificate/smtp-email-sender';
@@ -56,7 +56,8 @@ async function main(): Promise<void> {
     quizRepository,
     sessionRepository,
     interviewSessionService,
-    certificateClaimService: certificateClaims?.service
+    certificateClaimService: certificateClaims.actions?.service,
+    certificateRetrievalService: certificateClaims.retrievalService
   });
 
   const server = app.listen(config.port, () => {
@@ -64,9 +65,10 @@ async function main(): Promise<void> {
     console.log(`[server] allowed origins: ${config.allowedOrigins.join(', ')}`);
   });
 
-  const certificateClaimsPoller = certificateClaims
+  const certificateDispatcher = certificateClaims.actions?.dispatcher;
+  const certificateClaimsPoller = certificateDispatcher
     ? setInterval(() => {
-        certificateClaims.dispatcher.runOnce().catch((err: unknown) => {
+        certificateDispatcher.runOnce().catch((err: unknown) => {
           console.error('[certificate-claims] outbox poll failed:', err instanceof Error ? err.message : err);
         });
       }, 30_000)
@@ -121,37 +123,69 @@ async function loadQuizRepositoryOrExit(
 }
 
 /**
- * Constructs the certificate-claim feature, or nothing at all.
+ * Constructs the certificate-claim feature's two INDEPENDENT halves.
  *
- * Returns null whenever config.certificateClaims.enabled is false (the
- * default) — server.ts then never touches the certificate module again,
- * and createApp's router responds 503 to every certificate-claim path on
- * its own (see certificate-claims.route.ts). This is the actual mechanism
- * behind "missing email configuration must not break existing quiz
- * services when the feature is disabled": if it's disabled, this function
- * never even reads any certificate-claim variable, so their absence is a
- * complete non-event.
+ * `actions` (submit/resend/verify preview+confirm, plus the outbox
+ * dispatcher and poller) is present only when config.certificateClaims.enabled
+ * is true. `retrievalService` (GET /certificates/me) is present whenever
+ * config.certificateClaims.retrievalEnabled is true — which includes the
+ * case where `enabled` is false but CERTIFICATE_RETRIEVAL_ENABLED=true was
+ * set explicitly (see config.ts#parseCertificateClaims and
+ * docs/certificate-claims-runbook.md §7.3). Both absent (the default) means
+ * server.ts never touches the certificate module again, and createApp's
+ * router responds 503 to every certificate-claim path on its own (see
+ * certificate-claims.route.ts) — this is the actual mechanism behind
+ * "missing email configuration must not break existing quiz services when
+ * the feature is disabled": if both halves are off, this function never
+ * even reads any certificate-claim variable, so their absence is a complete
+ * non-event.
  *
- * EMAIL SENDER SELECTION: switches on config.certificateClaims.emailProvider
- * — 'smtp' selects SmtpEmailSender (Nodemailer), 'postmark' selects
- * PostmarkEmailSender (Postmark's HTTP Email API), and `undefined` selects
- * InMemoryEmailSender. config.ts's parseCertificateClaims makes
- * `emailProvider` undefined IMPOSSIBLE in production (see its own doc
- * comment) — so this function never needs a separate production check of
- * its own. Outside production, `emailProvider` being undefined is a
- * deliberate, supported local-dev choice (manual testing with the fake
- * sender), hence the loud warning rather than a thrown error. The two real
- * senders exist side by side specifically because the production Node
- * service runs on Render's free tier, which blocks outbound SMTP ports
- * entirely but not outbound HTTPS — see docs/certificate-claims-runbook.md.
+ * CertificateRetrievalService needs only the repository and a clock — no
+ * email sender, no provider configuration — so it is always constructible
+ * from the database alone, independent of which (if any) email provider is
+ * configured. This is what lets retrieval keep working through an
+ * email-provider outage or a deliberate rollback of new issuance, with the
+ * exact same token validation (expiry + revocation) either way.
+ *
+ * EMAIL SENDER SELECTION (only reached when `actions` is being built):
+ * switches on config.certificateClaims.emailProvider — 'smtp' selects
+ * SmtpEmailSender (Nodemailer), 'postmark' selects PostmarkEmailSender
+ * (Postmark's HTTP Email API), and `undefined` selects InMemoryEmailSender.
+ * config.ts's parseCertificateClaims makes `emailProvider` undefined
+ * IMPOSSIBLE in production (see its own doc comment) — so this function
+ * never needs a separate production check of its own. Outside production,
+ * `emailProvider` being undefined is a deliberate, supported local-dev
+ * choice (manual testing with the fake sender), hence the loud warning
+ * rather than a thrown error. The two real senders exist side by side
+ * specifically because the production Node service runs on Render's free
+ * tier, which blocks outbound SMTP ports entirely but not outbound HTTPS —
+ * see docs/certificate-claims-runbook.md.
  */
 function wireCertificateClaims(
   database: DatabaseHandle,
   config: AppConfig
-): { readonly service: CertificateClaimService; readonly dispatcher: NotificationDispatcher } | null {
-  if (!config.certificateClaims.enabled) return null;
-
+): {
+  readonly actions?: { readonly service: CertificateClaimService; readonly dispatcher: NotificationDispatcher } | undefined;
+  readonly retrievalService?: CertificateRetrievalService | undefined;
+} {
   const claimsConfig = config.certificateClaims;
+  if (!claimsConfig.enabled && !claimsConfig.retrievalEnabled) return {};
+
+  const now = () => Date.now();
+  const repository = createCertificateClaimRepository(database);
+  const retrievalService = claimsConfig.retrievalEnabled
+    ? new CertificateRetrievalService({ repository, now })
+    : undefined;
+
+  if (!claimsConfig.enabled) {
+    console.log(
+      '[certificate-claims] new submissions/resend/verification and the outbox dispatcher are DISABLED ' +
+      '(CERTIFICATE_CLAIMS_ENABLED is not "true"); GET /certificates/me stays available because ' +
+      'CERTIFICATE_RETRIEVAL_ENABLED=true — see docs/certificate-claims-runbook.md §7.3.'
+    );
+    return { retrievalService };
+  }
+
   let emailSender: EmailSender;
   if (claimsConfig.emailProvider === 'smtp') {
     console.log(`[certificate-claims] sending via SMTP: ${describeSmtpConfig(claimsConfig.smtp)}`);
@@ -169,8 +203,6 @@ function wireCertificateClaims(
     emailSender = new InMemoryEmailSender();
   }
 
-  const repository = createCertificateClaimRepository(database);
-  const now = () => Date.now();
   // Comfortably longer than the dispatcher's own worst-case retry span
   // (~11 hours across all attempts — see BACKOFF_MS_BY_ATTEMPT) so a link
   // that is still being retried is never expired by the time it finally
@@ -198,7 +230,7 @@ function wireCertificateClaims(
     retrievalTokenTtlMs: RETRIEVAL_TOKEN_TTL_MS
   });
 
-  return { service, dispatcher };
+  return { actions: { service, dispatcher }, retrievalService };
 }
 
 function openDatabaseOrExit(config: AppConfig): DatabaseHandle {

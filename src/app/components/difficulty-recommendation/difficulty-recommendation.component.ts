@@ -11,6 +11,7 @@ import { RouterLink } from '@angular/router';
 
 import { DifficultyAction, DifficultyRecommendation } from '@shared/models';
 import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
+import { CertificateClaimService } from '@shared/services/features/interview/certificate-claim.service';
 import { certificateNextAction } from '@shared/utils/interview-certificate-progress';
 
 /**
@@ -223,6 +224,7 @@ import { certificateNextAction } from '@shared/utils/interview-certificate-progr
 })
 export class DifficultyRecommendationComponent implements OnInit {
   private readonly cert = inject(InterviewCertificateService);
+  private readonly claimService = inject(CertificateClaimService);
 
   readonly recommendation = input.required<DifficultyRecommendation | null>();
 
@@ -231,8 +233,10 @@ export class DifficultyRecommendationComponent implements OnInit {
   /** Emits the target difficulty when the user chooses to browse those quizzes. */
   readonly browse = output<string>();
 
-  // Certificate state (single source of truth) — drives the complete-state copy.
-  readonly certUnlocked = this.cert.unlocked;
+  // Certificate state — a VERIFIED claim or a LEGACY local record, same
+  // precedence as the other certificate-status surfaces (see
+  // CertificateEarnedBadgeComponent / InterviewCertificateCalloutComponent).
+  readonly certUnlocked = computed(() => this.claimService.status() === 'verified' || this.cert.unlocked());
   readonly certProgress = this.cert.progress;
 
   // Reuses the shared helper rather than restating the requirement, so this

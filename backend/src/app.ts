@@ -11,6 +11,7 @@ import { createHealthRouter } from './routes/health.route';
 import { createQuizzesRouter } from './routes/quizzes.route';
 import { createRateLimiter } from './shared/rate-limit';
 import { createInterviewSessionsRouter } from './routes/interview-sessions.route';
+import { createCertificateClaimsRouter } from './routes/certificate-claims.route';
 
 /**
  * Builds the Express app WITHOUT listening, so tests drive it in-process via
@@ -61,6 +62,13 @@ export function createApp(config: AppConfig, dependencies: AppDependencies): Exp
   if (dependencies.interviewSessionService) {
     app.use('/api', createInterviewSessionsRouter(dependencies.interviewSessionService));
   }
+
+  // ALWAYS registered — unlike interviewSessionService above, this router
+  // handles its own "feature disabled" 503 internally (see
+  // certificate-claims.route.ts) so the route paths exist and respond
+  // predictably whether or not CERTIFICATE_CLAIMS_ENABLED is set, rather
+  // than falling through to a generic 404 that looks like a routing bug.
+  app.use('/api', createCertificateClaimsRouter(dependencies.certificateClaimService));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler({ isProduction: config.isProduction }));

@@ -5,6 +5,11 @@ import { openDatabase, type DatabaseHandle } from './db/database';
 import { migrate } from './db/migrate';
 import { createSessionRepository } from './interview/session.repository';
 import { InterviewSessionService } from './interview/session.service';
+import { createCertificateClaimRepository } from './certificate/certificate-claim.repository';
+import { CertificateClaimService } from './certificate/certificate-claim.service';
+import { NotificationDispatcher } from './certificate/certificate-notification-dispatcher';
+import { InMemoryEmailSender, type EmailSender } from './certificate/email-sender';
+import { parseOutboxEncryptionKey } from './certificate/certificate-outbox-crypto';
 
 /**
  * Process entry point. Kept separate from `createApp` so tests never bind a
@@ -43,18 +48,34 @@ async function main(): Promise<void> {
     now: () => Date.now()
   });
 
-  const app = createApp(config, { quizRepository, sessionRepository, interviewSessionService });
+  const certificateClaims = wireCertificateClaims(database, config);
+
+  const app = createApp(config, {
+    quizRepository,
+    sessionRepository,
+    interviewSessionService,
+    certificateClaimService: certificateClaims?.service
+  });
 
   const server = app.listen(config.port, () => {
     console.log(`[server] listening on :${config.port} (${config.nodeEnv})`);
     console.log(`[server] allowed origins: ${config.allowedOrigins.join(', ')}`);
   });
 
+  const certificateClaimsPoller = certificateClaims
+    ? setInterval(() => {
+        certificateClaims.dispatcher.runOnce().catch((err: unknown) => {
+          console.error('[certificate-claims] outbox poll failed:', err instanceof Error ? err.message : err);
+        });
+      }, 30_000)
+    : null;
+
   let shuttingDown = false;
   const shutdown = (signal: string): void => {
     if (shuttingDown) return;   // a second signal must not double-close
     shuttingDown = true;
     console.log(`[server] ${signal} received, closing`);
+    if (certificateClaimsPoller) clearInterval(certificateClaimsPoller);
     server.close(() => {
       database.close();   // idempotent
       process.exit(0);
@@ -95,6 +116,73 @@ async function loadQuizRepositoryOrExit(
     console.error(safeStartupMessage('quiz', 'quiz data failed to load', err, config));
     process.exit(1);
   }
+}
+
+/**
+ * Constructs the certificate-claim feature, or nothing at all.
+ *
+ * Returns null whenever config.certificateClaims.enabled is false (the
+ * default) — server.ts then never touches the certificate module again,
+ * and createApp's router responds 503 to every certificate-claim path on
+ * its own (see certificate-claims.route.ts). This is the actual mechanism
+ * behind "missing email configuration must not break existing quiz
+ * services when the feature is disabled": if it's disabled, this function
+ * never even reads EMAIL_PROVIDER_API_KEY etc., so their absence is a
+ * complete non-event.
+ *
+ * EmailSender is ALWAYS the in-memory fake right now — no real provider
+ * adapter exists yet (that is explicitly out of scope for this stage; see
+ * the certificate-claims design doc's Stage C). Enabling the feature today
+ * would validate a full, real-looking config and then silently send
+ * nothing. The loud warning below exists so that is never mistaken for a
+ * working deployment.
+ */
+function wireCertificateClaims(
+  database: DatabaseHandle,
+  config: AppConfig
+): { readonly service: CertificateClaimService; readonly dispatcher: NotificationDispatcher } | null {
+  if (!config.certificateClaims.enabled) return null;
+
+  console.warn(
+    '[certificate-claims] ENABLED, but no real email provider is wired yet — ' +
+    'using an IN-MEMORY sender that delivers nothing. Do not enable this in a ' +
+    'real production environment until a real EmailSender implementation ' +
+    'replaces InMemoryEmailSender in server.ts.'
+  );
+
+  const repository = createCertificateClaimRepository(database);
+  const emailSender: EmailSender = new InMemoryEmailSender();
+  const now = () => Date.now();
+  // Comfortably longer than the dispatcher's own worst-case retry span
+  // (~11 hours across all attempts — see BACKOFF_MS_BY_ATTEMPT) so a link
+  // that is still being retried is never expired by the time it finally
+  // sends, and roughly matched to Resend's own 24h idempotency-key
+  // retention (see certificate-notification-dispatcher.ts's doc comment).
+  const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60_000; // 24 hours
+  const RETRIEVAL_TOKEN_TTL_MS = 90 * 24 * 60 * 60_000; // 90 days
+
+  const claimsConfig = config.certificateClaims;
+  const buildVerificationUrl = (rawToken: string): string =>
+    `${claimsConfig.publicAppUrl.replace(/\/$/, '')}/interview/certificate/verify#token=${encodeURIComponent(rawToken)}`;
+
+  const dispatcher = new NotificationDispatcher({
+    repository,
+    emailSender,
+    now,
+    verificationTokenTtlMs: VERIFICATION_TOKEN_TTL_MS,
+    buildVerificationUrl,
+    ownerNotificationEmail: claimsConfig.ownerNotificationEmail,
+    outboxEncryptionKey: parseOutboxEncryptionKey(claimsConfig.outboxEncryptionKeyHex)
+  });
+
+  const service = new CertificateClaimService({
+    repository,
+    dispatcher,
+    now,
+    retrievalTokenTtlMs: RETRIEVAL_TOKEN_TTL_MS
+  });
+
+  return { service, dispatcher };
 }
 
 function openDatabaseOrExit(config: AppConfig): DatabaseHandle {

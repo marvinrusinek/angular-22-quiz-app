@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@a
 import { RouterLink } from '@angular/router';
 
 import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
+import { CertificateClaimService } from '@shared/services/features/interview/certificate-claim.service';
 import {
   certificateAccessibleSummary,
   certificateInterviewsShown,
@@ -86,8 +87,9 @@ import {
 })
 export class InterviewCertificateCalloutComponent implements OnInit {
   private readonly cert = inject(InterviewCertificateService);
+  private readonly claimService = inject(CertificateClaimService);
 
-  readonly unlocked = this.cert.unlocked;
+  readonly unlocked = computed(() => this.claimService.status() === 'verified' || this.cert.unlocked());
   readonly progress = this.cert.progress;
 
   readonly nextAction = computed(() => certificateNextAction(this.progress()));

@@ -33,3 +33,9 @@ STAGE3_HEADING_SINGLE_SOURCE_PLAN.md
 
 # Internal heading-rebuild design scratchpad — do not commit
 FET_HEADING_STATE_MODEL_DESIGN.md
+
+# Certificate-claims Playwright suite's own screenshots — verification
+# artifacts for local review, not the README's documented screenshots/
+# (which holds curated product images referenced from README.md). Never
+# committed from here.
+e2e-cert-claim/screenshots/

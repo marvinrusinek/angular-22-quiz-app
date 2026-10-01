@@ -1,0 +1,46 @@
+<div class="icv-page">
+  <div class="icv-bar">
+    <a class="icv-btn" routerLink="/interview/certificate" i18n>← Back to Certificate</a>
+    <codelab-theme-toggle />
+  </div>
+
+  <div class="icv-card">
+    @switch (view()) {
+      @case ('loading') {
+        <p role="status" i18n>Checking your link…</p>
+      }
+      @case ('preview') {
+        <h1 i18n>Confirm your certificate</h1>
+        <p i18n>
+          Confirm for <strong>{{ claimedName() }}</strong> ({{ emailMasked() }})?
+        </p>
+        <p class="icv-disclosure" i18n>
+          This confirms you control this email address. Your name and email will be shared
+          with the app owner once confirmed.
+        </p>
+        <button type="button" class="icv-btn icv-btn--primary" (click)="confirm()" i18n>
+          Confirm and issue my certificate
+        </button>
+      }
+      @case ('confirming') {
+        <p role="status" i18n>Confirming…</p>
+      }
+      @case ('confirmed') {
+        <h1 i18n>Certificate confirmed</h1>
+        <p i18n>Your certificate is ready.</p>
+        @if (certificate(); as cert) {
+          <dl class="icv-facts">
+            <div><dt i18n>Recipient</dt><dd>{{ cert.recipientName }}</dd></div>
+            <div><dt i18n>Certificate ID</dt><dd>{{ cert.certificateId }}</dd></div>
+          </dl>
+        }
+        <a class="icv-btn icv-btn--primary" routerLink="/interview/certificate" i18n>View your certificate</a>
+      }
+      @case ('error') {
+        <h1 i18n>This link didn't work</h1>
+        <p role="alert">{{ errorMessage() }}</p>
+        <a class="icv-btn" routerLink="/interview/certificate/claim" i18n>Request a new link</a>
+      }
+    }
+  </div>
+</div>

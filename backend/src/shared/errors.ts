@@ -12,6 +12,7 @@ export type ErrorCode =
   | 'UNAUTHORIZED'
   | 'NOT_FOUND'
   | 'CONFLICT'
+  | 'GONE'
   | 'SESSION_EXPIRED'
   | 'PAYLOAD_TOO_LARGE'
   | 'INTERNAL';
@@ -21,6 +22,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   UNAUTHORIZED: 401,
   NOT_FOUND: 404,
   CONFLICT: 409,
+  GONE: 410,
   SESSION_EXPIRED: 409,
   PAYLOAD_TOO_LARGE: 413,
   INTERNAL: 500

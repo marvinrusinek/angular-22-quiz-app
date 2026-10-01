@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 
 import { InterviewCertificateProgress } from '@shared/models';
 import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
+import { CertificateClaimService } from '@shared/services/features/interview/certificate-claim.service';
 import { InterviewCertificateCalloutComponent } from './interview-certificate-callout.component';
 
 const unlockedSig = signal(false);
@@ -25,12 +26,18 @@ function progress(over: Partial<InterviewCertificateProgress> = {}): InterviewCe
 
 const ensureQualificationStarted = jest.fn();
 const stub = { unlocked: unlockedSig, progress: progressSig, ensureQualificationStarted } as unknown as InterviewCertificateService;
+const claimStatusSig = signal<'none' | 'pending' | 'verified'>('none');
+const claimStub = { status: claimStatusSig } as unknown as CertificateClaimService;
 
 function render(): ComponentFixture<InterviewCertificateCalloutComponent> {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [InterviewCertificateCalloutComponent],
-    providers: [provideRouter([]), { provide: InterviewCertificateService, useValue: stub }]
+    providers: [
+      provideRouter([]),
+      { provide: InterviewCertificateService, useValue: stub },
+      { provide: CertificateClaimService, useValue: claimStub }
+    ]
   });
   const fixture = TestBed.createComponent(InterviewCertificateCalloutComponent);
   fixture.detectChanges();
@@ -41,6 +48,7 @@ describe('InterviewCertificateCalloutComponent (Interview Builder)', () => {
   beforeEach(() => {
     unlockedSig.set(false);
     progressSig.set(progress());
+    claimStatusSig.set('none');
   });
 
   it('36. displays a compact certificate progress callout while locked', () => {

@@ -30,7 +30,35 @@ export interface AppConfig {
    * is answer-key protection, not a nicety.
    */
   readonly topicQuizReceiptSecret: string;
+
+  /**
+   * The certificate-claim feature (email-verified certificate issuance).
+   * DISABLED unless explicitly turned on — see parseCertificateClaims'
+   * own doc comment for why every other field here is validated ONLY
+   * when `enabled` is true.
+   */
+  readonly certificateClaims: CertificateClaimsConfig;
 }
+
+export type CertificateClaimsConfig =
+  | { readonly enabled: false }
+  | {
+      readonly enabled: true;
+      readonly emailProviderApiKey: string;
+      readonly emailFromAddress: string;
+      readonly ownerNotificationEmail: string;
+      readonly publicAppUrl: string;
+      /**
+       * Raw hex, exactly 64 characters (32 bytes) — AES-256-GCM key for a
+       * claimant_verify outbox row's short-lived retry payload. See
+       * certificate-outbox-crypto.ts and certificate-notification-
+       * dispatcher.ts's doc comment for why this exists: the intended
+       * provider (Resend) rejects a retried idempotency key whose payload
+       * differs from the original, so a retry must resend the exact
+       * original verification link rather than a freshly minted one.
+       */
+      readonly outboxEncryptionKeyHex: string;
+    };
 
 /** Long enough that guessing is hopeless; short enough to be typeable. */
 export const MIN_RECEIPT_SECRET_LENGTH = 32;
@@ -174,6 +202,95 @@ function parseReceiptSecret(raw: string | undefined, isProduction: boolean): str
   return value;
 }
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * SAFE ROLLOUT: disabled unless CERTIFICATE_CLAIMS_ENABLED is exactly
+ * "true". This is the ONLY gate on requiring the other four variables —
+ * while disabled, every one of them may be absent, and this function never
+ * even looks at them. A deployment with zero certificate-related env vars
+ * set continues to boot and serve Topic Quiz / Interview Mode exactly as
+ * before; missing email configuration can never break an unrelated,
+ * already-shipping service.
+ *
+ * Once enabled, all four become required and fail closed — the same
+ * "name the missing variable, never accept a silent default" discipline as
+ * parseReceiptSecret, with no non-production fallback at all (unlike the
+ * receipt secret, there is no meaningful "dev-safe" email provider key to
+ * fall back to).
+ *
+ * PRODUCTION GUARD: as of this writing, server.ts's wireCertificateClaims
+ * wires ONLY InMemoryEmailSender — there is no real provider adapter in
+ * this codebase yet (see email-sender.ts). Enabling the feature in
+ * production today would therefore validate a fully real-looking
+ * configuration and then silently deliver NOTHING — every claimant's
+ * verification email and Marvin's own owner-completion notice would
+ * vanish with no error anywhere. Config validation cannot see which
+ * EmailSender class server.ts will construct, so it fails closed on the
+ * only fact it CAN see: enabled + production, unconditionally, until a
+ * real adapter exists. When one is added, replace this with a check for
+ * an explicit provider-selection variable (e.g. EMAIL_SENDER_IMPL) instead
+ * of removing it outright — production must still never silently fall
+ * back to the in-memory sender.
+ */
+function parseCertificateClaims(env: NodeJS.ProcessEnv, isProduction: boolean): CertificateClaimsConfig {
+  const enabledRaw = (env['CERTIFICATE_CLAIMS_ENABLED'] ?? '').trim().toLowerCase();
+  if (enabledRaw !== 'true') {
+    return { enabled: false };
+  }
+
+  if (isProduction) {
+    throw new ConfigError(
+      'CERTIFICATE_CLAIMS_ENABLED=true is not allowed in production yet — no real EmailSender ' +
+      'provider is implemented (server.ts wires only InMemoryEmailSender, which delivers nothing). ' +
+      'Implement and wire a real provider adapter before enabling this feature in production.'
+    );
+  }
+
+  const emailProviderApiKey = (env['EMAIL_PROVIDER_API_KEY'] ?? '').trim();
+  if (emailProviderApiKey.length === 0) {
+    throw new ConfigError('EMAIL_PROVIDER_API_KEY is required when CERTIFICATE_CLAIMS_ENABLED=true');
+  }
+
+  const emailFromAddress = (env['EMAIL_FROM_ADDRESS'] ?? '').trim();
+  if (!EMAIL_PATTERN.test(emailFromAddress)) {
+    throw new ConfigError('EMAIL_FROM_ADDRESS must be a valid email address when CERTIFICATE_CLAIMS_ENABLED=true');
+  }
+
+  const ownerNotificationEmail = (env['OWNER_NOTIFICATION_EMAIL'] ?? '').trim();
+  if (!EMAIL_PATTERN.test(ownerNotificationEmail)) {
+    throw new ConfigError('OWNER_NOTIFICATION_EMAIL must be a valid email address when CERTIFICATE_CLAIMS_ENABLED=true');
+  }
+
+  const publicAppUrl = (env['CERTIFICATE_CLAIM_BASE_URL'] ?? '').trim();
+  if (publicAppUrl.length === 0) {
+    throw new ConfigError('CERTIFICATE_CLAIM_BASE_URL is required when CERTIFICATE_CLAIMS_ENABLED=true');
+  }
+  try {
+    // eslint-disable-next-line no-new -- validation only, the URL itself is unused here
+    new URL(publicAppUrl);
+  } catch {
+    throw new ConfigError('CERTIFICATE_CLAIM_BASE_URL must be a valid absolute URL');
+  }
+
+  const outboxEncryptionKeyHex = (env['CERTIFICATE_OUTBOX_ENCRYPTION_KEY'] ?? '').trim();
+  if (!/^[0-9a-fA-F]{64}$/.test(outboxEncryptionKeyHex)) {
+    throw new ConfigError(
+      'CERTIFICATE_OUTBOX_ENCRYPTION_KEY is required when CERTIFICATE_CLAIMS_ENABLED=true and must be ' +
+      'exactly 64 hex characters (32 bytes) — generate one with `openssl rand -hex 32`'
+    );
+  }
+
+  return {
+    enabled: true,
+    emailProviderApiKey,
+    emailFromAddress,
+    ownerNotificationEmail,
+    publicAppUrl,
+    outboxEncryptionKeyHex
+  };
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const nodeEnv = parseNodeEnv(env['NODE_ENV']);
   const isProduction = nodeEnv === 'production';
@@ -184,6 +301,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     port: parsePort(env['PORT']),
     allowedOrigins: parseAllowedOrigins(env['ALLOWED_ORIGINS'], isProduction),
     databaseUrl: parseDatabaseUrl(env['DATABASE_URL'], isProduction),
-    topicQuizReceiptSecret: parseReceiptSecret(env['TOPIC_QUIZ_RECEIPT_SECRET'], isProduction)
+    topicQuizReceiptSecret: parseReceiptSecret(env['TOPIC_QUIZ_RECEIPT_SECRET'], isProduction),
+    certificateClaims: parseCertificateClaims(env, isProduction)
   };
 }

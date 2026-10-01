@@ -1,0 +1,79 @@
+<div class="icc-page">
+  <div class="icc-bar">
+    <a class="icc-btn" routerLink="/interview/certificate" i18n>← Back to Certificate</a>
+    <codelab-theme-toggle />
+  </div>
+
+  @if (!apiConfigured) {
+    <p class="icc-warning" role="status" i18n>
+      Certificate claiming is not available in this environment right now.
+    </p>
+  } @else if (submitted()) {
+    <div class="icc-card" role="status">
+      <h1 i18n>Check your email</h1>
+      <p i18n>
+        If that email address is eligible, we've sent a verification link. Open it to
+        confirm and view your certificate. The link expires after 24 hours.
+      </p>
+      <a class="icc-btn icc-btn--primary" routerLink="/interview/certificate" i18n>Back to Certificate</a>
+    </div>
+  } @else {
+    <div class="icc-card">
+      <h1 i18n>{{ recoveryMode() ? 'Recover your certificate' : 'Claim your certificate' }}</h1>
+
+      @if (!recoveryMode()) {
+        <p class="icc-disclosure" i18n>
+          Verifying your email confirms you control that address — it does not verify your
+          real-world identity. Your Angular achievements and interview history stay
+          browser-reported, same as before. Once confirmed, your name and email are shared
+          with the app owner so your certificate can be recorded.
+        </p>
+      } @else {
+        <p class="icc-disclosure" i18n>
+          Enter the email you used originally. If it has a certificate on file, we'll send a
+          link to confirm you still control that address and show it to you again — the
+          original certificate id and issue date are preserved.
+        </p>
+      }
+
+      <form (ngSubmit)="submit()" class="icc-form">
+        <label class="icc-label" for="icc-name" i18n>Your name</label>
+        <input
+          id="icc-name"
+          class="icc-input"
+          type="text"
+          maxlength="80"
+          required
+          [value]="name()"
+          (input)="onNameInput($any($event.target).value)"
+        />
+
+        <label class="icc-label" for="icc-email" i18n>Email address</label>
+        <input
+          id="icc-email"
+          class="icc-input"
+          type="email"
+          maxlength="254"
+          required
+          [value]="email()"
+          (input)="onEmailInput($any($event.target).value)"
+        />
+
+        @if (submitError()) {
+          <p class="icc-error" role="alert">{{ submitError() }}</p>
+        }
+
+        <button type="submit" class="icc-btn icc-btn--primary" [disabled]="busy()">
+          @if (busy()) { <ng-container i18n>Sending…</ng-container> }
+          @else if (recoveryMode()) { <ng-container i18n>Send recovery link</ng-container> }
+          @else { <ng-container i18n>Send verification email</ng-container> }
+        </button>
+      </form>
+
+      <button type="button" class="icc-link-btn" (click)="toggleRecoveryMode()">
+        @if (recoveryMode()) { <ng-container i18n>Claiming for the first time instead?</ng-container> }
+        @else { <ng-container i18n>Already have a certificate? Recover it</ng-container> }
+      </button>
+    </div>
+  }
+</div>

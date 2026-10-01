@@ -71,6 +71,17 @@ export const SK_INTERVIEW_HISTORY_V1 = 'interviewAttemptHistory:v1';
 // this store never duplicates achievement, readiness, or interview-history state.
 export const SK_INTERVIEW_CERTIFICATE = 'interviewCertificate:v1';
 
+// The backend-verified certificate CLAIM state — fully separate from
+// SK_INTERVIEW_CERTIFICATE above, which is now a LEGACY, locally-issued-only
+// record (never written for a NEW unlock once this key exists as a concept;
+// an existing legacy record is preserved and displayed, clearly labelled, but
+// never migrated into this store automatically). Holds claim status
+// ('none' | 'pending' | 'verified'), and once verified: the issued
+// certificate's id/name/date plus a long-lived RETRIEVAL token (not a
+// verification token — that is single-use and never persisted client-side).
+// See certificate-claim.service.ts (Angular) and backend/src/certificate/.
+export const SK_CERTIFICATE_CLAIM = 'certificateClaim:v1';
+
 // The certificate QUALIFICATION start date — a single ISO timestamp written ONCE
 // when the topic curriculum (Beginner/Intermediate/Advanced Complete) is first
 // finished. Only interviews completed on/after it count toward the certificate's

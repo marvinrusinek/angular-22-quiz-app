@@ -232,6 +232,7 @@ npm install</code></pre>
   <li>Continue improving accessibility, keyboard navigation, and mobile responsiveness</li>
   <li>Expand automated security, performance, and cross-platform regression coverage</li>
   <li>Adopt new Angular APIs and reactive patterns where they provide measurable architectural or user-experience improvements</li>
+  <li>Email-verified certificate claiming — backend and frontend complete, disabled by default pending a production email provider adapter (see <a href="./docs/certificate-claims-runbook.md">docs/certificate-claims-runbook.md</a>)</li>
 </ul>
 
 <hr>

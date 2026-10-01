@@ -16,6 +16,13 @@
   }
 
   @if (unlocked()) {
+    @if (hasLegacy()) {
+      <p class="ic-legacy-badge ic-noprint" role="status" i18n>
+        Legacy certificate — issued locally, not email-verified.
+        <a routerLink="/interview/certificate/claim">Claim a verified certificate</a>
+      </p>
+    }
+
     <!-- The certificate artifact. Semantic: one h1 (the award title), the award
          statement, and a definition list for the verifiable facts. -->
     <article class="ic-certificate" aria-labelledby="ic-title">
@@ -53,10 +60,12 @@
             <p class="ic-cert__name" [class.ic-cert__name--placeholder]="!recipientName()">
               {{ recipientName() || 'Angular Developer' }}
             </p>
-            <button type="button" class="ic-name-btn ic-noprint" (click)="startEditName()">
-              @if (recipientName()) { <ng-container i18n>Edit name</ng-container> }
-              @else { <ng-container i18n>Add your name</ng-container> }
-            </button>
+            @if (canEditName()) {
+              <button type="button" class="ic-name-btn ic-noprint" (click)="startEditName()">
+                @if (recipientName()) { <ng-container i18n>Edit name</ng-container> }
+                @else { <ng-container i18n>Add your name</ng-container> }
+              </button>
+            }
           }
         </div>
 
@@ -88,7 +97,7 @@
           </span>
           <span class="ic-cert__id">
             <ng-container i18n>Certificate ID</ng-container>
-            <strong>{{ record()!.certificateId }}</strong>
+            <strong>{{ certificateId() }}</strong>
           </span>
         </footer>
       </div>
@@ -98,8 +107,18 @@
       <button type="button" class="ic-btn ic-btn--primary" (click)="print()" i18n>Print Certificate</button>
       <a class="ic-btn" routerLink="/interview/results" i18n>Back to Results</a>
     </div>
+  } @else if (isEligible()) {
+    <!-- Eligible but not yet claimed — an explicit CTA, never an automatic unlock. -->
+    <div class="ic-locked" role="status">
+      <span class="ic-locked__icon" aria-hidden="true">🎓</span>
+      <h1 class="ic-locked__title" i18n>You're eligible for your certificate</h1>
+      <p class="ic-locked__text" i18n>
+        Claim your Angular Interview Master certificate by confirming your name and email.
+      </p>
+      <a class="ic-btn ic-btn--primary" routerLink="/interview/certificate/claim" i18n>Claim your certificate</a>
+    </div>
   } @else {
-    <!-- Direct visit before unlocking — a friendly, non-broken state. -->
+    <!-- Direct visit before eligibility — a friendly, non-broken state. -->
     <div class="ic-locked" role="status">
       <span class="ic-locked__icon" aria-hidden="true">🔒</span>
       <h1 class="ic-locked__title" i18n>Certificate not yet unlocked</h1>

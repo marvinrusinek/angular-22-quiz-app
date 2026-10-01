@@ -3,11 +3,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import {
+  InterviewCertificateProgress,
   InterviewCertificateRecord,
   InterviewReadiness,
   InterviewReadinessBand
 } from '@shared/models';
+import type { VerifiedCertificate } from '@shared/models/certificate-claim.model';
 import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
+import { CertificateClaimService } from '@shared/services/features/interview/certificate-claim.service';
 import { InterviewReadinessService } from '@shared/services/features/interview/interview-readiness.service';
 import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
 import { InterviewCertificateComponent } from './interview-certificate.component';
@@ -17,8 +20,20 @@ const readinessSig = signal<InterviewReadiness | null>({ band: 'interview-ready'
 const trendsSig = signal<{ best: number | null }>({ best: 95 });
 const setRecipientName = jest.fn();
 const ensureQualificationStarted = jest.fn();
-// Mirrors the real service: idempotent, and issues only when eligible.
-const unlock = jest.fn(() => recordSig());
+
+function progress(over: Partial<InterviewCertificateProgress> = {}): InterviewCertificateProgress {
+  return {
+    angularExplorerEarned: false,
+    qualifyingInterviewsCompleted: 0,
+    requiredInterviews: 5,
+    interviewsRemaining: 5,
+    isEligible: false,
+    isUnlocked: false,
+    interviewMasterEarned: false,
+    ...over
+  };
+}
+const progressSig = signal<InterviewCertificateProgress>(progress());
 
 function band(b: InterviewReadinessBand | null): void {
   readinessSig.set(b === null ? null : ({ band: b } as InterviewReadiness));
@@ -30,13 +45,26 @@ const serviceStub = {
   record: recordSig,
   unlocked: computed(() => recordSig()?.unlocked === true),
   persistenceFailed: persistFailedSig,
+  progress: progressSig,
   setRecipientName,
-  ensureQualificationStarted,
-  unlock
+  ensureQualificationStarted
 } as unknown as InterviewCertificateService;
+
+const verifiedCertSig = signal<VerifiedCertificate | undefined>(undefined);
+const claimStatusSig = signal<'none' | 'pending' | 'verified'>('none');
+const refresh = jest.fn(() => Promise.resolve());
+const claimStub = {
+  certificate: verifiedCertSig,
+  status: claimStatusSig,
+  refresh
+} as unknown as CertificateClaimService;
 
 function issued(over: Partial<InterviewCertificateRecord> = {}): InterviewCertificateRecord {
   return { version: 1, unlocked: true, unlockedAt: '2026-07-24T15:00:00.000Z', certificateId: 'AQ-2026-000128', ...over };
+}
+
+function verified(over: Partial<VerifiedCertificate> = {}): VerifiedCertificate {
+  return { certificateId: 'AQ-2026-000200-K', recipientName: 'Ada Lovelace', issuedAt: '2026-08-01T00:00:00.000Z', ...over };
 }
 
 function render(): ComponentFixture<InterviewCertificateComponent> {
@@ -46,6 +74,7 @@ function render(): ComponentFixture<InterviewCertificateComponent> {
     providers: [
       provideRouter([]),
       { provide: InterviewCertificateService, useValue: serviceStub },
+      { provide: CertificateClaimService, useValue: claimStub },
       { provide: InterviewReadinessService, useValue: { readiness: readinessSig } },
       { provide: InterviewHistoryService, useValue: { trends: trendsSig } }
     ]
@@ -58,32 +87,65 @@ function render(): ComponentFixture<InterviewCertificateComponent> {
 describe('InterviewCertificateComponent', () => {
   beforeEach(() => {
     recordSig.set(null);
+    verifiedCertSig.set(undefined);
+    claimStatusSig.set('none');
+    progressSig.set(progress());
     band('interview-ready');
     trendsSig.set({ best: 95 });
     setRecipientName.mockClear();
+    refresh.mockClear();
   });
 
-  it('shows a friendly locked state (no certificate) before it is unlocked', () => {
+  it('shows a friendly locked state (not eligible, no certificate)', () => {
     const el = render().nativeElement as HTMLElement;
     expect(el.querySelector('.ic-locked')).not.toBeNull();
     expect(el.querySelector('.ic-locked__title')?.textContent).toContain('not yet unlocked');
     expect(el.querySelector('.ic-cert')).toBeNull();
   });
 
-  it('57. renders the certificate with title, id, tier, score and date once unlocked', () => {
-    recordSig.set(issued());
+  it('eligible but not yet claimed: shows a CTA to the claim form, never an automatic certificate', () => {
+    progressSig.set(progress({ isEligible: true }));
+    const el = render().nativeElement as HTMLElement;
+    expect(el.querySelector('.ic-cert')).toBeNull();
+    const cta = el.querySelector('.ic-locked .ic-btn--primary') as HTMLAnchorElement;
+    expect(cta?.getAttribute('href')).toContain('/interview/certificate/claim');
+  });
+
+  it('renders a VERIFIED certificate with title, id, tier, score and date, no legacy badge', () => {
+    verifiedCertSig.set(verified());
+    claimStatusSig.set('verified');
     const el = render().nativeElement as HTMLElement;
     expect(el.querySelector('.ic-locked')).toBeNull();
     expect(el.querySelector('.ic-cert__title')?.textContent).toContain('Angular Interview Master');
-    expect(el.querySelector('.ic-cert__id')?.textContent).toContain('AQ-2026-000128');
+    expect(el.querySelector('.ic-cert__id')?.textContent).toContain('AQ-2026-000200-K');
+    expect(el.querySelector('.ic-cert__name')?.textContent).toContain('Ada Lovelace');
     const facts = el.querySelector('.ic-cert__facts')?.textContent ?? '';
     expect(facts).toContain('Interview Ready');
     expect(facts).toContain('95%');
-    expect(facts).toMatch(/2026/);
-    expect(el.querySelectorAll('h1#ic-title')).toHaveLength(1);
+    expect(el.querySelector('.ic-legacy-badge')).toBeNull();
+    // A verified certificate's name is not locally editable.
+    expect(el.querySelector('.ic-name-btn')).toBeNull();
   });
 
-  it('shows a placeholder name until one is entered, then the entered name', () => {
+  it('renders a LEGACY certificate (locally issued, pre-feature) with the legacy badge and editable name', () => {
+    recordSig.set(issued());
+    const el = render().nativeElement as HTMLElement;
+    expect(el.querySelector('.ic-locked')).toBeNull();
+    expect(el.querySelector('.ic-cert__id')?.textContent).toContain('AQ-2026-000128');
+    expect(el.querySelector('.ic-legacy-badge')).not.toBeNull();
+    expect(el.querySelector('.ic-name-btn')).not.toBeNull();
+  });
+
+  it('prefers the VERIFIED certificate over a legacy one when both exist', () => {
+    recordSig.set(issued());
+    verifiedCertSig.set(verified());
+    claimStatusSig.set('verified');
+    const el = render().nativeElement as HTMLElement;
+    expect(el.querySelector('.ic-cert__id')?.textContent).toContain('AQ-2026-000200-K');
+    expect(el.querySelector('.ic-legacy-badge')).toBeNull();
+  });
+
+  it('shows a placeholder name until one is entered, then the entered name (legacy)', () => {
     recordSig.set(issued());
     let el = render().nativeElement as HTMLElement;
     expect(el.querySelector('.ic-cert__name')?.textContent).toContain('Angular Developer');
@@ -95,7 +157,7 @@ describe('InterviewCertificateComponent', () => {
     expect(el.querySelector('.ic-cert__name--placeholder')).toBeNull();
   });
 
-  it('edits the recipient name through the service', () => {
+  it('edits the recipient name through the service (legacy only)', () => {
     recordSig.set(issued());
     const fixture = render();
     const comp = fixture.componentInstance;
@@ -125,14 +187,11 @@ describe('InterviewCertificateComponent', () => {
     expect(facts).toContain('—');                 // score placeholder
   });
 
-  // Unlocking used to be reachable ONLY from the Results status card, so a user
-  // who became eligible and came straight here saw the locked page despite
-  // qualifying. Visiting this page now attempts the (idempotent) unlock.
-  it('attempts qualification + unlock on visit, so unlocking is order-independent', () => {
-    recordSig.set(null);
+  it('calls ensureQualificationStarted + refresh on visit — never unlock()', () => {
     render();
     expect(ensureQualificationStarted).toHaveBeenCalled();
-    expect(unlock).toHaveBeenCalled();
+    expect(refresh).toHaveBeenCalled();
+    expect((serviceStub as unknown as { unlock?: unknown }).unlock).toBeUndefined();
   });
 
   it('warns when the certificate could not be saved, and stays silent otherwise', () => {
@@ -144,16 +203,5 @@ describe('InterviewCertificateComponent', () => {
     const warning = (render().nativeElement as HTMLElement).querySelector('.ic-warning');
     expect(warning?.textContent).toContain('could not be saved to this browser');
     persistFailedSig.set(false);
-  });
-
-  it('does not re-issue when already unlocked (id and date stay stable)', () => {
-    recordSig.set(issued());
-    const fixture = render();
-    const idText = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(idText).toContain('AQ-2026-000128');
-    // unlock() is idempotent: it returns the existing record rather than a new one.
-    expect(unlock).toHaveBeenCalled();
-    expect(recordSig()?.certificateId).toBe('AQ-2026-000128');
-    expect(recordSig()?.unlockedAt).toBe('2026-07-24T15:00:00.000Z');
   });
 });

@@ -1,4 +1,4 @@
-@if (unlocked()) {
+@if (hasCertificate()) {
   <!-- Earned — a calm, portfolio-style prompt (no locked progress shown here). -->
   <section class="ic-status ic-status--unlocked" aria-labelledby="ic-status-title">
     <span class="ic-status__badge" aria-hidden="true">🎓</span>
@@ -9,8 +9,19 @@
     <a class="ic-status__cta" routerLink="/interview/certificate"
        aria-label="View your Angular Interview Master certificate" i18n-aria-label i18n>View Certificate</a>
   </section>
+} @else if (awaitingClaim()) {
+  <!-- Both requirements are met — an explicit CTA to claim, never an automatic unlock. -->
+  <section class="ic-status ic-status--unlocked" aria-labelledby="ic-status-title">
+    <span class="ic-status__badge" aria-hidden="true">🎓</span>
+    <div class="ic-status__body">
+      <h2 id="ic-status-title" class="ic-status__title" i18n>Angular Interview Master</h2>
+      <p class="ic-status__sub" i18n>You're eligible — claim your certificate</p>
+    </div>
+    <a class="ic-status__cta" routerLink="/interview/certificate/claim"
+       aria-label="Claim your Angular Interview Master certificate" i18n-aria-label i18n>Claim Certificate</a>
+  </section>
 } @else {
-  <!-- Not yet — two truthful requirement rows + the single clearest next action. -->
+  <!-- Still in progress — two truthful requirement rows + the single clearest next action. -->
   <section class="ic-status ic-status--progress" aria-labelledby="ic-progress-title">
     <h2 id="ic-progress-title" class="ic-status__title" i18n>Certificate Progress</h2>
 
@@ -48,33 +59,4 @@
       <p class="ic-status__journey" i18n>Certificate journey started on {{ journeyDate() }}</p>
     }
   </section>
-}
-
-<!-- Subtle unlock celebration. Fades in once; respects reduced motion (SCSS).
-     A live region only for this newly-triggered unlock event. -->
-@if (showDialog()) {
-  <div class="ic-dialog__scrim" (click)="dismiss()"></div>
-  <div
-    class="ic-dialog"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="ic-dialog-title"
-    tabindex="-1"
-    cdkTrapFocus
-    [cdkTrapFocusAutoCapture]="true"
-    (keydown.escape)="dismiss()"
-  >
-    <span class="ic-dialog__mark" aria-hidden="true">🎓</span>
-    <h2 id="ic-dialog-title" class="ic-dialog__title" i18n>Certificate Unlocked</h2>
-    <p class="ic-dialog__text" i18n>
-      You have unlocked every achievement and completed enough Interview Mode
-      assessments. Your Angular Interview Master Certificate has been issued.
-    </p>
-    <div class="ic-dialog__actions">
-      <a class="ic-btn ic-btn--primary" routerLink="/interview/certificate" (click)="dismiss()" i18n>
-        View Certificate
-      </a>
-      <button type="button" class="ic-btn" (click)="dismiss()" i18n>Close</button>
-    </div>
-  </div>
 }

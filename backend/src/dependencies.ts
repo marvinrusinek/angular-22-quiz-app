@@ -1,6 +1,7 @@
 import type { QuizRepository } from './quiz/quiz.repository';
 import type { SessionRepository } from './interview/session.repository';
 import type { InterviewSessionService } from './interview/session.service';
+import type { CertificateClaimService } from './certificate/certificate-claim.service';
 
 /**
  * Everything the HTTP layer needs, passed in explicitly.
@@ -16,6 +17,13 @@ export interface AppDependencies {
   readonly sessionRepository?: SessionRepository;
   /** Absent in tests that only exercise metadata/health routes. */
   readonly interviewSessionService?: InterviewSessionService;
+  /**
+   * Absent whenever config.certificateClaims.enabled is false (the default —
+   * see config.ts#parseCertificateClaims). createCertificateClaimsRouter
+   * responds 503 to every route when this is undefined, so the feature
+   * being off costs nothing beyond that one flag check.
+   */
+  readonly certificateClaimService?: CertificateClaimService | undefined;
   /**
    * Injected clock for Topic Quiz attempt expiry, so tests can cross the
    * deadline without waiting. Defaults to Date.now().

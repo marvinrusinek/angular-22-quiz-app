@@ -28,6 +28,7 @@ export * from './FormattedExplanation.model';
 export * from './GeneratedAssessment.model';
 export * from './interview-analytics.model';
 export * from './interview-certificate.model';
+export * from './certificate-claim.model';
 export * from './interview-history.model';
 export * from './interview-preset.model';
 export * from './interview-readiness.model';

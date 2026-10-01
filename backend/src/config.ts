@@ -40,11 +40,22 @@ export interface AppConfig {
   readonly certificateClaims: CertificateClaimsConfig;
 }
 
+export type CertificateSmtpTlsMode = 'starttls' | 'tls';
+
+/** No "insecure"/"none" tlsMode value exists in this type at all — see smtp-email-sender.ts. */
+export interface CertificateSmtpConfig {
+  readonly host: string;
+  readonly port: number;
+  readonly tlsMode: CertificateSmtpTlsMode;
+  readonly username: string;
+  /** NEVER logged, NEVER included in a ConfigError message — see parseCertificateClaims' own care around this. */
+  readonly password: string;
+}
+
 export type CertificateClaimsConfig =
   | { readonly enabled: false }
   | {
       readonly enabled: true;
-      readonly emailProviderApiKey: string;
       readonly emailFromAddress: string;
       readonly ownerNotificationEmail: string;
       readonly publicAppUrl: string;
@@ -52,12 +63,23 @@ export type CertificateClaimsConfig =
        * Raw hex, exactly 64 characters (32 bytes) — AES-256-GCM key for a
        * claimant_verify outbox row's short-lived retry payload. See
        * certificate-outbox-crypto.ts and certificate-notification-
-       * dispatcher.ts's doc comment for why this exists: the intended
-       * provider (Resend) rejects a retried idempotency key whose payload
-       * differs from the original, so a retry must resend the exact
-       * original verification link rather than a freshly minted one.
+       * dispatcher.ts's doc comment for why this exists: so a retry resends
+       * the exact original verification link rather than a freshly minted
+       * one — still valuable for SMTP (a stable link, no excess token
+       * proliferation) even though SMTP has no provider-side idempotency to
+       * satisfy the way the originally-intended Resend adapter would have.
        */
       readonly outboxEncryptionKeyHex: string;
+      /**
+       * undefined ONLY outside production, and only when NONE of the five
+       * SMTP variables are set — server.ts then wires InMemoryEmailSender
+       * for local manual testing, with a loud startup warning. Any ONE
+       * variable present forces all five to be validated (a partial SMTP
+       * config is always a mistake, never a signal to fall back silently).
+       * parseCertificateClaims makes this undefined IMPOSSIBLE in
+       * production — see that function's own doc comment.
+       */
+      readonly smtp: CertificateSmtpConfig | undefined;
     };
 
 /** Long enough that guessing is hopeless; short enough to be typeable. */
@@ -204,52 +226,106 @@ function parseReceiptSecret(raw: string | undefined, isProduction: boolean): str
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const SMTP_VAR_NAMES = [
+  'CERTIFICATE_SMTP_HOST',
+  'CERTIFICATE_SMTP_PORT',
+  'CERTIFICATE_SMTP_TLS_MODE',
+  'CERTIFICATE_SMTP_USERNAME',
+  'CERTIFICATE_SMTP_PASSWORD'
+] as const;
+
+/**
+ * Parses the five CERTIFICATE_SMTP_* variables into a validated
+ * CertificateSmtpConfig, or returns undefined when NONE of them are set at
+ * all (the local-dev, fake-sender case). A PARTIAL set — some present, some
+ * not — is always an error, in dev or production: that shape is far more
+ * likely to be a typo'd variable name than a deliberate choice, and should
+ * never be silently treated as "not configured."
+ *
+ * `required` forces all five even when none are set — passed `true` only
+ * for production (see parseCertificateClaims).
+ */
+function parseSmtpConfig(env: NodeJS.ProcessEnv, required: boolean): CertificateSmtpConfig | undefined {
+  const present = SMTP_VAR_NAMES.filter((name) => (env[name] ?? '').trim().length > 0);
+  if (present.length === 0 && !required) return undefined;
+  if (present.length > 0 && present.length < SMTP_VAR_NAMES.length) {
+    const missing = SMTP_VAR_NAMES.filter((name) => !present.includes(name));
+    throw new ConfigError(
+      `Partial SMTP configuration: ${present.join(', ')} ${present.length === 1 ? 'is' : 'are'} set but ` +
+      `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not. Set all five CERTIFICATE_SMTP_* ` +
+      'variables together, or none at all.'
+    );
+  }
+  if (present.length === 0 && required) {
+    throw new ConfigError(
+      `${SMTP_VAR_NAMES.join(', ')} are all required when CERTIFICATE_CLAIMS_ENABLED=true in production — ` +
+      'no real EmailSender can be configured without them, and this feature must never silently fall back ' +
+      'to InMemoryEmailSender there.'
+    );
+  }
+
+  const host = (env['CERTIFICATE_SMTP_HOST'] ?? '').trim();
+  if (host.length === 0) throw new ConfigError('CERTIFICATE_SMTP_HOST must not be blank');
+
+  const portRaw = (env['CERTIFICATE_SMTP_PORT'] ?? '').trim();
+  const port = Number(portRaw);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new ConfigError(`CERTIFICATE_SMTP_PORT must be an integer 1-65535 — received "${portRaw}"`);
+  }
+
+  const tlsModeRaw = (env['CERTIFICATE_SMTP_TLS_MODE'] ?? '').trim().toLowerCase();
+  if (tlsModeRaw !== 'starttls' && tlsModeRaw !== 'tls') {
+    throw new ConfigError(
+      `CERTIFICATE_SMTP_TLS_MODE must be "starttls" (recommended — port 587, upgrades after connecting) or ` +
+      `"tls" (implicit TLS — typically port 465) — received "${tlsModeRaw}". There is no insecure option.`
+    );
+  }
+
+  const username = (env['CERTIFICATE_SMTP_USERNAME'] ?? '').trim();
+  if (username.length === 0) throw new ConfigError('CERTIFICATE_SMTP_USERNAME must not be blank');
+
+  // The value itself is intentionally never inspected beyond "non-empty" —
+  // no length/shape check, which would risk the error message implying
+  // something about a real password's structure. Never logged either way.
+  const password = env['CERTIFICATE_SMTP_PASSWORD'] ?? '';
+  if (password.length === 0) throw new ConfigError('CERTIFICATE_SMTP_PASSWORD must not be blank');
+
+  return { host, port, tlsMode: tlsModeRaw, username, password };
+}
+
 /**
  * SAFE ROLLOUT: disabled unless CERTIFICATE_CLAIMS_ENABLED is exactly
- * "true". This is the ONLY gate on requiring the other four variables —
- * while disabled, every one of them may be absent, and this function never
- * even looks at them. A deployment with zero certificate-related env vars
- * set continues to boot and serve Topic Quiz / Interview Mode exactly as
+ * "true". This is the ONLY gate on requiring the other variables — while
+ * disabled, every one of them may be absent, and this function never even
+ * looks at them. A deployment with zero certificate-related env vars set
+ * continues to boot and serve Topic Quiz / Interview Mode exactly as
  * before; missing email configuration can never break an unrelated,
  * already-shipping service.
  *
- * Once enabled, all four become required and fail closed — the same
- * "name the missing variable, never accept a silent default" discipline as
- * parseReceiptSecret, with no non-production fallback at all (unlike the
- * receipt secret, there is no meaningful "dev-safe" email provider key to
- * fall back to).
+ * Once enabled, the non-SMTP variables become required and fail closed —
+ * the same "name the missing variable, never accept a silent default"
+ * discipline as parseReceiptSecret. The five SMTP variables are handled
+ * separately by parseSmtpConfig: required in production, optional (but
+ * all-or-nothing) outside it — see that function's own doc comment.
  *
- * PRODUCTION GUARD: as of this writing, server.ts's wireCertificateClaims
- * wires ONLY InMemoryEmailSender — there is no real provider adapter in
- * this codebase yet (see email-sender.ts). Enabling the feature in
- * production today would therefore validate a fully real-looking
- * configuration and then silently deliver NOTHING — every claimant's
- * verification email and Marvin's own owner-completion notice would
- * vanish with no error anywhere. Config validation cannot see which
- * EmailSender class server.ts will construct, so it fails closed on the
- * only fact it CAN see: enabled + production, unconditionally, until a
- * real adapter exists. When one is added, replace this with a check for
- * an explicit provider-selection variable (e.g. EMAIL_SENDER_IMPL) instead
- * of removing it outright — production must still never silently fall
- * back to the in-memory sender.
+ * PRODUCTION GUARD: server.ts's wireCertificateClaims now selects a real
+ * SmtpEmailSender WHENEVER the five SMTP variables below are present and
+ * valid (see smtp-email-sender.ts), falling back to InMemoryEmailSender
+ * only when they are absent — which this function makes impossible in
+ * production, by requiring them below exactly like every other
+ * certificate-claim variable. A production deploy can therefore never
+ * silently end up with the in-memory sender: either the five SMTP
+ * variables are present and valid (real sending), or parsing throws here
+ * before the process ever reaches server.ts's wiring at all. If a SECOND
+ * real provider is ever added, replace this single required-SMTP-config
+ * check with an explicit provider-selection variable (e.g.
+ * EMAIL_SENDER_IMPL) instead of just adding a parallel set of fields —
+ * production must still never have an ambiguous or silent fallback path.
  */
 function parseCertificateClaims(env: NodeJS.ProcessEnv, isProduction: boolean): CertificateClaimsConfig {
   const enabledRaw = (env['CERTIFICATE_CLAIMS_ENABLED'] ?? '').trim().toLowerCase();
   if (enabledRaw !== 'true') {
     return { enabled: false };
-  }
-
-  if (isProduction) {
-    throw new ConfigError(
-      'CERTIFICATE_CLAIMS_ENABLED=true is not allowed in production yet — no real EmailSender ' +
-      'provider is implemented (server.ts wires only InMemoryEmailSender, which delivers nothing). ' +
-      'Implement and wire a real provider adapter before enabling this feature in production.'
-    );
-  }
-
-  const emailProviderApiKey = (env['EMAIL_PROVIDER_API_KEY'] ?? '').trim();
-  if (emailProviderApiKey.length === 0) {
-    throw new ConfigError('EMAIL_PROVIDER_API_KEY is required when CERTIFICATE_CLAIMS_ENABLED=true');
   }
 
   const emailFromAddress = (env['EMAIL_FROM_ADDRESS'] ?? '').trim();
@@ -281,13 +357,15 @@ function parseCertificateClaims(env: NodeJS.ProcessEnv, isProduction: boolean): 
     );
   }
 
+  const smtp = parseSmtpConfig(env, isProduction);
+
   return {
     enabled: true,
-    emailProviderApiKey,
     emailFromAddress,
     ownerNotificationEmail,
     publicAppUrl,
-    outboxEncryptionKeyHex
+    outboxEncryptionKeyHex,
+    smtp
   };
 }
 

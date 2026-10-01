@@ -316,7 +316,12 @@ const POLICIES: Record<ResponsePolicyName, ReadonlySet<string>> = {
     'encryptedPayload',
     'encrypted_payload',
     'outboxEncryptionKeyHex',
-    'outboxEncryptionKey'
+    'outboxEncryptionKey',
+    'smtpPassword',
+    'smtp_password',
+    'smtpUsername',
+    'smtp_username',
+    'password'
   ),
 
   /** Error envelopes are `{ error: { code, message } }` — internals still banned. */

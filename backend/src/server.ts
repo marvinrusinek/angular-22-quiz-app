@@ -9,6 +9,7 @@ import { createCertificateClaimRepository } from './certificate/certificate-clai
 import { CertificateClaimService } from './certificate/certificate-claim.service';
 import { NotificationDispatcher } from './certificate/certificate-notification-dispatcher';
 import { InMemoryEmailSender, type EmailSender } from './certificate/email-sender';
+import { describeSmtpConfig, SmtpEmailSender } from './certificate/smtp-email-sender';
 import { parseOutboxEncryptionKey } from './certificate/certificate-outbox-crypto';
 
 /**
@@ -127,15 +128,17 @@ async function loadQuizRepositoryOrExit(
  * its own (see certificate-claims.route.ts). This is the actual mechanism
  * behind "missing email configuration must not break existing quiz
  * services when the feature is disabled": if it's disabled, this function
- * never even reads EMAIL_PROVIDER_API_KEY etc., so their absence is a
+ * never even reads any certificate-claim variable, so their absence is a
  * complete non-event.
  *
- * EmailSender is ALWAYS the in-memory fake right now — no real provider
- * adapter exists yet (that is explicitly out of scope for this stage; see
- * the certificate-claims design doc's Stage C). Enabling the feature today
- * would validate a full, real-looking config and then silently send
- * nothing. The loud warning below exists so that is never mistaken for a
- * working deployment.
+ * EMAIL SENDER SELECTION: real SmtpEmailSender whenever
+ * config.certificateClaims.smtp is present, InMemoryEmailSender otherwise.
+ * config.ts's parseCertificateClaims makes `smtp` undefined IMPOSSIBLE in
+ * production (see its own doc comment) — so this function can select
+ * purely on that one field's presence, with no separate production check
+ * needed here. Outside production, `smtp` being undefined is a deliberate,
+ * supported local-dev choice (manual testing with the fake sender), hence
+ * the loud warning rather than a thrown error.
  */
 function wireCertificateClaims(
   database: DatabaseHandle,
@@ -143,25 +146,30 @@ function wireCertificateClaims(
 ): { readonly service: CertificateClaimService; readonly dispatcher: NotificationDispatcher } | null {
   if (!config.certificateClaims.enabled) return null;
 
-  console.warn(
-    '[certificate-claims] ENABLED, but no real email provider is wired yet — ' +
-    'using an IN-MEMORY sender that delivers nothing. Do not enable this in a ' +
-    'real production environment until a real EmailSender implementation ' +
-    'replaces InMemoryEmailSender in server.ts.'
-  );
+  const claimsConfig = config.certificateClaims;
+  let emailSender: EmailSender;
+  if (claimsConfig.smtp) {
+    console.log(`[certificate-claims] sending via SMTP: ${describeSmtpConfig(claimsConfig.smtp)}`);
+    emailSender = new SmtpEmailSender({ smtp: claimsConfig.smtp, fromAddress: claimsConfig.emailFromAddress });
+  } else {
+    console.warn(
+      '[certificate-claims] ENABLED, but no CERTIFICATE_SMTP_* configuration is set — ' +
+      'using an IN-MEMORY sender that delivers nothing. This is only ever reached outside ' +
+      'production (parseCertificateClaims requires SMTP config there); fine for local manual ' +
+      'testing, never acceptable for a real deployment.'
+    );
+    emailSender = new InMemoryEmailSender();
+  }
 
   const repository = createCertificateClaimRepository(database);
-  const emailSender: EmailSender = new InMemoryEmailSender();
   const now = () => Date.now();
   // Comfortably longer than the dispatcher's own worst-case retry span
   // (~11 hours across all attempts — see BACKOFF_MS_BY_ATTEMPT) so a link
   // that is still being retried is never expired by the time it finally
-  // sends, and roughly matched to Resend's own 24h idempotency-key
-  // retention (see certificate-notification-dispatcher.ts's doc comment).
+  // sends.
   const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60_000; // 24 hours
   const RETRIEVAL_TOKEN_TTL_MS = 90 * 24 * 60 * 60_000; // 90 days
 
-  const claimsConfig = config.certificateClaims;
   const buildVerificationUrl = (rawToken: string): string =>
     `${claimsConfig.publicAppUrl.replace(/\/$/, '')}/interview/certificate/verify#token=${encodeURIComponent(rawToken)}`;
 

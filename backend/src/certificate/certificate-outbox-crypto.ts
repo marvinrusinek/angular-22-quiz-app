@@ -6,10 +6,9 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
  * elsewhere: a claimant_verify row's rendered email payload, including its
  * raw (unhashed) verification token. See migration 009's encrypted_payload
  * column comment and certificate-notification-dispatcher.ts for why this
- * exists at all — in short, the intended provider (Resend) rejects a
- * retried idempotency key whose payload differs from the original, so a
- * retry must resend EXACTLY what was sent before, not a freshly-minted
- * token under the same key.
+ * exists at all — in short, a retry resends EXACTLY what was sent before
+ * (not a freshly-minted token) so a claimant sees a stable verification
+ * link across retries, rather than potentially several different ones.
  *
  * AES-256-GCM: authenticated encryption, so a wrong key (e.g. after a
  * rotation) or corrupted ciphertext fails LOUDLY inside this module and is

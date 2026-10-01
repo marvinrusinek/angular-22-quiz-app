@@ -768,7 +768,7 @@ describe('certificate-notification dispatcher — retries and resends', () => {
     expect(new Set(idempotencyKeys).size).toBe(2); // two DISTINCT keys — a real provider would not collapse these
   });
 
-  it('a system retry resends a BYTE-IDENTICAL payload under the SAME idempotency key — required by Resend, which errors on same-key-different-payload', async () => {
+  it('a system retry resends a BYTE-IDENTICAL payload under the SAME idempotency key — preserves a stable verification link across retries', async () => {
     const { clock, advance } = buildStack();
     const repository = await makeRepository();
     const emailSender = new InMemoryEmailSender();
@@ -938,10 +938,9 @@ describe('feature flag — safe rollout', () => {
     expect(() => loadConfig({ CERTIFICATE_CLAIMS_ENABLED: 'true' })).toThrow(ConfigError);
   });
 
-  it('parses a fully valid enabled configuration', () => {
+  it('parses a fully valid enabled configuration (dev, no SMTP set — the fake-sender case)', () => {
     const config = loadConfig({
       CERTIFICATE_CLAIMS_ENABLED: 'true',
-      EMAIL_PROVIDER_API_KEY: 'test-key',
       EMAIL_FROM_ADDRESS: 'certificates@example.com',
       OWNER_NOTIFICATION_EMAIL: 'owner@example.com',
       CERTIFICATE_CLAIM_BASE_URL: 'https://example.com',
@@ -949,18 +948,46 @@ describe('feature flag — safe rollout', () => {
     });
     expect(config.certificateClaims).toEqual({
       enabled: true,
-      emailProviderApiKey: 'test-key',
       emailFromAddress: 'certificates@example.com',
       ownerNotificationEmail: 'owner@example.com',
       publicAppUrl: 'https://example.com',
-      outboxEncryptionKeyHex: TEST_OUTBOX_ENCRYPTION_KEY_HEX
+      outboxEncryptionKeyHex: TEST_OUTBOX_ENCRYPTION_KEY_HEX,
+      smtp: undefined
+    });
+  });
+
+  it('parses a fully valid enabled configuration WITH SMTP — real-sender case, works outside production too', () => {
+    const config = loadConfig({
+      CERTIFICATE_CLAIMS_ENABLED: 'true',
+      EMAIL_FROM_ADDRESS: 'certificates@example.com',
+      OWNER_NOTIFICATION_EMAIL: 'owner@example.com',
+      CERTIFICATE_CLAIM_BASE_URL: 'https://example.com',
+      CERTIFICATE_OUTBOX_ENCRYPTION_KEY: TEST_OUTBOX_ENCRYPTION_KEY_HEX,
+      CERTIFICATE_SMTP_HOST: 'smtp.example.test',
+      CERTIFICATE_SMTP_PORT: '587',
+      CERTIFICATE_SMTP_TLS_MODE: 'starttls',
+      CERTIFICATE_SMTP_USERNAME: 'certificates@example.com',
+      CERTIFICATE_SMTP_PASSWORD: 'super-secret-not-logged'
+    });
+    expect(config.certificateClaims).toEqual({
+      enabled: true,
+      emailFromAddress: 'certificates@example.com',
+      ownerNotificationEmail: 'owner@example.com',
+      publicAppUrl: 'https://example.com',
+      outboxEncryptionKeyHex: TEST_OUTBOX_ENCRYPTION_KEY_HEX,
+      smtp: {
+        host: 'smtp.example.test',
+        port: 587,
+        tlsMode: 'starttls',
+        username: 'certificates@example.com',
+        password: 'super-secret-not-logged'
+      }
     });
   });
 
   it('throws a clear ConfigError when enabled without CERTIFICATE_OUTBOX_ENCRYPTION_KEY, or with a wrong-length one', () => {
     const base = {
       CERTIFICATE_CLAIMS_ENABLED: 'true',
-      EMAIL_PROVIDER_API_KEY: 'test-key',
       EMAIL_FROM_ADDRESS: 'certificates@example.com',
       OWNER_NOTIFICATION_EMAIL: 'owner@example.com',
       CERTIFICATE_CLAIM_BASE_URL: 'https://example.com'
@@ -970,18 +997,93 @@ describe('feature flag — safe rollout', () => {
     expect(() => loadConfig({ ...base, CERTIFICATE_OUTBOX_ENCRYPTION_KEY: 'zz'.repeat(32) })).toThrow(ConfigError); // not hex
   });
 
-  it('refuses to enable in PRODUCTION even with every required var present — no real EmailSender adapter exists yet, only InMemoryEmailSender', () => {
-    expect(() => loadConfig({
+  describe('SMTP configuration validation', () => {
+    const baseNonProd = {
+      CERTIFICATE_CLAIMS_ENABLED: 'true',
+      EMAIL_FROM_ADDRESS: 'certificates@example.com',
+      OWNER_NOTIFICATION_EMAIL: 'owner@example.com',
+      CERTIFICATE_CLAIM_BASE_URL: 'https://example.com',
+      CERTIFICATE_OUTBOX_ENCRYPTION_KEY: TEST_OUTBOX_ENCRYPTION_KEY_HEX
+    };
+    const fullSmtp = {
+      CERTIFICATE_SMTP_HOST: 'smtp.example.test',
+      CERTIFICATE_SMTP_PORT: '587',
+      CERTIFICATE_SMTP_TLS_MODE: 'starttls',
+      CERTIFICATE_SMTP_USERNAME: 'certificates@example.com',
+      CERTIFICATE_SMTP_PASSWORD: 'super-secret-not-logged'
+    };
+
+    it('a PARTIAL SMTP config (some vars set, not all) is always an error, in dev or production', () => {
+      expect(() => loadConfig({ ...baseNonProd, CERTIFICATE_SMTP_HOST: 'smtp.example.test' })).toThrow(ConfigError);
+      expect(() => loadConfig({ ...baseNonProd, CERTIFICATE_SMTP_HOST: 'smtp.example.test', CERTIFICATE_SMTP_PORT: '587' })).toThrow(ConfigError);
+    });
+
+    it('rejects a non-numeric or out-of-range SMTP port', () => {
+      expect(() => loadConfig({ ...baseNonProd, ...fullSmtp, CERTIFICATE_SMTP_PORT: 'not-a-number' })).toThrow(ConfigError);
+      expect(() => loadConfig({ ...baseNonProd, ...fullSmtp, CERTIFICATE_SMTP_PORT: '99999' })).toThrow(ConfigError);
+      expect(() => loadConfig({ ...baseNonProd, ...fullSmtp, CERTIFICATE_SMTP_PORT: '0' })).toThrow(ConfigError);
+    });
+
+    it('rejects an invalid CERTIFICATE_SMTP_TLS_MODE — there is no insecure option', () => {
+      expect(() => loadConfig({ ...baseNonProd, ...fullSmtp, CERTIFICATE_SMTP_TLS_MODE: 'none' })).toThrow(ConfigError);
+      expect(() => loadConfig({ ...baseNonProd, ...fullSmtp, CERTIFICATE_SMTP_TLS_MODE: 'plaintext' })).toThrow(ConfigError);
+      expect(() => loadConfig({ ...baseNonProd, ...fullSmtp, CERTIFICATE_SMTP_TLS_MODE: '' })).toThrow(ConfigError);
+    });
+
+    it('rejects a blank host, username, or password even when all five keys are present', () => {
+      expect(() => loadConfig({ ...baseNonProd, ...fullSmtp, CERTIFICATE_SMTP_HOST: '   ' })).toThrow(ConfigError);
+      expect(() => loadConfig({ ...baseNonProd, ...fullSmtp, CERTIFICATE_SMTP_USERNAME: '' })).toThrow(ConfigError);
+      expect(() => loadConfig({ ...baseNonProd, ...fullSmtp, CERTIFICATE_SMTP_PASSWORD: '' })).toThrow(ConfigError);
+    });
+
+    it("a ConfigError thrown for missing/invalid SMTP config never includes the word 'password' value or any credential-shaped string", () => {
+      try {
+        loadConfig({ ...baseNonProd, ...fullSmtp, CERTIFICATE_SMTP_PASSWORD: '' });
+        throw new Error('expected loadConfig to throw');
+      } catch (err: unknown) {
+        expect(err).toBeInstanceOf(ConfigError);
+        expect((err as Error).message).not.toContain('super-secret-not-logged');
+      }
+    });
+  });
+
+  describe('production requires real SMTP config — no silent fallback to the fake sender', () => {
+    const prodBase = {
       NODE_ENV: 'production',
       ALLOWED_ORIGINS: 'https://example.com',
       DATABASE_URL: 'postgres://x/y',
       TOPIC_QUIZ_RECEIPT_SECRET: 'x'.repeat(40),
       CERTIFICATE_CLAIMS_ENABLED: 'true',
-      EMAIL_PROVIDER_API_KEY: 'test-key',
       EMAIL_FROM_ADDRESS: 'certificates@example.com',
       OWNER_NOTIFICATION_EMAIL: 'owner@example.com',
-      CERTIFICATE_CLAIM_BASE_URL: 'https://example.com'
-    })).toThrow(ConfigError);
+      CERTIFICATE_CLAIM_BASE_URL: 'https://example.com',
+      CERTIFICATE_OUTBOX_ENCRYPTION_KEY: TEST_OUTBOX_ENCRYPTION_KEY_HEX
+    };
+
+    it('refuses to enable in PRODUCTION without SMTP configuration — every non-SMTP var present is not enough', () => {
+      expect(() => loadConfig(prodBase)).toThrow(ConfigError);
+    });
+
+    it('SUCCEEDS in production once real SMTP configuration is also present — this is the whole point of a real adapter existing now', () => {
+      const config = loadConfig({
+        ...prodBase,
+        CERTIFICATE_SMTP_HOST: 'm07.internetmailserver.net',
+        CERTIFICATE_SMTP_PORT: '587',
+        CERTIFICATE_SMTP_TLS_MODE: 'starttls',
+        CERTIFICATE_SMTP_USERNAME: 'marvin@marvinrusinek.com',
+        CERTIFICATE_SMTP_PASSWORD: 'not-a-real-password'
+      });
+      expect(config.certificateClaims.enabled).toBe(true);
+      if (config.certificateClaims.enabled) {
+        expect(config.certificateClaims.smtp).toEqual({
+          host: 'm07.internetmailserver.net',
+          port: 587,
+          tlsMode: 'starttls',
+          username: 'marvin@marvinrusinek.com',
+          password: 'not-a-real-password'
+        });
+      }
+    });
   });
 });
 

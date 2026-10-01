@@ -37,59 +37,48 @@ import type { EmailSender, OutboundEmail } from './email-sender';
  * PostgreSQL" describe block) — pg-mem's own pool emulation queues one
  * client at a time and cannot prove this by itself.
  *
- * THE INTENDED PROVIDER IS RESEND. This matters for more than "it supports
- * idempotency keys" — its actual contract
- * (https://resend.com/docs/dashboard/emails/idempotency-keys), checked
- * directly against its docs rather than assumed, is:
- *   - a key is retained for 24 HOURS;
- *   - replaying the SAME key with the SAME request body returns the
- *     ORIGINAL result without a second send (what we actually want);
- *   - replaying the SAME key with a DIFFERENT request body is an ERROR —
- *     409 invalid_idempotent_request — not a silent dedup;
- *   - a key reused while an earlier request with it is still in flight is
- *     also an error — 409 concurrent_idempotent_requests — explicitly
- *     documented as safe to retry later.
- * (Postmark, mentioned in an earlier version of this comment, does NOT
- * support idempotency keys at all — checked directly, not assumed; Resend
- * is the only realistic candidate for this design.)
+ * THE IMPLEMENTED PROVIDER IS SMTP (smtp-email-sender.ts, Nodemailer —
+ * built and verified against Winhost's mail service, confirmed via this
+ * domain's own MX record and a direct STARTTLS handshake). This is a
+ * DELIBERATE, DOCUMENTED CHANGE from this design's original target,
+ * Resend's HTTP API: SMTP has NO idempotency-key concept of any kind. Once
+ * a message is accepted (`250 OK`), there is no API to later ask "did you
+ * already get this" — a retry is indistinguishable from a brand-new send
+ * to the server. EVERY claim below about idempotency is therefore about
+ * what THIS SYSTEM's own bookkeeping guarantees, never about the provider
+ * suppressing a duplicate on its own.
  *
- * CRASH-AFTER-PROVIDER-ACCEPTANCE + BYTE-IDENTICAL RETRIES: because Resend
- * errors on a same-key-different-payload replay, a SYSTEM RETRY of a
- * claimant_verify row cannot mint a fresh verification token the way the
- * first version of this design did — that would change templateData.
- * verificationUrl, which is itself part of what makes two requests "the
- * same" to Resend. Instead, a claimant_verify row's FIRST attempt within a
+ * BYTE-IDENTICAL RETRIES ARE STILL PRESERVED, for a different reason than
+ * originally designed: a claimant_verify row's FIRST attempt within a
  * generation mints a token and encrypts+persists the resulting payload
  * (via certificate-outbox-crypto.ts) to
  * certificate_notification_outbox.encrypted_payload BEFORE calling
  * emailSender.send() — see buildEmail below. Every subsequent attempt at
  * the SAME generation decrypts that stored payload and resends it
- * UNCHANGED, under the SAME idempotencyKey (`kind:referenceId:generation`).
- * This makes the crash-after-acceptance case work correctly either way:
- *   - crash BEFORE the payload was persisted: nothing was sent yet
- *     (persist happens before send), so the next attempt starts clean;
- *   - crash AFTER Resend accepted the send but BEFORE markNotificationSent
- *     runs: the payload is already durable, so the next attempt resends
- *     the IDENTICAL body under the IDENTICAL key — Resend returns the
- *     original result rather than erroring or double-sending.
- * `generation` only advances on a user-requested RESEND
+ * UNCHANGED. Over SMTP this no longer prevents a duplicate SEND (nothing
+ * can, once the process crashes at the wrong instant — see below) — what
+ * it still buys is a STABLE verification link: a claimant who received an
+ * earlier retry's email and a later one sees the identical, still-valid
+ * link rather than two different tokens, and MAX_OUTSTANDING_TOKENS_PER_
+ * CLAIM is never needlessly consumed by retries alone. `generation` only
+ * advances on a user-requested RESEND
  * (certificate-claim.repository.ts#requeueForResend, which also clears the
- * stored payload) — a genuine resend gets both a new idempotency key AND a
- * freshly minted token/payload, never suppressed as a mere retry.
+ * stored payload) — a genuine resend still gets a freshly minted
+ * token/payload, never suppressed as a mere retry.
  *
- * RESIDUAL, DOCUMENTED LIMIT ON THE 24-HOUR WINDOW: Resend's own
- * idempotency-key retention is 24 hours, measured from a key's first use.
- * BACKOFF_MS_BY_ATTEMPT below is deliberately kept well under that (worst
- * case across all MAX_NOTIFICATION_ATTEMPTS attempts is roughly 11 hours),
- * so a row's own retry schedule can never outrun Resend's memory of the
- * key by itself. The residual risk this does NOT eliminate: if THIS SERVER
- * PROCESS is down for more than 24 hours between an accepted-but-unrecorded
- * send and its retry (an outage far longer than this schedule's own
- * span), Resend may no longer recognize the key, treat the retry as
- * genuinely new, and send a second physical email. This system would still
- * record the event exactly once and never issue a second certificate or a
- * second owner notification — only "the recipient's inbox has exactly one
- * copy" is not a claim this design can make across an outage that long.
+ * THE RESIDUAL RISK THIS DESIGN DOES NOT AND CANNOT ELIMINATE: if this
+ * process crashes after the SMTP server accepts a message but before
+ * markNotificationSent's UPDATE persists that fact, the next retry WILL
+ * send a second, genuinely duplicate physical email — there is no
+ * provider-side mechanism left to prevent it. This system still
+ * guarantees, unconditionally: exactly one outbox ROW, exactly one
+ * certificate ever issued per email, and exactly one owner-notification
+ * ROW (never a second one from a recovery). It does NOT, and this comment
+ * deliberately does not claim it does, guarantee that a recipient's inbox
+ * receives exactly one copy of a given email. The crash window this
+ * depends on is kept as small as practically possible (markNotificationSent
+ * is called immediately after send() resolves, with no intervening await),
+ * but it cannot be closed to zero.
  *
  * owner_claim_notice rows never use the encrypted-payload mechanism at
  * all: their payload (claimedName/claimedEmail/certificateId) is read
@@ -126,10 +115,14 @@ export interface DispatchOutcome {
 
 /**
  * Fixed, bounded backoff tiers — matches this codebase's "bounded, not
- * open-ended" retry philosophy. Deliberately kept well under Resend's
- * 24-hour idempotency-key retention (worst case across all
- * MAX_NOTIFICATION_ATTEMPTS attempts is roughly 11 hours) — see this
- * class's own doc comment on the residual limit this does NOT eliminate.
+ * open-ended" retry philosophy (worst case across all
+ * MAX_NOTIFICATION_ATTEMPTS attempts is roughly 11 hours before a row is
+ * marked permanently 'failed'). These values were originally sized to stay
+ * under Resend's 24-hour idempotency-key retention; that specific reason no
+ * longer applies now that the implemented provider is SMTP (which has no
+ * such window at all — see this class's own doc comment), but the bounded
+ * values themselves remain a reasonable retry schedule on their own terms
+ * and were kept rather than widened without a concrete reason to.
  */
 const BACKOFF_MS_BY_ATTEMPT: readonly number[] = [
   60_000,        // 1 min
@@ -274,8 +267,9 @@ export class NotificationDispatcher {
       const stored = decryptOutboxPayload<StoredClaimantPayload>(this.options.outboxEncryptionKey, storedEncryptedPayload);
       if (stored) {
         // A genuine retry of this SAME generation — resend the IDENTICAL
-        // payload under the IDENTICAL key, which is what Resend's
-        // same-key-same-payload contract requires.
+        // payload under the IDENTICAL key, so the claimant always sees the
+        // SAME verification link across retries (see this class's own doc
+        // comment for what this does and does not guarantee over SMTP).
         return {
           email: {
             idempotencyKey,
@@ -289,13 +283,11 @@ export class NotificationDispatcher {
       // Decryption failed — almost certainly CERTIFICATE_OUTBOX_ENCRYPTION_
       // KEY was rotated while this row had a pending retry (see this
       // class's own doc comment and the migration 009 column comment).
-      // The payload we WOULD resend is now unknowable, so it is
-      // necessarily going to differ from whatever Resend remembers under
-      // idempotencyKey — reusing that key here would risk the same
-      // invalid_idempotent_request error this whole design exists to
-      // avoid. Mint a fresh payload under a DISTINCT, FIXED fallback key
-      // (not a new random suffix each time) so that if this fallback is
-      // hit again before the row resolves, IT is byte-stable too.
+      // The payload we WOULD resend is now unknowable, so the claimant
+      // would otherwise get a dead link — mint a fresh payload under a
+      // DISTINCT, FIXED fallback key (not a new random suffix each time)
+      // so that if this fallback is hit again before the row resolves, IT
+      // is byte-stable too.
       return this.mintFreshClaimantVerifyEmail(referenceId, `${idempotencyKey}:recovery`);
     }
 

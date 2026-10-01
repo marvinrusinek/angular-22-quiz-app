@@ -16,16 +16,22 @@
  * IDEMPOTENCY: `idempotencyKey` is stable for the lifetime of one outbox
  * row's CURRENT generation (see certificate-notification-dispatcher.ts) —
  * every attempt to send that same row/generation reuses the same key AND,
- * for claimant_verify, the SAME rendered payload. This matters because the
- * intended provider, Resend, checked directly against its own docs
- * (https://resend.com/docs/dashboard/emails/idempotency-keys), returns the
- * ORIGINAL result for a repeated key ONLY when the request body also
- * matches — a repeated key with a DIFFERENT body is a 409 error, not a
- * silent dedup. (Postmark, despite an earlier version of this comment
- * claiming otherwise, has NO idempotency-key support at all — checked
- * directly, not assumed.) See the dispatcher's own doc comment for the
- * full crash-recovery design this enables, and its residual, documented
- * limit once Resend's own 24-hour key-retention window is exceeded.
+ * for claimant_verify, the SAME rendered payload. This was ORIGINALLY
+ * designed around Resend's HTTP API, whose idempotency-key contract
+ * (checked directly against its docs, not assumed) returns the ORIGINAL
+ * result for a repeated key only when the request body also matches. THE
+ * ACTUAL IMPLEMENTED PROVIDER IS SMTP (smtp-email-sender.ts, Nodemailer) —
+ * plain SMTP has NO equivalent concept at all: once a message is accepted,
+ * there is no way to ask the server later whether a retry is "the same
+ * request." `idempotencyKey` is still passed through to the SMTP sender
+ * (as a forensic `X-Certificate-Idempotency-Key` header, never functional
+ * dedup) and the byte-identical-payload mechanism is still preserved for
+ * its OTHER benefit — a stable verification link across retries — but see
+ * smtp-email-sender.ts's own doc comment for the honest, undiluted
+ * statement of what this design can and cannot guarantee over SMTP: a
+ * crash between the server accepting a message and this process recording
+ * that fact CAN still produce a duplicate physical email. Exactly-once
+ * delivery is never claimed.
  */
 
 export type CertificateNotificationKind = 'claimant_verify' | 'owner_claim_notice';
@@ -73,7 +79,13 @@ export interface EmailSender {
  * Simulates provider-level idempotency (see the interface doc comment
  * above): a second `send()` call with an ALREADY-SEEN idempotencyKey
  * returns the original result without appending to `sentMessages` again —
- * this is what lets a test prove "two attempts, one actual delivery."
+ * this is what lets a test prove "two attempts, one actual delivery." This
+ * is DELIBERATELY more generous than the real, implemented SmtpEmailSender
+ * (which has no such behavior at all — see its own doc comment): it
+ * exists so the outbox/dispatcher mechanism's OWN correctness (exactly one
+ * row, correct generation handling, correct backoff) stays testable in
+ * isolation from provider-specific limitations, not to imply SMTP shares
+ * this property.
  */
 export class InMemoryEmailSender implements EmailSender {
   /** Test inspection only. Never logged. */

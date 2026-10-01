@@ -2,15 +2,17 @@
 
 Operational reference for the **email-verified certificate claim feature** —
 the backend-issued replacement for the old, purely local "unlock a
-certificate on page load" behavior. Covers current status, how to run the
-real-browser regression suite, and what remains before this can be enabled
-in production.
+certificate on page load" behavior. Covers current status, the SMTP sender,
+how to run the real-browser regression suite, and the ONE remaining blocker
+before this can be enabled in production.
 
-**Status: code-complete, disabled by default, not yet production-ready.**
-`CERTIFICATE_CLAIMS_ENABLED` defaults to `false`; enabling it in production
-is unconditionally refused today (see §3) because no real email provider
-adapter exists yet — only an in-memory fake used for local development and
-tests.
+**Status: code-complete (including a real SMTP sender), disabled by
+default, blocked from production by a hosting platform limit — not a code
+gap.** `CERTIFICATE_CLAIMS_ENABLED` defaults to `false`. Enabling it in
+production now *requires* real SMTP configuration (§3) rather than being
+unconditionally refused — but the production Node service, as currently
+hosted, cannot reach any SMTP server at all (§4). This is the one thing
+standing between "code-complete" and "actually live."
 
 ---
 
@@ -33,13 +35,10 @@ tests.
 - **Eligibility stays browser-reported** — unchanged. This feature only
   changes what happens once eligible: instead of a silent local unlock, the
   UI offers an explicit claim form.
-- Intended email provider: **Resend**. Its idempotency-key contract
-  (checked directly against its docs, not assumed) requires a byte-identical
-  payload on any retried key — same key + different payload is a `409`
-  error, not a silent dedup. `certificate-notification-dispatcher.ts`'s own
-  doc comment has the full design this drives (encrypted, short-lived
-  outbox payload for `claimant_verify` retries; `owner_claim_notice` never
-  needs one because its payload is already reconstructible).
+- **The implemented email provider is SMTP** (`backend/src/certificate/
+  smtp-email-sender.ts`, Nodemailer) — a deliberate change from this
+  design's original target, Resend's HTTP API. See §3.2 for why that change
+  matters structurally, not just which package is imported.
 
 ---
 
@@ -64,10 +63,9 @@ Desktop or equivalent). It:
 3. Starts a **test-only backend launcher**
    (`e2e-cert-claim/support/launch-cert-e2e-backend.js`) on `:3000` — the
    real `createApp()`/`CertificateClaimService` wiring, but with
-   `InMemoryEmailSender` (see §2.1) instead of a real provider. Aborts if
-   `:3000` is already occupied (could be a developer's own `npm run dev`
-   backend — this suite must never send claim-form traffic to a real
-   database).
+   `InMemoryEmailSender` (see §2.1) instead of real SMTP. Aborts if `:3000`
+   is already occupied (could be a developer's own `npm run dev` backend —
+   this suite must never send claim-form traffic to a real database).
 4. Reuses an already-running `ng serve` on `:4200` if you have one, or
    starts its own.
 5. Runs `e2e-cert-claim/certificate-claim.spec.ts` against both, then tears
@@ -81,6 +79,11 @@ token) → reused-link rejection → expired-link rejection → recovery in a
 genuinely fresh browser context (same certificate id/date preserved, no
 second owner notification) → a legacy local certificate stays labelled as
 such → Quiz Selection loads with no registration gate.
+
+This suite always uses `InMemoryEmailSender`, never the real SMTP sender —
+it proves the claim/confirm/recovery FLOW, not SMTP delivery itself. See §4
+for how SMTP delivery itself was verified, separately and without sending
+a real email.
 
 ### 2.1 Why the fake sender is safe to use here, and why its debug channel can never reach production
 
@@ -116,56 +119,161 @@ This channel cannot exist in a production process:
 
 ---
 
-## 3. Remaining production setup
+## 3. The SMTP sender
 
-**Required before `CERTIFICATE_CLAIMS_ENABLED=true` can be set anywhere
-real:**
+### 3.1 Configuration
 
-1. **A real `EmailSender` adapter.** `backend/src/certificate/email-sender.ts`
-   defines the one interface a provider must implement
-   (`send(message: OutboundEmail): Promise<EmailSendResult>`); only
-   `InMemoryEmailSender` exists today. Building the Resend adapter is the
-   next piece of work (tracked in the main README's Roadmap).
-2. **Remove or replace the unconditional production guard.**
-   `backend/src/config.ts#parseCertificateClaims` currently throws
-   `ConfigError` whenever `CERTIFICATE_CLAIMS_ENABLED=true` AND
-   `NODE_ENV=production`, specifically because no real adapter exists yet
-   and `server.ts` would otherwise silently wire the in-memory one. Once a
-   real adapter is built and `server.ts` is updated to select it (e.g. via
-   a new `EMAIL_SENDER_IMPL` variable), update this guard to require that
-   explicit selection instead of refusing outright — never remove it
-   without replacing it with an equivalent fail-closed check.
-3. **Five required environment variables**, validated fail-closed the
-   moment the feature is enabled (`backend/src/config.ts`):
-   - `EMAIL_PROVIDER_API_KEY`
-   - `EMAIL_FROM_ADDRESS`
-   - `OWNER_NOTIFICATION_EMAIL` — Marvin's own inbox; the only recipient of
-     `owner_claim_notice`, never claimant-supplied.
-   - `CERTIFICATE_CLAIM_BASE_URL` — the public Angular origin the emailed
-     verification link points at.
-   - `CERTIFICATE_OUTBOX_ENCRYPTION_KEY` — exactly 64 hex characters (32
-     bytes). Generate with:
-     ```
-     openssl rand -hex 32
-     ```
-     Never log this value or commit it. Rotating it invalidates any
-     currently-pending `claimant_verify` row's stored retry payload — the
-     dispatcher detects that (decryption fails closed) and falls back to a
-     fresh payload under a distinct key rather than crashing or silently
-     reusing a changed payload under the old key, but rotating during a
-     real outage is still best avoided if possible.
-4. **Frontend**: nothing further required — the claim form, confirmation
-   page, certificate display, and recovery flow are already built and
-   covered by this runbook's own suite plus the Jest unit/component tests.
-   `CertificateClaimApiService#configured` already hides the claim UI
-   gracefully when `API_BASE_URL` isn't set for a build.
-5. **render.yaml**: add the five variables above with `sync: false` (never
-   committed values), matching this file's existing convention for secrets.
+Six variables, all required TOGETHER once `CERTIFICATE_CLAIMS_ENABLED=true`
+— see `backend/.env.example` for the full annotated list. The five
+`CERTIFICATE_SMTP_*` variables are required unconditionally in production;
+outside production, setting ANY one of them forces all five to be validated
+(a partial set is always treated as a configuration mistake, never a signal
+to fall back to the fake sender) — leave all five unset in local dev to use
+`InMemoryEmailSender` instead.
 
-**Already true, verified, and must stay true:**
-- Disabled by default; missing email configuration never breaks Topic Quiz
-  or Interview Mode when the feature is off (`loadConfig({})` tests this
-  directly).
-- An unrelated route still 404s normally when the feature is disabled — the
-  disabled-feature 503 handler is scoped to the five certificate-claim
-  paths only, not a blanket `/api/*` catch-all.
+| Variable | Notes |
+|---|---|
+| `EMAIL_FROM_ADDRESS` | The `From:` header on every sent email. |
+| `OWNER_NOTIFICATION_EMAIL` | Marvin's own inbox — the only recipient of `owner_claim_notice`, never claimant-supplied. |
+| `CERTIFICATE_CLAIM_BASE_URL` | The public Angular origin the emailed verification link points at. |
+| `CERTIFICATE_OUTBOX_ENCRYPTION_KEY` | 64 hex chars (32 bytes). `openssl rand -hex 32`. Never logged or committed. Rotating it invalidates any currently-pending retry payload (handled gracefully — see smtp-email-sender.ts and the dispatcher's own doc comment — but best avoided mid-outage). |
+| `CERTIFICATE_SMTP_HOST` | e.g. `m07.internetmailserver.net` — **confirm this via your own Winhost control panel's Site Info page**, not just this document. Independently corroborated here via `marvinrusinek.com`'s own DNS MX record, which points directly at this host (§4.1) — strong evidence, not a substitute for checking Site Info yourself. |
+| `CERTIFICATE_SMTP_PORT` | Preferred: `587`. |
+| `CERTIFICATE_SMTP_TLS_MODE` | `starttls` (preferred — mandatory STARTTLS upgrade, port 587) or `tls` (implicit TLS, typically port 465). No insecure option exists in this field's type. |
+| `CERTIFICATE_SMTP_USERNAME` | e.g. `marvin@marvinrusinek.com`. |
+| `CERTIFICATE_SMTP_PASSWORD` | **Enter this ONLY in your own local `backend/.env`** (already gitignored — confirmed: `.gitignore` lists `.env`). Never in chat, a commit, a log, or `.env.example`. |
+
+Certificate validation (`rejectUnauthorized: true`, TLS 1.2 floor) is
+hard-coded in `buildSmtpTransportOptions` — not a configurable flag, so
+there is no way to misconfigure it away.
+
+### 3.2 SMTP gives no idempotency guarantee — what changed in the design
+
+The original design (built around Resend's HTTP API) relied on a
+provider-side idempotency-key contract: a retried key with the same payload
+would return the original result instead of sending again. **Plain SMTP has
+no equivalent concept.** Once a message is accepted (`250 OK`), there is no
+way to later ask the server "did you already get this."
+
+What this means concretely:
+
+- The byte-identical retry payload mechanism (`certificate-outbox-
+  crypto.ts`) is **preserved**, but for a different reason: it keeps the
+  verification link **stable** across retries (a claimant sees the same
+  link, not several different ones) and avoids needlessly consuming
+  `MAX_OUTSTANDING_TOKENS_PER_CLAIM`. It no longer prevents a duplicate
+  *send*.
+- **If this process crashes after the SMTP server accepts a message but
+  before `markNotificationSent` persists that fact, the next retry WILL
+  send a second, genuinely duplicate physical email.** There is no
+  provider-side mechanism left to prevent it, and this document does not
+  claim otherwise.
+- What is still guaranteed, unconditionally, regardless of provider: exactly
+  one outbox row, exactly one certificate ever issued per email, and
+  exactly one owner-notification row (a recovery never generates a second
+  one). Only "the recipient's inbox has exactly one copy" is the claim that
+  changed.
+- The crash window is kept as small as practically possible
+  (`markNotificationSent` is called immediately after `send()` resolves,
+  with no intervening `await`), but it cannot be closed to zero.
+- `idempotencyKey` is still passed to the SMTP sender, as an
+  `X-Certificate-Idempotency-Key` header — forensic/debugging traceability
+  only, never functional deduplication.
+
+Full detail: `certificate-notification-dispatcher.ts` and `smtp-email-
+sender.ts`'s own top doc comments.
+
+### 3.3 Error classification
+
+`smtp-email-sender.ts` classifies every send failure into a `SmtpSendError`
+with a `kind`: `auth`, `timeout`, `transient`, `permanent`, or `unknown`
+(derived from Nodemailer's error `code` and, where present, the raw SMTP
+response code — 4xx transient, 5xx permanent). The dispatcher does not
+currently branch on `kind` — every failure still follows the same bounded
+retry schedule — but the classification is visible in logs and covered by
+`backend/test/smtp-email-sender.test.ts` (22 tests: TLS transport options,
+successful send, all five error kinds, header/HTML injection stripping, and
+secret redaction — no thrown error or logged value ever contains the
+configured password).
+
+---
+
+## 4. Production hosting: the one remaining blocker
+
+### 4.1 Where the production Node API actually runs
+
+Confirmed directly from `render.yaml`, not assumed: the Node service
+(`interview-api`) runs on **Render**, `runtime: docker`, **`plan: free`**,
+region `oregon`. This is the service `CERTIFICATE_CLAIMS_ENABLED` would be
+set on.
+
+### 4.2 Winhost SMTP itself: verified working
+
+Checked directly, without sending any email or touching production:
+
+- **Hostname**: `m07.internetmailserver.net` is independently confirmed as
+  `marvinrusinek.com`'s real mail server via a live DNS MX lookup —
+  `marvinrusinek.com MX preference = 10, mail exchanger =
+  m07.internetmailserver.net`. (Still confirm it against Winhost's own Site
+  Info page before relying on it exclusively — Winhost's KB page itself
+  returned 403 to an automated fetch, so this could not be cross-checked
+  against their documentation directly.)
+- **TCP connect to port 587**: succeeds.
+- **STARTTLS handshake**: succeeds. Server certificate
+  (`CN=*.internetmailserver.net`, DigiCert/RapidSSL, valid to 2026-10-19)
+  verifies cleanly through its full chain — `rejectUnauthorized: true` will
+  work correctly against this exact host.
+- **Post-STARTTLS `EHLO`**: server advertises `AUTH PLAIN LOGIN CRAM-MD5` —
+  compatible with Nodemailer's default authentication.
+
+All of this was run from a local machine, not from Render — see §4.3 for
+why that distinction is the actual blocker.
+
+### 4.3 Render's free tier blocks outbound SMTP entirely — this is the real blocker
+
+**Confirmed directly from Render's own official changelog** (not a forum
+post or assumption):
+[render.com/changelog/free-web-services-will-no-longer-allow-outbound-traffic-to-smtp-ports](https://render.com/changelog/free-web-services-will-no-longer-allow-outbound-traffic-to-smtp-ports)
+
+> Free web services will block outbound network traffic to SMTP ports 25,
+> 465, and 587 — effective across all regions by Friday, September 26th
+> \[2025\]. To continue sending traffic to an SMTP port, upgrade your free
+> web service to any paid instance type.
+
+This is a **platform-level network policy**, not a code, credentials, or
+TLS-configuration problem. It applies regardless of how correctly
+`CERTIFICATE_SMTP_*` is set. Because `interview-api` is on `plan: free`
+(§4.1), **no SMTP connection to Winhost (or any SMTP server) can succeed
+from the current production deployment at all**, until the plan is
+upgraded. This is why §4.4's connectivity check was run locally rather than
+attempted from Render — doing so would only reproduce this documented
+block, and attempting it from inside a running production service would
+itself be a change this task was explicitly asked not to make.
+
+**Resolution paths, not mutually exclusive:**
+1. Upgrade `interview-api`'s Render plan to any paid instance type, then
+   enable `CERTIFICATE_CLAIMS_ENABLED` with the SMTP variables from §3.1.
+2. Reconsider an HTTP-API-based provider (e.g. the originally-intended
+   Resend) instead of SMTP specifically for the free tier — ironically the
+   exact reason that design was first chosen. `EmailSender` is a boundary
+   interface for exactly this reason: a second adapter could be added
+   without touching the dispatcher, repository, or frontend at all.
+
+### 4.4 The controlled inbox test needed next
+
+Once the plan question above is resolved (either path), the remaining
+verification — explicitly NOT done yet, since real emails were not to be
+sent this round — is a single controlled send to a real inbox you control:
+
+1. Set all `CERTIFICATE_SMTP_*` variables in a non-production environment
+   that CAN reach port 587 (e.g. your own local `backend/.env`, with
+   `CERTIFICATE_CLAIMS_ENABLED=true` and `NODE_ENV=development` so the
+   production guard doesn't apply).
+2. Run the real server (`npm run dev` in `backend/`) and submit one claim
+   form with an email address you personally control.
+3. Confirm the email actually arrives (not just that `send()` resolved
+   without throwing), check it renders correctly, and click through to
+   confirm the certificate.
+4. Only after that succeeds, repeat against whichever production
+   environment is chosen in §4.3, still with an email address you control
+   before any real claimant traffic is allowed.

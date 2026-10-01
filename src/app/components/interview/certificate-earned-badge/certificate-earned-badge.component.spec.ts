@@ -3,18 +3,25 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
+import { CertificateClaimService } from '@shared/services/features/interview/certificate-claim.service';
 import { CertificateEarnedBadgeComponent } from './certificate-earned-badge.component';
 
 // The service's `unlocked` is the single source of truth (it loads persisted
 // certificate state on construction, so a `true` value == "earned + survives reload").
 const unlockedSig = signal(false);
 const stub = { unlocked: unlockedSig } as unknown as InterviewCertificateService;
+const claimStatusSig = signal<'none' | 'pending' | 'verified'>('none');
+const claimStub = { status: claimStatusSig } as unknown as CertificateClaimService;
 
 function render(): ComponentFixture<CertificateEarnedBadgeComponent> {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [CertificateEarnedBadgeComponent],
-    providers: [provideRouter([]), { provide: InterviewCertificateService, useValue: stub }]
+    providers: [
+      provideRouter([]),
+      { provide: InterviewCertificateService, useValue: stub },
+      { provide: CertificateClaimService, useValue: claimStub }
+    ]
   });
   const fixture = TestBed.createComponent(CertificateEarnedBadgeComponent);
   fixture.detectChanges();
@@ -22,7 +29,16 @@ function render(): ComponentFixture<CertificateEarnedBadgeComponent> {
 }
 
 describe('CertificateEarnedBadgeComponent', () => {
-  beforeEach(() => unlockedSig.set(false));
+  beforeEach(() => {
+    unlockedSig.set(false);
+    claimStatusSig.set('none');
+  });
+
+  it('shows the badge for a VERIFIED certificate even with no legacy record', () => {
+    claimStatusSig.set('verified');
+    const el = render().nativeElement as HTMLElement;
+    expect(el.querySelector('.cert-badge')).not.toBeNull();
+  });
 
   it('renders NOTHING before the certificate is earned', () => {
     expect((render().nativeElement as HTMLElement).querySelector('.cert-badge')).toBeNull();

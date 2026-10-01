@@ -19,6 +19,7 @@ export type ResponsePolicyName =
   | 'ACTIVE_ASSESSMENT'
   | 'SESSION_CREATED'
   | 'SUBMITTED_REVIEW'
+  | 'CERTIFICATE_CLAIM'
   | 'ERROR';
 
 /**
@@ -285,6 +286,42 @@ const POLICIES: Record<ResponsePolicyName, ReadonlySet<string>> = {
     // InterviewResult.correct), not an answer flag — earned data the user is
     // entitled to see. It remains banned under PUBLIC_METADATA and
     // ACTIVE_ASSESSMENT, where any `correct` key would be a genuine leak.
+  ),
+
+  /**
+   * Certificate-claim responses: submission ack, token preview, confirm
+   * result, and the retrieval-by-token GET. `retrievalToken` (the raw,
+   * one-time credential returned exactly once by confirm) and
+   * `emailMasked` (the deliberately-redacted display form) are the two
+   * fields this policy must NOT ban — everything that could expose the
+   * real email, a token's hash, or an idempotency/audit internal is.
+   */
+  CERTIFICATE_CLAIM: banned(
+    ...ANSWER_KEY_FIELDS,
+    ...INTERNAL_FIELDS,
+    ...IDENTIFIER_FIELDS,
+    'email',
+    'email_normalized',
+    'emailNormalized',
+    'claimedEmail',
+    'claimed_email',
+    'idempotencyKeyHash',
+    'idempotency_key_hash',
+    'idempotencyRequestHash',
+    'idempotency_request_hash',
+    'eligibilitySnapshotJson',
+    'eligibility_snapshot_json',
+    'claimId',
+    'claim_id',
+    'encryptedPayload',
+    'encrypted_payload',
+    'outboxEncryptionKeyHex',
+    'outboxEncryptionKey',
+    'smtpPassword',
+    'smtp_password',
+    'smtpUsername',
+    'smtp_username',
+    'password'
   ),
 
   /** Error envelopes are `{ error: { code, message } }` — internals still banned. */

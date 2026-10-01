@@ -18,16 +18,28 @@ import {
   InterviewCertificateService,
   readinessBandLabel
 } from '@shared/services/features/interview/interview-certificate.service';
+import { CertificateClaimService } from '@shared/services/features/interview/certificate-claim.service';
 import { InterviewReadinessService } from '@shared/services/features/interview/interview-readiness.service';
 import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 
 /**
- * The Angular Interview Master Certificate page. READ-ONLY and presentation-only:
- * all eligibility / unlock / persistence logic lives in InterviewCertificateService.
- * Reachable at /interview/certificate. If the certificate hasn't been unlocked
- * (e.g. a direct visit) it shows a friendly locked state rather than a broken
- * page. Print-friendly: only the certificate itself prints (see the SCSS
+ * The Angular Interview Master Certificate page. READ-ONLY and
+ * presentation-only. Reachable at /interview/certificate.
+ *
+ * THREE possible states, checked in this order:
+ *   1. A VERIFIED, backend-issued certificate exists (CertificateClaimService)
+ *      — the normal path going forward. Shown with no "legacy" label.
+ *   2. No verified certificate, but a LEGACY locally-issued one exists
+ *      (InterviewCertificateService, from before this feature) — preserved
+ *      exactly as issued, never deleted, but clearly labelled as legacy and
+ *      not email-verified, with a CTA to claim a verified one.
+ *   3. Neither exists. If eligible, a CTA to the claim form
+ *      (/interview/certificate/claim) — NOT an automatic unlock. Unlocking a
+ *      local record on page load is what this feature replaces; see
+ *      InterviewCertificateService's own doc comment.
+ *
+ * Print-friendly: only the certificate itself prints (see the SCSS
  * `@media print`), so it doubles as a portfolio artifact.
  */
 @Component({
@@ -41,13 +53,22 @@ import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-tog
 })
 export class InterviewCertificateComponent implements OnInit {
   private readonly certService = inject(InterviewCertificateService);
+  private readonly claimService = inject(CertificateClaimService);
   private readonly readinessService = inject(InterviewReadinessService);
   private readonly historyService = inject(InterviewHistoryService);
 
   readonly title = CERTIFICATE_TITLE;
   readonly requiredInterviews = REQUIRED_CERTIFICATE_INTERVIEWS;
-  readonly record = this.certService.record;
-  readonly unlocked = this.certService.unlocked;
+
+  readonly verifiedCertificate = this.claimService.certificate;
+  readonly isVerified = computed(() => this.claimService.status() === 'verified');
+
+  /** The legacy, locally-issued record — never shown once a verified certificate exists. */
+  readonly legacyRecord = this.certService.record;
+  readonly hasLegacy = computed(() => this.certService.unlocked() && !this.isVerified());
+
+  readonly unlocked = computed(() => this.isVerified() || this.hasLegacy());
+  readonly isEligible = computed(() => this.certService.progress().isEligible);
   readonly persistenceFailed = this.certService.persistenceFailed;
 
   // Live readiness tier for display — reuses the readiness service (no re-derive).
@@ -61,23 +82,25 @@ export class InterviewCertificateComponent implements OnInit {
   // cleared post-issue.
   readonly score = computed(() => this.historyService.trends().best);
 
-  readonly recipientName = computed(() => this.record()?.recipientName ?? '');
+  readonly recipientName = computed(() => this.verifiedCertificate()?.recipientName ?? this.legacyRecord()?.recipientName ?? '');
+  readonly certificateId = computed(() => this.verifiedCertificate()?.certificateId ?? this.legacyRecord()?.certificateId ?? '');
 
   ngOnInit(): void {
-    // Make unlocking ORDER-INDEPENDENT. Previously the only place that could
-    // issue the certificate was the Results status card, so a user who became
-    // eligible and came straight here (or deep-linked) saw the locked page even
-    // though they qualified. Both calls are idempotent: ensureQualificationStarted()
-    // no-ops once the date exists, and unlock() returns the existing record when
-    // already issued and null when not yet eligible — so the id and issue date
-    // stay stable and no duplicate is ever generated. The celebration dialog
-    // deliberately stays a Results-only moment.
+    // Qualification-date tracking is unaffected by this feature — it only
+    // counts WHICH interviews qualify, never issues anything. Kept so
+    // progress()/isEligible() stay correct for a user reaching this page
+    // for the first time.
     this.certService.ensureQualificationStarted();
-    this.certService.unlock();
+    // Re-fetch a verified certificate via its stored retrieval token, so a
+    // refresh or a later visit shows it without re-confirming. No-ops
+    // silently if there is nothing to refresh (see the service's own doc
+    // comment) — the legacy/eligible states below still render correctly
+    // either way.
+    void this.claimService.refresh();
   }
 
   readonly issuedDate = computed(() => {
-    const iso = this.record()?.unlockedAt;
+    const iso = this.verifiedCertificate()?.issuedAt ?? this.legacyRecord()?.unlockedAt;
     if (!iso) return '';
     try {
       const d = new Date(iso);
@@ -88,7 +111,10 @@ export class InterviewCertificateComponent implements OnInit {
     }
   });
 
-  // ── recipient name editing (optional; persisted via the service) ──
+  // ── recipient name editing — LEGACY certificates only. A verified
+  // certificate's name is the one confirmed by email and is not locally
+  // editable; its recipientName comes from the backend. ──
+  readonly canEditName = computed(() => this.hasLegacy());
   readonly editingName = signal(false);
   readonly nameDraft = signal('');
 

@@ -319,9 +319,29 @@
   box-sizing: border-box;
 }
 
+.ic-legacy-badge {
+  max-width: 720px;
+  margin: 0 auto 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--ir-border, #e0e0e0);
+  border-left: 3px solid var(--ic-gold, #b8860b);
+  border-radius: 8px;
+  background: var(--ir-surface, #fff);
+  color: var(--ir-text, #1a1a1a);
+  font-size: 13.5px;
+  line-height: 1.5;
+  box-sizing: border-box;
+
+  a {
+    margin-left: 6px;
+    color: var(--ir-accent, #007aff);
+  }
+}
+
 @media print {
   .ic-noprint { display: none !important; }
   .ic-warning { display: none !important; }
+  .ic-legacy-badge { display: none !important; }
 
   .interview-certificate {
     max-width: none;

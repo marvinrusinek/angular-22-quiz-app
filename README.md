@@ -232,7 +232,7 @@ npm install</code></pre>
   <li>Continue improving accessibility, keyboard navigation, and mobile responsiveness</li>
   <li>Expand automated security, performance, and cross-platform regression coverage</li>
   <li>Adopt new Angular APIs and reactive patterns where they provide measurable architectural or user-experience improvements</li>
-  <li>Certificate claims: Require a name and verified email to issue new Interview certificates, with email recovery and owner notifications.</li>
+  <li>Certificate claims — a required name and verified email to issue new Interview certificates, with recovery and owner notifications; code-complete with both an SMTP and a Postmark sender, disabled by default (see <a href="./docs/certificate-claims-runbook.md">docs/certificate-claims-runbook.md</a>)</li>
 </ul>
 
 <hr>

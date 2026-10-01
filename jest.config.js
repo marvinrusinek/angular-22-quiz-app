@@ -25,6 +25,7 @@ module.exports = {
     '<rootDir>/node_modules/',
     '<rootDir>/dist/',
     '<rootDir>/e2e/',
+    '<rootDir>/e2e-cert-claim/',
     '<rootDir>/backend/'
   ],
   moduleNameMapper: {

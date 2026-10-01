@@ -3,7 +3,11 @@ dist/
 coverage/
 
 # Real environment values and the SQLite session store are never committed.
+# .env is an EXACT match only — .env.* covers named variants too (e.g. a
+# throwaway local env file for a one-off manual test against an isolated
+# database), so a differently-named env file is never accidentally staged.
 .env
+.env.*
 *.db
 *.db-journal
 *.db-wal

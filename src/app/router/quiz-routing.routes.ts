@@ -23,6 +23,10 @@ import { InterviewHistoryDetailComponent } from
     '../containers/interview/interview-history-detail/interview-history-detail.component';
 import { InterviewCertificateComponent } from
     '../containers/interview/interview-certificate/interview-certificate.component';
+import { InterviewCertificateClaimComponent } from
+    '../containers/interview/interview-certificate-claim/interview-certificate-claim.component';
+import { InterviewCertificateVerifyComponent } from
+    '../containers/interview/interview-certificate-verify/interview-certificate-verify.component';
 
 import { QuizGuard } from './guards/quiz-guard';
 import { QuizResultGuard } from './guards/quiz-result-guard';
@@ -114,6 +118,19 @@ export const routes: Routes = [
   {
     path: 'interview/certificate',
     component: InterviewCertificateComponent
+  },
+  // Required name/verified-email claim form (new issuance, or recovery of an
+  // existing one via the same form). More specific path listed first.
+  {
+    path: 'interview/certificate/claim',
+    component: InterviewCertificateClaimComponent
+  },
+  // The emailed verification link's confirmation page. Reads the raw token
+  // from the URL FRAGMENT only — see the component's own doc comment for why
+  // it never auto-verifies on load.
+  {
+    path: 'interview/certificate/verify',
+    component: InterviewCertificateVerifyComponent
   },
 
   // Weak Areas Practice — untimed learning session generated from the user's

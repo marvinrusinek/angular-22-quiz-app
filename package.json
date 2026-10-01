@@ -9,6 +9,7 @@
     "test:watch": "jest --watch",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
+    "e2e:certificate": "playwright test --config=playwright.cert-e2e.config.ts",
     "deploy": "ng build --configuration=production && npm run verify:artifact && ngh --dir=dist/demo/browser --no-silent",
     "dev": "node scripts/dev.js",
     "dev:api": "npm --prefix backend run dev",

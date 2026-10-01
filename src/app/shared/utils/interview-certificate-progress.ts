@@ -23,11 +23,17 @@ export function certificateInterviewsShown(p: InterviewCertificateProgress): num
 }
 
 /**
- * The single clearest next action for a NOT-yet-unlocked certificate. Returns ''
- * when unlocked or already eligible (the UI shows the unlocked state instead).
+ * The single clearest next action. Returns '' only when already unlocked (the
+ * UI shows the unlocked state instead). ELIGIBLE-but-not-yet-claimed is its own
+ * case, not blank: since this feature replaced automatic unlock with an
+ * explicit claim step (see InterviewCertificateService's own doc comment),
+ * a user can sit in "eligible" indefinitely until they actually claim — the
+ * compact callout surfaces that the same way the full certificate page's CTA
+ * does, rather than going silent.
  */
 export function certificateNextAction(p: InterviewCertificateProgress): string {
-  if (p.isUnlocked || p.isEligible) return '';
+  if (p.isUnlocked) return '';
+  if (p.isEligible) return $localize`Claim your certificate now.`;
 
   const explorer = p.angularExplorerEarned;
   const interviewsDone = p.qualifyingInterviewsCompleted >= p.requiredInterviews;

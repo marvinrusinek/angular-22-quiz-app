@@ -62,6 +62,9 @@ function registerMissingFunctions(db: IMemoryDb): void {
 const BEGIN = /^\s*BEGIN\b/i;
 const COMMIT = /^\s*COMMIT\b/i;
 const ROLLBACK = /^\s*ROLLBACK\b/i;
+const SAVEPOINT = /^\s*SAVEPOINT\s+(\S+)/i;
+const ROLLBACK_TO_SAVEPOINT = /^\s*ROLLBACK\s+TO\s+SAVEPOINT\s+(\S+)/i;
+const RELEASE_SAVEPOINT = /^\s*RELEASE\s+SAVEPOINT\s+(\S+)/i;
 
 /**
  * Transaction emulation.
@@ -83,23 +86,51 @@ const ROLLBACK = /^\s*ROLLBACK\b/i;
  *    nothing depends on that distinction.
  *  - Locking, deadlocks and concurrent-writer conflicts are not modelled at
  *    all. Anything relying on those needs TEST_DATABASE_URL.
+ *
+ * SAVEPOINTS: pg-mem's SQL parser does not accept SAVEPOINT / ROLLBACK TO
+ * SAVEPOINT / RELEASE SAVEPOINT at all (a hard parse error, not a silent
+ * no-op), so those three are intercepted here the same way BEGIN/COMMIT/
+ * ROLLBACK are — each named savepoint is its own `db.backup()` snapshot,
+ * layered on top of the outer transaction's. This is what lets
+ * confirmVerificationToken's real "SAVEPOINT, catch a unique violation,
+ * ROLLBACK TO SAVEPOINT, keep querying in the same transaction" pattern run
+ * against this test double at all.
  */
 function withTransactions(db: IMemoryDb, raw: Pool): Pool {
   let backup: IBackup | null = null;
   let busy: Promise<void> = Promise.resolve();
+  const savepoints = new Map<string, IBackup>();
 
   const run = async (sql: string, params?: readonly unknown[]): Promise<unknown> => {
     if (BEGIN.test(sql)) {
       backup = db.backup();
+      savepoints.clear();
       return { rows: [], rowCount: 0 };
     }
     if (COMMIT.test(sql)) {
       backup = null;
+      savepoints.clear();
+      return { rows: [], rowCount: 0 };
+    }
+    const rollbackToSavepoint = ROLLBACK_TO_SAVEPOINT.exec(sql);
+    if (rollbackToSavepoint) {
+      savepoints.get(rollbackToSavepoint[1] as string)?.restore();
       return { rows: [], rowCount: 0 };
     }
     if (ROLLBACK.test(sql)) {
       backup?.restore();
       backup = null;
+      savepoints.clear();
+      return { rows: [], rowCount: 0 };
+    }
+    const savepoint = SAVEPOINT.exec(sql);
+    if (savepoint) {
+      savepoints.set(savepoint[1] as string, db.backup());
+      return { rows: [], rowCount: 0 };
+    }
+    const releaseSavepoint = RELEASE_SAVEPOINT.exec(sql);
+    if (releaseSavepoint) {
+      savepoints.delete(releaseSavepoint[1] as string);
       return { rows: [], rowCount: 0 };
     }
     return raw.query(sql as string, params as unknown[]);

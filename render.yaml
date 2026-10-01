@@ -111,8 +111,17 @@ services:
       #     sync: false
       #   - key: OWNER_NOTIFICATION_EMAIL
       #     sync: false
+      #   # NOTE the path: angular.json sets "baseHref": "/angular-22-quiz-app/",
+      #   # so the app is served at this subpath, NOT at the bare domain root
+      #   # (confirmed against README.md's own live-demo link and
+      #   # spring-production-runbook.md). This is DIFFERENT from
+      #   # ALLOWED_ORIGINS above, which is correctly bare — an HTTP Origin
+      #   # header never carries a path, but this value becomes part of a
+      #   # NAVIGABLE emailed link (.../interview/certificate/verify#token=...),
+      #   # which does need the full path. No trailing slash — the code strips
+      #   # one if present before appending its own route.
       #   - key: CERTIFICATE_CLAIM_BASE_URL
-      #     value: https://marvinrusinek.github.io
+      #     value: https://marvinrusinek.github.io/angular-22-quiz-app
       #   - key: CERTIFICATE_OUTBOX_ENCRYPTION_KEY
       #     sync: false
       #   - key: CERTIFICATE_EMAIL_PROVIDER

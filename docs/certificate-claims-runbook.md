@@ -7,11 +7,15 @@ senders, how to run the real-browser regression suite, and the Postmark
 setup checklist needed before production enablement.
 
 **Status: code-complete, with two real senders (SMTP and Postmark),
-disabled by default.** `CERTIFICATE_CLAIMS_ENABLED` defaults to `false`.
+disabled by default, and a successful CONTROLLED LOCAL test with real
+Postmark delivery.** `CERTIFICATE_CLAIMS_ENABLED` defaults to `false`.
 Enabling it in production now *requires* an explicit, real, valid provider
 configuration (§3) rather than being unconditionally refused. **Postmark is
 the provider that can actually work on the current Render free plan** — see
 §4; SMTP is kept available for optional/local use or a future paid plan.
+**Production claims remain disabled** — the local test (§4.5) proves the
+flow end to end against real Postmark delivery, not that production is
+live. See §6 for the exact rollout order and §7 for rollback.
 
 ---
 
@@ -320,22 +324,302 @@ more Postmark-specific gates apply to a transactional sending account:
    Postmark dashboard first, or every send fails with `ErrorCode 1235`
    ("MessageStream... does not exist").
 
-### 4.5 The controlled inbox test needed next
+### 4.5 The controlled local inbox test — CONFIRMED SUCCESSFUL
 
-Explicitly NOT done yet, since real emails were not to be sent this round:
+Run against an isolated local Postgres container (`cert-manual-test-
+postgres`), `NODE_ENV=development`, real Postmark delivery, an email
+address the operator controls. Result: **verification email received,
+explicit confirmation completed, certificate displayed, owner notification
+received.**
 
-1. Set `CERTIFICATE_EMAIL_PROVIDER=postmark`,
-   `CERTIFICATE_POSTMARK_SERVER_TOKEN`, and the shared variables (§3) in a
-   non-production environment — e.g. your own local `backend/.env`, with
-   `NODE_ENV=development` so the production guard doesn't apply.
-2. Run the real server (`npm run dev` in `backend/`) and submit one claim
-   form with an email address you personally control.
-3. Confirm the email actually arrives (not just that `send()` resolved
-   without throwing), check it renders correctly (text and HTML), and click
-   through to confirm the certificate.
-4. Check the Postmark dashboard's own activity log for that message —
-   confirms provider-side delivery status beyond what this system's own
-   `delivered: true` can tell you.
-5. Only after that succeeds, repeat against the production Render
-   environment, still with an email address you control, before any real
-   claimant traffic is allowed.
+**One real-world delivery detail observed, worth documenting rather than
+treating as a failure**: Winhost (the recipient mail server) initially
+**greylisted** the delivery attempt — a common anti-spam technique where an
+unfamiliar sender is temporarily rejected (a `4xx`-class soft bounce) on
+the first attempt, on the assumption that a legitimate mail transfer agent
+will retry after a delay, while most spam senders will not. Postmark's own
+outbound retry logic retried automatically and the message was
+subsequently accepted and delivered. This is normal, expected behavior for
+a new sender/domain pair and typically resolves itself (or improves)
+automatically over the first several sends. It also means: **a real
+end-recipient may see their first verification email arrive with a delay
+of up to several minutes, or (rarely) not at all on the first attempt** —
+the "resend" feature in the claim form exists precisely for this case, and
+the disclosure copy and recovery path already account for it.
+
+This confirms the local flow against REAL Postmark delivery end to end. It
+does not confirm production, which is a separate environment (Render) with
+its own outbound network path — see §6 for why that still needs its own
+verification before real claimant traffic, and §8 for the exact production
+smoke-test plan.
+
+---
+
+## 5. Production routing and URL verification
+
+Checked directly against the actual repository configuration, not assumed.
+
+### 5.1 Node vs. Spring — certificate traffic never touches Spring
+
+`CertificateClaimApiService` injects `API_BASE_URL` (Node's token) exclusively
+— the same token every other Topic-Quiz-adjacent service already uses. It
+never injects `INTERVIEW_API_BASE_URL` (Spring's token). Certificate-claim
+requests reach Node by construction, with zero change to how Interview Mode
+routes to Spring.
+
+### 5.2 GitHub Pages base path — a real bug found and fixed
+
+`angular.json` sets `"baseHref": "/angular-22-quiz-app/"` — the production
+app is served at `https://marvinrusinek.github.io/angular-22-quiz-app/`, NOT
+at the bare domain root (confirmed against README.md's own live-demo link
+and `spring-production-runbook.md`, which explains the SEPARATE, correctly
+bare-origin case: an HTTP `Origin` header never carries a path, so
+`ALLOWED_ORIGINS` is correctly `https://marvinrusinek.github.io` with no
+path — that is a different value for a different purpose than the emailed
+link).
+
+`render.yaml`'s own commented-out `CERTIFICATE_CLAIM_BASE_URL` placeholder
+was wrong — it used the bare origin, which would have produced a broken
+emailed link (`https://marvinrusinek.github.io/interview/certificate/
+verify#token=...`, missing the app's own subpath entirely). **Fixed**: now
+`https://marvinrusinek.github.io/angular-22-quiz-app` (no trailing slash —
+the code strips one before appending its own route).
+
+### 5.3 Deep-link fallback — confirmed already correct
+
+GitHub Pages is a static host with no server-side rewrite, and this app
+uses Angular's default path-based routing (no `HashLocationStrategy`
+anywhere in the codebase — confirmed by direct search). A cold open of a
+deep link like `.../interview/certificate/verify#token=...` would normally
+404 on a static host. `scripts/stage-ghpages.js` already handles this: it
+stages `404.html` as a **byte-identical copy of `index.html`** (confirmed
+directly in the script), which is the standard GitHub Pages SPA fallback —
+the server returns `404.html`, which boots the Angular app, whose Router
+then reads the browser's actual current URL and routes internally. No
+redirect occurs, so this was already correct before this feature existed;
+nothing needed changing.
+
+### 5.4 Fragment handling — confirmed correct
+
+The verification token travels only in the URL **fragment**
+(`#token=...`), never a query string. A fragment is never sent to the
+server in an HTTP request (per the URL spec) — GitHub's server only ever
+sees the path, returns `404.html`, and because this is same-URL content
+substitution rather than a redirect, the browser's `window.location.hash`
+is untouched throughout. The confirmation page's own `ngOnInit` reads it
+directly from `location.hash`.
+
+### 5.5 CORS and CSP — confirmed no change needed
+
+- **CORS**: `ALLOWED_ORIGINS` already lists the correct bare GitHub Pages
+  origin (§5.2); certificate-claim requests go through the same Node
+  origin as every other Topic-Quiz request, so no new entry is needed.
+- **CSP**: `index.html`'s `connect-src` already lists
+  `https://interview-api-c842.onrender.com` (Node's production origin) —
+  the same one `API_BASE_URL` resolves to in production. Certificate-claim
+  calls use that exact token, so no CSP change is needed.
+
+### 5.6 Service worker — confirmed no interference
+
+`ngsw-config.json` defines only `assetGroups` (static files: app shell,
+fonts, images) — there are no `dataGroups` at all, so the service worker
+never intercepts or caches any `/api/*` request. Every certificate-claim
+API call (submit, preview, confirm, retrieve) reaches the network directly;
+there is no risk of a stale cached response ever being replayed for a
+`previewToken` or `confirmToken` call.
+
+### 5.7 No localhost URLs or secrets reach production artifacts
+
+- **Backend Docker image**: `backend/Dockerfile` copies explicit paths only
+  (`package.json`, `tsconfig.json`, `scripts`, `src`, then compiled `dist`
+  and `node_modules` into the runtime stage) — never `test/`, never any
+  `.env*` file. `backend/.dockerignore` independently excludes `test`,
+  `jest.config.*`, and `.env*` too (defense in depth). `render.yaml` scopes
+  the build context to `dockerContext: ./backend`, so anything outside
+  `backend/` — including all of `e2e-cert-claim/` (the Playwright suite's
+  test-only debug channel, §2.1) — is **structurally invisible** to this
+  Docker build, not merely excluded by convention.
+- **Frontend bundle**: a full `ng build --configuration=production` was run
+  and the output grepped directly for `postmark`, `smtp`, the local test
+  database password, and both Postmark/SMTP env var names — none found. The
+  only `localhost:*` string present (`localhost:3000`) is the pre-existing,
+  intentionally-public `DEV_API_BASE_URL` dev-mode fallback constant (see
+  `api-base-url.token.ts`'s own doc comment: "Both URLs are PUBLIC
+  configuration, not secrets") — unrelated to certificates, present before
+  this feature existed, and never used at runtime unless the page is
+  actually loaded from `localhost`.
+
+---
+
+## 6. Database migration and rollout order
+
+### 6.1 Migration 009 is additive and low-risk
+
+Reviewed directly: six brand-new tables (`certificate_claims`,
+`certificate_verification_tokens`, `issued_certificates`,
+`certificate_retrieval_tokens`, `certificate_notification_outbox`), with
+foreign keys only among themselves — **no `ALTER TABLE` on any existing
+table, no backfill, no data migration of any kind.** `CREATE TABLE` only
+locks the new table being created; `CREATE INDEX IF NOT EXISTS` (no
+`CONCURRENTLY` needed) on a brand-new, empty table is effectively instant.
+This migration cannot lock or block access to `quizzes`, `questions`,
+`interview_sessions`, or any other existing production table.
+
+### 6.2 Compatibility with the currently-deployed Node and Spring versions
+
+- **Node**: `migrate()` (`backend/src/db/migrate.ts`) runs automatically on
+  every boot, applying any migration not yet recorded in
+  `schema_migrations` — unconditionally, regardless of
+  `CERTIFICATE_CLAIMS_ENABLED`. This means migration 009 will apply the
+  NEXT time `interview-api` is deployed for ANY reason, whether or not the
+  feature is ever turned on — a deliberate, safe property: the schema
+  appearing and the feature activating are two independently-controllable
+  moments, not one.
+- **Spring**: `ddl-auto=validate` only validates entities Spring explicitly
+  maps. None of the six new tables are Spring entities — they are
+  completely invisible to it. Spring is unaffected by this migration in
+  every respect, confirmed by the same reasoning already established for
+  every other Node-only migration in this codebase.
+
+### 6.3 Exact deployment order
+
+**Phase 1 — code + schema only, feature still OFF (low-risk, reversible):**
+1. Merge this branch (or deploy it directly) to `interview-api` on Render.
+   `CERTIFICATE_CLAIMS_ENABLED` is NOT set. Migration 009 applies
+   automatically on boot. **Zero user-visible behavior change** — the
+   disabled-feature 503 handler covers all five certificate-claim paths,
+   and every existing Topic Quiz / Interview Mode route is untouched.
+2. Confirm the health check passes and `GET /api/quizzes` (or any existing
+   route) still works normally — proves the deploy succeeded and the new,
+   unused tables didn't disturb anything.
+
+**Phase 2 — enable the feature, still no real claimant traffic:**
+3. In the Render dashboard (never in `render.yaml`), set the five
+   non-secret-shaped values from §3/render.yaml's commented block
+   (`EMAIL_FROM_ADDRESS`, `OWNER_NOTIFICATION_EMAIL`,
+   `CERTIFICATE_CLAIM_BASE_URL` — **with the `/angular-22-quiz-app` path,
+   §5.2** — `CERTIFICATE_EMAIL_PROVIDER=postmark`,
+   `CERTIFICATE_POSTMARK_MESSAGE_STREAM=outbound`) plus the two secrets
+   (`CERTIFICATE_OUTBOX_ENCRYPTION_KEY`, freshly generated;
+   `CERTIFICATE_POSTMARK_SERVER_TOKEN`, from Postmark's dashboard) as
+   `sync: false` values, entered directly in the dashboard.
+4. Set `CERTIFICATE_CLAIMS_ENABLED=true` last, after every other variable
+   above is already in place — restart/redeploy to pick them up.
+5. Confirm the startup log shows `[certificate-claims] sending via
+   Postmark: message stream "outbound"` — NOT the in-memory-sender warning.
+
+**Phase 3 — controlled smoke test, then real traffic:**
+6. Run the exact smoke test in §8, using only an email address the
+   operator controls.
+7. Only after that succeeds does the claim form become safe to expose to
+   real users.
+
+---
+
+## 7. Rollback plan
+
+### 7.1 Frontend
+
+The claim form, confirmation page, and certificate display are already
+live in the deployed Angular bundle regardless of the backend flag — they
+simply call an API that may or may not be enabled.
+`CertificateClaimApiService#configured` already hides/short-circuits
+gracefully when `API_BASE_URL` isn't set for a build; rolling back the
+FEATURE never requires a separate frontend deploy or revert. If a frontend
+BUG specifically (not the backend flag) needs rolling back, that is an
+ordinary GitHub Pages rollback: redeploy from the previous `gh-pages` head
+per `docs/github-pages-deploy.md` (never force-push `gh-pages`; the
+previous head is always the rollback point).
+
+### 7.2 Node revision
+
+Migration 009 is purely additive (§6.1) — rolling back to a Node revision
+from BEFORE this feature existed is always safe and needs NO corresponding
+schema rollback. The older code's `migrate()` call simply never attempts
+migration 009 (its own `migrations/` directory doesn't contain that file),
+and the six new tables are left in place, unreferenced and harmless. **Do
+not drop these tables as part of a code rollback** — there is no reason to,
+and doing so would destroy any already-issued certificates' data for no
+benefit.
+
+### 7.3 The feature flag — precise effect, NOT a single on/off for everything
+
+Setting `CERTIFICATE_CLAIMS_ENABLED=false` (or unsetting it) and
+redeploying/restarting causes `wireCertificateClaims()` to return `null`
+entirely — **verified directly in code, not assumed, exactly because this
+task asked not to assume the flag stops both new submissions and existing
+access identically:**
+
+| Effect | Stopped by disabling? | Why |
+|---|---|---|
+| New claim submission (`POST /certificate-claims`) | **Yes** | The disabled-feature 503 handler covers this exact path. |
+| Resend (`POST /certificate-claims/resend`) | **Yes** | Same mechanism. |
+| Confirmation (`POST /certificate-claims/verify/confirm`) | **Yes** | Same mechanism — a claimant mid-flow with an unconfirmed link cannot complete it while disabled. |
+| **Outbox dispatch/retry (the 30-second poller)** | **Yes** | `wireCertificateClaims()` returning `null` means `server.ts` never starts the poller at all. **Any already-pending or retry-scheduled notification is frozen in place — not merely delayed — until the feature is re-enabled.** It resumes exactly where it left off once re-enabled (the outbox row's own state is untouched by the flag). |
+| **Retrieving an already-issued certificate (`GET /certificates/me`)** | **Yes** | This path is ALSO covered by the same disabled-feature 503 handler (confirmed directly in `certificate-claims.route.ts`) — a user on a new device/browser, or anyone whose local `localStorage` state was cleared, CANNOT re-fetch their certificate via its retrieval token while the feature is disabled. A user who already has it cached in their OWN browser's `localStorage` still sees it fine (`CertificateClaimService#refresh()` swallows the failure and keeps the last-known state) — but that is a client-side cache, not the server confirming anything. |
+| Already-issued certificate DATA in Postgres | **No — never** | The flag only gates HTTP reachability. No issued certificate, claim, or outbox row is ever deleted or modified by disabling the feature. |
+
+**This is a deliberate design trade-off, not an oversight, flagged here for
+an explicit decision rather than silently changed**: the "all-or-nothing"
+gate is simple and matches this codebase's existing fail-closed
+conventions, but it means an emergency rollback (e.g., disabling due to a
+security concern in the CONFIRM path specifically) also removes
+RETRIEVAL access for anyone who needs their certificate from a new device
+during the outage. If "stop new issuance/confirmation but keep retrieval
+working" is ever wanted, that requires constructing the repository/
+retrieval-serving path independently of whether `emailProvider` is
+configured — a real, separable change, not made here without that explicit
+decision.
+
+### 7.4 Pending outbox work during a rollback
+
+Per §7.3: pending `claimant_verify` or `owner_claim_notice` rows are
+neither lost nor corrupted by disabling — they simply stop being processed
+until re-enabled. If a rollback is expected to last more than a few hours,
+be aware that a `claimant_verify` row's own verification token still
+expires on its normal 24-hour schedule regardless of whether the outbox
+poller is running — see §7.5.
+
+### 7.5 Expired links during delivery delays — confirmed safe
+
+A verification token's TTL (24 hours, `server.ts`) is deliberately sized
+well above the dispatcher's own worst-case retry span (~11 hours across
+all `MAX_NOTIFICATION_ATTEMPTS`) specifically so a message that is retried
+right up to the bounded attempt cap still carries a token that has not yet
+expired when it finally sends. An expired token is rejected at confirm
+time with a clear "This link has expired" message (never silently
+succeeds, never issues a certificate) — covered directly by
+`backend/test/certificate-claim.test.ts`'s expired-token tests and the
+Playwright suite's own expired-link test. The claim form's own "Already
+have a certificate? Recover it" path, and the plain resend button, are
+both always available as the working recovery path, independent of
+whether a specific link happened to expire.
+
+---
+
+## 8. Controlled production smoke test
+
+Uses only an email address the operator controls — no real claimant
+traffic until this succeeds.
+
+1. In the Render dashboard, enter the production configuration exactly as
+   in §6.3 Phase 2, with `CERTIFICATE_CLAIMS_ENABLED` left at its LAST
+   step.
+2. Set `CERTIFICATE_CLAIMS_ENABLED=true` and redeploy/restart.
+3. Confirm the startup log line from §6.3 step 5.
+4. From the live site (`https://marvinrusinek.github.io/angular-22-quiz-app/`),
+   navigate to the claim form and submit with an email address you
+   personally control.
+5. Confirm the email arrives (allow a few minutes — greylisting on a first
+   send is expected and normal, §4.5), click through, confirm explicitly,
+   and verify the certificate displays correctly.
+6. Confirm the separate owner-notification email also arrives.
+7. Check Postmark's own Activity dashboard for both messages' actual
+   delivery status.
+8. Refresh the certificate page and confirm it still displays (proves
+   retrieval-by-token works against the live deployment, not just
+   locally).
+9. Only after every step above succeeds should the claim form be
+   considered ready for real claimant traffic. Until then, treat
+   `CERTIFICATE_CLAIMS_ENABLED=true` in production as itself a
+   smoke-test-only state, reversible at any point via §7.

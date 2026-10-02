@@ -25,15 +25,92 @@ import { createTestPool, MIGRATION_007_ORIGINAL_ALTER } from './helpers/pg-mem-p
  */
 
 const CLOCK = () => 1_700_000_000_000;
-const HASH_64 = (fill: string): string => fill.repeat(64).slice(0, 64);
-const KEY_HASH_A = HASH_64('a');
-const KEY_HASH_B = HASH_64('b');
-const REQUEST_HASH_A = HASH_64('1');
 
 let sessionCounter = 0;
 function nextIds(): { id: string; attemptId: string } {
   sessionCounter += 1;
   return { id: `sess_idem_${sessionCounter}`, attemptId: `att_idem_${sessionCounter}` };
+}
+
+/**
+ * A FRESH, never-before-used 64-character hash value, every single call —
+ * never a shared constant reused across tests. A prior version of this
+ * file reused fixed constants (KEY_HASH_A etc.) across unrelated tests: by
+ * the time later negative tests ran, that value was already present in
+ * the table from an earlier test, so their generic `.rejects.toThrow()`
+ * could pass from the UNIQUE constraint on idempotency_key_hash alone —
+ * even if the hash-length CHECK being "tested" were missing entirely.
+ * A monotonic counter makes that collision structurally impossible.
+ */
+let hashCounter = 0;
+function freshHash(): string {
+  hashCounter += 1;
+  const marker = hashCounter.toString(16).padStart(8, '0');
+  return marker.repeat(8).slice(0, 64);
+}
+
+interface ConstraintNames {
+  readonly keyHashFormat: string;
+  readonly requestHashFormat: string;
+  readonly pairedNullability: string;
+}
+
+/** The real auto-generated constraint names Postgres gives the two inline, unnamed CHECKs on migration 007's ORIGINAL (unmodified) statement. */
+const REAL_PG_CONSTRAINT_NAMES: ConstraintNames = {
+  keyHashFormat: 'interview_sessions_idempotency_key_hash_check',
+  requestHashFormat: 'interview_sessions_idempotency_request_hash_check',
+  pairedNullability: 'idempotency_hash_present_iff_key_present'
+};
+
+/** The explicit names this project's pg-mem-safe rewrite (pg-mem-pool.ts) gives the same three CHECKs. */
+const PGMEM_CONSTRAINT_NAMES: ConstraintNames = {
+  keyHashFormat: 'idempotency_key_hash_format',
+  requestHashFormat: 'idempotency_request_hash_format',
+  pairedNullability: 'idempotency_hash_present_iff_key_present'
+};
+
+interface PgErrorLike {
+  readonly code?: string;
+  readonly constraint?: string;
+  readonly message?: string;
+}
+
+/**
+ * Asserts the promise rejects due to a CHECK violation on SPECIFICALLY
+ * `constraintName` — never a UNIQUE violation, and never any other
+ * failure. Real Postgres reports SQLSTATE 23514 (check_violation) and the
+ * exact constraint name directly on the error object. pg-mem does NOT
+ * populate `.code` for a CHECK violation at all (verified directly by
+ * probing it — only a UNIQUE violation gets a `.code`), so the constraint
+ * name embedded in its error message is the reliable fallback there.
+ * Either way, a 23505 (UNIQUE) can never satisfy this assertion — which is
+ * exactly the masking gap a prior review found.
+ */
+async function expectCheckViolation(promise: Promise<unknown>, constraintName: string): Promise<void> {
+  let caught: PgErrorLike | undefined;
+  try {
+    await promise;
+  } catch (err) {
+    caught = err as PgErrorLike;
+  }
+  if (!caught) {
+    throw new Error(`expected a CHECK violation on "${constraintName}", but the insert succeeded`);
+  }
+
+  expect(caught.code).not.toBe('23505');
+  if (caught.code !== undefined) {
+    expect(caught.code).toBe('23514');
+  }
+  if (caught.constraint !== undefined) {
+    expect(caught.constraint).toBe(constraintName);
+  } else {
+    expect(caught.message ?? '').toContain(constraintName);
+  }
+}
+
+/** SQLSTATE 23505 (unique_violation) — reported with `.code` by BOTH pg-mem and real Postgres, verified directly. */
+async function expectUniqueViolation(promise: Promise<unknown>): Promise<void> {
+  await expect(promise).rejects.toMatchObject({ code: '23505' });
 }
 
 interface InsertOverrides {
@@ -75,11 +152,11 @@ function copyMigrationsBefore(beforeVersion: number, destDir: string): void {
  * database — including a real one also used by other describe blocks in
  * this file.
  */
-function defineConstraintSuite(getDb: () => DatabaseHandle): void {
+function defineConstraintSuite(getDb: () => DatabaseHandle, names: ConstraintNames): void {
   it('accepts exactly 64 hex characters for both hash columns', async () => {
     await expect(insertSession(getDb(), {
-      idempotencyKeyHash: KEY_HASH_A,
-      idempotencyRequestHash: REQUEST_HASH_A
+      idempotencyKeyHash: freshHash(),
+      idempotencyRequestHash: freshHash()
     })).resolves.toBeUndefined();
   });
 
@@ -88,41 +165,50 @@ function defineConstraintSuite(getDb: () => DatabaseHandle): void {
   });
 
   it('hash-length CHECK rejects an idempotency_key_hash shorter than 64 characters', async () => {
-    await expect(insertSession(getDb(), {
-      idempotencyKeyHash: 'a'.repeat(63),
-      idempotencyRequestHash: REQUEST_HASH_A
-    })).rejects.toThrow();
+    await expectCheckViolation(
+      insertSession(getDb(), { idempotencyKeyHash: 'a'.repeat(63), idempotencyRequestHash: freshHash() }),
+      names.keyHashFormat
+    );
   });
 
   it('hash-length CHECK rejects an idempotency_key_hash longer than 64 characters', async () => {
-    await expect(insertSession(getDb(), {
-      idempotencyKeyHash: 'a'.repeat(65),
-      idempotencyRequestHash: REQUEST_HASH_A
-    })).rejects.toThrow();
+    await expectCheckViolation(
+      insertSession(getDb(), { idempotencyKeyHash: 'a'.repeat(65), idempotencyRequestHash: freshHash() }),
+      names.keyHashFormat
+    );
   });
 
   it('hash-length CHECK rejects an idempotency_request_hash of the wrong length', async () => {
-    await expect(insertSession(getDb(), {
-      idempotencyKeyHash: KEY_HASH_A,
-      idempotencyRequestHash: 'short'
-    })).rejects.toThrow();
+    // idempotencyKeyHash is a FRESH hash never used elsewhere — so if this
+    // insert fails, it cannot be the UNIQUE constraint; it can only be the
+    // request-hash CHECK this test actually targets.
+    await expectCheckViolation(
+      insertSession(getDb(), { idempotencyKeyHash: freshHash(), idempotencyRequestHash: 'short' }),
+      names.requestHashFormat
+    );
   });
 
   it('paired-nullability CHECK rejects a key hash present without a request hash', async () => {
-    await expect(insertSession(getDb(), { idempotencyKeyHash: KEY_HASH_A })).rejects.toThrow();
+    await expectCheckViolation(
+      insertSession(getDb(), { idempotencyKeyHash: freshHash() }),
+      names.pairedNullability
+    );
   });
 
   it('paired-nullability CHECK rejects a request hash present without a key hash', async () => {
-    await expect(insertSession(getDb(), { idempotencyRequestHash: REQUEST_HASH_A })).rejects.toThrow();
+    await expectCheckViolation(
+      insertSession(getDb(), { idempotencyRequestHash: freshHash() }),
+      names.pairedNullability
+    );
   });
 
   it('UNIQUE constraint rejects two rows presenting the SAME idempotency_key_hash', async () => {
     const db = getDb();
-    await insertSession(db, { idempotencyKeyHash: KEY_HASH_B, idempotencyRequestHash: REQUEST_HASH_A });
-    await expect(insertSession(db, {
-      idempotencyKeyHash: KEY_HASH_B,
-      idempotencyRequestHash: REQUEST_HASH_A
-    })).rejects.toThrow();
+    const sharedKeyHash = freshHash();
+    await insertSession(db, { idempotencyKeyHash: sharedKeyHash, idempotencyRequestHash: freshHash() });
+    await expectUniqueViolation(
+      insertSession(db, { idempotencyKeyHash: sharedKeyHash, idempotencyRequestHash: freshHash() })
+    );
   });
 
   it('UNIQUE constraint allows MULTIPLE rows with a NULL idempotency_key_hash (SQL-standard: NULLs are never equal)', async () => {
@@ -199,7 +285,7 @@ describe('007_interview_session_idempotency — schema constraints (pg-mem)', ()
     await db.close();
   });
 
-  defineConstraintSuite(() => db);
+  defineConstraintSuite(() => db, PGMEM_CONSTRAINT_NAMES);
   defineCompatibilityTest(async () => fromPool(createTestPool().pool, 'pg-mem'));
 });
 
@@ -235,7 +321,7 @@ describeReal('007_interview_session_idempotency — same constraints against REA
     await db.close();
   });
 
-  defineConstraintSuite(() => db);
+  defineConstraintSuite(() => db, REAL_PG_CONSTRAINT_NAMES);
 
   defineCompatibilityTest(async () => {
     const compatSchema = `migration_007_compat_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;

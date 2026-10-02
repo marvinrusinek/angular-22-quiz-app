@@ -90,12 +90,33 @@ function registerMissingFunctions(db: IMemoryDb): void {
  * only ever touches SQL text flowing through THIS test pool — the real
  * migration file on disk, and what runs against production/real Postgres,
  * is completely unmodified. Matched by an exact substring (not a general
- * ALTER TABLE parser, which would be far riskier to get right), so this
- * does nothing to any other statement and throws loudly rather than
- * silently no-op if migration 007's text ever changes without this being
- * updated to match.
+ * ALTER TABLE parser, which would be far riskier to get right and could
+ * silently mis-rewrite an unrelated statement), so this does nothing to
+ * any other statement.
+ *
+ * DRIFT: a non-matching substring makes `workAroundPgMemCorruptedAliasBug`
+ * return the input UNCHANGED (never a stale/obsolete rewrite applied to
+ * different SQL) — safe, but not loud on its own. A dedicated test
+ * (test/migration-007-idempotency.test.ts) separately asserts
+ * MIGRATION_007_ORIGINAL_ALTER still appears verbatim in the real migration
+ * file, so an edit to it that silently stops matching here fails with a
+ * specific, correctly-attributed message instead of a confusing
+ * re-emergence of the original "Corrupted alias" error somewhere else.
  */
-const MIGRATION_007_ORIGINAL_ALTER = `ALTER TABLE interview_sessions
+/**
+ * Exported SPECIFICALLY so a dedicated drift test (see
+ * test/migration-007-idempotency.test.ts) can assert this still appears
+ * verbatim in 007_interview_session_idempotency.sql as currently written.
+ * If a future edit to that migration changes this statement at all — a
+ * renamed constraint, reworded CHECK, added column — this substring no
+ * longer matches, `workAroundPgMemCorruptedAliasBug` silently stops
+ * rewriting it (see that function's own check below), and pg-mem tests
+ * touching `interview_sessions` would start failing with the ORIGINAL
+ * "Corrupted alias" error again, with nothing pointing at why. The drift
+ * test converts that into an immediate, specific, correctly-attributed
+ * failure instead.
+ */
+export const MIGRATION_007_ORIGINAL_ALTER = `ALTER TABLE interview_sessions
   ADD COLUMN idempotency_key_hash TEXT UNIQUE
              CHECK (idempotency_key_hash IS NULL OR length(trim(idempotency_key_hash)) = 64),
   ADD COLUMN idempotency_request_hash TEXT

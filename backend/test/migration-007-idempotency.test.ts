@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, readdirSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, readdirSync, copyFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -6,7 +6,7 @@ import { Pool } from 'pg';
 
 import { fromPool, type DatabaseHandle } from '../src/db/database';
 import { migrate, migrationsDirectory } from '../src/db/migrate';
-import { createTestPool } from './helpers/pg-mem-pool';
+import { createTestPool, MIGRATION_007_ORIGINAL_ALTER } from './helpers/pg-mem-pool';
 
 /**
  * Schema-level regression coverage for migration
@@ -169,6 +169,23 @@ function defineCompatibilityTest(openFreshUnmigratedDb: () => Promise<DatabaseHa
     }
   });
 }
+
+describe('007_interview_session_idempotency — pg-mem compatibility drift', () => {
+  it('the pg-mem-safe rewrite in pg-mem-pool.ts still matches this migration as currently written', () => {
+    // No database involved — a pure text check, so it runs even without any
+    // DB infra at all. If this fails, migration 007 was edited (a renamed
+    // constraint, reworded CHECK, added column, ANY change to this exact
+    // statement) without updating workAroundPgMemCorruptedAliasBug's
+    // MIGRATION_007_ORIGINAL_ALTER to match. That function already fails
+    // SAFE on a mismatch (returns the SQL unchanged rather than applying a
+    // stale rewrite to different SQL) — but silently, so every pg-mem test
+    // touching interview_sessions would start failing again with the
+    // original "Corrupted alias" error and no indication why. This test is
+    // what turns that into one specific, correctly-attributed failure here.
+    const sql = readFileSync(resolve(migrationsDirectory(), '007_interview_session_idempotency.sql'), 'utf8');
+    expect(sql).toContain(MIGRATION_007_ORIGINAL_ALTER);
+  });
+});
 
 describe('007_interview_session_idempotency — schema constraints (pg-mem)', () => {
   let db: DatabaseHandle;

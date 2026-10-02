@@ -111,7 +111,7 @@ describe('InterviewCertificateComponent', () => {
     expect(cta?.getAttribute('href')).toContain('/interview/certificate/claim');
   });
 
-  it('renders a VERIFIED certificate with title, id, tier and date, no legacy badge', () => {
+  it('renders a VERIFIED certificate with title, id and date, no legacy badge', () => {
     verifiedCertSig.set(verified());
     claimStatusSig.set('verified');
     const el = render().nativeElement as HTMLElement;
@@ -119,31 +119,34 @@ describe('InterviewCertificateComponent', () => {
     expect(el.querySelector('.ic-cert__title')?.textContent).toContain('Angular Interview Master');
     expect(el.querySelector('.ic-cert__id')?.textContent).toContain('AQ-2026-000200-K');
     expect(el.querySelector('.ic-cert__name')?.textContent).toContain('Ada Lovelace');
-    const facts = el.querySelector('.ic-cert__facts')?.textContent ?? '';
-    expect(facts).toContain('Interview Ready');
     expect(el.querySelector('.ic-legacy-badge')).toBeNull();
     // A verified certificate's name is not locally editable.
     expect(el.querySelector('.ic-name-btn')).toBeNull();
   });
 
-  it('a VERIFIED certificate NEVER shows an Interview Score fact — it is server-issued and must not depend on this browser’s local history', () => {
+  it('a VERIFIED certificate shows ONLY Date Issued — never Interview Readiness or Interview Score, both browser-local and absent from the backend record', () => {
     verifiedCertSig.set(verified());
     claimStatusSig.set('verified');
     const el = render().nativeElement as HTMLElement;
     const facts = el.querySelector('.ic-cert__facts');
     expect(facts?.textContent).not.toMatch(/Interview Score/i);
-    expect(facts?.querySelectorAll('.ic-fact')).toHaveLength(2);
-    expect(facts?.classList.contains('ic-cert__facts--two')).toBe(true);
+    expect(facts?.textContent).not.toMatch(/Interview Readiness/i);
+    expect(facts?.textContent).not.toMatch(/Interview Ready\b/i); // the readiness BAND label, not just the field name
+    expect(facts?.textContent).toContain('Date Issued');
+    expect(facts?.querySelectorAll('.ic-fact')).toHaveLength(1);
+    expect(facts?.classList.contains('ic-cert__facts--one')).toBe(true);
   });
 
-  it('a VERIFIED certificate displays IDENTICALLY whether or not this browser has local interview history — the exact bug a mismatched regular/Incognito display would be', () => {
+  it('a VERIFIED certificate displays IDENTICALLY regardless of this browser’s local interview history OR readiness band — the exact bug a mismatched regular/Incognito display would be', () => {
     verifiedCertSig.set(verified());
     claimStatusSig.set('verified');
 
-    trendsSig.set({ best: 95 }); // e.g. regular Chrome, rich local history
+    trendsSig.set({ best: 95 });    // e.g. regular Chrome, rich local history
+    band('interview-ready');
     const withHistory = (render().nativeElement as HTMLElement).querySelector('.ic-cert__facts')?.innerHTML;
 
-    trendsSig.set({ best: null }); // e.g. a fresh Incognito window, no local history
+    trendsSig.set({ best: null });  // e.g. a fresh Incognito window, no local history
+    band(null);                     // and no readiness computed either
     const withoutHistory = (render().nativeElement as HTMLElement).querySelector('.ic-cert__facts')?.innerHTML;
 
     expect(withHistory).toBe(withoutHistory);
@@ -157,10 +160,11 @@ describe('InterviewCertificateComponent', () => {
     expect(el.querySelector('.ic-legacy-badge')).not.toBeNull();
     expect(el.querySelector('.ic-name-btn')).not.toBeNull();
     const facts = el.querySelector('.ic-cert__facts');
+    expect(facts?.textContent).toContain('Interview Readiness');
     expect(facts?.textContent).toContain('Best Interview Score');
     expect(facts?.textContent).toContain('95%');
     expect(facts?.querySelectorAll('.ic-fact')).toHaveLength(3);
-    expect(facts?.classList.contains('ic-cert__facts--two')).toBe(false);
+    expect(facts?.classList.contains('ic-cert__facts--one')).toBe(false);
   });
 
   it('prefers the VERIFIED certificate over a legacy one when both exist', () => {

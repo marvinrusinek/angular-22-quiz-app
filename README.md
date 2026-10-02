@@ -82,7 +82,7 @@
 
 <h2>🧭 Architecture Overview</h2>
 
-<p>The application follows a modular frontend/backend architecture. Angular container components orchestrate application flow, focused services encapsulate business logic, and Signals and RxJS keep the UI synchronized with user interactions. Topic Quizzes and quiz metadata are served through a Node/Express REST API, while Interview Mode session workflows are served through a Spring Boot REST API. Both backends connect to a shared PostgreSQL database, hosted on Neon in production, which serves as the authoritative store for quiz content, assessment sessions, submitted answers, and server-side results.</p>
+<p>The application follows a modular frontend/backend architecture. Angular container components orchestrate application flow, focused services encapsulate business logic, and Signals and RxJS keep the UI synchronized with user interactions. Topic Quizzes, quiz metadata, and certificate claims are served through a Node/Express REST API, while Interview Mode session workflows are served through a Spring Boot REST API. Both backends connect to a shared PostgreSQL database, hosted on Neon in production, which serves as the authoritative store for quiz content, assessment sessions, submitted answers, and server-side results.</p>
 
 <p>The frontend combines <strong>Angular Signals</strong> for fine-grained reactive UI state with <strong>RxJS</strong> for asynchronous data flows, event coordination, and cross-component communication. Correctness-sensitive operations remain backend-authoritative so answer-bearing quiz data is not shipped with the Angular application. </p>
 
@@ -191,7 +191,7 @@ npm install</code></pre>
 
 <h3>Run the Topic Quiz API and Angular Frontend</h3>
 
-<p>The Node/Express backend serves Topic Quizzes and quiz metadata.</p>
+<p>The Node/Express backend serves Topic Quizzes, quiz metadata, and certificate claims.</p>
 
 
 <pre><code>npm run dev</code></pre>

@@ -75,14 +75,14 @@
   <li><strong>Secure Full-Stack Design:</strong> Node/Express powers Topic Quizzes, Spring Boot powers Interview Mode, and PostgreSQL serves as the authoritative data store. Correctness-sensitive data and scoring remain on the backend.</li>
   <li><strong>Testing and Reliability:</strong> Automated coverage across Angular, Node/Express, Spring Boot, database integration, API contract parity, and end-to-end workflows using Jest, Playwright, JUnit 5, MockMvc, and Testcontainers.</li>
   <li><strong>Accessible, Responsive Experience:</strong> Angular Material, keyboard navigation, accessibility-conscious interactions, mobile-responsive layouts, dark and light themes, and Progressive Web App support.</li>
-  <li><strong>Interview certificate claims:</strong> Require a name and verified email, support email-based recovery, and notify the app owner when a new certificate is issued. Email verification confirms inbox ownership; achievement eligibility remains browser-reported. See the <a href="./docs/certificate-claims-runbook.md">certificate claims runbook</a>.</li>
+  <li><strong>Interview Certificate Claims:</strong> Require a name and verified email, support email-based recovery, and notify the app owner when a new certificate is issued. Email verification confirms inbox ownership; achievement eligibility remains browser-reported. See the <a href="./docs/certificate-claims-runbook.md">certificate claims runbook</a>.</li>
 </ul>
 
 <hr>
 
 <h2>🧭 Architecture Overview</h2>
 
-<p>The application follows a modular frontend/backend architecture. Angular container components orchestrate application flow, focused services encapsulate business logic, and Signals and RxJS keep the UI synchronized with user interactions. Topic Quizzes, quiz metadata, and certificate claims are served through a Node/Express REST API, while Interview Mode session workflows are served through a Spring Boot REST API. Both backends connect to a shared PostgreSQL database, hosted on Neon in production, which serves as the authoritative store for quiz content, assessment sessions, submitted answers, and server-side results.</p>
+<p>The application follows a modular frontend/backend architecture. Angular container components orchestrate application flow, focused services encapsulate business logic, and Signals and RxJS keep the UI synchronized with user interactions. Topic Quizzes, quiz metadata, and certificate claims are served through a Node/Express REST API, while Interview Mode session workflows are served through a Spring Boot REST API. Both backends connect to a shared PostgreSQL database, hosted on Neon in production, which serves as the authoritative store for quiz content, assessment sessions, submitted answers, server-side results, and issued certificates.</p>
 
 <p>The frontend combines <strong>Angular Signals</strong> for fine-grained reactive UI state with <strong>RxJS</strong> for asynchronous data flows, event coordination, and cross-component communication. Correctness-sensitive operations remain backend-authoritative so answer-bearing quiz data is not shipped with the Angular application. </p>
 
@@ -123,6 +123,7 @@
   <li><strong>Testing:</strong> Jest, Playwright, JUnit 5, MockMvc, Testcontainers, API contract-parity testing</li>
   <li><strong>Platform:</strong> Progressive Web App (PWA)</li>
   <li><strong>Hosting:</strong> GitHub Pages, Render, Oracle Cloud Infrastructure, Neon</li>
+  <li><strong>Transactional Email:</strong> Postmark HTTPS API for certificate verification, recovery, and owner notifications; optional SMTP support.</li>
 </ul>  
 
 <hr>
@@ -145,7 +146,8 @@ angular-22-quiz-app/
 │       ├── routes/
 │       ├── quiz/
 │       ├── interview/
-│       └── database/
+        ├── certificate/
+│       └── db/
 │
 ├── backend-spring/                  # Spring Boot API
 │   └── src/

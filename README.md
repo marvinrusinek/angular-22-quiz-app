@@ -75,7 +75,7 @@
   <li><strong>Secure Full-Stack Design:</strong> Node/Express powers Topic Quizzes, Spring Boot powers Interview Mode, and PostgreSQL serves as the authoritative data store. Correctness-sensitive data and scoring remain on the backend.</li>
   <li><strong>Testing and Reliability:</strong> Automated coverage across Angular, Node/Express, Spring Boot, database integration, API contract parity, and end-to-end workflows using Jest, Playwright, JUnit 5, MockMvc, and Testcontainers.</li>
   <li><strong>Accessible, Responsive Experience:</strong> Angular Material, keyboard navigation, accessibility-conscious interactions, mobile-responsive layouts, dark and light themes, and Progressive Web App support.</li>
-  <li>Interview certificate claims — require a name and verified email, support email-based recovery, and notify the app owner when a new certificate is issued. Email verification confirms inbox ownership; achievement eligibility remains browser-reported. See the <a href="./docs/certificate-claims-runbook.md">certificate claims runbook</a>.</li>
+  <li><strong>Interview certificate claims:</strong> Require a name and verified email, support email-based recovery, and notify the app owner when a new certificate is issued. Email verification confirms inbox ownership; achievement eligibility remains browser-reported. See the <a href="./docs/certificate-claims-runbook.md">certificate claims runbook</a>.</li>
 </ul>
 
 <hr>

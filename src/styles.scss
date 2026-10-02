@@ -489,11 +489,17 @@ mat-card {
   box-shadow: none !important;
 }
 
-/* Remove MDC focus indicator that shows on click */
+/* Remove MDC focus indicator that shows on click (mouse) */
 .mat-mdc-menu-trigger:focus,
-.mat-mdc-menu-trigger:focus-visible,
 .mat-mdc-menu-trigger:active {
   outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Restore a clear keyboard-only focus indicator (WCAG 2.4.7) */
+.mat-mdc-menu-trigger:focus-visible {
+  outline: 2px solid vars.$dodger-blue !important;
+  outline-offset: 2px !important;
   box-shadow: none !important;
 }
 

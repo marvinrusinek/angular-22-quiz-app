@@ -51,11 +51,19 @@
   cursor: inherit !important;
 }
 
-/* Hide native circles/boxes and their containers to ensure zero layout impact */
+/* Zero layout impact for the radio/checkbox wrapper spans — `display: contents`
+   rather than `display: none`, because the native .mdc-radio__native-control /
+   .mdc-checkbox__native-control input lives INSIDE .mdc-radio / .mdc-checkbox:
+   `display: none` here would also remove that input from the layout and take
+   it out of the tab order, making every answer keyboard-unreachable. */
 .mdc-radio,
-.mdc-checkbox,
+.mdc-checkbox {
+  display: contents !important;
+}
+
+/* Hide the purely decorative circle/box graphics (safe to fully remove —
+   neither is, nor contains, the focusable native input). */
 .mdc-checkbox__background,
-.mdc-checkbox__native-control,
 .mat-mdc-radio-ripple,
 .mat-mdc-checkbox-ripple {
   display: none !important;

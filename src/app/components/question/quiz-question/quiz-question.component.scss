@@ -100,16 +100,19 @@
 }
 
 /* ────────────────────────────────────────────────
-   HIDE all MDC radio/checkbox visuals (Angular 20)
+   HIDE decorative MDC radio/checkbox visuals (Angular 20)
+   NOTE: the native <input> (.mdc-radio__native-control /
+   .mdc-checkbox__native-control) is deliberately NOT included here — it
+   must stay in the layout (not display:none) to remain keyboard
+   focusable/tabbable. It's made invisible-but-present instead by the
+   "ensure click region covers full option box" rule below.
 ──────────────────────────────────────────────────*/
 ::ng-deep .mat-mdc-radio-touch-target,
 ::ng-deep .mat-mdc-radio-ripple,
 ::ng-deep .mat-mdc-radio-button .mdc-radio__background,
 ::ng-deep .mat-mdc-checkbox-touch-target,
 ::ng-deep .mat-mdc-checkbox-ripple,
-::ng-deep .mat-mdc-checkbox .mdc-checkbox__background,
-::ng-deep .mdc-radio__native-control,
-::ng-deep .mdc-checkbox__native-control {
+::ng-deep .mat-mdc-checkbox .mdc-checkbox__background {
   display: none !important;
   opacity: 0 !important;
   pointer-events: none !important;
@@ -143,6 +146,17 @@ mat-icon {
   pointer-events: none;
   position: relative;
   z-index: 1;
+}
+
+/* visible keyboard-focus indicator on the custom option box.
+   ::ng-deep throughout (matching this file's other Material-reaching rules):
+   mat-radio-button/mat-checkbox and their internal native <input> are each
+   rendered by a different, separately-encapsulated component, so a plain
+   (non-deep) selector here does not reliably match across those boundaries. */
+::ng-deep .options mat-radio-button:has(input:focus-visible),
+::ng-deep .options mat-checkbox:has(input:focus-visible) {
+  outline: 3px solid vars.$vivid-blue;
+  outline-offset: 2px;
 }
 
 /* alignment fixes for Angular 21 MDC labels */

@@ -59,6 +59,88 @@ function registerMissingFunctions(db: IMemoryDb): void {
   });
 }
 
+/**
+ * Works around a pg-mem engine bug ("Corrupted alias", pg-mem's own internal
+ * assertion — see https://github.com/oguimbal/pg-mem), reproduced directly
+ * against this exact statement in this exact schema context: migration
+ * 007_interview_session_idempotency.sql's single ALTER TABLE — two
+ * `ADD COLUMN` clauses, each with an INLINE `CHECK` referencing the column
+ * being added in that SAME clause, plus a third `ADD CONSTRAINT` — corrupts
+ * pg-mem's column-alias resolution once `interview_sessions` already carries
+ * the ALTER history from migrations 001/004/005. It is NOT a schema defect:
+ *
+ *   - Verified directly against REAL PostgreSQL 18 (disposable container):
+ *     the ENTIRE migration chain 1-9, including this exact statement
+ *     byte-for-byte, applies cleanly, and all four expected constraints
+ *     (the UNIQUE, both hash-length CHECKs, and the paired-nullability
+ *     CHECK) are present with their exact intended definitions.
+ *   - A minimal isolated repro (a hand-built table, just this ALTER TABLE)
+ *     also passes under pg-mem — the bug only manifests with this table's
+ *     REAL migration history already applied, which is exactly the
+ *     condition every real test run is in.
+ *   - Merely splitting the two ADD COLUMN clauses into separate statements
+ *     while keeping each CHECK inline does NOT fix it (reproduced) — the
+ *     trigger is specifically an inline CHECK co-located with the ADD
+ *     COLUMN that introduces the column it references.
+ *
+ * The rewrite below is semantically IDENTICAL to the original — every
+ * column, the UNIQUE constraint, both hash-length CHECKs, and the paired-
+ * nullability CHECK are all preserved, just expressed as separate
+ * `ADD CONSTRAINT` clauses instead of inline `CHECK`s on `ADD COLUMN`. It
+ * only ever touches SQL text flowing through THIS test pool — the real
+ * migration file on disk, and what runs against production/real Postgres,
+ * is completely unmodified. Matched by an exact substring (not a general
+ * ALTER TABLE parser, which would be far riskier to get right and could
+ * silently mis-rewrite an unrelated statement), so this does nothing to
+ * any other statement.
+ *
+ * DRIFT: a non-matching substring makes `workAroundPgMemCorruptedAliasBug`
+ * return the input UNCHANGED (never a stale/obsolete rewrite applied to
+ * different SQL) — safe, but not loud on its own. A dedicated test
+ * (test/migration-007-idempotency.test.ts) separately asserts
+ * MIGRATION_007_ORIGINAL_ALTER still appears verbatim in the real migration
+ * file, so an edit to it that silently stops matching here fails with a
+ * specific, correctly-attributed message instead of a confusing
+ * re-emergence of the original "Corrupted alias" error somewhere else.
+ */
+/**
+ * Exported SPECIFICALLY so a dedicated drift test (see
+ * test/migration-007-idempotency.test.ts) can assert this still appears
+ * verbatim in 007_interview_session_idempotency.sql as currently written.
+ * If a future edit to that migration changes this statement at all — a
+ * renamed constraint, reworded CHECK, added column — this substring no
+ * longer matches, `workAroundPgMemCorruptedAliasBug` silently stops
+ * rewriting it (see that function's own check below), and pg-mem tests
+ * touching `interview_sessions` would start failing with the ORIGINAL
+ * "Corrupted alias" error again, with nothing pointing at why. The drift
+ * test converts that into an immediate, specific, correctly-attributed
+ * failure instead.
+ */
+export const MIGRATION_007_ORIGINAL_ALTER = `ALTER TABLE interview_sessions
+  ADD COLUMN idempotency_key_hash TEXT UNIQUE
+             CHECK (idempotency_key_hash IS NULL OR length(trim(idempotency_key_hash)) = 64),
+  ADD COLUMN idempotency_request_hash TEXT
+             CHECK (idempotency_request_hash IS NULL OR length(trim(idempotency_request_hash)) = 64),
+  ADD CONSTRAINT idempotency_hash_present_iff_key_present
+    CHECK ((idempotency_key_hash IS NULL) = (idempotency_request_hash IS NULL));`;
+
+const MIGRATION_007_PGMEM_SAFE_ALTER = `ALTER TABLE interview_sessions
+  ADD COLUMN idempotency_key_hash TEXT UNIQUE,
+  ADD CONSTRAINT idempotency_key_hash_format
+    CHECK (idempotency_key_hash IS NULL OR length(trim(idempotency_key_hash)) = 64);
+ALTER TABLE interview_sessions
+  ADD COLUMN idempotency_request_hash TEXT,
+  ADD CONSTRAINT idempotency_request_hash_format
+    CHECK (idempotency_request_hash IS NULL OR length(trim(idempotency_request_hash)) = 64);
+ALTER TABLE interview_sessions
+  ADD CONSTRAINT idempotency_hash_present_iff_key_present
+    CHECK ((idempotency_key_hash IS NULL) = (idempotency_request_hash IS NULL));`;
+
+function workAroundPgMemCorruptedAliasBug(sql: string): string {
+  if (!sql.includes(MIGRATION_007_ORIGINAL_ALTER)) return sql;
+  return sql.replace(MIGRATION_007_ORIGINAL_ALTER, MIGRATION_007_PGMEM_SAFE_ALTER);
+}
+
 const BEGIN = /^\s*BEGIN\b/i;
 const COMMIT = /^\s*COMMIT\b/i;
 const ROLLBACK = /^\s*ROLLBACK\b/i;
@@ -133,7 +215,7 @@ function withTransactions(db: IMemoryDb, raw: Pool): Pool {
       savepoints.delete(releaseSavepoint[1] as string);
       return { rows: [], rowCount: 0 };
     }
-    return raw.query(sql as string, params as unknown[]);
+    return raw.query(workAroundPgMemCorruptedAliasBug(sql), params as unknown[]);
   };
 
   const client = {

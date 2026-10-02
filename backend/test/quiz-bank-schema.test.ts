@@ -1,5 +1,5 @@
 import { fromPool, type DatabaseHandle } from '../src/db/database';
-import { migrate } from '../src/db/migrate';
+import { listMigrationFiles, migrate } from '../src/db/migrate';
 import { createTestPool } from './helpers/pg-mem-pool';
 
 /**
@@ -18,6 +18,10 @@ import { createTestPool } from './helpers/pg-mem-pool';
  */
 
 const CLOCK = () => 1_700_000_000_000;
+
+// Read from disk rather than hardcoded — see db-migrations.test.ts's own
+// comment on ALL_VERSIONS for why a fixed total goes stale.
+const ALL_VERSIONS = listMigrationFiles().map((f) => f.version);
 
 async function migratedDb(): Promise<DatabaseHandle> {
   const db = fromPool(createTestPool().pool, 'pg-mem');
@@ -81,7 +85,7 @@ describe('migration 002 applies alongside 001', () => {
 
   it('is idempotent — a second run applies nothing', async () => {
     const db = fromPool(createTestPool().pool, 'pg-mem');
-    expect(await migrate(db, { now: CLOCK })).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(await migrate(db, { now: CLOCK })).toEqual(ALL_VERSIONS);
     expect(await migrate(db, { now: CLOCK })).toEqual([]);
   });
 });

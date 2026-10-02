@@ -1,3 +1,4 @@
+import { mkdtempSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { createQuizRepository, describeBank } from '../src/quiz/quiz.repository';
@@ -68,8 +69,24 @@ describe('file-path safety', () => {
   });
 
   it('rejects a directory', () => {
-    expect(() => createQuizRepository({ dataPath: './data' }))
-      .toThrow(/directory, not a file/i);
+    // A directory GUARANTEED to exist, created and cleaned up by this test —
+    // `./data` relied on a leftover directory from before Stage 15 removed
+    // the private bank from the repo. A fresh checkout has no `./data` at
+    // all, so the lookup failed with "not found" instead of exercising the
+    // directory check this test is actually about (reproduced directly: a
+    // fresh clone of this exact test against `./data` throws the WRONG
+    // error — not a flaky pass/fail, a different failure mode entirely).
+    //
+    // Created UNDER the backend root (resolveQuizDataPath's default rootDir
+    // is process.cwd(), the backend directory under Jest) so the directory
+    // check is reached at all, rather than rejected first as outside-root.
+    const dir = mkdtempSync(resolve(BACKEND_ROOT, 'quiz-repo-dir-check-'));
+    try {
+      expect(() => createQuizRepository({ dataPath: dir }))
+        .toThrow(/directory, not a file/i);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('rejects invalid JSON without quoting file contents', () => {

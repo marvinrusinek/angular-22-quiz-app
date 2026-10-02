@@ -23,6 +23,14 @@ function freshDb() {
   return fromPool(createTestPool().pool, 'pg-mem');
 }
 
+// The REAL migration count, read from disk rather than hardcoded — a
+// hardcoded total silently goes stale every time a new migration file is
+// added (reproduced directly: this was `[1, 2, 3, 4, 5, 6]` / `6` until
+// migrations 007-009 were added after this test was written, which turned
+// every assertion below into a false failure with nothing wrong in the
+// actual migration runner).
+const ALL_VERSIONS = listMigrationFiles().map((f) => f.version);
+
 describe('opening a connection', () => {
   it('rejects a blank connection string', () => {
     expect(() => openDatabase({ databaseUrl: '   ' })).toThrow(DatabaseError);
@@ -154,9 +162,9 @@ describe('migration application', () => {
     const applied = await migrate(db, { now: CLOCK });
 
     // Every migration in the directory, in numeric order.
-    expect(applied).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(applied).toEqual(ALL_VERSIONS);
     const records = await getAppliedMigrations(db);
-    expect(records).toHaveLength(6);
+    expect(records).toHaveLength(ALL_VERSIONS.length);
     expect(records[0]).toEqual({
       version: 1,
       name: 'interview_sessions',
@@ -169,9 +177,9 @@ describe('migration application', () => {
 
   it('is IDEMPOTENT — a second run applies nothing', async () => {
     const db = freshDb();
-    expect(await migrate(db, { now: CLOCK })).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(await migrate(db, { now: CLOCK })).toEqual(ALL_VERSIONS);
     expect(await migrate(db, { now: CLOCK })).toEqual([]);
-    expect(await getAppliedMigrations(db)).toHaveLength(6);
+    expect(await getAppliedMigrations(db)).toHaveLength(ALL_VERSIONS.length);
   });
 
   it('creates every expected table', async () => {
@@ -185,7 +193,7 @@ describe('migration application', () => {
       'session_answers', 'schema_migrations'
     ]) {
       const { rows } = await db.query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM ${table}`);
-      expect(rows[0]!['n']).toBe(table === 'schema_migrations' ? 6 : 0);
+      expect(rows[0]!['n']).toBe(table === 'schema_migrations' ? ALL_VERSIONS.length : 0);
     }
   });
 

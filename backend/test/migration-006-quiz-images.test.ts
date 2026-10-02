@@ -33,12 +33,24 @@ let tempDir: string;
 beforeEach(() => { tempDir = makeTempDir(); });
 afterEach(() => removeTempDir(tempDir));
 
-/** Copy migrations 001-005 (only) into a temp dir, mirroring the real set. */
+/**
+ * Copy migrations 001-005 (only) into a temp dir, mirroring the real set as
+ * it existed when migration 006 was written.
+ *
+ * Filtered by PARSED VERSION NUMBER, not by excluding the literal "006_"
+ * filename — the latter silently swept in every later migration (007, 008,
+ * 009) once they were added, since none of them start with "006_" either.
+ * That stale filter is exactly what made this helper's own callers
+ * reproducibly fail once those later migrations existed: `migrate()` doesn't
+ * require contiguous versions, so it happily also applied 7/8/9 alongside
+ * 1-5, which is not what "pre-existing migrations" meant here.
+ */
 function copyPreExistingMigrations(destDir: string): void {
   mkdirSync(destDir, { recursive: true });
   const real = migrationsDirectory();
   for (const file of readdirSync(real)) {
-    if (file.startsWith('006_')) continue;
+    const match = /^(\d+)_/.exec(file);
+    if (!match || Number(match[1]) >= 6) continue;
     copyFileSync(resolve(real, file), resolve(destDir, file));
   }
 }
@@ -71,8 +83,15 @@ describe('006_fix_quiz_image_urls — against a disposable local (pg-mem) databa
   });
 
   it('applies as migration version 6, after 1-5', async () => {
+    // Scoped to exactly 1-6 — this test's claim is specifically about 006's
+    // position right after 1-5, not "every migration in the real directory"
+    // (which now also includes 007-009, applied and asserted elsewhere).
+    const dir = resolve(tempDir, 'version-6-after-1-5');
+    copyPreExistingMigrations(dir);
+    addMigration006(dir);
+
     const db = freshDb();
-    const applied = await migrate(db, { now: CLOCK });
+    const applied = await migrate(db, { directory: dir, now: CLOCK });
     expect(applied).toEqual([1, 2, 3, 4, 5, 6]);
     const records = await getAppliedMigrations(db);
     expect(records.map((r) => r.version)).toEqual([1, 2, 3, 4, 5, 6]);

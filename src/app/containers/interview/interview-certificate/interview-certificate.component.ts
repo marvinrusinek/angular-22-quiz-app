@@ -71,15 +71,24 @@ export class InterviewCertificateComponent implements OnInit {
   readonly isEligible = computed(() => this.certService.progress().isEligible);
   readonly persistenceFailed = this.certService.persistenceFailed;
 
-  // Live readiness tier for display — reuses the readiness service (no re-derive).
-  // Falls back to the required tier if history has since aged out (the
-  // certificate stays valid; the tier was met when it was issued).
+  // LEGACY CERTIFICATES ONLY — never read for a verified one (see the
+  // template's own comment next to its one usage). Reuses the readiness
+  // service, which is itself derived from this BROWSER's local Interview
+  // History — not part of the issued certificate record, same reasoning as
+  // `score` below. Falls back to the required tier if history has since
+  // aged out (the certificate stays valid; the tier was met when it was
+  // issued) — a legacy-only fallback, since a verified certificate never
+  // reads this at all.
   readonly tierLabel = computed(() =>
     readinessBandLabel(this.readinessService.readiness()?.band ?? CERTIFICATE_REQUIRED_BAND)
   );
 
-  // Best interview score (live) from Interview History. Null only if history was
-  // cleared post-issue.
+  // LEGACY CERTIFICATES ONLY — never read for a verified one (see the
+  // template's own comment next to its one usage). This is this BROWSER's
+  // local Interview History, so it is NOT part of the issued certificate
+  // record and will differ (or be entirely absent) on a different browser
+  // or device — exactly the kind of inconsistency a verified, server-issued
+  // certificate must never show. Null only if history was cleared post-issue.
   readonly score = computed(() => this.historyService.trends().best);
 
   readonly recipientName = computed(() => this.verifiedCertificate()?.recipientName ?? this.legacyRecord()?.recipientName ?? '');

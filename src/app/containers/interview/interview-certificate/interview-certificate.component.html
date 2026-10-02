@@ -75,15 +75,28 @@
           recognition as an <strong>Angular Interview Master</strong>.
         </p>
 
-        <dl class="ic-cert__facts">
-          <div class="ic-fact">
-            <dt i18n>Interview Readiness</dt>
-            <dd>{{ tierLabel() }}</dd>
-          </div>
-          <div class="ic-fact">
-            <dt i18n>Interview Score</dt>
-            <dd>{{ score() !== null ? score() + '%' : '—' }}</dd>
-          </div>
+        <!-- LEGACY ONLY below: both Interview Readiness and Best Interview
+             Score come from THIS BROWSER's local Interview History (see the
+             `tierLabel`/`score` computed's own doc comments) — a verified,
+             server-issued certificate has neither: the backend's own issued-
+             certificate record carries only an id, a recipient name, and an
+             issue date (see ConfirmedCertificate), nothing readiness- or
+             score-shaped. A verified certificate is meant to display
+             identically from any browser or device; showing a value that
+             depends on which browser opened the page would silently
+             contradict that. A legacy certificate was always a same-browser
+             artifact, so both fields are accurate there. -->
+        <dl class="ic-cert__facts" [class.ic-cert__facts--one]="isVerified()">
+          @if (!isVerified()) {
+            <div class="ic-fact">
+              <dt i18n>Interview Readiness</dt>
+              <dd>{{ tierLabel() }}</dd>
+            </div>
+            <div class="ic-fact">
+              <dt i18n>Best Interview Score</dt>
+              <dd>{{ score() !== null ? score() + '%' : '—' }}</dd>
+            </div>
+          }
           <div class="ic-fact">
             <dt i18n>Date Issued</dt>
             <dd>{{ issuedDate() }}</dd>

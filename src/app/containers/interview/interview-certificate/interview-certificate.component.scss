@@ -152,6 +152,13 @@
     padding: 16px 0;
     border-top: 1px solid var(--ic-frame);
     border-bottom: 1px solid var(--ic-frame);
+
+    // A verified certificate shows exactly one fact (Date Issued) — no
+    // Interview Readiness or Best Interview Score, both browser-local (see
+    // the template's own comment on why). One item spread across three
+    // fixed columns leaves two empty trailing columns, so this switches to
+    // a single, centered column instead of a lonely fact pinned to the left.
+    &--one { grid-template-columns: 1fr; text-align: center; }
   }
 
   &__foot {

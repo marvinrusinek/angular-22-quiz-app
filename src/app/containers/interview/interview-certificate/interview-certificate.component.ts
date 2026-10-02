@@ -78,8 +78,12 @@ export class InterviewCertificateComponent implements OnInit {
     readinessBandLabel(this.readinessService.readiness()?.band ?? CERTIFICATE_REQUIRED_BAND)
   );
 
-  // Best interview score (live) from Interview History. Null only if history was
-  // cleared post-issue.
+  // LEGACY CERTIFICATES ONLY — never read for a verified one (see the
+  // template's own comment next to its one usage). This is this BROWSER's
+  // local Interview History, so it is NOT part of the issued certificate
+  // record and will differ (or be entirely absent) on a different browser
+  // or device — exactly the kind of inconsistency a verified, server-issued
+  // certificate must never show. Null only if history was cleared post-issue.
   readonly score = computed(() => this.historyService.trends().best);
 
   readonly recipientName = computed(() => this.verifiedCertificate()?.recipientName ?? this.legacyRecord()?.recipientName ?? '');

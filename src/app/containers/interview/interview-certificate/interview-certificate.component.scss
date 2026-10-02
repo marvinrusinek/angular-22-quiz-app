@@ -152,6 +152,13 @@
     padding: 16px 0;
     border-top: 1px solid var(--ic-frame);
     border-bottom: 1px solid var(--ic-frame);
+
+    // A verified certificate shows two facts, not three (no Best Interview
+    // Score — see the template's own comment on why). Three items spread
+    // across three fixed columns leaves an empty trailing column; two items
+    // in the same grid would do the same, so this switches the column count
+    // to match rather than leaving a visible gap.
+    &--two { grid-template-columns: repeat(2, 1fr); }
   }
 
   &__foot {

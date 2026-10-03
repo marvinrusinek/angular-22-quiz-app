@@ -66,8 +66,14 @@
    NOTE: MatRadioButton's real ripple/focus-indicator class is
    "mat-radio-ripple" (no "mdc" infix) — unlike the checkbox's
    "mat-mdc-checkbox-ripple", which already matches below. ".mat-mdc-radio-ripple"
-   never matches anything; kept harmlessly alongside the correct selector. */
+   never matches anything; kept harmlessly alongside the correct selector.
+   ".mdc-checkbox__ripple" is a THIRD, separate span — MatCheckbox's own MDC
+   hover/focus state-layer (sibling of .mat-mdc-checkbox-ripple, not nested
+   in it) — normally clipped to the small checkbox icon and invisible at
+   rest, but rendered full-row-sized once checked+focused because
+   display:contents on .mdc-checkbox (below) removed its sizing context. */
 .mdc-checkbox__background,
+.mdc-checkbox__ripple,
 .mat-mdc-radio-ripple,
 .mat-radio-ripple,
 .mat-mdc-checkbox-ripple {

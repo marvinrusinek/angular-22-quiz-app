@@ -34,6 +34,41 @@ async function tabUntil(page: Page, predicate: () => Promise<boolean>, maxPresse
   throw new Error(`Condition not met within ${maxPresses} Tab presses`);
 }
 
+/**
+ * Generalized guard for the ellipse-decoration bug class (fixed twice on this
+ * branch: MatRadioButton's "mat-radio-ripple" span, then MatCheckbox's
+ * "mdc-checkbox__ripple" state-layer span — both normally clipped to a small
+ * icon, both rendered full-row-sized once display:contents on .mdc-radio/
+ * .mdc-checkbox removed their sizing context). Rather than asserting a
+ * specific selector is display:none (which only proves THAT element is
+ * hidden, not that nothing else paints), this scans every descendant of
+ * .option-row for anything actually rendered, rounded, and painted — the
+ * shape this defect always takes — so it also catches a third such element
+ * if one is ever found.
+ */
+async function assertNoDecorativeOverlay(page: Page, rowIndex = 0): Promise<void> {
+  const painted = await page.evaluate((idx) => {
+    const row = document.querySelectorAll('.option-row')[idx];
+    if (!row) return null;
+    return Array.from(row.querySelectorAll('*'))
+      .filter((el) => {
+        const cs = getComputedStyle(el);
+        const r = el.getBoundingClientRect();
+        return (
+          cs.display !== 'none' &&
+          cs.visibility !== 'hidden' &&
+          r.width > 0 &&
+          r.height > 0 &&
+          cs.borderRadius !== '0px' &&
+          parseFloat(cs.opacity) > 0 &&
+          (cs.backgroundColor !== 'rgba(0, 0, 0, 0)' || cs.boxShadow !== 'none')
+        );
+      })
+      .map((el) => ({ tag: el.tagName, cls: (el.className || '').toString().slice(0, 80) }));
+  }, rowIndex);
+  expect(painted).toEqual([]);
+}
+
 /** Select exactly these 0-based option indices on the CURRENT question, via keyboard only. */
 async function selectOptionsViaKeyboard(page: Page, indices: number[]): Promise<void> {
   for (const idx of indices) {
@@ -303,5 +338,63 @@ test.describe('Group 3: mouse/touch regressions + display:contents impact', () =
       Array.from(document.querySelectorAll('.option-row input[type="radio"]')).map((i) => (i as HTMLInputElement).checked),
     );
     expect(afterClick.filter(Boolean).length).toBe(1);
+  });
+
+  // Regression coverage for the "unwanted ellipse" bug reproduced on a real
+  // multi-answer question (Dependency Injection Q3, live localhost): MatCheckbox's
+  // own MDC "mdc-checkbox__ripple" state-layer span rendered as a full-row,
+  // translucent, accent-colored ellipse once a checkbox option was selected
+  // and its native input held focus. fixture-doohickeys question 2 (0-based
+  // index 1) is this suite's existing multi-answer fixture (2 correct
+  // options) — see the Group 1 doc comment above.
+  test.describe('multi-answer (checkbox) selected option — no decorative overlay (ellipse regression)', () => {
+    test('mouse click: selecting a checkbox option paints no decorative overlay', async ({ page }) => {
+      const doohickeys = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-doohickeys');
+      await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+      await advanceToQuestion(page, doohickeys, 2); // question 2 = the multi-answer question
+      await page.locator(OPTION_ROW).first().waitFor({ state: 'visible', timeout: 20_000 });
+
+      await page.locator(OPTION_ROW).first().click();
+      await expect(page.locator(OPTION_ROW).first()).toHaveClass(/selected/);
+      await assertNoDecorativeOverlay(page, 0);
+    });
+
+    test('keyboard Space: selecting a checkbox option paints no decorative overlay, and the custom focus outline still shows', async ({ page }) => {
+      const doohickeys = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-doohickeys');
+      await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+      await advanceToQuestion(page, doohickeys, 2);
+      await page.locator(OPTION_ROW).first().waitFor({ state: 'visible', timeout: 20_000 });
+
+      await tabUntil(page, async () =>
+        page.evaluate(() => {
+          const inputs = Array.from(document.querySelectorAll('.option-row input[type="checkbox"]'));
+          return document.activeElement === inputs[0];
+        }),
+      );
+      const outlineStyle = await page.evaluate(() => {
+        const host = document.activeElement?.closest('mat-checkbox');
+        return host ? getComputedStyle(host).outlineStyle : null;
+      });
+      expect(outlineStyle).not.toBe('none');
+
+      await page.keyboard.press('Space');
+      await page.waitForTimeout(200);
+      await expect(page.locator(OPTION_ROW).first()).toHaveClass(/selected/);
+      await assertNoDecorativeOverlay(page, 0);
+    });
+
+    test('touch tap: selecting a checkbox option paints no decorative overlay', async ({ browser }) => {
+      const context = await browser.newContext({ hasTouch: true, viewport: { width: 390, height: 844 } });
+      const page = await context.newPage();
+      const doohickeys = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-doohickeys');
+      await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+      await advanceToQuestion(page, doohickeys, 2);
+      await page.locator(OPTION_ROW).first().waitFor({ state: 'visible', timeout: 20_000 });
+
+      await page.locator(OPTION_ROW).first().tap();
+      await expect(page.locator(OPTION_ROW).first()).toHaveClass(/selected/);
+      await assertNoDecorativeOverlay(page, 0);
+      await context.close();
+    });
   });
 });

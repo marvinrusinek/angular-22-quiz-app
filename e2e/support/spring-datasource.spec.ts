@@ -396,7 +396,18 @@ describe('playwright.config.ts — the controlled-backend wiring', () => {
   const { spawnSync } = require('node:child_process');
   const root = join(__dirname, '..', '..');
 
-  const facts = (() => {
+  /**
+   * playwright.config.ts's own Angular webServer entry reads
+   * `!process.env.CI` to decide reuseExistingServer. This child process only
+   * INTROSPECTS the config's structure (reuse policy, server order, database
+   * wiring) — it never actually runs Playwright — so the CI-ness it sees must
+   * be chosen DELIBERATELY per call, never inherited from whatever
+   * environment the OUTER test runner happens to have (e.g. GitHub Actions
+   * sets CI=true globally): an inherited value would make the introspected
+   * fact depend on where Jest itself is invoked from, rather than on the
+   * `ci` argument this helper is explicitly asked to simulate.
+   */
+  function loadPlaywrightConfigFacts(ci: '' | 'true') {
     const script = `
       const c = require(${JSON.stringify(join(root, 'playwright.config.ts'))}).default;
       const [angular, node, spring] = c.webServer;
@@ -418,23 +429,22 @@ describe('playwright.config.ts — the controlled-backend wiring', () => {
     const result = spawnSync(
       process.execPath,
       ['--require', join(root, 'backend', 'node_modules', 'ts-node', 'register', 'transpile-only'), '-e', script],
-      {
-        cwd: join(root, 'backend'),
-        encoding: 'utf8',
-        timeout: 60_000,
-        // playwright.config.ts's own Angular webServer entry reads
-        // `!process.env.CI` to decide reuseExistingServer. This child process
-        // only INTROSPECTS the config's structure (reuse policy, server
-        // order, database wiring) — it never actually runs Playwright — so it
-        // must not inherit whatever CI-ness the OUTER test runner happens to
-        // have (e.g. GitHub Actions sets CI=true globally), or the structural
-        // fact below flips depending on where Jest itself is invoked from.
-        env: { ...process.env, CI: '' }
-      }
+      { cwd: join(root, 'backend'), encoding: 'utf8', timeout: 60_000, env: { ...process.env, CI: ci } }
     );
     if (result.status !== 0) throw new Error('could not load playwright.config.ts: ' + String(result.stderr).slice(-400));
     return JSON.parse(result.stdout.trim().split('\n').pop());
-  })();
+  }
+
+  // Local development: CI explicitly cleared. Used by every structural
+  // assertion below EXCEPT the CI-mode-specific reuse check, so none of them
+  // can accidentally depend on the outer test runner's own environment.
+  const facts = loadPlaywrightConfigFacts('');
+  // CI: explicitly simulated, not inherited — asserts the OTHER branch of
+  // the same `!process.env.CI` conditional actually flips the other way,
+  // the exact thing the local-only version of this test could never catch
+  // (confirmed: it passed in CI right up until a real CI run exercised the
+  // true branch for the first time and found a stale, hardcoded expectation).
+  const ciFacts = loadPlaywrightConfigFacts('true');
 
   it('starts exactly three servers, in dependency order: Angular, then Node, then Spring', () => {
     expect(facts.count).toBe(3);
@@ -446,8 +456,12 @@ describe('playwright.config.ts — the controlled-backend wiring', () => {
     expect(facts.springReuse).toBe(false);
   });
 
-  it('may reuse the developer\'s Angular dev server — it only serves the app, and touches no database', () => {
+  it('in local development (CI unset): may reuse the developer\'s Angular dev server — it only serves the app, and touches no database', () => {
     expect(facts.angularReuse).toBe(true);
+  });
+
+  it('in CI (CI=true): must NOT reuse the Angular dev server — a stale server from a previous run could serve the wrong build', () => {
+    expect(ciFacts.angularReuse).toBe(false);
   });
 
   it('checks BOTH controlled ports before the database is created', () => {

@@ -62,9 +62,14 @@
 }
 
 /* Hide the purely decorative circle/box graphics (safe to fully remove —
-   neither is, nor contains, the focusable native input). */
+   neither is, nor contains, the focusable native input).
+   NOTE: MatRadioButton's real ripple/focus-indicator class is
+   "mat-radio-ripple" (no "mdc" infix) — unlike the checkbox's
+   "mat-mdc-checkbox-ripple", which already matches below. ".mat-mdc-radio-ripple"
+   never matches anything; kept harmlessly alongside the correct selector. */
 .mdc-checkbox__background,
 .mat-mdc-radio-ripple,
+.mat-radio-ripple,
 .mat-mdc-checkbox-ripple {
   display: none !important;
   width: 0 !important;

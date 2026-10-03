@@ -109,6 +109,11 @@
 ──────────────────────────────────────────────────*/
 ::ng-deep .mat-mdc-radio-touch-target,
 ::ng-deep .mat-mdc-radio-ripple,
+// MatRadioButton's actual ripple/focus-indicator span is "mat-radio-ripple"
+// (no "mdc" infix, unlike the checkbox's "mat-mdc-checkbox-ripple") — the
+// line above never matched it, so it stayed visible as a filled ellipse
+// once the option was checked.
+::ng-deep .mat-radio-ripple,
 ::ng-deep .mat-mdc-radio-button .mdc-radio__background,
 ::ng-deep .mat-mdc-checkbox-touch-target,
 ::ng-deep .mat-mdc-checkbox-ripple,

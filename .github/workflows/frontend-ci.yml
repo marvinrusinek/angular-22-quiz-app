@@ -19,10 +19,11 @@ name: Frontend CI
 # backend/node_modules/ts-node/register to load playwright.config.ts (a
 # pure, offline assertion about the config's own shape — no live Spring, no
 # database). Without that install, the companion suite fails on a fresh
-# checkout with "Cannot find module 'ts-node'". backend/** is deliberately
-# NOT a trigger path below — only root frontend inputs decide whether this
-# workflow runs; the backend install is purely an execution-time dependency
-# of one spec file.
+# checkout with "Cannot find module 'ts-node'". backend/** is NOT a trigger
+# path below, EXCEPT backend/package.json and backend/package-lock.json —
+# the two manifests that determine whether that install actually resolves
+# ts-node. Everything else under backend/ is already covered by
+# cross-runtime-parity.yml's own triggers.
 on:
   push:
     branches: [main]
@@ -39,6 +40,20 @@ on:
       - "jest.e2e-support.config.js"
       - "setup-jest.ts"
       - "e2e/support/**"
+      # Read directly (via require/readFileSync) by
+      # e2e/support/spring-datasource.spec.ts's "playwright.config.ts" and
+      # "the Interview backend specs cannot silently skip" describe blocks —
+      # a change here can flip an assertion in the companion suite above.
+      - "playwright.config.ts"
+      - "e2e/interview-backend-session.spec.ts"
+      - "e2e/interview-results-backend.spec.ts"
+      # Only these two files, not backend/** generally: the companion
+      # suite's one cross-package need is ts-node being installed and
+      # resolvable at backend/node_modules/ts-node — these two manifests are
+      # what determine that. Everything else under backend/ is already
+      # covered by cross-runtime-parity.yml's own triggers.
+      - "backend/package.json"
+      - "backend/package-lock.json"
       - "scripts/verify-no-bank-in-artifact.js"
       - "scripts/verify-no-bank-in-artifact.selftest.js"
       - ".github/workflows/frontend-ci.yml"
@@ -56,6 +71,11 @@ on:
       - "jest.e2e-support.config.js"
       - "setup-jest.ts"
       - "e2e/support/**"
+      - "playwright.config.ts"
+      - "e2e/interview-backend-session.spec.ts"
+      - "e2e/interview-results-backend.spec.ts"
+      - "backend/package.json"
+      - "backend/package-lock.json"
       - "scripts/verify-no-bank-in-artifact.js"
       - "scripts/verify-no-bank-in-artifact.selftest.js"
       - ".github/workflows/frontend-ci.yml"
@@ -82,10 +102,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Node
-        uses: actions/setup-node@v4.4.0
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: "22"
           cache: npm

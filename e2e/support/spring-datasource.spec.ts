@@ -418,7 +418,19 @@ describe('playwright.config.ts — the controlled-backend wiring', () => {
     const result = spawnSync(
       process.execPath,
       ['--require', join(root, 'backend', 'node_modules', 'ts-node', 'register', 'transpile-only'), '-e', script],
-      { cwd: join(root, 'backend'), encoding: 'utf8', timeout: 60_000 }
+      {
+        cwd: join(root, 'backend'),
+        encoding: 'utf8',
+        timeout: 60_000,
+        // playwright.config.ts's own Angular webServer entry reads
+        // `!process.env.CI` to decide reuseExistingServer. This child process
+        // only INTROSPECTS the config's structure (reuse policy, server
+        // order, database wiring) — it never actually runs Playwright — so it
+        // must not inherit whatever CI-ness the OUTER test runner happens to
+        // have (e.g. GitHub Actions sets CI=true globally), or the structural
+        // fact below flips depending on where Jest itself is invoked from.
+        env: { ...process.env, CI: '' }
+      }
     );
     if (result.status !== 0) throw new Error('could not load playwright.config.ts: ' + String(result.stderr).slice(-400));
     return JSON.parse(result.stdout.trim().split('\n').pop());

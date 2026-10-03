@@ -1,5 +1,5 @@
 import { test, expect, type Page, type ConsoleMessage } from '@playwright/test';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { DEBUG_SENT_LOG_URL, DEBUG_MINT_EXPIRED_URL } from './support/cert-e2e-backends';
@@ -329,6 +329,7 @@ test.describe('certificate claim — real browser', () => {
     const pdf = await page.pdf({ format: 'A4' }); // a real print render, no dialog
     expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
     expect(pdf.length).toBeGreaterThan(5_000);
+    writeFileSync(resolve(SCREENSHOT_DIR, '6-certificate.pdf'), pdf); // saved as a real artifact to inspect, not just byte-checked
     await page.screenshot({ path: resolve(SCREENSHOT_DIR, '5-print-long-name.png'), fullPage: true });
 
     await page.emulateMedia({ media: 'screen' });

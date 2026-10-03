@@ -1,5 +1,5 @@
 import {
-  Directive, effect, ElementRef, inject, input, OnInit, output, Renderer2
+  Directive, effect, ElementRef, inject, input, OnDestroy, OnInit, output, Renderer2
 } from '@angular/core';
 
 import { Option } from '@shared/models/Option.model';
@@ -14,7 +14,7 @@ import { SharedOptionConfig } from '@shared/models/SharedOptionConfig.model';
     '(click)': 'onClick()'
   }
 })
-export class HighlightOptionDirective implements OnInit {
+export class HighlightOptionDirective implements OnInit, OnDestroy {
   // ── injects ─────────────────────────────────────────────────────
   private readonly el = inject(ElementRef);
   private readonly renderer = inject(Renderer2);
@@ -50,6 +50,16 @@ export class HighlightOptionDirective implements OnInit {
   appHighlightReset = false;
   option!: Option;
   isSelected = false;
+  // updateHighlight()'s setTimeout(…, 0) is not tied to DestroyRef and
+  // option objects routinely outlive one directive/component instance
+  // (the same Option reference flows through selectedOptionService/
+  // quizService state across navigation and revisit). Without this guard,
+  // a timer scheduled just before destruction fires afterward and can
+  // clobber a value a LATER, unrelated render already set on that same
+  // object — a real, reproduced post-destruction mutation, not a
+  // hypothetical one. See highlight-option.directive.spec.ts's "lifecycle
+  // check" test.
+  private destroyed = false;
 
   constructor() {
     // Mirror the signal input to the mutable backing field so legacy
@@ -95,6 +105,10 @@ export class HighlightOptionDirective implements OnInit {
     if (optionBinding) optionBinding.directiveInstance = this;
   }
 
+  ngOnDestroy(): void {
+    this.destroyed = true;
+  }
+
   onClick(): void {
     // NO-OP: Click handling is done by OptionItemComponent (onContentClick / onChanged).
     // Running updateHighlight() here fires BEFORE the click handler processes,
@@ -107,6 +121,8 @@ export class HighlightOptionDirective implements OnInit {
 
     setTimeout(() => {
       try {
+        if (this.destroyed) return;  // the host is gone; never mutate state after that
+
         const optionBinding = this.optionBinding();
         const opt = optionBinding?.option;
         if (!opt) return;  // null guard for strict mode

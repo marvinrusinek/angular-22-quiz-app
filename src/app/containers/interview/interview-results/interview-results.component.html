@@ -75,15 +75,24 @@
     </div>
 
     <div class="interview-results__actions">
-      @if (!showReview()) {
-        <button type="button" class="ir-btn" (click)="toggleReview()" [attr.aria-expanded]="false" i18n>
-          Review Answers
-        </button>
-      } @else {
-        <button type="button" class="ir-btn" (click)="toggleReview()" [attr.aria-expanded]="true" i18n>
-          Hide Review
-        </button>
-      }
+      <!-- ONE stable button element, not an @if/@else swap: the two-element
+           swap used to destroy whichever button currently held focus on
+           every toggle, dropping focus to <body>. Only the label/aria-expanded
+           update now; the element's own identity (and any focus on it)
+           survives a toggle. -->
+      <button
+        type="button"
+        class="ir-btn"
+        #reviewToggleBtn
+        (click)="toggleReview()"
+        [attr.aria-expanded]="showReview()"
+      >
+        @if (!showReview()) {
+          <ng-container i18n>Review Answers</ng-container>
+        } @else {
+          <ng-container i18n>Hide Review</ng-container>
+        }
+      </button>
       <a class="ir-btn interview-results__export-report" [routerLink]="['/interview/report', r.sessionId]" i18n>Export Report</a>
       <button type="button" class="ir-btn ir-btn--primary" (click)="buildAnother()" i18n>
         Build Another Assessment
@@ -96,6 +105,7 @@
     @if (showReview()) {
       <section class="interview-results__review" aria-label="Answer review" i18n-aria-label>
         <h2
+          #reviewHeading
           id="interview-review-heading"
           class="interview-results__review-heading"
           tabindex="-1"

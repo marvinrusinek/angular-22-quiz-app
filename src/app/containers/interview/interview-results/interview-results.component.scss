@@ -157,6 +157,14 @@
     margin: 0 0 14px;
     font-size: 20px;
     font-weight: 800;
+
+    // Programmatically focused on open (see the component's focus-management
+    // effect) — same explicit outline as .ir-btn below rather than relying on
+    // the browser's UA default, which is inconsistent across browsers/themes.
+    &:focus-visible {
+      outline: 2px solid var(--ir-accent);
+      outline-offset: 2px;
+    }
   }
 }
 

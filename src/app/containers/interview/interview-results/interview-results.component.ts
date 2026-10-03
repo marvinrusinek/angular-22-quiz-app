@@ -1,9 +1,14 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
+  ElementRef,
   inject,
+  Injector,
   signal,
+  viewChild,
   ViewEncapsulation
 } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
@@ -63,6 +68,17 @@ export class InterviewResultsComponent {
   private readonly history = inject(InterviewHistoryService);
   private readonly readinessService = inject(InterviewReadinessService);
   private readonly achievements = inject(AchievementService);
+  private readonly injector = inject(Injector);
+
+  private readonly reviewToggleBtn = viewChild<ElementRef<HTMLButtonElement>>('reviewToggleBtn');
+  private readonly reviewHeading = viewChild<ElementRef<HTMLHeadingElement>>('reviewHeading');
+
+  /**
+   * null until the first real open/close transition — distinguishes "just
+   * mounted, showReview() read for the first time" (must NOT steal focus on
+   * page load) from an actual toggle.
+   */
+  private previousShowReview: boolean | null = null;
 
   constructor() {
     // A completed interview can unlock Interview Master and, in turn, Angular
@@ -71,6 +87,34 @@ export class InterviewResultsComponent {
     // achievements stay with the topic-quiz flow, which already evaluates them.
     // Runs before the certificate-status child checks eligibility. Idempotent.
     this.achievements.evaluateInterviewAchievements();
+
+    // Review focus management. toggleReview() has no focus-management code
+    // of its own: the Review section is an ordinary inline area (not a
+    // dialog — no focus trap, no role="dialog", confirmed by inspection), so
+    // this only needs to move focus to a sensible landing point on open and
+    // back to the (now stable, see the template) toggle button on close —
+    // never leaving it stranded on <body>.
+    effect(() => {
+      const open = this.showReview();
+      const previous = this.previousShowReview;
+      this.previousShowReview = open;
+      if (previous === null || previous === open) return; // mount, or no real transition
+
+      // afterNextRender: the heading/button must already be in the DOM
+      // (showReview's new value has been rendered) before .focus() can land
+      // on them — an arbitrary setTimeout would be a race against that same
+      // render, not a guarantee of it.
+      afterNextRender(
+        () => {
+          if (open) {
+            this.reviewHeading()?.nativeElement.focus();
+          } else {
+            this.reviewToggleBtn()?.nativeElement.focus();
+          }
+        },
+        { injector: this.injector }
+      );
+    });
   }
 
   /**

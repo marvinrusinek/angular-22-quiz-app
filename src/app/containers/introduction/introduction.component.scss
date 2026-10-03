@@ -97,6 +97,21 @@ mat-card-actions {
       justify-content: center;
       font-size: 18px;
       color: var(--intro-accent);
+      // The VISIBLE label text does not actually inherit the `color` above —
+      // confirmed via Chrome DevTools Protocol's CSS.getMatchedStylesForNode
+      // against the real running app. MDC renders it through its own nested
+      // <label class="mdc-label">, themed by Angular Material's own
+      // `.mat-mdc-slide-toggle .mat-internal-form-field` rule reading
+      // `var(--mat-slide-toggle-label-text-color, var(--mat-sys-on-surface))`
+      // — a SEPARATE custom property this app never set, so it fell back to
+      // Material's own near-black on-surface token regardless of this app's
+      // theme. A custom property declared here cascades to that nested
+      // <label> through ordinary CSS inheritance (Angular's view-encapsulation
+      // scoping only governs where a rule's SELECTOR matches, not whether a
+      // declared custom property is inherited by descendants — including ones
+      // inside a child component's own encapsulated template), so this is
+      // the correct, minimal override rather than reaching for ::ng-deep.
+      --mat-slide-toggle-label-text-color: var(--intro-accent);
       transform: scale(1.02);
       border: blue;
     }

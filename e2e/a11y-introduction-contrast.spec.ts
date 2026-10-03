@@ -35,11 +35,19 @@ async function readColors(page: Page) {
     const cs = (el: Element | null) => (el ? getComputedStyle(el) : null);
     const card = document.querySelector('.quiz-card, mat-card.quiz-card');
     const metaItem = document.querySelector('.meta-item:not(.meta-difficulty)');
-    const toggle = document.querySelector('mat-slide-toggle');
+    // The VISIBLE label text does not inherit color from the mat-slide-toggle
+    // host — confirmed via CDP's CSS.getMatchedStylesForNode against the real
+    // app: MDC renders it through a nested <label class="mdc-label">, themed
+    // by Material's own `--mat-slide-toggle-label-text-color` custom property
+    // (falling back to --mat-sys-on-surface, a near-black Material default,
+    // when unset). An earlier version of this test read the HOST's color
+    // instead, which looked correct but did not reflect what was actually
+    // painted — the real defect this spec exists to catch.
+    const toggleLabel = document.querySelector('mat-slide-toggle label.mdc-label');
     return {
       cardBg: cs(card)?.backgroundColor ?? '',
       metaItemColor: cs(metaItem)?.color ?? '',
-      toggleColor: cs(toggle)?.color ?? '',
+      toggleColor: cs(toggleLabel)?.color ?? '',
     };
   });
 }

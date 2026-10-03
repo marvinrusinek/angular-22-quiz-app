@@ -51,12 +51,31 @@
   cursor: inherit !important;
 }
 
-/* Hide native circles/boxes and their containers to ensure zero layout impact */
+/* Zero layout impact for the radio/checkbox wrapper spans — `display: contents`
+   rather than `display: none`, because the native .mdc-radio__native-control /
+   .mdc-checkbox__native-control input lives INSIDE .mdc-radio / .mdc-checkbox:
+   `display: none` here would also remove that input from the layout and take
+   it out of the tab order, making every answer keyboard-unreachable. */
 .mdc-radio,
-.mdc-checkbox,
+.mdc-checkbox {
+  display: contents !important;
+}
+
+/* Hide the purely decorative circle/box graphics (safe to fully remove —
+   neither is, nor contains, the focusable native input).
+   NOTE: MatRadioButton's real ripple/focus-indicator class is
+   "mat-radio-ripple" (no "mdc" infix) — unlike the checkbox's
+   "mat-mdc-checkbox-ripple", which already matches below. ".mat-mdc-radio-ripple"
+   never matches anything; kept harmlessly alongside the correct selector.
+   ".mdc-checkbox__ripple" is a THIRD, separate span — MatCheckbox's own MDC
+   hover/focus state-layer (sibling of .mat-mdc-checkbox-ripple, not nested
+   in it) — normally clipped to the small checkbox icon and invisible at
+   rest, but rendered full-row-sized once checked+focused because
+   display:contents on .mdc-checkbox (below) removed its sizing context. */
 .mdc-checkbox__background,
-.mdc-checkbox__native-control,
+.mdc-checkbox__ripple,
 .mat-mdc-radio-ripple,
+.mat-radio-ripple,
 .mat-mdc-checkbox-ripple {
   display: none !important;
   width: 0 !important;

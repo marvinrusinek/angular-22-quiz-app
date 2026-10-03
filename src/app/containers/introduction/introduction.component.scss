@@ -6,6 +6,20 @@
   justify-content: center;
   min-height: 100vh;
   margin-top: -20px;
+
+  // Theme-aware blue accent for the quiz-meta line ("N Questions · ~N min")
+  // and the "Shuffle questions and answers" toggle label. The light value is
+  // the pre-existing chambray-blue (6.77:1 on the light card background,
+  // unchanged); the dark value is a lightened shade chosen to clear 4.5:1
+  // against the dark card background (--bg-card: #3a3d46) — chambray-blue
+  // itself measured 1.60:1 there, and vivid-blue (the toggle's previous
+  // color) measured 3.67:1 on dark and, found while verifying this fix,
+  // only 2.96:1 on LIGHT too — both below the 4.5:1 normal-text threshold.
+  --intro-accent: #{vars.$chambray-blue};
+}
+
+:host-context([data-theme='dark']) {
+  --intro-accent: #6fb3ff; // 4.94:1 on #3a3d46
 }
 
 mat-card-header {
@@ -82,7 +96,22 @@ mat-card-actions {
       align-items: center;
       justify-content: center;
       font-size: 18px;
-      color: vars.$vivid-blue;
+      color: var(--intro-accent);
+      // The VISIBLE label text does not actually inherit the `color` above —
+      // confirmed via Chrome DevTools Protocol's CSS.getMatchedStylesForNode
+      // against the real running app. MDC renders it through its own nested
+      // <label class="mdc-label">, themed by Angular Material's own
+      // `.mat-mdc-slide-toggle .mat-internal-form-field` rule reading
+      // `var(--mat-slide-toggle-label-text-color, var(--mat-sys-on-surface))`
+      // — a SEPARATE custom property this app never set, so it fell back to
+      // Material's own near-black on-surface token regardless of this app's
+      // theme. A custom property declared here cascades to that nested
+      // <label> through ordinary CSS inheritance (Angular's view-encapsulation
+      // scoping only governs where a rule's SELECTOR matches, not whether a
+      // declared custom property is inherited by descendants — including ones
+      // inside a child component's own encapsulated template), so this is
+      // the correct, minimal override rather than reaching for ::ng-deep.
+      --mat-slide-toggle-label-text-color: var(--intro-accent);
       transform: scale(1.02);
       border: blue;
     }
@@ -282,7 +311,7 @@ mat-card-actions {
     gap: 6px;
     font-size: 15px;
     font-weight: 700;
-    color: vars.$chambray-blue;
+    color: var(--intro-accent);
 
     mat-icon {
       font-size: 20px;

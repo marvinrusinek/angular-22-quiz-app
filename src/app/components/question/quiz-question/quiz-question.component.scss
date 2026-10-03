@@ -109,9 +109,23 @@
 ──────────────────────────────────────────────────*/
 ::ng-deep .mat-mdc-radio-touch-target,
 ::ng-deep .mat-mdc-radio-ripple,
+// MatRadioButton's actual ripple/focus-indicator span is "mat-radio-ripple"
+// (no "mdc" infix, unlike the checkbox's "mat-mdc-checkbox-ripple") — the
+// line above never matched it, so it stayed visible as a filled ellipse
+// once the option was checked.
+::ng-deep .mat-radio-ripple,
 ::ng-deep .mat-mdc-radio-button .mdc-radio__background,
 ::ng-deep .mat-mdc-checkbox-touch-target,
 ::ng-deep .mat-mdc-checkbox-ripple,
+// Separate from .mat-mdc-checkbox-ripple above: MatCheckbox also renders its
+// own MDC native focus/hover "state layer" as a SIBLING span,
+// ".mdc-checkbox__ripple" (no "mat-" prefix). It's normally clipped to the
+// small checkbox icon and invisible at rest, but the selected+keyboard/click-
+// focused state (".mdc-checkbox__native-control:focus:checked + .mdc-checkbox__ripple")
+// sets opacity/background-color — rendered full-row-sized (not icon-sized)
+// for the same reason as the radio ripple above: display:contents on
+// .mdc-checkbox removed the containing block it relied on for sizing.
+::ng-deep .mdc-checkbox__ripple,
 ::ng-deep .mat-mdc-checkbox .mdc-checkbox__background {
   display: none !important;
   opacity: 0 !important;

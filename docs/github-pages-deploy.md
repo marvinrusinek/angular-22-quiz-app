@@ -3,6 +3,11 @@
 The site is served from the `gh-pages` branch. Deployment is manual and forward-only
 (never force-push `gh-pages`; the previous head is the rollback point).
 
+Unrelated to this: `.github/workflows/frontend-ci.yml` runs TypeScript checks, the
+Jest suite, a production build, and the artifact scanner on every frontend pull
+request and push to `main`. It verifies the frontend builds and ships clean — it
+never deploys, and has no part in the procedure below.
+
 ## Why staging is byte-exact
 
 Angular's service worker (`ngsw.json`) records a SHA-1 of the exact bytes of every file in

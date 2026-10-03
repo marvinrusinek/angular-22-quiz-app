@@ -1,0 +1,145 @@
+name: Frontend CI
+
+# Verifies the Angular frontend: TypeScript compiles clean, the full Jest
+# suite (including the e2e-support companion suite — see below) passes, the
+# production build succeeds, and the shipped artifact carries no quiz-bank
+# data. This workflow NEVER deploys — it builds into a throwaway, untracked
+# `dist/` that is discarded when the runner is torn down, same as every
+# other workflow here. See docs/github-pages-deploy.md for the separate,
+# manual GitHub Pages deploy procedure this workflow has no part in.
+#
+# Separate from backend-spring-ci.yml and cross-runtime-parity.yml — neither
+# of those has any frontend path trigger, so until this file existed, a
+# frontend-only change (SCSS, a component, an a11y fix, a Jest spec) ran
+# through NO automated check at all.
+#
+# `npm ci` also runs in backend/ as an install step (NOT because this
+# workflow tests the backend): jest.e2e-support.config.js's
+# spring-datasource.spec.ts spawns a child process requiring
+# backend/node_modules/ts-node/register to load playwright.config.ts (a
+# pure, offline assertion about the config's own shape — no live Spring, no
+# database). Without that install, the companion suite fails on a fresh
+# checkout with "Cannot find module 'ts-node'". backend/** is NOT a trigger
+# path below, EXCEPT backend/package.json and backend/package-lock.json —
+# the two manifests that determine whether that install actually resolves
+# ts-node. Everything else under backend/ is already covered by
+# cross-runtime-parity.yml's own triggers.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "angular.json"
+      - "ngsw-config.json"
+      - "tsconfig.json"
+      - "tsconfig.app.json"
+      - "tsconfig.spec.json"
+      - "jest.config.js"
+      - "jest.e2e-support.config.js"
+      - "setup-jest.ts"
+      - "e2e/support/**"
+      # Read directly (via require/readFileSync) by
+      # e2e/support/spring-datasource.spec.ts's "playwright.config.ts" and
+      # "the Interview backend specs cannot silently skip" describe blocks —
+      # a change here can flip an assertion in the companion suite above.
+      - "playwright.config.ts"
+      - "e2e/interview-backend-session.spec.ts"
+      - "e2e/interview-results-backend.spec.ts"
+      # Only these two files, not backend/** generally: the companion
+      # suite's one cross-package need is ts-node being installed and
+      # resolvable at backend/node_modules/ts-node — these two manifests are
+      # what determine that. Everything else under backend/ is already
+      # covered by cross-runtime-parity.yml's own triggers.
+      - "backend/package.json"
+      - "backend/package-lock.json"
+      - "scripts/verify-no-bank-in-artifact.js"
+      - "scripts/verify-no-bank-in-artifact.selftest.js"
+      - ".github/workflows/frontend-ci.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "angular.json"
+      - "ngsw-config.json"
+      - "tsconfig.json"
+      - "tsconfig.app.json"
+      - "tsconfig.spec.json"
+      - "jest.config.js"
+      - "jest.e2e-support.config.js"
+      - "setup-jest.ts"
+      - "e2e/support/**"
+      - "playwright.config.ts"
+      - "e2e/interview-backend-session.spec.ts"
+      - "e2e/interview-results-backend.spec.ts"
+      - "backend/package.json"
+      - "backend/package-lock.json"
+      - "scripts/verify-no-bank-in-artifact.js"
+      - "scripts/verify-no-bank-in-artifact.selftest.js"
+      - ".github/workflows/frontend-ci.yml"
+  # Path filters above don't apply to a manual run, so this always works
+  # regardless of what changed.
+  workflow_dispatch: {}
+
+# Least privilege: this workflow only reads the repository. It never
+# authenticates to a registry, deploys, comments on a PR, or writes any
+# other repository resource.
+permissions:
+  contents: read
+
+# A second push to the same branch/PR while a run is still going supersedes
+# it instead of running alongside it, same convention as the other two
+# workflows — the ref-scoped group keeps separate branches/PRs independent.
+concurrency:
+  group: frontend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: TypeScript, Jest, production build, artifact checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+          # Two separate npm projects (root + backend/), each with its own
+          # lockfile — list both so setup-node's cache covers the backend
+          # install too (see the top-of-file note on why it's needed here).
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies (ts-node only — no live Spring/Neon)
+        run: npm ci
+        working-directory: backend
+
+      - name: TypeScript check — app config (tsconfig.app.json)
+        run: npx tsc --noEmit -p tsconfig.app.json
+
+      - name: TypeScript check — spec config (tsconfig.spec.json)
+        run: npx tsc --noEmit -p tsconfig.spec.json
+
+      - name: Jest — Angular unit suite
+        run: npx jest --runInBand
+
+      - name: Jest — e2e-support companion suite (offline, no browser/database)
+        run: npx jest --config jest.e2e-support.config.js --runInBand
+
+      - name: Production build (ng build --configuration=production)
+        run: npm run build -- --configuration=production
+
+      - name: verify:artifact — no quiz-bank data in the built output
+        run: npm run verify:artifact
+
+      - name: verify:artifact:selftest — the scanner's own test suite
+        run: npm run verify:artifact:selftest

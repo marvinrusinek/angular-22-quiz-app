@@ -395,19 +395,16 @@ test.describe('Interview Review — all three outcomes, keyboard only', () => {
         await expect(page.locator('app-interview-review')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Hide Review' })).toBeVisible();
 
-        // Logical focus order: toggleReview() does no focus management
-        // (checked in source — interview-results.component.ts), and the
-        // template swaps the trigger for a DIFFERENT button element across
-        // an @if/@else (not the same element with changing text) — so
-        // activating "Review Answers" destroys that button and creates a
-        // new "Hide Review" one, and the browser drops focus to <body> when
-        // a focused element is removed from the DOM. Confirmed via this
-        // test, not assumed: this is a real, minor rough edge (reported
-        // separately — it does not BLOCK keyboard access, since Tab from
-        // body still reaches the revealed content next, exercised
-        // immediately below), not something to redesign here.
+        // Focus management (fixed — see interview-results.component.ts):
+        // activating "Review Answers" moves focus to the Review heading, a
+        // programmatically-focused (tabindex="-1") stable landing point, not
+        // <body>. The toggle button itself is now ONE stable element across
+        // the open/close toggle (no @if/@else swap), so a focused trigger is
+        // never destroyed out from under the user — exercised directly by
+        // 'Interview Review focus management (fix regression)' below.
+        await expect(page.locator('#interview-review-heading')).toBeFocused();
         const postToggleFocusTag = await page.evaluate(() => document.activeElement?.tagName);
-        expect(postToggleFocusTag).toBe('BODY');
+        expect(postToggleFocusTag).not.toBe('BODY');
 
         // ── Filter toolbar: Angular Aria's ngToolbar (@angular/aria/toolbar,
         // a framework primitive, not a native radiogroup). Tab enters it
@@ -535,5 +532,193 @@ test.describe('Interview Review — all three outcomes, keyboard only', () => {
         console.log(`REVIEW KEYBOARD FLOW (${theme}, ${vp.label}): COMPLETE — all three outcomes verified, no mouse used`);
       });
     }
+  }
+});
+
+/**
+ * Focused regression coverage for the Review focus-management fix
+ * (interview-results.component.ts/.html/.scss): opening Review used to
+ * destroy the focused "Review Answers" button (an @if/@else element swap)
+ * and drop focus to <body>. Fixed by consolidating to one stable button
+ * element and moving focus explicitly — to the Review heading on open, back
+ * to the trigger on close — via an effect()+afterNextRender(), not a timeout.
+ *
+ * Reuses the full keyboard-only flow above for the "every outcome, every
+ * theme/width, deep filter interaction" coverage; these tests use a FAST
+ * mouse-driven setup (not the subject under test — the toggle itself is
+ * still exercised via keyboard) to reach Results, per instructions not to
+ * duplicate the full Interview setup.
+ */
+test.describe('Interview Review focus management (fix regression)', () => {
+  /**
+   * Builder -> a Custom Interview -> answered -> submitted -> Results.
+   * Mouse-driven setup; not what these tests are about. 10 is the smallest
+   * of the Builder's actual question-count chips ([10, 20, 30] — see
+   * build-your-interview.component.ts's countOptions), not an arbitrary
+   * guess.
+   */
+  async function reachResults(page: Page, count = 10): Promise<void> {
+    await page.goto('/interview');
+    await page.locator('.chip:has-text("Beginner")').first().click();
+    const boxes = page.locator('.topic-check input[type="checkbox"]');
+    await expect(boxes.first()).toBeVisible();
+    await page.locator('.topics-toolbar button:has-text("Select All")').click();
+    await expect(boxes.first()).toBeChecked();
+    await page.locator(`.chip--button:has-text("${count}")`).first().click();
+    await page.locator('.start-interview-btn').click();
+    await page.waitForURL(/\/interview\/session\/[^/?#]+/);
+    for (let i = 1; i <= count; i++) {
+      await page.locator('.io-option').first().click();
+      if (i < count) {
+        await page.locator('.pg-next').first().click();
+        await expect(page.locator('.interview-progress')).toContainText(`Question ${i + 1}`);
+      }
+    }
+    await page.locator('.show-results-btn').click();
+    await expect(page.getByText('Submit Assessment?')).toBeVisible();
+    await page.locator('button:has-text("Submit Assessment")').last().click();
+    await page.waitForURL(/\/interview\/results\/[^/?#]+/);
+  }
+
+  async function openReviewViaKeyboard(page: Page): Promise<void> {
+    await tabUntil(page, async () => page.evaluate(() => (document.activeElement?.textContent || '').trim() === 'Review Answers'));
+    await pressKey(page, 'Enter');
+  }
+
+  test('keyboard-open: focus lands on the Review heading (tabindex=-1, visible outline), and Tab continues logically into the filter toolbar', async ({ page }) => {
+    await reachResults(page);
+    await openReviewViaKeyboard(page);
+
+    await expect(page.locator('#interview-review-heading')).toBeFocused();
+    const heading = await page.evaluate(() => ({
+      tag: document.activeElement?.tagName,
+      tabindex: document.activeElement?.getAttribute('tabindex'),
+      outline: getComputedStyle(document.activeElement as Element).outlineStyle,
+    }));
+    expect(heading.tag).toBe('H2');
+    expect(heading.tabindex).toBe('-1'); // programmatic target, no extra ordinary Tab stop
+    expect(heading.outline).not.toBe('none');
+
+    // Logical path: Tab from the heading reaches the filter toolbar next —
+    // Angular Aria's ngToolbar (roving tabindex) is untouched by this fix.
+    await tabUntil(page, async () => page.evaluate(() => (document.activeElement as HTMLElement)?.classList?.contains('rv-filter')), 10);
+    const label = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') || '');
+    expect(label.startsWith('All')).toBe(true);
+    await pressKey(page, 'ArrowRight');
+    await pressKey(page, 'Enter');
+    await expect.poll(() => page.evaluate(() => document.activeElement?.getAttribute('aria-checked'))).toBe('true');
+  });
+
+  test('keyboard-close: focus returns to the rendered trigger button (not a destroyed element, not <body>), result unchanged', async ({ page }) => {
+    await reachResults(page);
+    const scoreBefore = (await page.locator('.score-pct').innerText()).trim();
+
+    await openReviewViaKeyboard(page);
+    await expect(page.locator('#interview-review-heading')).toBeFocused();
+
+    await tabUntil(page, async () => page.evaluate(() => (document.activeElement?.textContent || '').trim() === 'Hide Review'));
+    await pressKey(page, 'Enter');
+    await expect(page.locator('app-interview-review')).toBeHidden();
+
+    const after = await page.evaluate(() => ({
+      tag: document.activeElement?.tagName,
+      text: (document.activeElement?.textContent || '').trim(),
+    }));
+    expect(after.tag).toBe('BUTTON');
+    expect(after.tag).not.toBe('BODY');
+    expect(after.text).toBe('Review Answers'); // relabeled back, same element
+
+    expect((await page.locator('.score-pct').innerText()).trim()).toBe(scoreBefore);
+  });
+
+  test('repeated open/close cycles: the SAME button element persists (never recreated), focus lands correctly every time', async ({ page }) => {
+    await reachResults(page);
+    await tabUntil(page, async () => page.evaluate(() => (document.activeElement?.textContent || '').trim() === 'Review Answers'));
+    // Mark the actual DOM node so a later read proves identity, not just text.
+    await page.evaluate(() => (document.activeElement as HTMLElement)?.setAttribute('data-test-identity', 'review-toggle'));
+
+    for (let cycle = 1; cycle <= 3; cycle++) {
+      await pressKey(page, 'Enter'); // open
+      await expect(page.locator('#interview-review-heading')).toBeFocused();
+
+      await tabUntil(page, async () => page.evaluate(() => (document.activeElement?.textContent || '').trim() === 'Hide Review'));
+      const identity = await page.evaluate(() => document.activeElement?.getAttribute('data-test-identity'));
+      expect(identity, `cycle ${cycle}: toggle button identity lost — it was recreated`).toBe('review-toggle');
+
+      await pressKey(page, 'Enter'); // close
+      await expect(page.locator('app-interview-review')).toBeHidden();
+      const afterClose = await page.evaluate(() => ({
+        tag: document.activeElement?.tagName,
+        identity: document.activeElement?.getAttribute('data-test-identity'),
+      }));
+      expect(afterClose.tag, `cycle ${cycle}`).toBe('BUTTON');
+      expect(afterClose.identity, `cycle ${cycle}`).toBe('review-toggle');
+    }
+  });
+
+  test('no console/page errors across open -> close -> navigate-away (component destruction)', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
+
+    await reachResults(page);
+    await openReviewViaKeyboard(page);
+    await expect(page.locator('#interview-review-heading')).toBeFocused();
+    await tabUntil(page, async () => page.evaluate(() => (document.activeElement?.textContent || '').trim() === 'Hide Review'));
+    await pressKey(page, 'Enter');
+    await expect(page.locator('app-interview-review')).toBeHidden();
+
+    // Navigate away while the component (and its focus-management effect)
+    // is still live — destruction must not throw or leave a pending
+    // afterNextRender callback misfiring on a torn-down view.
+    await page.locator('a:has-text("Export Report")').first().click();
+    await page.waitForURL(/\/interview\/report\/[^/?#]+/);
+
+    expect(errors).toEqual([]);
+  });
+
+  test('mouse/touch: clicking "Review Answers" still opens it, and the same button still closes it', async ({ page }) => {
+    await reachResults(page);
+    await page.getByRole('button', { name: 'Review Answers' }).click();
+    await expect(page.locator('app-interview-review')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Hide Review' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Hide Review' }).click();
+    await expect(page.locator('app-interview-review')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Review Answers' })).toBeVisible();
+  });
+
+  const focusVisibilityVariants: Array<{ label: string; apply: (page: Page) => Promise<void> }> = [
+    { label: 'light theme, desktop', apply: async () => {} },
+    { label: 'dark theme, desktop', apply: async (page) => page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark')) },
+    { label: '375px width, light theme', apply: async (page) => page.setViewportSize({ width: 375, height: 667 }) },
+  ];
+  for (const variant of focusVisibilityVariants) {
+    test(`${variant.label}: Review heading focus outline is visible, not clipped, no new horizontal overflow`, async ({ page }) => {
+      await variant.apply(page);
+      await reachResults(page);
+      await openReviewViaKeyboard(page);
+      await expect(page.locator('#interview-review-heading')).toBeFocused();
+      // toBeFocused() resolves the instant the focus event fires, which can
+      // be a tick ahead of Angular's own render/scroll settling (observed:
+      // an interim layout read a transient, incorrect clip.left before
+      // settling to its real position a few hundred ms later) — let it
+      // settle before reading geometry, same established pattern as this
+      // file's other post-action waits (e.g. selectOptionsViaKeyboard).
+      await page.waitForTimeout(300);
+
+      const outline = await page.evaluate(() => getComputedStyle(document.activeElement as Element).outlineStyle);
+      expect(outline).not.toBe('none');
+
+      const clip = await page.evaluate(() => {
+        const r = (document.activeElement as Element).getBoundingClientRect();
+        return { left: r.left, right: r.right, viewportWidth: window.innerWidth };
+      });
+      expect(clip.left).toBeGreaterThanOrEqual(0);
+      expect(clip.right).toBeLessThanOrEqual(clip.viewportWidth + 2);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(overflow).toBeLessThanOrEqual(2);
+    });
   }
 });

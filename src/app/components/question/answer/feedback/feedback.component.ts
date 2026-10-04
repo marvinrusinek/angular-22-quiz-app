@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, effect, inject, input, signal
+  ChangeDetectionStrategy, Component, effect, inject, input, output, signal
 } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
@@ -39,6 +39,21 @@ export class FeedbackComponent {
   readonly feedbackMessageClass = signal('');
   readonly displayMessage = signal('');
 
+  /**
+   * Mirrors displayMessage() for a STABLE, persistent announcer — see
+   * SharedOptionComponent's `announcedFeedback`. This component itself is
+   * instantiated fresh per option-anchor (shared-option.component.html's
+   * `@if (shouldShowFeedbackAfter(b, i))`), which is correct for VISUAL
+   * positioning (feedback sits below whichever option it's about) but means
+   * a screen reader never sees an existing live region mutate — it sees a
+   * brand-new subtree appear already containing its final text, which most
+   * screen readers do not announce (confirmed live: Narrator read this
+   * feedback only when the user manually navigated onto it, never
+   * automatically). The parent's persistent region re-announces reliably
+   * because IT is never destroyed; this output is how it learns the text.
+   */
+  readonly messageAnnounced = output<string>();
+
   constructor() {
     // Re-runs whenever the feedbackConfig signal input changes (replaces
     // the prior ngOnInit + ngOnChanges pair). Truthy-only gate matches the
@@ -65,6 +80,7 @@ export class FeedbackComponent {
       this.questionVerdictService.states();
 
       if (cfg) this.updateFeedback();
+      this.messageAnnounced.emit(this.displayMessage());
     });
   }
 

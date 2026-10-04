@@ -57,6 +57,10 @@ export class OptionInteractionEffectsService {
   private resetBindingsAndState(h: any, v: number): void {
     h.timerExpiredForQuestion.set(false);
     h._timerExpiryHandled = false;
+    // The persistent feedback announcer (see shared-option.component.html)
+    // must not carry a verdict from the question just left into the
+    // incoming one — it is never destroyed, so nothing else clears it.
+    h.announcedFeedback?.set('');
     for (const b of h.optionBindings() ?? []) {
       if (!b) continue;
       delete b._timerExpiredStamped;

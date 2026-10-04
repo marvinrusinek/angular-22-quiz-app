@@ -203,6 +203,17 @@ export class SharedOptionComponent
 
   readonly renderReady = signal(false);
 
+  /**
+   * Text for the single, persistent, visually-hidden feedback announcer —
+   * see the template's own comment for why this exists separately from the
+   * visible feedback box. Set by codelab-quiz-feedback's `messageAnnounced`
+   * output (one listener per `@for` option slot, but only the slot that is
+   * actually the current feedback anchor ever emits a non-empty value —
+   * every other slot's own FeedbackComponent instance stays at its initial
+   * '', so its effect never re-fires and it never overwrites this signal).
+   */
+  readonly announcedFeedback = signal('');
+
   // Include disableRenderTrigger to force re-render when disabled state changes
   trackByOptionId = (b: OptionBindings, idx: number) => {
     const idPart = (b.option?.optionId != null && b.option.optionId !== -1) ? b.option.optionId : `idx-${idx}`;

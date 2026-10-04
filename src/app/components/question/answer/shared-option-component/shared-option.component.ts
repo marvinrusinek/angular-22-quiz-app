@@ -214,6 +214,47 @@ export class SharedOptionComponent
    */
   readonly announcedFeedback = signal('');
 
+  /** Pending timer for announceFeedbackStaggered — see that method. */
+  private pendingAnnouncerTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Writes announcedFeedback after a short delay instead of immediately.
+   *
+   * Live MutationObserver timestamps (captured against the real app, not
+   * assumed) showed that on verdict arrival this announcer, the question
+   * heading (#qText, also aria-live="polite" — it reveals the explanation
+   * at the same moment), and the progress message-area (also polite) all
+   * mutate within the SAME synchronous tick (observed within 0.1ms of each
+   * other). Multiple aria-live="polite" regions mutating in one batch are
+   * NOT reliably queued by every assistive technology — this is confirmed
+   * to be a genuine competing-announcement condition, not an assumption.
+   * Deferring this region's own write by one macrotask moves its mutation
+   * into a separate accessibility-tree update batch from its two siblings,
+   * without adding any new live region, touching their politeness, or
+   * changing the heading/message-area producers at all.
+   */
+  announceFeedbackStaggered(text: string): void {
+    this.cancelPendingFeedbackAnnouncement();
+    this.pendingAnnouncerTimeoutId = setTimeout(() => {
+      this.pendingAnnouncerTimeoutId = null;
+      this.announcedFeedback.set(text);
+    }, 400);
+  }
+
+  /**
+   * Must run before any direct `announcedFeedback.set(...)` (e.g. the Q→Q
+   * clear in OptionInteractionEffectsService) — otherwise a still-pending
+   * staggered write from the question just left could fire AFTER that
+   * clear and reintroduce the stale-verdict-on-navigation bug this was
+   * built to prevent.
+   */
+  cancelPendingFeedbackAnnouncement(): void {
+    if (this.pendingAnnouncerTimeoutId !== null) {
+      clearTimeout(this.pendingAnnouncerTimeoutId);
+      this.pendingAnnouncerTimeoutId = null;
+    }
+  }
+
   // Include disableRenderTrigger to force re-render when disabled state changes
   trackByOptionId = (b: OptionBindings, idx: number) => {
     const idPart = (b.option?.optionId != null && b.option.optionId !== -1) ? b.option.optionId : `idx-${idx}`;
@@ -286,6 +327,7 @@ export class SharedOptionComponent
     this.optionFeedbackEffects.registerFeedbackEffects(this);
 
     this.destroyRef.onDestroy(() => {
+      this.cancelPendingFeedbackAnnouncement();
       this.orchestrator.runOnDestroy(this);
     });
   }

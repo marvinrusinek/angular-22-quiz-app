@@ -7,7 +7,7 @@
       <div class="feedback-below-option" @correctAnswer>
         <codelab-quiz-feedback
           [feedbackConfig]="inlineFeedback"
-          (messageAnnounced)="announcedFeedback.set($event)"
+          (messageAnnounced)="announceFeedbackStaggered($event)"
         />
       </div>
     }

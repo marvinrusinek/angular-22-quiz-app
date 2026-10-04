@@ -60,6 +60,11 @@ export class OptionInteractionEffectsService {
     // The persistent feedback announcer (see shared-option.component.html)
     // must not carry a verdict from the question just left into the
     // incoming one — it is never destroyed, so nothing else clears it.
+    // Cancel FIRST: a staggered announce (announceFeedbackStaggered) from
+    // the question just left may still be pending, and if it fired after
+    // this clear it would reintroduce the exact stale-verdict-on-
+    // navigation bug this clear exists to prevent.
+    h.cancelPendingFeedbackAnnouncement?.();
     h.announcedFeedback?.set('');
     for (const b of h.optionBindings() ?? []) {
       if (!b) continue;

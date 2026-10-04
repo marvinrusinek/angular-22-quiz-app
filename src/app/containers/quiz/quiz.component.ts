@@ -1,12 +1,15 @@
 import {
   AfterViewInit,
+  afterNextRender,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   computed,
   DestroyRef,
   effect,
+  ElementRef,
   inject,
+  Injector,
   OnInit,
   signal,
   untracked,
@@ -136,11 +139,23 @@ export class QuizComponent implements OnInit, AfterViewInit {
   public readonly cdRef = inject(ChangeDetectorRef);
   public readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
 
   // ── viewChilds ──────────────────────────────────────────────────
   readonly quizQuestionComponent = viewChild(QuizQuestionComponent);
   readonly sharedOptionComponent = viewChild(SharedOptionComponent);
   readonly nextButtonTooltip = viewChild<MatTooltip>('nextButton');
+  // The projected question heading (declared in THIS component's own
+  // template at quiz.component.html, even though it ends up rendered
+  // inside CodelabQuizContentComponent's projection slot) — see the
+  // route-focus effect in the constructor.
+  readonly qTextHeading = viewChild<ElementRef<HTMLHeadingElement>>('qText');
+
+  // Single-fire latch for the route-focus effect below: flips true the
+  // first time this component ever moves focus, and is never reset, so
+  // Next/Previous (which reuse this same instance — only route params
+  // change) never re-trigger it.
+  private focusedHeadingOnInitialRender = false;
 
   // ── remaining variables ─────────────────────────────────────────
   readonly selectedQuiz = signal<Quiz | null>(null);
@@ -421,6 +436,36 @@ export class QuizComponent implements OnInit, AfterViewInit {
     // Re-assert SHOW_RESULTS_MSG when the user lands back on the last question
     // from Results. Runs as the index/total signals settle after the rebuild.
     effect(() => this.restoreShowResultsMessageOnReturn());
+
+    // Screen-reader route-focus fix: an Angular SPA route change (e.g.
+    // Introduction -> this component) is a DOM swap under one shared
+    // <router-outlet>, not a real browser navigation, so it gives Narrator
+    // (or any AT) no unload/load cue to stop speaking the page just left.
+    // Without a deliberate focus move, whatever was already queued from
+    // QuizSelection/Introduction can keep playing after Q1 has mounted.
+    // Moving focus onto the question heading is a genuine focus change
+    // (NOT another live region), which browsers/AT generally treat as an
+    // interrupt-and-announce signal. Fires once per component lifetime via
+    // the latch above — never on Next/Previous, which reuse this instance.
+    effect(() => {
+      const qa = this.combinedQuestionDataView();
+      const ready = !!qa?.options?.length;
+      if (!ready || this.focusedHeadingOnInitialRender) return;
+      this.focusedHeadingOnInitialRender = true;
+
+      afterNextRender(
+        () => {
+          const el = this.qTextHeading()?.nativeElement;
+          // Only focus once CodelabQuizContentComponent's own DOM-write
+          // effect has actually populated the heading — focusing an empty
+          // element would announce nothing, and could even read as a
+          // SECOND, duplicate announcement once the text does land a
+          // moment later.
+          if (el && (el.textContent ?? '').trim().length > 0) el.focus();
+        },
+        { injector: this.injector }
+      );
+    });
 
     this.destroyRef.onDestroy(() => {
       this.removeScrollIndicator();

@@ -25,13 +25,19 @@
                      unit, so the heading and its optional code snippet are
                      literal DOM children of the same box element, not merely
                      adjacent siblings. contentChild('qText') still finds the
-                     <h3> anywhere within this projected subtree. -->
+                     <h3> anywhere within this projected subtree, AND this
+                     component's own viewChild('qText') resolves it too (it was
+                     declared in THIS template) — the route-focus effect in
+                     quiz.component.ts uses that to focus it once, on initial
+                     render only. tabindex="-1" makes it focusable without
+                     adding it to the normal Tab order. -->
                 <div
                   quiz-projected-content
                   class="question-box"
                 >
                   <h3
                     #qText
+                    tabindex="-1"
                     aria-live="polite"
                     aria-atomic="true"
                   ></h3>

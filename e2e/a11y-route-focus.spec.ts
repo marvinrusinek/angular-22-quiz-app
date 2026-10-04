@@ -4,35 +4,46 @@ import { quizData, startQuizViaUi, advanceToQuestion, HEADING, NEXT_BTN } from '
 /**
  * Regression coverage for the route-focus fix (quiz.component.ts/.html).
  *
- * Root cause this addresses: an Angular SPA route change (QuizSelection ->
- * Introduction -> this component) is a client-side DOM swap under one shared
- * <router-outlet>, never a real browser navigation — so it gives screen
- * readers no unload/load cue to stop speaking whatever page they were on.
- * With no focus-management anywhere in the app (the app-level NavigationEnd
- * handler was found to be dead code — it toggles fields the template never
- * reads), a screen reader's own queued/in-progress speech from
- * QuizSelection/Introduction can keep playing after Q1 has already mounted.
+ * ── Root cause ──────────────────────────────────────────────────────────
+ * An Angular SPA route change (QuizSelection -> Introduction -> this
+ * component, or Next/Previous BETWEEN questions) is a client-side DOM
+ * swap, never a real browser navigation — so it gives screen readers no
+ * unload/load cue to stop speaking whatever they were on. With no focus-
+ * management anywhere in the app (the app-level NavigationEnd handler was
+ * found to be dead code — it toggles fields the template never reads), a
+ * screen reader's own in-progress/queued speech from the page or question
+ * just left can keep playing after the next one has already mounted.
  *
- * Fix: QuizComponent now moves focus to the question heading
- * (`#qText`, given `tabindex="-1"`) exactly once per component lifetime —
- * on the FIRST question that resolves after mounting — guarded by a plain
- * boolean latch so Next/Previous (which reuse this same component instance;
- * no custom RouteReuseStrategy exists in this app) never re-trigger it. The
- * focus call only runs once the heading's own DOM-write effect (in
- * CodelabQuizContentComponent) has populated real text, via
- * `afterNextRender`.
+ * ── Scope (expanded from the initial-arrival-only version) ─────────────
+ * A live diagnostic confirmed the app writes NO stale previous-question
+ * text anywhere after a Next/Previous navigation (the `/check` response is
+ * question-keyed, the heading/message-area are pure computeds off the live
+ * index, and the staggered feedback announcer — see
+ * a11y-feedback-announcer-stagger.spec.ts — is explicitly cancel-guarded on
+ * transition). The reported overlap is consistent with the AT finishing
+ * speech it had already started, which no DOM state can retroactively
+ * un-queue. QuizComponent now moves focus to the question heading
+ * (`#qText`, `tabindex="-1"`) on EVERY actual question-index change —
+ * initial arrival AND every Next/Previous — gated on
+ * `currentQuestionIndex()` genuinely changing, so an answer click, a
+ * feedback update, or a timer tick (none of which change that index) never
+ * re-trigger it. `tabindex="-1"` keeps the heading out of the normal Tab
+ * sequence, so this never alters logical Tab order.
  *
- * What this suite proves: the heading is a real, present, focusable
- * (tabindex="-1") element; it receives focus on initial arrival; it already
- * carries non-empty, question-matching text at the moment it is focused; and
- * Next/Previous do not re-steal focus onto it afterward.
+ * ── What this suite proves ──────────────────────────────────────────────
+ * The heading is real, present, and focusable; it receives focus on
+ * initial arrival AND on every subsequent Next, each time with that
+ * question's own non-empty text; answering a question (without
+ * navigating) does not steal focus away mid-interaction; rapid repeated
+ * navigation and navigating away entirely (destruction) produce no
+ * console/page errors.
  *
- * What this suite does NOT and cannot prove: that Narrator (or any other
- * assistive technology) actually interrupts its speech queue when this focus
- * change happens, or that no duplicate announcement occurs in practice.
- * Browser DOM/accessibility-tree state is not a stand-in for real screen-
- * reader speech output — only a manual Narrator/NVDA retest can confirm
- * that. See this task's final report for the manual verification steps.
+ * ── What this suite does NOT and cannot prove ───────────────────────────
+ * That Narrator (or any other assistive technology) actually interrupts
+ * its speech queue when this focus change happens. Focus movement is a
+ * CANDIDATE mitigation, not a guaranteed fix — only a manual Narrator
+ * retest can confirm it. See this task's final report for the manual
+ * verification steps.
  *
  * Navigation uses startQuizViaUi + advanceToQuestion (real progression),
  * never a direct page.goto to a non-first question — QuizGuard redirects
@@ -42,50 +53,109 @@ import { quizData, startQuizViaUi, advanceToQuestion, HEADING, NEXT_BTN } from '
 const doohickeys = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-doohickeys');
 const HEADING_H3 = `${HEADING}[tabindex="-1"]`;
 
-test.describe('Topic Quiz route focus — initial arrival only, never on Next/Previous (fix regression)', () => {
+async function headingState(page: import('@playwright/test').Page) {
+  return page.evaluate((sel) => {
+    const el = document.querySelector(sel) as HTMLElement | null;
+    if (!el) return { found: false as const };
+    return {
+      found: true as const,
+      isFocused: document.activeElement === el,
+      text: (el.textContent || '').trim(),
+    };
+  }, HEADING_H3);
+}
+
+test.describe('Topic Quiz route focus — every question change, never on answer/feedback/timer updates (fix regression)', () => {
   test('arriving at Q1 from Introduction focuses the question heading, which already carries non-empty, matching text', async ({ page }) => {
     await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
 
-    const state = await page.evaluate((sel) => {
-      const el = document.querySelector(sel) as HTMLElement | null;
-      if (!el) return { found: false as const };
-      return {
-        found: true as const,
-        isFocused: document.activeElement === el,
-        tabindex: el.getAttribute('tabindex'),
-        text: (el.textContent || '').trim(),
-      };
-    }, HEADING_H3);
-
+    const state = await headingState(page);
     expect(state.found).toBe(true);
-    expect(state.tabindex).toBe('-1');
     expect(state.isFocused).toBe(true);
     expect(state.text.length).toBeGreaterThan(0);
     expect(state.text).toContain(doohickeys.questions[0].questionText.slice(0, 20));
   });
 
-  test('clicking Next does not move focus back onto the heading — Next/Previous focus behavior is unchanged', async ({ page }) => {
+  test('clicking Next moves focus BACK onto the heading, now with the NEW question text', async ({ page }) => {
     await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
 
-    // Consume the initial auto-focus by answering Q1, matching real usage —
-    // the latch must survive a real click cycle, not just an idle page.
     const correctIdx = doohickeys.questions[0].options.findIndex(
       (o: any) => o.correct === true || o.correct === 'true'
     );
     await page.locator('.option-row').nth(correctIdx).click();
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(600);
 
     const nextBtn = page.locator(NEXT_BTN);
-    if ((await nextBtn.count()) > 0 && (await nextBtn.isEnabled())) {
+    await expect(nextBtn).toBeEnabled({ timeout: 10_000 });
+    await nextBtn.click();
+    await advanceToQuestion(page, doohickeys, 2);
+    await page.waitForTimeout(300);
+
+    const state = await headingState(page);
+    expect(state.found).toBe(true);
+    expect(state.isFocused).toBe(true);
+    expect(state.text).toContain(doohickeys.questions[1].questionText.slice(0, 20));
+    // Genuinely a different question's text, not a stale re-focus of Q1's.
+    expect(state.text).not.toContain(doohickeys.questions[0].questionText.slice(0, 20));
+  });
+
+  test('selecting an option (answer/feedback update, no navigation) does NOT steal focus back onto the heading', async ({ page }) => {
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+
+    // Initial arrival already focused the heading — move focus elsewhere
+    // (onto the option itself, as a real click does) before triggering the
+    // answer/feedback update under test.
+    const correctIdx = doohickeys.questions[0].options.findIndex(
+      (o: any) => o.correct === true || o.correct === 'true'
+    );
+    const row = page.locator('.option-row').nth(correctIdx);
+    await row.click();
+    await page.waitForTimeout(900); // past the feedback announcer's 400ms stagger too
+
+    const state = await headingState(page);
+    // The verdict/feedback effects fired (same question, same index) — the
+    // heading must NOT have reclaimed focus as a side effect of that.
+    expect(state.isFocused).toBe(false);
+  });
+
+  test('rapid repeated Next clicks and navigating away entirely produce no console/page errors', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (msg) => {
+      if (msg.type() !== 'error') return;
+      // NG02955 (NgOptimizedImage LCP-priority advisory on QuizSelection's
+      // tile images) is a pre-existing Angular dev-mode diagnostic, unrelated
+      // to focus management — it fires whenever /quiz loads, regardless of
+      // this fix. Everything else still fails the test.
+      if (msg.text().includes('NG02955')) return;
+      errors.push(msg.text());
+    });
+
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+
+    for (let q = 0; q < 2; q++) {
+      const correctIdxs: number[] = doohickeys.questions[q].options
+        .map((o: any, i: number) => ((o.correct === true || o.correct === 'true') ? i : -1))
+        .filter((i: number) => i >= 0);
+      for (const idx of correctIdxs) {
+        await page.locator('.option-row').nth(idx).click();
+      }
+      const nextBtn = page.locator(NEXT_BTN);
+      await expect(nextBtn).toBeEnabled({ timeout: 10_000 });
+      // Click Next immediately — deliberately inside the feedback
+      // announcer's stagger window, and before any afterNextRender focus
+      // callback from THIS click has necessarily run yet.
       await nextBtn.click();
-      await advanceToQuestion(page, doohickeys, 2);
     }
+    await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
+    await page.waitForTimeout(500);
 
-    const state = await page.evaluate((sel) => {
-      const el = document.querySelector(sel) as HTMLElement | null;
-      return { isHeadingFocused: !!el && document.activeElement === el };
-    }, HEADING_H3);
+    // Navigate away entirely while a focus effect could still be pending —
+    // this component (and its injector) is destroyed mid-flight.
+    await page.goto('/quiz');
+    await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
+    await page.waitForTimeout(300);
 
-    expect(state.isHeadingFocused).toBe(false);
+    expect(errors).toEqual([]);
   });
 });

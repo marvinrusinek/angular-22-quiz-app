@@ -151,11 +151,13 @@ export class QuizComponent implements OnInit, AfterViewInit {
   // route-focus effect in the constructor.
   readonly qTextHeading = viewChild<ElementRef<HTMLHeadingElement>>('qText');
 
-  // Single-fire latch for the route-focus effect below: flips true the
-  // first time this component ever moves focus, and is never reset, so
-  // Next/Previous (which reuse this same instance — only route params
-  // change) never re-trigger it.
-  private focusedHeadingOnInitialRender = false;
+  // Identity latch for the route-focus effect below: the question index
+  // this component last moved focus FOR. Gates on currentQuestionIndex()
+  // actually changing to a NEW value — not a one-shot boolean — so Next/
+  // Previous (which reuse this same instance) refocus too, while an
+  // answer click, a feedback update, or a timer tick (none of which change
+  // this index) never re-trigger it.
+  private lastFocusedQuestionIndex: number | null = null;
 
   // ── remaining variables ─────────────────────────────────────────
   readonly selectedQuiz = signal<Quiz | null>(null);
@@ -438,29 +440,50 @@ export class QuizComponent implements OnInit, AfterViewInit {
     effect(() => this.restoreShowResultsMessageOnReturn());
 
     // Screen-reader route-focus fix: an Angular SPA route change (e.g.
-    // Introduction -> this component) is a DOM swap under one shared
-    // <router-outlet>, not a real browser navigation, so it gives Narrator
-    // (or any AT) no unload/load cue to stop speaking the page just left.
-    // Without a deliberate focus move, whatever was already queued from
-    // QuizSelection/Introduction can keep playing after Q1 has mounted.
-    // Moving focus onto the question heading is a genuine focus change
-    // (NOT another live region), which browsers/AT generally treat as an
-    // interrupt-and-announce signal. Fires once per component lifetime via
-    // the latch above — never on Next/Previous, which reuse this instance.
+    // Introduction -> this component, or Next/Previous between questions)
+    // is a DOM swap, not a real browser navigation, so it gives Narrator
+    // (or any AT) no unload/load cue to stop speaking the page/question
+    // just left. A live diagnostic confirmed the app writes no stale
+    // previous-question text anywhere after navigation (the `/check`
+    // response is question-keyed, the heading/message-area are pure
+    // computeds off the live index, and the staggered feedback announcer
+    // is explicitly cancel-guarded on transition) — the overlap users can
+    // hear is the AT finishing speech it had already started, which no
+    // DOM state can retroactively un-queue. Moving focus onto the question
+    // heading is a genuine focus change (NOT another live region, NOT a
+    // delay, NOT assertive), which browsers/AT generally treat as an
+    // interrupt-and-announce signal — a CANDIDATE mitigation, not a
+    // guaranteed fix; only a real Narrator retest can confirm it actually
+    // interrupts the queue.
+    //
+    // Gated on currentQuestionIndex() actually changing (lastFocusedQuestionIndex
+    // above), not a one-shot latch, so this fires on initial arrival AND on
+    // every Next/Previous — but an answer click, a feedback update, or a
+    // timer tick never change that index, so none of them re-trigger it.
+    // tabindex="-1" (quiz.component.html) keeps the heading out of the
+    // normal Tab sequence; this never alters logical Tab order.
     effect(() => {
+      const idx = this.currentQuestionIndex();
       const qa = this.combinedQuestionDataView();
       const ready = !!qa?.options?.length;
-      if (!ready || this.focusedHeadingOnInitialRender) return;
-      this.focusedHeadingOnInitialRender = true;
+      if (!ready || idx === this.lastFocusedQuestionIndex) return;
+      this.lastFocusedQuestionIndex = idx;
 
+      // afterNextRender's callback is automatically cancelled by Angular if
+      // `this.injector` (this component) is destroyed before the next
+      // render happens — e.g. the user navigates away to Results entirely
+      // while this is still pending — so no extra destroy-guard is needed.
       afterNextRender(
         () => {
           const el = this.qTextHeading()?.nativeElement;
           // Only focus once CodelabQuizContentComponent's own DOM-write
-          // effect has actually populated the heading — focusing an empty
-          // element would announce nothing, and could even read as a
-          // SECOND, duplicate announcement once the text does land a
-          // moment later.
+          // effect has actually populated the heading for THIS question —
+          // focusing an empty element would announce nothing, and could
+          // even read as a SECOND, duplicate announcement once the text
+          // does land a moment later. Rapid Next/Next/Next clicking can
+          // mean this callback fires once the heading already shows a
+          // LATER question's text than the one that scheduled it — that is
+          // still the correct, current text, so focusing it is harmless.
           if (el && (el.textContent ?? '').trim().length > 0) el.focus();
         },
         { injector: this.injector }

@@ -70,7 +70,7 @@ test.describe('Topic Quiz route focus — every question change, never on answer
     await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
 
     const state = await headingState(page);
-    expect(state.found).toBe(true);
+    if (!state.found) throw new Error('heading element not found');
     expect(state.isFocused).toBe(true);
     expect(state.text.length).toBeGreaterThan(0);
     expect(state.text).toContain(doohickeys.questions[0].questionText.slice(0, 20));
@@ -92,7 +92,7 @@ test.describe('Topic Quiz route focus — every question change, never on answer
     await page.waitForTimeout(300);
 
     const state = await headingState(page);
-    expect(state.found).toBe(true);
+    if (!state.found) throw new Error('heading element not found');
     expect(state.isFocused).toBe(true);
     expect(state.text).toContain(doohickeys.questions[1].questionText.slice(0, 20));
     // Genuinely a different question's text, not a stale re-focus of Q1's.
@@ -113,12 +113,13 @@ test.describe('Topic Quiz route focus — every question change, never on answer
     await page.waitForTimeout(900); // past the feedback announcer's 400ms stagger too
 
     const state = await headingState(page);
+    if (!state.found) throw new Error('heading element not found');
     // The verdict/feedback effects fired (same question, same index) — the
     // heading must NOT have reclaimed focus as a side effect of that.
     expect(state.isFocused).toBe(false);
   });
 
-  test('rapid repeated Next clicks and navigating away entirely produce no console/page errors', async ({ page }) => {
+  test('rapid repeated Next clicks land focus on the FINAL question only (never a stale intermediate one), and navigating away entirely produces no console/page errors', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (msg) => {
@@ -149,6 +150,16 @@ test.describe('Topic Quiz route focus — every question change, never on answer
     }
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
     await page.waitForTimeout(500);
+
+    // Focus must land on the FINAL question reached (index 2, 1-based),
+    // never an intermediate one — confirms rapid Next/Next cannot leave
+    // focus on a stale/earlier heading.
+    const afterRapidNav = await headingState(page);
+    if (!afterRapidNav.found) throw new Error('heading element not found');
+    expect(afterRapidNav.isFocused).toBe(true);
+    expect(afterRapidNav.text).toContain(doohickeys.questions[2].questionText.slice(0, 20));
+    expect(afterRapidNav.text).not.toContain(doohickeys.questions[0].questionText.slice(0, 20));
+    expect(afterRapidNav.text).not.toContain(doohickeys.questions[1].questionText.slice(0, 20));
 
     // Navigate away entirely while a focus effect could still be pending —
     // this component (and its injector) is destroyed mid-flight.

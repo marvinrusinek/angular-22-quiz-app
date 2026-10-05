@@ -19,6 +19,7 @@ import {
   SharedOptionConfig
 } from '@shared/models';
 
+import { AnswerAnnouncementCoordinatorService } from '@shared/services/features/shared-option/answer-announcement-coordinator.service';
 import { OptionClickHandlerService } from '@shared/services/options/engine/option-click-handler.service';
 import { OptionFeedbackDisplayService } from '@shared/services/features/shared-option/option-feedback-display.service';
 import { OptionFeedbackEffectsService } from '@shared/services/features/shared-option/option-feedback-effects.service';
@@ -204,55 +205,76 @@ export class SharedOptionComponent
   readonly renderReady = signal(false);
 
   /**
-   * Text for the single, persistent, visually-hidden feedback announcer —
-   * see the template's own comment for why this exists separately from the
-   * visible feedback box. Set by codelab-quiz-feedback's `messageAnnounced`
-   * output (one listener per `@for` option slot, but only the slot that is
-   * actually the current feedback anchor ever emits a non-empty value —
-   * every other slot's own FeedbackComponent instance stays at its initial
-   * '', so its effect never re-fires and it never overwrites this signal).
+   * Text for the single, persistent, visually-hidden ANSWER-OUTCOME
+   * announcer — see the template's own comment for why this exists
+   * separately from the visible feedback box. Carries the ONE composed
+   * message for the current click's outcome (feedback alone; feedback +
+   * "select N more"; or feedback + explanation — see
+   * AnswerAnnouncementCoordinatorService), not the raw feedback text
+   * verbatim. Written by `onFeedbackAnnounced` below, fed by
+   * codelab-quiz-feedback's `messageAnnounced` output (one listener per
+   * `@for` option slot, but only the slot that is actually the current
+   * feedback anchor ever emits a non-empty value — every other slot's own
+   * FeedbackComponent instance stays at its initial '', so its effect never
+   * re-fires and it never overwrites this signal).
    */
   readonly announcedFeedback = signal('');
 
-  /** Pending timer for announceFeedbackStaggered — see that method. */
-  private pendingAnnouncerTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private readonly answerAnnouncementCoordinator = inject(AnswerAnnouncementCoordinatorService);
 
   /**
-   * Writes announcedFeedback after a short delay instead of immediately.
-   *
-   * Live MutationObserver timestamps (captured against the real app, not
-   * assumed) showed that on verdict arrival this announcer, the question
-   * heading (#qText, also aria-live="polite" — it reveals the explanation
-   * at the same moment), and the progress message-area (also polite) all
-   * mutate within the SAME synchronous tick (observed within 0.1ms of each
-   * other). Multiple aria-live="polite" regions mutating in one batch are
-   * NOT reliably queued by every assistive technology — this is confirmed
-   * to be a genuine competing-announcement condition, not an assumption.
-   * Deferring this region's own write by one macrotask moves its mutation
-   * into a separate accessibility-tree update batch from its two siblings,
-   * without adding any new live region, touching their politeness, or
-   * changing the heading/message-area producers at all.
+   * Monotonic token guarding the deferred re-announce write in
+   * `onFeedbackAnnounced` below against a newer click, or a Q→Q clear,
+   * superseding it before its microtask runs.
    */
-  announceFeedbackStaggered(text: string): void {
-    this.cancelPendingFeedbackAnnouncement();
-    this.pendingAnnouncerTimeoutId = setTimeout(() => {
-      this.pendingAnnouncerTimeoutId = null;
-      this.announcedFeedback.set(text);
-    }, 400);
+  private announcementGeneration = 0;
+
+  /**
+   * Composes (via AnswerAnnouncementCoordinatorService) and writes the ONE
+   * coordinated announcement for this click's outcome.
+   *
+   * No stagger: the question/FET heading and the selection-message region
+   * no longer independently self-announce for answer-outcome events (their
+   * own `aria-live` was removed — see their templates' own comments), so
+   * there is nothing left for this region to compete with. A live
+   * MutationObserver diagnostic had previously confirmed those three
+   * regions mutated within the same synchronous tick; removing two of the
+   * three auto-announcing regions removes the competition at its source,
+   * rather than staggering around it.
+   *
+   * Always clears to '' first, then writes the composed text on the next
+   * microtask: Angular's interpolation binding skips a DOM write when the
+   * new value is byte-identical to the one already there, which would
+   * otherwise silently swallow a second click whose outcome reads the same
+   * as an earlier one (e.g. two different wrong single-answer picks
+   * sharing the same generic wrong-answer wording) — DOM clearing alone
+   * does not prove an assistive technology re-announces it, but it is the
+   * documented technique (MDN) for forcing a genuine, announceable
+   * mutation on repeat content. Generation-guarded so a stale write from a
+   * superseded click, or from a question already left, can never land
+   * after the fact.
+   */
+  onFeedbackAnnounced(payload: { text: string; isCorrect: boolean }): void {
+    const composed = this.answerAnnouncementCoordinator.compose(payload.text, payload.isCorrect);
+    const generation = ++this.announcementGeneration;
+    this.announcedFeedback.set('');
+    if (!composed) return;
+    queueMicrotask(() => {
+      if (generation !== this.announcementGeneration) return; // superseded
+      this.announcedFeedback.set(composed);
+    });
   }
 
   /**
-   * Must run before any direct `announcedFeedback.set(...)` (e.g. the Q→Q
-   * clear in OptionInteractionEffectsService) — otherwise a still-pending
-   * staggered write from the question just left could fire AFTER that
-   * clear and reintroduce the stale-verdict-on-navigation bug this was
-   * built to prevent.
+   * Bumps the generation so a still-pending deferred write from the
+   * question just left (see `onFeedbackAnnounced`) can never land after a
+   * direct `announcedFeedback.set('')` elsewhere (the Q→Q clear in
+   * OptionInteractionEffectsService, or destroy below) — otherwise it would
+   * reintroduce the exact stale-verdict-on-navigation bug that clear exists
+   * to prevent.
    */
   cancelPendingFeedbackAnnouncement(): void {
-    if (this.pendingAnnouncerTimeoutId !== null) {
-      clearTimeout(this.pendingAnnouncerTimeoutId);
-      this.pendingAnnouncerTimeoutId = null;
-    }
+    this.announcementGeneration++;
   }
 
   // Include disableRenderTrigger to force re-render when disabled state changes

@@ -253,6 +253,29 @@ export class QuizComponent implements OnInit, AfterViewInit {
   }
 
   /**
+   * A LIVE timer expiry for the CURRENT question only — mirrors
+   * heading-inputs.ts's own `isTimedOut` exactly (excluding a stale
+   * "already expired before this visit" revisit via `expiredOnArrivalSig`,
+   * per that file's own comment), NOT the simpler check above.
+   *
+   * Used ONLY to decide whether the question heading keeps its own
+   * `aria-live` (see quiz.component.html): a genuine timeout reveals the
+   * explanation WITHOUT any option click, so it never flows through
+   * AnswerAnnouncementCoordinatorService's click-driven composition —
+   * this is the one case that still needs the heading to self-announce.
+   * Every click-driven reveal (a real correct pick) is composed and
+   * announced through the persistent answer-outcome announcer instead
+   * (shared-option.component.html), so the heading's `aria-live` is OFF
+   * for every other state.
+   */
+  readonly isLiveTimerExpiryForCurrentQuestion = computed<boolean>(() => {
+    const idx = this.currentQuestionIndex();
+    const efi = this.timerService.expiredForQuestionIndexSig?.();
+    const eoa = this.timerService.expiredOnArrivalSig?.();
+    return efi === idx && eoa !== idx;
+  });
+
+  /**
    * Recovery notice for a FAILED (or timed-out) answer check.
    *
    * A failed `/check` is never a verdict — nothing is scored and nothing

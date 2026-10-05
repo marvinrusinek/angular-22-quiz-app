@@ -51,8 +51,15 @@ export class FeedbackComponent {
    * feedback only when the user manually navigated onto it, never
    * automatically). The parent's persistent region re-announces reliably
    * because IT is never destroyed; this output is how it learns the text.
+   *
+   * Carries `isCorrect` alongside the text — AnswerAnnouncementCoordinatorService
+   * needs the AUTHORIZED correct/incorrect verdict to decide whether to also
+   * fold in the explanation or the "select N more" guidance, and
+   * `isSelectedOptionCorrect()` below already derives that correctly
+   * (including every historical edge case this class's other comments
+   * document) — nothing downstream re-derives or second-guesses it.
    */
-  readonly messageAnnounced = output<string>();
+  readonly messageAnnounced = output<{ text: string; isCorrect: boolean }>();
 
   constructor() {
     // Re-runs whenever the feedbackConfig signal input changes (replaces
@@ -80,7 +87,10 @@ export class FeedbackComponent {
       this.questionVerdictService.states();
 
       if (cfg) this.updateFeedback();
-      this.messageAnnounced.emit(this.displayMessage());
+      this.messageAnnounced.emit({
+        text: this.displayMessage(),
+        isCorrect: this.isSelectedOptionCorrect(),
+      });
     });
   }
 

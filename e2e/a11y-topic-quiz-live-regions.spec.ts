@@ -1,56 +1,50 @@
 import { test, expect, Page } from '@playwright/test';
-import { quizData, startQuizViaUi, advanceToQuestion } from './helpers';
+import { quizData, startQuizViaUi, advanceToQuestion, HEADING } from './helpers';
 
 /**
- * Regression coverage for the feedback-announcer fix
- * (feedback.component.ts/.html + shared-option.component.ts/.html/.scss +
- * option-interaction-effects.service.ts).
+ * Regression coverage for ONE coordinated answer-outcome announcement
+ * (compose-answer-announcement.ts / AnswerAnnouncementCoordinatorService).
  *
- * ── The defect ──────────────────────────────────────────────────────────
- * Topic Quiz's per-click feedback ("That's correct!", "Not this one, try
- * again!", "You're right! The correct answers are...") rendered inside
- * <codelab-quiz-feedback>, which shared-option.component.html only ever
- * instantiates via `@if (shouldShowFeedbackAfter(b, i))` — correct for
- * VISUAL positioning (the box sits below whichever option earned it,
- * preserved exactly as-is by this fix), but it means the element carrying
- * `role="status" aria-live="polite"` is destroyed and a brand-new one
- * created, already containing its final text, every time the anchor option
- * changes. A screen reader detects a live-region update by observing a
- * MUTATION on an element it has already registered — a freshly-inserted,
- * pre-populated subtree is a different signal most screen readers do not
- * announce. Confirmed live with Windows Narrator: this feedback was read
- * only when the user manually navigated onto it, never automatically.
+ * ── History ─────────────────────────────────────────────────────────────
+ * This suite originally covered a simpler fix: a single persistent,
+ * visually-hidden `role="status"` announcer mirroring the raw per-click
+ * feedback text, because the VISIBLE feedback box is destroyed/recreated
+ * per option-anchor and so never reliably self-announces. That alone left
+ * Narrator audible but unnecessarily verbose: on a correctness reveal it
+ * spoke the FET (heading), then the selection-message guidance, then the
+ * feedback — three independently-mutating `aria-live="polite"` regions, all
+ * in the same synchronous tick (confirmed live via MutationObserver).
  *
- * ── The fix ─────────────────────────────────────────────────────────────
- * FeedbackComponent now also emits its computed message via a
- * `messageAnnounced` output. SharedOptionComponent listens on every
- * per-option feedback-block instantiation and writes the value into
- * `announcedFeedback`, a signal read by ONE single, persistent,
- * visually-hidden `role="status"` region that is NEVER conditionally
- * removed — so every update is a genuine mutation on an already-registered
- * live region. The existing `aria-live`/`role="status"` were removed from
- * the VISIBLE feedback box itself (feedback.component.html) so there is
- * exactly one announcing channel, not two saying the same thing.
- * `announcedFeedback` is cleared on every real question-index transition
- * (option-interaction-effects.service.ts's existing resetBindingsAndState,
- * the established place per-question UI state already resets) so a verdict
- * from the question just left is never read back on the next one.
+ * ── The current design ──────────────────────────────────────────────────
+ * The question/FET heading and the selection-message region no longer
+ * self-announce for answer-outcome events — their `aria-live` was removed
+ * for that case (the heading KEEPS it, conditionally, for a genuine live
+ * timer expiry only — see quiz.component.html's own comment). This single
+ * persistent announcer now carries ONE composed message per outcome:
+ *   - incorrect           -> feedback alone
+ *   - partial multi-answer -> feedback + "select N more..." guidance
+ *   - full correctness     -> feedback + the explanation (FET)
+ * No stagger: there is nothing left for this region to compete with, so its
+ * write is immediate (clear-then-set on a microtask, only to guarantee a
+ * real mutation even when two outcomes happen to read identically — not a
+ * timing workaround).
  *
  * ── What this suite does NOT and cannot prove ──────────────────────────
- * These are DOM/accessibility-tree assertions in a real browser (persistent
- * node identity, correct `role`/`aria-live` attributes, correct text at
- * each step). They prove the MARKUP is structurally correct for a screen
- * reader to announce reliably — they cannot prove any assistive technology
- * actually SPEAKS it, which depends on the AT/browser combination. See the
- * manual verification checklist in this fix's commit description.
+ * DOM/accessibility-tree assertions (role/aria-live attributes, text
+ * content, node identity, mutation presence) prove the MARKUP is
+ * structurally correct and unambiguous for a screen reader to announce.
+ * They cannot prove any assistive technology actually SPEAKS it, in what
+ * order, or whether it is perceived as "one" utterance. Only a manual
+ * Narrator/NVDA retest can confirm the actual spoken output.
  *
  * Navigation uses startQuizViaUi + advanceToQuestion (real progression),
  * never a direct page.goto to a non-first question — QuizGuard redirects
- * that back to Q1 on a fresh attempt, the same reason every other spec in
- * this repo avoids it (see e.g. a11y-deep-verification.spec.ts's own note).
+ * that back to Q1 on a fresh attempt.
  */
 
 const ANNOUNCER_SELECTOR = '.visually-hidden[role="status"]';
+const MESSAGE_AREA_SELECTOR = '.message-area';
+const HEADING_SELECTOR = HEADING; // 'codelab-quiz-content h3'
 
 const doohickeys = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-doohickeys');
 
@@ -68,43 +62,58 @@ async function reachQuestion(page: Page, oneBasedIndex: number): Promise<void> {
   await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
 }
 
-test.describe('Topic Quiz feedback announcer — persistent live region (fix regression)', () => {
-  test('single-answer correct pick: the persistent announcer receives the feedback text, the visible box is not itself a live region', async ({ page }) => {
-    await reachQuestion(page, SINGLE_ANSWER_IDX[0] + 1);
+async function announcerText(page: Page): Promise<string> {
+  return ((await page.locator(ANNOUNCER_SELECTOR).textContent()) ?? '').trim();
+}
 
-    // Baseline: before any click, the announcer exists (persistent) and is empty.
+test.describe('Topic Quiz answer-outcome announcer — ONE coordinated message per event (fix regression)', () => {
+  test('single-answer CORRECT pick (full correctness): the announcer carries feedback AND the explanation, composed as one message', async ({ page }) => {
+    const qIdx = SINGLE_ANSWER_IDX[0];
+    await reachQuestion(page, qIdx + 1);
+
     await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveCount(1);
     await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveText('');
 
-    const correctIdx = doohickeys.questions[SINGLE_ANSWER_IDX[0]].options.findIndex(
+    const correctIdx = doohickeys.questions[qIdx].options.findIndex(
       (o: any) => o.correct === true || o.correct === 'true'
     );
     await page.locator('.option-row').nth(correctIdx).click();
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(900);
 
-    const announced = await page.locator(ANNOUNCER_SELECTOR).textContent();
-    expect(announced?.trim().length).toBeGreaterThan(0);
-
-    // The visible feedback box itself must NOT carry aria-live/role="status"
-    // — exactly one channel announces, not two saying the same thing.
-    const visibleBoxLive = await page.evaluate(() => {
-      const box = document.querySelector('.feedback-below-option .message');
-      if (!box) return { found: false };
-      return {
-        found: true,
-        role: box.getAttribute('role'),
-        ariaLive: box.getAttribute('aria-live'),
-        text: (box.textContent || '').trim(),
-      };
-    });
-    expect(visibleBoxLive.found).toBe(true);
-    expect(visibleBoxLive.role).toBeNull();
-    expect(visibleBoxLive.ariaLive).toBeNull();
-    // Same information still shown visually — just not as a live region.
-    expect(visibleBoxLive.text!.length).toBeGreaterThan(0);
+    const announced = await announcerText(page);
+    expect(announced.length).toBeGreaterThan(0);
+    // Feedback verdict present...
+    expect(/right|correct/i.test(announced)).toBe(true);
+    // ...AND the explanation, composed into the SAME message (not a
+    // separate heading announcement — the heading's own aria-live is off
+    // for this event).
+    const headingText = ((await page.locator(HEADING_SELECTOR).first().textContent()) ?? '').trim();
+    expect(headingText.length).toBeGreaterThan(0);
+    // The announced text includes (a plain-text version of) the heading's
+    // explanation content.
+    const headingWords = headingText.replace(/<[^>]*>/g, ' ').trim().split(/\s+/).slice(0, 4).join(' ');
+    expect(announced).toContain(headingWords);
   });
 
-  test('single-answer incorrect pick: the persistent announcer receives the wrong-answer feedback text', async ({ page }) => {
+  test('single-answer correct pick: the heading itself is NOT a live region (no competing auto-announcement)', async ({ page }) => {
+    const qIdx = SINGLE_ANSWER_IDX[0];
+    await reachQuestion(page, qIdx + 1);
+
+    const correctIdx = doohickeys.questions[qIdx].options.findIndex(
+      (o: any) => o.correct === true || o.correct === 'true'
+    );
+    await page.locator('.option-row').nth(correctIdx).click();
+    await page.waitForTimeout(900);
+
+    const headingLive = await page.evaluate((sel) => {
+      const el = document.querySelector(sel);
+      return { ariaLive: el?.getAttribute('aria-live') ?? null, role: el?.getAttribute('role') ?? null };
+    }, HEADING_SELECTOR);
+    expect(headingLive.ariaLive).toBeNull();
+    expect(headingLive.role).toBeNull();
+  });
+
+  test('single-answer INCORRECT pick: the announcer carries feedback ONLY — no repeated selection guidance', async ({ page }) => {
     const qIdx = SINGLE_ANSWER_IDX[1];
     await reachQuestion(page, qIdx + 1);
 
@@ -114,14 +123,35 @@ test.describe('Topic Quiz feedback announcer — persistent live region (fix reg
     expect(wrongIdx).toBeGreaterThanOrEqual(0);
 
     await page.locator('.option-row').nth(wrongIdx).click();
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(900);
 
-    const announced = (await page.locator(ANNOUNCER_SELECTOR).textContent())?.trim() ?? '';
+    const announced = await announcerText(page);
     expect(announced.length).toBeGreaterThan(0);
     expect(/wrong|not this one|incorrect|try again/i.test(announced)).toBe(true);
+    // Must NOT also carry the unchanged "select the correct answer" guidance.
+    expect(/select the correct answer/i.test(announced)).toBe(false);
   });
 
-  test('multi-answer: the announcer is the SAME persistent DOM node across a correct pick, a wrong pick, and completion — never recreated', async ({ page }) => {
+  test('multi-answer: a correct-but-partial pick composes feedback + "select N more" guidance as ONE message', async ({ page }) => {
+    const qIdx = MULTI_ANSWER_IDX[0];
+    await reachQuestion(page, qIdx + 1);
+
+    const opts = doohickeys.questions[qIdx].options;
+    const correctIdxs: number[] = opts
+      .map((o: any, i: number) => ((o.correct === true || o.correct === 'true') ? i : -1))
+      .filter((i: number) => i >= 0);
+    expect(correctIdxs.length).toBeGreaterThanOrEqual(2);
+
+    await page.locator('.option-row').nth(correctIdxs[0]).click();
+    await page.waitForTimeout(900);
+
+    const announced = await announcerText(page);
+    expect(announced.length).toBeGreaterThan(0);
+    expect(/right|correct/i.test(announced)).toBe(true);
+    expect(/select\s+\d+\s+more\s+correct\s+answers?/i.test(announced)).toBe(true);
+  });
+
+  test('multi-answer: a wrong pick (while progress exists) still announces feedback only', async ({ page }) => {
     const qIdx = MULTI_ANSWER_IDX[0];
     await reachQuestion(page, qIdx + 1);
 
@@ -130,49 +160,35 @@ test.describe('Topic Quiz feedback announcer — persistent live region (fix reg
       .map((o: any, i: number) => ((o.correct === true || o.correct === 'true') ? i : -1))
       .filter((i: number) => i >= 0);
     const wrongIdx = opts.findIndex((o: any) => !(o.correct === true || o.correct === 'true'));
-    expect(correctIdxs.length).toBeGreaterThanOrEqual(2);
-    expect(wrongIdx).toBeGreaterThanOrEqual(0);
 
-    await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveCount(1);
-    await page.evaluate((sel) => {
-      document.querySelector(sel)?.setAttribute('data-identity-check', 'stable');
-    }, ANNOUNCER_SELECTOR);
+    await page.locator('.option-row').nth(correctIdxs[0]).click();
+    await page.waitForTimeout(900);
+    await page.locator('.option-row').nth(wrongIdx).click();
+    await page.waitForTimeout(900);
 
-    const rows = page.locator('.option-row');
+    const announced = await announcerText(page);
+    expect(announced.length).toBeGreaterThan(0);
+    expect(/select\s+\d+\s+more/i.test(announced)).toBe(false);
+  });
 
-    // 1) First correct pick.
-    await rows.nth(correctIdxs[0]).click();
-    await page.waitForTimeout(400);
-    const afterCorrect = await page.evaluate((sel) => {
-      const el = document.querySelector(sel);
-      return { identity: el?.getAttribute('data-identity-check'), text: (el?.textContent || '').trim() };
-    }, ANNOUNCER_SELECTOR);
-    expect(afterCorrect.identity).toBe('stable'); // same node — not recreated
-    expect(afterCorrect.text.length).toBeGreaterThan(0);
+  test('multi-answer: completing the question composes feedback + explanation (full correctness), not the progress guidance', async ({ page }) => {
+    const qIdx = MULTI_ANSWER_IDX[0];
+    await reachQuestion(page, qIdx + 1);
 
-    // 2) A wrong pick.
-    await rows.nth(wrongIdx).click();
-    await page.waitForTimeout(400);
-    const afterWrong = await page.evaluate((sel) => {
-      const el = document.querySelector(sel);
-      return { identity: el?.getAttribute('data-identity-check'), text: (el?.textContent || '').trim() };
-    }, ANNOUNCER_SELECTOR);
-    expect(afterWrong.identity).toBe('stable');
-    expect(afterWrong.text).not.toBe(afterCorrect.text); // content genuinely changed
-    expect(afterWrong.text.length).toBeGreaterThan(0);
+    const opts = doohickeys.questions[qIdx].options;
+    const correctIdxs: number[] = opts
+      .map((o: any, i: number) => ((o.correct === true || o.correct === 'true') ? i : -1))
+      .filter((i: number) => i >= 0);
 
-    // 3) Completing pick (remaining correct option(s)).
-    for (const idx of correctIdxs.slice(1)) {
-      await rows.nth(idx).click();
-      await page.waitForTimeout(400);
+    for (const idx of correctIdxs) {
+      await page.locator('.option-row').nth(idx).click();
+      await page.waitForTimeout(900);
     }
-    const afterComplete = await page.evaluate((sel) => {
-      const el = document.querySelector(sel);
-      return { identity: el?.getAttribute('data-identity-check'), text: (el?.textContent || '').trim() };
-    }, ANNOUNCER_SELECTOR);
-    expect(afterComplete.identity).toBe('stable');
-    expect(afterComplete.text).not.toBe(afterWrong.text);
-    expect(afterComplete.text.length).toBeGreaterThan(0);
+
+    const announced = await announcerText(page);
+    expect(announced.length).toBeGreaterThan(0);
+    expect(/select\s+\d+\s+more/i.test(announced)).toBe(false);
+    expect(/next button|show results/i.test(announced)).toBe(false);
   });
 
   test('navigating to the next question clears the announcer — no stale verdict carried over', async ({ page }) => {
@@ -183,8 +199,8 @@ test.describe('Topic Quiz feedback announcer — persistent live region (fix reg
       (o: any) => o.correct === true || o.correct === 'true'
     );
     await page.locator('.option-row').nth(correctIdx).click();
-    await page.waitForTimeout(400);
-    const before = (await page.locator(ANNOUNCER_SELECTOR).textContent())?.trim() ?? '';
+    await page.waitForTimeout(900);
+    const before = await announcerText(page);
     expect(before.length).toBeGreaterThan(0);
 
     await page.locator('[aria-label="Next Question"]').click();
@@ -194,23 +210,74 @@ test.describe('Topic Quiz feedback announcer — persistent live region (fix reg
     await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveText('');
   });
 
-  test('"Select N more..." / progress prompts remain their own correctly-scoped persistent live region, unaffected by this fix', async ({ page }) => {
+  test('two DIFFERENT wrong picks whose feedback text happens to read identically still both produce a real, re-announceable mutation', async ({ page }) => {
+    // Regression for the clear-then-set write: Angular's interpolation
+    // binding skips a DOM write when the new value is byte-identical to
+    // the current one, which would otherwise silently swallow a second
+    // click's announcement.
+    const qIdx = SINGLE_ANSWER_IDX[1];
+    await reachQuestion(page, qIdx + 1);
+    const wrongIdx = doohickeys.questions[qIdx].options.findIndex(
+      (o: any) => !(o.correct === true || o.correct === 'true')
+    );
+
+    await page.evaluate((sel) => {
+      (window as any).__mutCount = 0;
+      const el = document.querySelector(sel);
+      if (el) new MutationObserver(() => { (window as any).__mutCount++; }).observe(el, { childList: true, characterData: true, subtree: true });
+    }, ANNOUNCER_SELECTOR);
+
+    await page.locator('.option-row').nth(wrongIdx).click();
+    await page.waitForTimeout(900);
+    const firstText = await announcerText(page);
+
+    // Navigate to a DIFFERENT single-answer question and click ITS wrong
+    // option too — the generic wrong-answer wording is highly likely to
+    // repeat verbatim across different single-answer questions.
+    const qIdx2 = SINGLE_ANSWER_IDX[2];
+    await advanceToQuestion(page, doohickeys, qIdx2 + 1);
+    const wrongIdx2 = doohickeys.questions[qIdx2].options.findIndex(
+      (o: any) => !(o.correct === true || o.correct === 'true')
+    );
+    await page.locator('.option-row').nth(wrongIdx2).click();
+    await page.waitForTimeout(900);
+    const secondText = await announcerText(page);
+
+    expect(secondText.length).toBeGreaterThan(0);
+    // Whether or not the wording happens to match, a real mutation occurred
+    // for the second click too (the clear-then-set always fires at least
+    // the clear + the real write, i.e. at least 2 mutations total here,
+    // across BOTH the nav-clear and this click).
+    const mutCount = await page.evaluate(() => (window as any).__mutCount);
+    expect(mutCount).toBeGreaterThanOrEqual(2);
+    void firstText;
+  });
+
+  test('"Select N more..." guidance remains visible and unchanged, but the selection-message region no longer self-announces', async ({ page }) => {
     const qIdx = MULTI_ANSWER_IDX[0];
     await reachQuestion(page, qIdx + 1);
 
-    const messageArea = page.locator('.message-area[role="status"]');
+    const messageArea = page.locator(MESSAGE_AREA_SELECTOR);
     await expect(messageArea).toHaveCount(1);
     await expect(messageArea).toContainText('Select all that apply');
+
+    const liveAttrs = await page.evaluate((sel) => {
+      const el = document.querySelector(sel);
+      return { ariaLive: el?.getAttribute('aria-live') ?? null, role: el?.getAttribute('role') ?? null };
+    }, MESSAGE_AREA_SELECTOR);
+    expect(liveAttrs.ariaLive).toBeNull();
+    expect(liveAttrs.role).toBeNull();
 
     const correctIdx = doohickeys.questions[qIdx].options.findIndex(
       (o: any) => o.correct === true || o.correct === 'true'
     );
     await page.locator('.option-row').nth(correctIdx).click();
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(900);
+    // Visible content still updates exactly as before.
     await expect(messageArea).toContainText(/select.*more/i);
   });
 
-  test('the timer carries no aria-live/role — it never forces a repeated per-second announcement', async ({ page }) => {
+  test('the timer carries no aria-live/role outside a genuine live expiry — it never forces a repeated per-second announcement', async ({ page }) => {
     await reachQuestion(page, 1);
 
     const timerLive = await page.evaluate(() => {
@@ -225,7 +292,7 @@ test.describe('Topic Quiz feedback announcer — persistent live region (fix reg
     expect(timerLive.hasLiveRegion).toBe(false);
   });
 
-  test('exactly one feedback announcer exists at a time — no duplicate/competing status regions stamped per option', async ({ page }) => {
+  test('exactly one answer-outcome announcer exists at a time — no duplicate/competing status regions stamped per option', async ({ page }) => {
     const qIdx = MULTI_ANSWER_IDX[0];
     await reachQuestion(page, qIdx + 1);
 
@@ -233,11 +300,8 @@ test.describe('Topic Quiz feedback announcer — persistent live region (fix reg
       (o: any) => o.correct === true || o.correct === 'true'
     );
     await page.locator('.option-row').nth(correctIdx).click();
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(900);
 
-    // Only the ONE persistent announcer should carry aria-live — no
-    // per-option duplicate live regions, and the visible feedback box's own
-    // section does not (confirmed by the architectural change above).
     // Exact class-token match (not substring): Angular CDK injects its own
     // global live-announcer element (class "cdk-visually-hidden", id
     // "cdk-live-announcer-0") on any page using CDK a11y utilities — a
@@ -249,7 +313,7 @@ test.describe('Topic Quiz feedback announcer — persistent live region (fix reg
         text: (el.textContent || '').trim().slice(0, 60),
       }));
     });
-    const feedbackAnnouncers = liveRegions.filter((r) => r.classList.includes('visually-hidden'));
-    expect(feedbackAnnouncers.length).toBe(1);
+    const answerAnnouncers = liveRegions.filter((r) => r.classList.includes('visually-hidden'));
+    expect(answerAnnouncers.length).toBe(1);
   });
 });

@@ -91,6 +91,13 @@ function makeHost(template: string) {
     readonly data = signal<{ question: QuestionUnderTest }>({ question: makeQuestion() });
     readonly idx = signal(IDX);
     readonly questionToDisplay$ = of('');
+    // The real quiz.component.html binds the heading's aria-live
+    // conditionally to this (see its own comment: on ONLY for a genuine
+    // live timer expiry, since that reveal has no option click to compose
+    // an announcement from — every other reveal is announced through the
+    // persistent answer-outcome announcer instead). Defaults to false,
+    // matching an ordinary (non-timeout) question.
+    readonly isLiveTimerExpiryForCurrentQuestion = signal(false);
   }
   return HostComponent;
 }
@@ -255,11 +262,34 @@ describe('CodelabQuizContentComponent — the question is projected content', ()
   });
 
   describe('accessibility: the live region is the heading, not the whole box', () => {
-    it('the <h3> is a polite, atomic live region', () => {
+    // aria-live is now CONDITIONAL — on only for a genuine live timer
+    // expiry (isLiveTimerExpiryForCurrentQuestion). Every click-driven
+    // reveal is composed and announced through the persistent
+    // answer-outcome announcer instead (shared-option.component.html), so
+    // the heading no longer self-announces for that case — see
+    // quiz.component.html's own comment for why (avoids the same
+    // explanation being announced via two competing live regions at once).
+    it('the <h3> is NOT a live region for an ordinary question (no live timer expiry)', () => {
       ({ fixture } = render(consumerRegion()));
+
+      expect(heading().hasAttribute('aria-live')).toBe(false);
+      expect(heading().hasAttribute('aria-atomic')).toBe(false);
+      expect(heading().hasAttribute('role')).toBe(false);
+    });
+
+    it('the <h3> becomes a polite, atomic status region during a genuine live timer expiry', () => {
+      const Host = makeHost(consumerRegion());
+      const f = fakes(makeQuestion());
+      TestBed.configureTestingModule({ providers: f.providers });
+      const created = TestBed.createComponent(Host);
+      created.componentInstance.isLiveTimerExpiryForCurrentQuestion.set(true);
+      fixture = created;
+      created.detectChanges();
+      created.detectChanges();
 
       expect(heading().getAttribute('aria-live')).toBe('polite');
       expect(heading().getAttribute('aria-atomic')).toBe('true');
+      expect(heading().getAttribute('role')).toBe('status');
     });
 
     it('the .question-box is not a live region, so a code snippet is never announced as part of the question', () => {

@@ -24,10 +24,17 @@ import { quizData, startQuizViaUi, advanceToQuestion, HEADING } from './helpers'
  *   - incorrect           -> feedback alone
  *   - partial multi-answer -> feedback + "select N more..." guidance
  *   - full correctness     -> feedback + the explanation (FET)
- * No stagger: there is nothing left for this region to compete with, so its
- * write is immediate (clear-then-set on a microtask, only to guarantee a
- * real mutation even when two outcomes happen to read identically — not a
- * timing workaround).
+ * No stagger against competing regions — there are none left to compete
+ * with. But a REAL 100ms clear-then-restore gap (setTimeout, a macrotask)
+ * is deliberately kept: live Narrator testing showed a same-task
+ * clear-then-set (queueMicrotask) still went unannounced for a second,
+ * textually-identical outcome, even though the DOM genuinely mutated
+ * twice. This matches a documented, cross-screen-reader limitation (NVDA
+ * issue nvaccess/nvda#19328 and others): screen readers can fail to
+ * re-announce aria-live content that reads identically to what they last
+ * announced, and the commonly-cited mitigation is exactly a clear +
+ * ~100ms-scale real delay before restoring. Cancellable on a newer click,
+ * navigation, or destruction, so a stale restore can never land late.
  *
  * ── What this suite does NOT and cannot prove ──────────────────────────
  * DOM/accessibility-tree assertions (role/aria-live attributes, text
@@ -303,6 +310,75 @@ test.describe('Topic Quiz answer-outcome announcer — ONE coordinated message p
     // real text — not zero (the original bug: silent), and not four (the
     // double-fire jitter this fix removes).
     expect(secondClickMutations).toEqual(['', afterSecond]);
+  });
+
+  test('the clear-then-restore gap is a REAL timer delay, not an instantaneous same-task write', async ({ page }) => {
+    // Regression for the evidence-based 100ms delay (shared-option.component.ts's
+    // onFeedbackAnnounced): a same-task/microtask clear-then-set was
+    // confirmed (live) to still go unannounced for a repeated outcome, a
+    // documented cross-screen-reader limitation (NVDA issue
+    // nvaccess/nvda#19328 among others). This test proves the gap is a
+    // genuine, measurable delay — not that any assistive technology
+    // actually uses it to re-announce (which only a manual retest proves).
+    const qIdx = SINGLE_ANSWER_IDX[0];
+    await reachQuestion(page, qIdx + 1);
+    const wrongIdxs: number[] = doohickeys.questions[qIdx].options
+      .map((o: any, i: number) => (!(o.correct === true || o.correct === 'true') ? i : -1))
+      .filter((i: number) => i >= 0);
+    expect(wrongIdxs.length).toBeGreaterThanOrEqual(2);
+
+    // Prime the announcer with a first pick: a fresh question already starts
+    // empty, so the FIRST outcome's clear is a no-op and would not produce an
+    // observable '' mutation. The gap under test is the SECOND outcome's clear
+    // (text present -> '') and its restore (-> text).
+    await page.locator('.option-row').nth(wrongIdxs[0]).click();
+    await page.waitForTimeout(1500);
+
+    await page.evaluate((sel) => {
+      (window as any).__log = [];
+      const el = document.querySelector(sel);
+      if (el) {
+        new MutationObserver(() => {
+          (window as any).__log.push({ t: performance.now(), text: (el.textContent || '').trim() });
+        }).observe(el, { childList: true, characterData: true, subtree: true });
+      }
+    }, ANNOUNCER_SELECTOR);
+
+    await page.locator('.option-row').nth(wrongIdxs[1]).click();
+    await page.waitForTimeout(1500);
+
+    const log: Array<{ t: number; text: string }> = await page.evaluate(() => (window as any).__log);
+    const clearEvent = log.find((e) => e.text === '');
+    const restoreEvent = log.find((e) => e.text !== '');
+    expect(clearEvent).toBeDefined();
+    expect(restoreEvent).toBeDefined();
+    // A real macrotask-scale gap — comfortably above what a same-task
+    // microtask write would produce (effectively 0ms), with margin below
+    // the full 100ms target to tolerate scheduling jitter.
+    expect(restoreEvent!.t - clearEvent!.t).toBeGreaterThan(50);
+  });
+
+  test('navigating away WHILE the 100ms restore is still pending cancels it — no stale text lands on the next question', async ({ page }) => {
+    const qIdx = SINGLE_ANSWER_IDX[0];
+    await reachQuestion(page, qIdx + 1);
+    const correctIdx = doohickeys.questions[qIdx].options.findIndex(
+      (o: any) => o.correct === true || o.correct === 'true'
+    );
+
+    await page.locator('.option-row').nth(correctIdx).click();
+    // Click Next IMMEDIATELY — deliberately inside the 100ms window, before
+    // the pending restore has fired.
+    const nextBtn = page.locator('[aria-label="Next Question"]');
+    await nextBtn.waitFor({ state: 'visible', timeout: 10_000 });
+    await expect(nextBtn).toBeEnabled({ timeout: 10_000 });
+    await nextBtn.click();
+    await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
+
+    // Wait well past 100ms — if cancellation had failed, the stale timer
+    // would have fired by now and overwritten the fresh question's cleared
+    // announcer with the PREVIOUS question's verdict text.
+    await page.waitForTimeout(500);
+    await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveText('');
   });
 
   test('"Select N more..." guidance remains visible and unchanged, but the selection-message region no longer self-announces', async ({ page }) => {

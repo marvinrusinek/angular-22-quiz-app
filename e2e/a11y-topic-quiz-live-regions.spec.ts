@@ -253,6 +253,58 @@ test.describe('Topic Quiz answer-outcome announcer — ONE coordinated message p
     void firstText;
   });
 
+  test('two DIFFERENT wrong picks on the SAME question, with NO navigation between them: the second pick still produces exactly one clean clear-then-set cycle', async ({ page }) => {
+    // Regression for a real bug found via live Narrator testing: Narrator
+    // announced the FIRST incorrect pick but stayed silent for a second,
+    // consecutive incorrect pick (same question, identical generic
+    // wrong-answer wording, no navigation in between). A live
+    // MutationObserver diagnostic showed FeedbackComponent's constructor
+    // effect re-emitting the SAME {text, isCorrect} twice, 21ms apart, for
+    // ONE click — each emission forcing SharedOptionComponent's announcer
+    // through its OWN clear-then-set cycle, producing a jittery
+    // ''->text->''->text flicker instead of one clean ''->text transition.
+    // Fixed by deduplicating same-value re-emissions WITHIN one
+    // FeedbackComponent instance (feedback.component.ts's `lastEmitted`
+    // guard) — a brand-new instance (a genuinely NEW click) still always
+    // emits at least once, so a new selection is never suppressed; only a
+    // redundant re-run of the SAME click's own settling effect is.
+    const qIdx = SINGLE_ANSWER_IDX[0];
+    await reachQuestion(page, qIdx + 1);
+    const wrongIdxs: number[] = doohickeys.questions[qIdx].options
+      .map((o: any, i: number) => (!(o.correct === true || o.correct === 'true') ? i : -1))
+      .filter((i: number) => i >= 0);
+    expect(wrongIdxs.length).toBeGreaterThanOrEqual(2);
+
+    await page.evaluate((sel) => {
+      (window as any).__log = [];
+      const el = document.querySelector(sel);
+      if (el) {
+        new MutationObserver(() => {
+          (window as any).__log.push((el.textContent || '').trim());
+        }).observe(el, { childList: true, characterData: true, subtree: true });
+      }
+    }, ANNOUNCER_SELECTOR);
+
+    await page.locator('.option-row').nth(wrongIdxs[0]).click();
+    await page.waitForTimeout(900);
+    const afterFirst = await announcerText(page);
+    expect(afterFirst.length).toBeGreaterThan(0);
+
+    const mutationsBeforeSecondClick = await page.evaluate(() => (window as any).__log.length);
+
+    await page.locator('.option-row').nth(wrongIdxs[1]).click();
+    await page.waitForTimeout(900);
+    const afterSecond = await announcerText(page);
+    expect(afterSecond.length).toBeGreaterThan(0);
+
+    const log: string[] = await page.evaluate(() => (window as any).__log);
+    const secondClickMutations = log.slice(mutationsBeforeSecondClick);
+    // Exactly ONE clear-then-set cycle for the second click: '' then the
+    // real text — not zero (the original bug: silent), and not four (the
+    // double-fire jitter this fix removes).
+    expect(secondClickMutations).toEqual(['', afterSecond]);
+  });
+
   test('"Select N more..." guidance remains visible and unchanged, but the selection-message region no longer self-announces', async ({ page }) => {
     const qIdx = MULTI_ANSWER_IDX[0];
     await reachQuestion(page, qIdx + 1);

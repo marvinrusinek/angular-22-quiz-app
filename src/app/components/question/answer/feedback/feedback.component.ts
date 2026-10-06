@@ -16,6 +16,21 @@ import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 import { norm } from '@shared/utils/text-norm';
 
+export interface FeedbackEmission {
+  text: string;
+  isCorrect: boolean;
+}
+
+/**
+ * Pure predicate for the dedup guard in the constructor effect below —
+ * extracted so it is directly unit-testable without standing up the whole
+ * component. `prev` is `null` for an instance's first-ever computation
+ * (never equal to anything, so the first emission always goes through).
+ */
+export function isSameFeedbackEmission(prev: FeedbackEmission | null, next: FeedbackEmission): boolean {
+  return !!prev && prev.text === next.text && prev.isCorrect === next.isCorrect;
+}
+
 @Component({
   selector: 'codelab-quiz-feedback',
   standalone: true,
@@ -61,6 +76,13 @@ export class FeedbackComponent {
    */
   readonly messageAnnounced = output<{ text: string; isCorrect: boolean }>();
 
+  /**
+   * The last {text, isCorrect} this instance actually emitted — see the
+   * dedup guard in the constructor effect below. `null` until the first
+   * emission.
+   */
+  private lastEmitted: FeedbackEmission | null = null;
+
   constructor() {
     // Re-runs whenever the feedbackConfig signal input changes (replaces
     // the prior ngOnInit + ngOnChanges pair). Truthy-only gate matches the
@@ -87,10 +109,26 @@ export class FeedbackComponent {
       this.questionVerdictService.states();
 
       if (cfg) this.updateFeedback();
-      this.messageAnnounced.emit({
-        text: this.displayMessage(),
-        isCorrect: this.isSelectedOptionCorrect(),
-      });
+
+      // DEDUP WITHIN THIS INSTANCE, NOT ACROSS CLICKS.
+      //
+      // This effect legitimately re-runs several times for ONE click as the
+      // /check round trip progresses (feedbackConfig arrives, then the
+      // selection signal, then the verdict) — a live diagnostic showed TWO
+      // emissions 21ms apart for a single click that both happened to carry
+      // the SAME final text, each forcing SharedOptionComponent's announcer
+      // through its own clear-then-set cycle (an extra, needless '' -> text
+      // -> '' -> text flicker that a real click produced only once for).
+      // Skipping a same-value re-emission here means the announcer sees
+      // EXACTLY ONE clear-then-set per genuine outcome, while a brand-new
+      // instance (a NEW click, on a new option anchor) always starts from
+      // `lastEmitted = null` and so always emits at least once — the
+      // announcer still gets a fresh event for every new selection, even
+      // one whose text happens to match an earlier, DIFFERENT click's text.
+      const next: FeedbackEmission = { text: this.displayMessage(), isCorrect: this.isSelectedOptionCorrect() };
+      if (isSameFeedbackEmission(this.lastEmitted, next)) return;
+      this.lastEmitted = next;
+      this.messageAnnounced.emit(next);
     });
   }
 

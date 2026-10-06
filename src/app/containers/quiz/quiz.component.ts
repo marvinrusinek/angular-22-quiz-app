@@ -469,15 +469,16 @@ export class QuizComponent implements OnInit, AfterViewInit {
     // just left. A live diagnostic confirmed the app writes no stale
     // previous-question text anywhere after navigation (the `/check`
     // response is question-keyed, the heading/message-area are pure
-    // computeds off the live index, and the staggered feedback announcer
-    // is explicitly cancel-guarded on transition) — the overlap users can
-    // hear is the AT finishing speech it had already started, which no
-    // DOM state can retroactively un-queue. Moving focus onto the question
-    // heading is a genuine focus change (NOT another live region, NOT a
-    // delay, NOT assertive), which browsers/AT generally treat as an
-    // interrupt-and-announce signal — a CANDIDATE mitigation, not a
-    // guaranteed fix; only a real Narrator retest can confirm it actually
-    // interrupts the queue.
+    // computeds off the live index, and the feedback announcer's pending
+    // restore is cancelled on transition). The remaining overlap a
+    // Narrator user hears after Next is CONSISTENT WITH the AT finishing
+    // speech it had already started; that is an inference from DOM and
+    // focus events, not a measurement of the speech queue, and DOM state
+    // cannot un-queue speech. Moving focus onto the question heading is a
+    // genuine focus change (NOT another live region, NOT a delay, NOT
+    // assertive). Browsers/AT often treat it as an interrupt cue, but that
+    // is not guaranteed; it does not reliably cancel speech already underway
+    // in the tested Chrome/Narrator setup.
     //
     // Gated on currentQuestionIndex() actually changing (lastFocusedQuestionIndex
     // above), not a one-shot latch, so this fires on initial arrival AND on

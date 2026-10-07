@@ -1,5 +1,18 @@
-<section class="message" [class.feedback-inline]="stylePreset() === 'inline'" role="status" aria-live="polite" aria-atomic="true">
+<section class="message" [class.feedback-inline]="stylePreset() === 'inline'">
   <!--
+    NOT a live region (no role="status"/aria-live here): this section is
+    recreated at a new option-anchor on every feedback change (see
+    shared-option.component.html's shouldShowFeedbackAfter gate, kept as-is
+    for correct VISUAL positioning below the relevant option), so a screen
+    reader would see a freshly-inserted, already-populated subtree rather
+    than a mutation on an element it has already registered — which most
+    screen readers do not announce (confirmed live: Narrator read this text
+    only on manual navigation to it, never automatically). The ACTUAL
+    announcement now comes from messageAnnounced (see the .ts file), read by
+    a single persistent, visually-hidden status region in
+    SharedOptionComponent that is never destroyed. Keeping a second live
+    region here would announce the same text twice.
+
     NOTHING RENDERS UNTIL THERE IS SOMETHING TO SAY.
 
     `showFeedback` alone was enough to render, and the icon below is an

@@ -5,7 +5,10 @@
   @if (shouldShowFeedbackAfter(b, i)) {
     @if (getInlineFeedbackConfig(b, i); as inlineFeedback) {
       <div class="feedback-below-option" @correctAnswer>
-        <codelab-quiz-feedback [feedbackConfig]="inlineFeedback" />
+        <codelab-quiz-feedback
+          [feedbackConfig]="inlineFeedback"
+          (messageAnnounced)="onFeedbackAnnounced($event)"
+        />
       </div>
     }
   }
@@ -44,3 +47,19 @@
 } @else if (opts.length === 0) {
   <span i18n>Options not ready&hellip;</span>
 }
+
+<!-- Single, persistent, visually-hidden announcer for every answer outcome
+     (incorrect / partial-progress / full-correctness+explanation) — see
+     AnswerAnnouncementCoordinatorService / compose-answer-announcement.ts
+     for the composition rules, and feedback.component.html's own comment
+     for why the VISIBLE feedback box next to each option cannot be the
+     live region itself (it is recreated at a new option anchor on every
+     change, which most screen readers do not announce). This is now the
+     ONLY auto-announcing region for these events — the question/FET
+     heading and the selection-message guidance region each still show
+     their own (unchanged) visible content, but their own `aria-live` was
+     removed so they no longer compete with this one. This element is
+     NEVER conditionally removed, so its content changes are real mutations
+     on an already-registered live region. Deliberately outside the @if
+     above and scoped to exactly this text — not the whole options area. -->
+<div class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{{ announcedFeedback() }}</div>

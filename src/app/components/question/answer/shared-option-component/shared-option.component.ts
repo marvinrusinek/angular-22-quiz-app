@@ -19,6 +19,7 @@ import {
   SharedOptionConfig
 } from '@shared/models';
 
+import { AnswerAnnouncementCoordinatorService } from '@shared/services/features/shared-option/answer-announcement-coordinator.service';
 import { OptionClickHandlerService } from '@shared/services/options/engine/option-click-handler.service';
 import { OptionFeedbackDisplayService } from '@shared/services/features/shared-option/option-feedback-display.service';
 import { OptionFeedbackEffectsService } from '@shared/services/features/shared-option/option-feedback-effects.service';
@@ -203,6 +204,97 @@ export class SharedOptionComponent
 
   readonly renderReady = signal(false);
 
+  /**
+   * Text for the single, persistent, visually-hidden ANSWER-OUTCOME
+   * announcer — see the template's own comment for why this exists
+   * separately from the visible feedback box. Carries the ONE composed
+   * message for the current click's outcome (feedback alone; feedback +
+   * "select N more"; or feedback + explanation — see
+   * AnswerAnnouncementCoordinatorService), not the raw feedback text
+   * verbatim. Written by `onFeedbackAnnounced` below, fed by
+   * codelab-quiz-feedback's `messageAnnounced` output (one listener per
+   * `@for` option slot, but only the slot that is actually the current
+   * feedback anchor ever emits a non-empty value — every other slot's own
+   * FeedbackComponent instance stays at its initial '', so its effect never
+   * re-fires and it never overwrites this signal).
+   */
+  readonly announcedFeedback = signal('');
+
+  private readonly answerAnnouncementCoordinator = inject(AnswerAnnouncementCoordinatorService);
+
+  /**
+   * Monotonic token guarding the deferred re-announce write in
+   * `onFeedbackAnnounced` below against a newer click, or a Q→Q clear,
+   * superseding it before its timer fires. Belt-and-suspenders alongside
+   * `pendingAnnouncerTimeoutId` below (which is the real cancellation
+   * mechanism) — this also protects against the timer having already
+   * fired into the macrotask queue before a cancel runs.
+   */
+  private announcementGeneration = 0;
+
+  /** The pending restore timer from `onFeedbackAnnounced` below, or null. */
+  private pendingAnnouncerTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Composes (via AnswerAnnouncementCoordinatorService) and writes the ONE
+   * coordinated announcement for this click's outcome.
+   *
+   * Clears to '' immediately, then restores the composed text after a
+   * REAL 100ms delay (setTimeout, a macrotask — not queueMicrotask). This
+   * is not a stagger against competing live regions (there are none left
+   * to compete with — see the removed heading/selection-message aria-live,
+   * documented on their own templates); it exists for a different, proven
+   * reason: live Narrator testing showed a clear-then-set on the SAME
+   * microtask/task still went unannounced for a second, textually
+   * identical outcome, even though the DOM genuinely mutated twice
+   * (confirmed via MutationObserver). This matches a well-documented,
+   * cross-screen-reader limitation — NVDA issue nvaccess/nvda#19328,
+   * a Safari/VoiceOver WebKit ticket, and other accessibility-engineering
+   * sources all describe screen readers (Narrator included) failing to
+   * re-announce aria-live content that reads identically to what they
+   * last announced, EVEN when the underlying DOM mutation is real and
+   * observable. The consistently-cited mitigation across those sources is
+   * exactly this: clear, then restore after a real (commonly ~100ms)
+   * delay — not a same-task write, which the accessibility-tree
+   * serialization layer can still coalesce away. 100ms is negligible next
+   * to the verdict round-trip itself (typically 900ms+ in this app).
+   *
+   * Cancellable (see `cancelPendingFeedbackAnnouncement`) so a newer
+   * click, a Q→Q navigation, or component destruction can never let a
+   * stale restore land after the fact — generation-guarded AND the timer
+   * itself is cleared, not merely superseded.
+   */
+  onFeedbackAnnounced(payload: { text: string; isCorrect: boolean }): void {
+    const composed = this.answerAnnouncementCoordinator.compose(payload.text, payload.isCorrect);
+    this.cancelPendingFeedbackAnnouncement();
+    const generation = this.announcementGeneration;
+    this.announcedFeedback.set('');
+    if (!composed) return;
+    this.pendingAnnouncerTimeoutId = setTimeout(() => {
+      this.pendingAnnouncerTimeoutId = null;
+      if (generation !== this.announcementGeneration) return; // superseded
+      this.announcedFeedback.set(composed);
+    }, 100);
+  }
+
+  /**
+   * Cancels any still-pending restore timer from `onFeedbackAnnounced`
+   * above (real cancellation via clearTimeout) and bumps the generation
+   * token as a second guard. Must run before any direct
+   * `announcedFeedback.set(...)` elsewhere (the Q→Q clear in
+   * OptionInteractionEffectsService, or destroy below) — otherwise a
+   * still-pending restore from the question/click just left could fire
+   * 100ms later and overwrite that fresh clear with stale text, exactly
+   * the bug this exists to prevent.
+   */
+  cancelPendingFeedbackAnnouncement(): void {
+    if (this.pendingAnnouncerTimeoutId !== null) {
+      clearTimeout(this.pendingAnnouncerTimeoutId);
+      this.pendingAnnouncerTimeoutId = null;
+    }
+    this.announcementGeneration++;
+  }
+
   // Include disableRenderTrigger to force re-render when disabled state changes
   trackByOptionId = (b: OptionBindings, idx: number) => {
     const idPart = (b.option?.optionId != null && b.option.optionId !== -1) ? b.option.optionId : `idx-${idx}`;
@@ -275,6 +367,7 @@ export class SharedOptionComponent
     this.optionFeedbackEffects.registerFeedbackEffects(this);
 
     this.destroyRef.onDestroy(() => {
+      this.cancelPendingFeedbackAnnouncement();
       this.orchestrator.runOnDestroy(this);
     });
   }

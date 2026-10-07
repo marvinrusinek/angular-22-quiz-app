@@ -57,6 +57,17 @@ export class OptionInteractionEffectsService {
   private resetBindingsAndState(h: any, v: number): void {
     h.timerExpiredForQuestion.set(false);
     h._timerExpiryHandled = false;
+    // The persistent feedback announcer (see shared-option.component.html)
+    // must not carry a verdict from the question just left into the
+    // incoming one — it is never destroyed, so nothing else clears it.
+    // Cancel FIRST: a still-pending deferred re-announce write (see
+    // onFeedbackAnnounced's clear-then-set, needed so two consecutive
+    // identical outcomes still both announce) from the question just left
+    // is generation-guarded by this bump, so it can never land after this
+    // clear and reintroduce the stale-verdict-on-navigation bug this clear
+    // exists to prevent.
+    h.cancelPendingFeedbackAnnouncement?.();
+    h.announcedFeedback?.set('');
     for (const b of h.optionBindings() ?? []) {
       if (!b) continue;
       delete b._timerExpiredStamped;

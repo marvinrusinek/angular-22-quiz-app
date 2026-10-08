@@ -24,6 +24,15 @@ import { quizData, startQuizViaUi, advanceToQuestion, HEADING } from './helpers'
  *   - incorrect           -> feedback alone
  *   - partial multi-answer -> feedback + "select N more..." guidance
  *   - full correctness     -> feedback + the explanation (FET)
+ *
+ * The SAME announcer ALSO carries a NAVIGATION-arrival announcement (the
+ * current question's own text) on every question-index change — see
+ * a11y-navigation-announcement.spec.ts for that event type's own coverage.
+ * This means the announcer is NOT empty on arrival or right after Next —
+ * tests below that check its content after navigating assert it holds the
+ * NEW question's own text, not that it is blank, and never the OLD
+ * question's stale verdict.
+ *
  * No stagger against competing regions — there are none left to compete
  * with. But a REAL 100ms clear-then-restore gap (setTimeout, a macrotask)
  * is deliberately kept: live Narrator testing showed a same-task
@@ -79,7 +88,12 @@ test.describe('Topic Quiz answer-outcome announcer — ONE coordinated message p
     await reachQuestion(page, qIdx + 1);
 
     await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveCount(1);
-    await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveText('');
+    // Baseline is NOT empty: the navigation-arrival announcement (see
+    // a11y-navigation-announcement.spec.ts) already wrote Q1's own question
+    // text on arrival — this is the current question, not a stale verdict.
+    await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveText(
+      doohickeys.questions[qIdx].questionText
+    );
 
     const correctIdx = doohickeys.questions[qIdx].options.findIndex(
       (o: any) => o.correct === true || o.correct === 'true'
@@ -89,6 +103,9 @@ test.describe('Topic Quiz answer-outcome announcer — ONE coordinated message p
 
     const announced = await announcerText(page);
     expect(announced.length).toBeGreaterThan(0);
+    // The outcome announcement correctly SUPERSEDED the navigation-arrival
+    // text — not just appended to it.
+    expect(announced).not.toBe(doohickeys.questions[qIdx].questionText);
     // Feedback verdict present...
     expect(/right|correct/i.test(announced)).toBe(true);
     // ...AND the explanation, composed into the SAME message (not a
@@ -198,7 +215,7 @@ test.describe('Topic Quiz answer-outcome announcer — ONE coordinated message p
     expect(/next button|show results/i.test(announced)).toBe(false);
   });
 
-  test('navigating to the next question clears the announcer — no stale verdict carried over', async ({ page }) => {
+  test('navigating to the next question clears the OLD verdict — the announcer carries the NEW question\'s own arrival text, never the stale one', async ({ page }) => {
     const qIdx = SINGLE_ANSWER_IDX[0];
     await reachQuestion(page, qIdx + 1);
 
@@ -212,9 +229,14 @@ test.describe('Topic Quiz answer-outcome announcer — ONE coordinated message p
 
     await page.locator('[aria-label="Next Question"]').click();
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(600);
 
-    await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveText('');
+    // Not the stale Q1 verdict — but the navigation-arrival announcement
+    // (see a11y-navigation-announcement.spec.ts) legitimately writes Q2's
+    // OWN question text, so the announcer is not empty either.
+    const after = await announcerText(page);
+    expect(after).not.toBe(before);
+    expect(after).toContain(doohickeys.questions[1].questionText.slice(0, 20));
   });
 
   test('two DIFFERENT wrong picks whose feedback text happens to read identically still both produce a real, re-announceable mutation', async ({ page }) => {
@@ -358,7 +380,7 @@ test.describe('Topic Quiz answer-outcome announcer — ONE coordinated message p
     expect(restoreEvent!.t - clearEvent!.t).toBeGreaterThan(50);
   });
 
-  test('navigating away WHILE the 100ms restore is still pending cancels it — no stale text lands on the next question', async ({ page }) => {
+  test('navigating away WHILE the 100ms restore is still pending cancels it — no stale verdict lands on the next question', async ({ page }) => {
     const qIdx = SINGLE_ANSWER_IDX[0];
     await reachQuestion(page, qIdx + 1);
     const correctIdx = doohickeys.questions[qIdx].options.findIndex(
@@ -374,11 +396,15 @@ test.describe('Topic Quiz answer-outcome announcer — ONE coordinated message p
     await nextBtn.click();
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
 
-    // Wait well past 100ms — if cancellation had failed, the stale timer
-    // would have fired by now and overwritten the fresh question's cleared
-    // announcer with the PREVIOUS question's verdict text.
-    await page.waitForTimeout(500);
-    await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveText('');
+    // Wait well past 100ms — if cancellation had failed, the Q1 verdict's
+    // stale timer would have fired by now and overwritten whatever Q2 had
+    // written with Q1's OLD text. The navigation-arrival announcement
+    // (see a11y-navigation-announcement.spec.ts) legitimately writes Q2's
+    // OWN question text in the meantime, so the announcer is not empty.
+    await page.waitForTimeout(600);
+    const after = await announcerText(page);
+    expect(after).not.toContain(doohickeys.questions[qIdx].questionText.slice(0, 20));
+    expect(after).toContain(doohickeys.questions[1].questionText.slice(0, 20));
   });
 
   test('"Select N more..." guidance remains visible and unchanged, but the selection-message region no longer self-announces', async ({ page }) => {

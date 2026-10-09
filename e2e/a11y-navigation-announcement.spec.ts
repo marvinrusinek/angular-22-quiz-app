@@ -64,6 +64,60 @@ test.describe('Topic Quiz navigation-arrival announcement (fix candidate)', () =
     expect(announced).toContain(doohickeys.questions[qIdx].questionText.slice(0, 20));
   });
 
+  test('Introduction -> Q1 (cold start): the announcer is observed EMPTY before it is ever observed with content — never born pre-populated', async ({ page }) => {
+    // Regression coverage for a reopened investigation: on a cold start the
+    // announcer's host (SharedOptionComponent, created only once the dynamic
+    // AnswerComponent's own async load chain resolves) mounts noticeably
+    // later and slower than it does on Next, where the component tree
+    // already exists. If that host ever mounted AFTER the coordinator's
+    // 100ms clear-then-restore had already resolved, the live region would
+    // be born with its final text already in place — a mutation-free
+    // "initial render" that most screen readers, Narrator included, do not
+    // reliably announce (same class of bug as the viewChild defect this
+    // fix already found and corrected for Next). A live diagnostic on this
+    // exact path confirmed the region is still always observed empty first;
+    // this locks that ordering in.
+    const qIdx = SINGLE_ANSWER_IDX[0];
+
+    await page.addInitScript(() => {
+      (window as any).__arrivalTrace = [];
+      const SEL = '.visually-hidden[role="status"]';
+      const recordIfFound = () => {
+        const el = document.querySelector(SEL) as any;
+        if (el && !el.__observed) {
+          el.__observed = true;
+          (window as any).__arrivalTrace.push({ event: 'mounted', text: el.textContent });
+          new MutationObserver(() => {
+            (window as any).__arrivalTrace.push({ event: 'mutated', text: el.textContent });
+          }).observe(el, { characterData: true, childList: true, subtree: true });
+        }
+      };
+      const start = () => {
+        if (document.body) {
+          new MutationObserver(recordIfFound).observe(document.body, { childList: true, subtree: true });
+          recordIfFound();
+        } else {
+          requestAnimationFrame(start);
+        }
+      };
+      start();
+    });
+
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+    await page.waitForTimeout(600);
+
+    const trace = await page.evaluate(() => (window as any).__arrivalTrace as Array<{ event: string; text: string }>);
+
+    expect(trace.length).toBeGreaterThan(0);
+    // The region's very FIRST observed state must be empty — it must never
+    // be observed already carrying its final text on first sight.
+    expect(trace[0].text).toBe('');
+
+    const firstNonEmpty = trace.find((entry) => entry.text.length > 0);
+    expect(firstNonEmpty).toBeDefined();
+    expect(firstNonEmpty!.text).toContain(doohickeys.questions[qIdx].questionText.slice(0, 20));
+  });
+
   test('Next: the announcer carries the NEW question\'s text, not the previous question\'s feedback/FET', async ({ page }) => {
     const qIdx = SINGLE_ANSWER_IDX[0];
     await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);

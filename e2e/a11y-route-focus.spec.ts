@@ -76,6 +76,31 @@ test.describe('Topic Quiz route focus — every question change, never on answer
     expect(state.text).toContain(doohickeys.questions[0].questionText.slice(0, 20));
   });
 
+  test('arriving at Q1 from Introduction (cold start): focus lands on the heading exactly once and is never stolen back afterward', async ({ page }) => {
+    // Regression coverage for a reopened investigation: a live diagnostic on
+    // this exact cold-start path (Introduction's own "Preparing quiz…"
+    // overlay + the slower first-time dynamic AnswerComponent/option-load
+    // chain, both unique to this transition and absent from Next/Previous)
+    // confirmed focus moves to the heading exactly once and holds — this
+    // locks that in so a future regression (e.g. something re-stealing
+    // focus back to <body> after the heading already has it) is caught.
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+
+    const first = await headingState(page);
+    if (!first.found) throw new Error('heading element not found');
+    expect(first.isFocused).toBe(true);
+
+    // Give any later-settling work (the cold-start overlay's own minimum
+    // display floor, any trailing async option-binding work) a full window
+    // to finish, then confirm focus is still exactly where it was.
+    await page.waitForTimeout(1800);
+
+    const second = await headingState(page);
+    expect(second.found).toBe(true);
+    expect(second.isFocused).toBe(true);
+    expect(second.text).toBe(first.text);
+  });
+
   test('clicking Next moves focus BACK onto the heading, now with the NEW question text', async ({ page }) => {
     await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
 

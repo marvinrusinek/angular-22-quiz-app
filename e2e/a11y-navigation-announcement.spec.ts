@@ -9,28 +9,37 @@ import { quizData, startQuizViaUi, advanceToQuestion, HEADING, NEXT_BTN, PREV_BT
  *
  * ── Why this exists ───────────────────────────────────────────────────
  * A real Narrator retest found that moving focus to the question heading
- * alone (the prior fix) does not reliably interrupt speech Narrator had
- * already queued from Quiz Selection/Introduction, or from the previous
- * question's own feedback/FET. This writes the current question's own
- * text through the SAME persistent announcer already field-verified to
- * reliably reach Narrator for answer feedback, on every actual
- * question-index change (initial arrival AND every Next/Previous).
+ * alone does not reliably interrupt speech Narrator had already queued
+ * from the previous question's own feedback/FET. This writes the current
+ * question's own text through the SAME persistent announcer already
+ * field-verified to reliably reach Narrator for answer feedback — but
+ * ONLY on Next/Previous. Real Narrator retest: PASSED on Next/Previous.
+ *
+ * The INITIAL arrival (Introduction -> Q1, a cold start) is the ONE
+ * exception, confirmed by real Narrator retest, not assumed: the combined
+ * approach (focus + this announcement) FAILED there — Introduction's own
+ * speech kept playing past Q1's load — while focus ALONE, on that exact
+ * same transition, PASSED. So the cold start gets focus only; the
+ * announcement fires only from Next/Previous. See
+ * QuizComponent's route-focus effect for the up-to-date split and the
+ * full evidence trail; the cause of the cold-start-specific difference is
+ * not established.
  *
  * ── What this suite proves ──────────────────────────────────────────────
  * The announcer carries the CURRENT question's own text (with its
- * multi-answer banner) after arrival, Next, and Previous; it is correctly
- * superseded by a subsequent answer-outcome announcement; a genuine
- * revisit announces the question text, never a stale outcome; rapid
- * repeated navigation lands on the FINAL question only; and destruction
- * mid-flight produces no errors.
+ * multi-answer banner) after Next and Previous; it is correctly superseded
+ * by a subsequent answer-outcome announcement; a genuine revisit announces
+ * the question text, never a stale outcome; rapid repeated navigation
+ * lands on the FINAL question only; destruction mid-flight produces no
+ * errors; and the cold-start arrival never writes to the announcer at all
+ * (focus-only, confirmed correct by a real Narrator retest).
  *
  * ── What this suite does NOT and cannot prove ───────────────────────────
- * That Narrator actually speaks this, or that it interrupts speech already
- * underway. This is a CANDIDATE mitigation — DOM/application-state
- * assertions prove the right text reaches the right (already-reliable)
- * channel at the right time; only a manual Narrator retest proves the
- * actual spoken behavior. See this task's final report for the retest
- * checklist.
+ * That Narrator actually speaks the Next/Previous announcement in every
+ * case, beyond what has already been manually retested. DOM/application-
+ * state assertions prove the right text reaches the right (already-
+ * reliable) channel at the right time; only a manual Narrator retest
+ * proves actual spoken behavior.
  *
  * Navigation uses startQuizViaUi + advanceToQuestion (real progression),
  * never a direct page.goto to a non-first question — QuizGuard redirects
@@ -51,34 +60,31 @@ async function announcerText(page: Page): Promise<string> {
   return ((await page.locator(ANNOUNCER_SELECTOR).textContent()) ?? '').trim();
 }
 
-test.describe('Topic Quiz navigation-arrival announcement (fix candidate)', () => {
-  test('Introduction -> Q1: the announcer carries Q1\'s own question text on arrival', async ({ page }) => {
+test.describe('Topic Quiz navigation-arrival announcement (Next/Previous only, confirmed by real Narrator retest)', () => {
+  test('Introduction -> Q1 (cold start): focus lands on the heading with Q1\'s own text, but the announcer is NEVER written to', async ({ page }) => {
+    // This is the confirmed behavior, not a candidate: a real Narrator
+    // retest of the combined approach (focus + this announcement) FAILED
+    // on this exact transition — Introduction's own speech kept playing
+    // past Q1's load. A controlled retest of focus ALONE on the same
+    // transition PASSED. See QuizComponent's route-focus effect for the
+    // full evidence trail.
     const qIdx = SINGLE_ANSWER_IDX[0];
     await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
     await page.waitForTimeout(600);
 
-    const announced = await announcerText(page);
     const headingText = ((await page.locator(HEADING).first().textContent()) ?? '').trim();
-    expect(announced.length).toBeGreaterThan(0);
-    expect(announced).toBe(headingText);
-    expect(announced).toContain(doohickeys.questions[qIdx].questionText.slice(0, 20));
+    expect(headingText.length).toBeGreaterThan(0);
+    expect(headingText).toContain(doohickeys.questions[qIdx].questionText.slice(0, 20));
+
+    const announced = await announcerText(page);
+    expect(announced).toBe('');
   });
 
-  test('Introduction -> Q1 (cold start): the announcer is observed EMPTY before it is ever observed with content — never born pre-populated', async ({ page }) => {
-    // Regression coverage for a reopened investigation: on a cold start the
-    // announcer's host (SharedOptionComponent, created only once the dynamic
-    // AnswerComponent's own async load chain resolves) mounts noticeably
-    // later and slower than it does on Next, where the component tree
-    // already exists. If that host ever mounted AFTER the coordinator's
-    // 100ms clear-then-restore had already resolved, the live region would
-    // be born with its final text already in place — a mutation-free
-    // "initial render" that most screen readers, Narrator included, do not
-    // reliably announce (same class of bug as the viewChild defect this
-    // fix already found and corrected for Next). A live diagnostic on this
-    // exact path confirmed the region is still always observed empty first;
-    // this locks that ordering in.
-    const qIdx = SINGLE_ANSWER_IDX[0];
-
+  test('Introduction -> Q1 (cold start): the announcer stays empty throughout — never receives any content, not even transiently', async ({ page }) => {
+    // Stronger than a single snapshot: a MutationObserver installed before
+    // any navigation proves the region never receives a non-empty write at
+    // any point during the cold-start transition, not just that it reads
+    // empty at one sampled instant.
     await page.addInitScript(() => {
       (window as any).__arrivalTrace = [];
       const SEL = '.visually-hidden[role="status"]';
@@ -109,13 +115,7 @@ test.describe('Topic Quiz navigation-arrival announcement (fix candidate)', () =
     const trace = await page.evaluate(() => (window as any).__arrivalTrace as Array<{ event: string; text: string }>);
 
     expect(trace.length).toBeGreaterThan(0);
-    // The region's very FIRST observed state must be empty — it must never
-    // be observed already carrying its final text on first sight.
-    expect(trace[0].text).toBe('');
-
-    const firstNonEmpty = trace.find((entry) => entry.text.length > 0);
-    expect(firstNonEmpty).toBeDefined();
-    expect(firstNonEmpty!.text).toContain(doohickeys.questions[qIdx].questionText.slice(0, 20));
+    expect(trace.every((entry) => entry.text === '')).toBe(true);
   });
 
   test('Next: the announcer carries the NEW question\'s text, not the previous question\'s feedback/FET', async ({ page }) => {
@@ -153,13 +153,24 @@ test.describe('Topic Quiz navigation-arrival announcement (fix candidate)', () =
   });
 
   test('a navigation announcement is correctly superseded by a subsequent answer-outcome announcement', async ({ page }) => {
+    // Uses a Next transition (not the cold start) to produce the navigation
+    // announcement being superseded — the cold start never writes one.
     const qIdx = SINGLE_ANSWER_IDX[0];
     await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
-    await page.waitForTimeout(600);
-    const navAnnounced = await announcerText(page);
-    expect(navAnnounced).toContain(doohickeys.questions[qIdx].questionText.slice(0, 20));
 
-    const correctIdx = doohickeys.questions[qIdx].options.findIndex(
+    const firstCorrectIdx = doohickeys.questions[qIdx].options.findIndex(
+      (o: any) => o.correct === true || o.correct === 'true'
+    );
+    await page.locator('.option-row').nth(firstCorrectIdx).click();
+    await page.waitForTimeout(900);
+    await page.locator(NEXT_BTN).click();
+    await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
+    await page.waitForTimeout(600);
+
+    const navAnnounced = await announcerText(page);
+    expect(navAnnounced).toContain(doohickeys.questions[1].questionText.slice(0, 20));
+
+    const correctIdx = doohickeys.questions[1].options.findIndex(
       (o: any) => o.correct === true || o.correct === 'true'
     );
     await page.locator('.option-row').nth(correctIdx).click();

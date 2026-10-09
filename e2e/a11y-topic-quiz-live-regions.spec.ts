@@ -26,12 +26,18 @@ import { quizData, startQuizViaUi, advanceToQuestion, HEADING } from './helpers'
  *   - full correctness     -> feedback + the explanation (FET)
  *
  * The SAME announcer ALSO carries a NAVIGATION-arrival announcement (the
- * current question's own text) on every question-index change — see
- * a11y-navigation-announcement.spec.ts for that event type's own coverage.
- * This means the announcer is NOT empty on arrival or right after Next —
- * tests below that check its content after navigating assert it holds the
- * NEW question's own text, not that it is blank, and never the OLD
- * question's stale verdict.
+ * current question's own text) on every Next/Previous question-index
+ * change — see a11y-navigation-announcement.spec.ts for that event type's
+ * own coverage. Tests below that check its content after Next/Previous
+ * assert it holds the NEW question's own text, not that it is blank, and
+ * never the OLD question's stale verdict.
+ *
+ * The ONE exception: the INITIAL Introduction -> Q1 cold-start arrival
+ * does NOT get this announcement (focus only) — a real Narrator retest
+ * found the combined approach failed on that specific transition, while
+ * focus alone, retested separately, passed. So a test that reaches Q1
+ * directly from Introduction (no Next yet) asserts the announcer is still
+ * empty at that point, not that it holds Q1's text.
  *
  * No stagger against competing regions — there are none left to compete
  * with. But a REAL 100ms clear-then-restore gap (setTimeout, a macrotask)
@@ -88,12 +94,14 @@ test.describe('Topic Quiz answer-outcome announcer — ONE coordinated message p
     await reachQuestion(page, qIdx + 1);
 
     await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveCount(1);
-    // Baseline is NOT empty: the navigation-arrival announcement (see
-    // a11y-navigation-announcement.spec.ts) already wrote Q1's own question
-    // text on arrival — this is the current question, not a stale verdict.
-    await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveText(
-      doohickeys.questions[qIdx].questionText
-    );
+    // Baseline IS empty: the cold-start (Introduction -> Q1) arrival
+    // deliberately withholds the navigation-arrival announcement (see
+    // a11y-navigation-announcement.spec.ts and QuizComponent's route-focus
+    // effect) — a real Narrator retest found the combined focus+
+    // announcement approach failed on this exact transition, while focus
+    // alone passed. Next/Previous still get the announcement; this is Q1
+    // reached directly from Introduction, with no Next yet.
+    await expect(page.locator(ANNOUNCER_SELECTOR)).toHaveText('');
 
     const correctIdx = doohickeys.questions[qIdx].options.findIndex(
       (o: any) => o.correct === true || o.correct === 'true'

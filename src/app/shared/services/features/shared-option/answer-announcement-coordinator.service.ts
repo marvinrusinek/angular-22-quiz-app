@@ -55,7 +55,9 @@ export class AnswerAnnouncementCoordinatorService {
    *     SharedOptionComponent.onFeedbackAnnounced; or
    *   - a NAVIGATION arrival (the new question's own text), via
    *     `announceQuestionArrival`, called from QuizComponent's route-focus
-   *     effect on every actual question-index change.
+   *     effect on every Next/Previous question-index change — NOT on the
+   *     initial Introduction -> Q1 cold start, which gets focus only (see
+   *     `announceQuestionArrival`'s own doc comment for why).
    */
   readonly announcedFeedback = signal('');
 
@@ -152,17 +154,21 @@ export class AnswerAnnouncementCoordinatorService {
   }
 
   /**
-   * Called from QuizComponent's route-focus effect on every actual
-   * question-index change (initial arrival AND every Next/Previous).
+   * Called from QuizComponent's route-focus effect on every Next/Previous
+   * question-index change — NOT on the initial Introduction -> Q1 cold
+   * start, which gets focus only. See that effect's own doc comment for
+   * the real-Narrator evidence behind the split: the combined approach
+   * (focus + this announcement) is confirmed working on Next/Previous, but
+   * failed a real Narrator retest on cold start specifically, while focus
+   * alone passed there. The cause of that cold-start-specific difference
+   * is not established.
    *
-   * Why this exists: a real Narrator retest found that moving focus to the
-   * question heading alone does not reliably interrupt speech Narrator had
-   * already queued from the page/question just left. This writes the
-   * current question's own text through the SAME mechanism already
-   * field-verified to reliably reach Narrator for answer feedback, rather
-   * than inventing an untested second channel. This is a CANDIDATE
-   * mitigation, not a confirmed fix — only a real Narrator retest proves
-   * whether it actually interrupts the previous speech.
+   * Why this exists (for Next/Previous): a real Narrator retest found that
+   * moving focus to the question heading alone does not reliably interrupt
+   * speech Narrator had already queued from the question just left. This
+   * writes the current question's own text through the SAME mechanism
+   * already field-verified to reliably reach Narrator for answer feedback,
+   * rather than inventing an untested second channel.
    */
   announceQuestionArrival(): void {
     this.writeAnnouncement(this.composeQuestionArrivalAnnouncement());

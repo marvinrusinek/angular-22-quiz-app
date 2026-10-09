@@ -482,28 +482,40 @@ export class QuizComponent implements OnInit, AfterViewInit {
     // computeds off the live index, and the feedback announcer's pending
     // restore is cancelled on transition).
     //
-    // A real Narrator retest then showed focus alone is NOT a reliable fix:
-    // moving focus to the heading does not consistently interrupt speech
-    // Narrator had already queued from the page/question just left. So this
-    // effect now ALSO writes a coordinated NAVIGATION-arrival announcement
-    // (the new question's own text) through
-    // AnswerAnnouncementCoordinatorService — the SAME mechanism already
-    // field-verified to reliably reach Narrator for answer feedback —
-    // rather than inventing an untested second channel. This is a
-    // CANDIDATE, not a confirmed fix:
-    // it proves the right text is written to the right (already-reliable)
-    // channel at the right time; only a real Narrator retest proves
-    // whether it actually interrupts the previous speech. Focus is still
-    // moved to the heading too (unchanged — useful for sighted/low-vision
-    // keyboard users; it no longer needs to carry the announcement alone).
+    // A real Narrator retest then showed focus alone is NOT a reliable fix
+    // for Next/Previous: moving focus to the heading does not consistently
+    // interrupt speech Narrator had already queued from the question just
+    // left. So on Next/Previous this effect ALSO writes a coordinated
+    // NAVIGATION-arrival announcement (the new question's own text)
+    // through AnswerAnnouncementCoordinatorService — the SAME mechanism
+    // already field-verified to reliably reach Narrator for answer
+    // feedback, rather than inventing an untested second channel. Real
+    // Narrator retest on Next: PASSED — old speech stopped, the new
+    // question was announced.
     //
-    // NOT escalated to assertive: this session's own earlier research
-    // (Adrian Roselli's cross-browser/AT live-region test matrix) found
-    // Windows Narrator treats ALL live regions as polite regardless of
-    // the declared politeness — so an assertive region would not change
-    // Narrator's behavior here, only add risk for OTHER screen readers
-    // that DO honor it (e.g. cutting off in-progress FET speech on rapid
-    // navigation). Reusing the already-proven polite channel is the
+    // The INITIAL arrival (Introduction -> Q1, a cold start) is the ONE
+    // exception: it does NOT get that announcement, only focus. A real
+    // Narrator retest with the announcement included FAILED on this one
+    // transition specifically (Introduction's own speech kept playing past
+    // Q1's load); a controlled retest of focus ALONE on this exact
+    // transition PASSED. `isInitialArrival` below captures this — it is
+    // true only once per QuizComponent instance (the very first time this
+    // effect fires), so it can never affect Next/Previous, which keep the
+    // announcement unconditionally. The cause of the cold-start failure is
+    // not established (a live DOM/focus trace found the mechanism itself
+    // structurally correct — the announcer was always observed empty
+    // before any restore, never born pre-populated, and focus landed
+    // cleanly once and stayed — so this is not a known defect being
+    // patched, only an empirically-verified behavioral difference between
+    // the two transitions).
+    //
+    // NOT escalated to assertive for Next/Previous: this session's own
+    // earlier research (Adrian Roselli's cross-browser/AT live-region test
+    // matrix) found Windows Narrator treats ALL live regions as polite
+    // regardless of the declared politeness — so an assertive region would
+    // not change Narrator's behavior here, only add risk for OTHER screen
+    // readers that DO honor it (e.g. cutting off in-progress FET speech on
+    // rapid navigation). Reusing the already-proven polite channel is the
     // smallest evidence-supported escalation available.
     //
     // Gated on currentQuestionIndex() actually changing (lastFocusedQuestionIndex
@@ -517,6 +529,13 @@ export class QuizComponent implements OnInit, AfterViewInit {
       const qa = this.combinedQuestionDataView();
       const ready = !!qa?.options?.length;
       if (!ready || idx === this.lastFocusedQuestionIndex) return;
+      // Captured BEFORE the overwrite below: true only for the very first
+      // time this effect ever fires on THIS QuizComponent instance (the
+      // Introduction -> Q1 cold-start arrival). Every subsequent Next/
+      // Previous on this same instance sees `lastFocusedQuestionIndex`
+      // already set to a number, so this is always false for them —
+      // used below to withhold the announcement on cold start only.
+      const isInitialArrival = this.lastFocusedQuestionIndex === null;
       this.lastFocusedQuestionIndex = idx;
 
       // afterNextRender's callback is automatically cancelled by Angular if
@@ -543,7 +562,13 @@ export class QuizComponent implements OnInit, AfterViewInit {
           const text = (el?.textContent ?? '').trim();
           if (!text) return;
           el!.focus();
-          this.answerAnnouncementCoordinator.announceQuestionArrival();
+          // Withhold the navigation-arrival announcement ONLY on the
+          // cold-start (Introduction -> Q1) transition — see this effect's
+          // own doc comment above for the real-Narrator evidence behind
+          // this split. Next/Previous always get it.
+          if (!isInitialArrival) {
+            this.answerAnnouncementCoordinator.announceQuestionArrival();
+          }
         },
         { injector: this.injector }
       );

@@ -40,10 +40,15 @@ import { quizData, startQuizViaUi, advanceToQuestion, HEADING, NEXT_BTN } from '
  *
  * ── What this suite does NOT and cannot prove ───────────────────────────
  * That Narrator (or any other assistive technology) actually interrupts
- * its speech queue when this focus change happens. Focus movement is a
- * CANDIDATE mitigation, not a guaranteed fix — only a manual Narrator
- * retest can confirm it. See this task's final report for the manual
- * verification steps.
+ * its speech queue when this focus change happens, beyond what has
+ * already been manually retested. For Next/Previous, focus is paired with
+ * a coordinated navigation announcement (see
+ * a11y-navigation-announcement.spec.ts) — confirmed passing by a real
+ * Narrator retest. For the INITIAL Introduction -> Q1 cold-start arrival,
+ * focus runs ALONE (the announcement is deliberately withheld there — a
+ * real Narrator retest of the combined approach failed on this exact
+ * transition, while focus alone, retested separately, passed). The cause
+ * of that cold-start-specific difference is not established.
  *
  * Navigation uses startQuizViaUi + advanceToQuestion (real progression),
  * never a direct page.goto to a non-first question — QuizGuard redirects

@@ -12,7 +12,24 @@
       />
 
       <mat-card-title-group>
-        <mat-card-title i18n>
+        <!-- #introTitle/tabindex="-1": focus target for the screen-reader
+             navigation-speech mitigation (introduction.component.ts) —
+             mirrors QuizComponent's #qText heading focus pattern. Not in
+             the normal Tab sequence.
+
+             role="heading" aria-level="1": MatCardTitle (Angular Material)
+             applies no ARIA role of its own, so this element's default
+             computed role is "generic" — confirmed via Chromium's raw
+             accessibility tree (CDP Accessibility.getFullAXTree), not
+             assumed. Chromium maps a role="generic" node to Windows UIA's
+             ControlType.Group, which is what Narrator was announcing as
+             "Group" right after the title text. A heading IS the correct,
+             valid semantic for this page's own title (Introduction has no
+             other h1-h6 anywhere), unlike `role="generic"`, which carries
+             no meaning at all — this replaces a meaningless default with
+             an accurate one, the same way QuizComponent's own equivalent
+             heading is a real `<h3>` rather than a role-less element. -->
+        <mat-card-title #introTitle tabindex="-1" role="heading" aria-level="1" i18n>
           {{ quiz.milestone }} Quiz
         </mat-card-title>
 

@@ -181,11 +181,24 @@ export class IntroductionComponent implements OnInit {
     // Manual retest results on THIS transition:
     //   - Keyboard-only navigation through Selection -> Introduction:
     //     PASSED.
-    //   - Narrator: mostly works, but exposed a SEPARATE, now-fixed
-    //     semantic defect — see introduction.component.html's own comment
-    //     on `role="heading" aria-level="1"` for the confirmed (via raw
-    //     Chromium accessibility-tree inspection, not assumed) cause of
-    //     Narrator announcing "Group" after the title.
+    //   - Narrator: mostly works, but exposed two SEPARATE, now-fixed
+    //     semantic issues with the title element itself:
+    //     1. It originally announced "Group" after the title — confirmed
+    //        (via raw Chromium accessibility-tree inspection, not assumed)
+    //        to be <mat-card-title>'s default "generic" computed role
+    //        (Material applies no ARIA role of its own), which Chromium
+    //        maps to Windows UIA's ControlType.Group.
+    //     2. Overriding that with role="heading" aria-level="1" fixed the
+    //        "Group" announcement, but a later retest found Narrator then
+    //        announced the heading role/level TWICE. A focus-event/
+    //        accessibility-tree trace found exactly ONE heading-role node,
+    //        ONE `.focus()` call, and ONE `focusin` event — ruling out any
+    //        duplicate node or repeated focus call as the cause. See
+    //        introduction.component.html's own comment on the title
+    //        element for the current fix: a native `<h1 matCardTitle>`
+    //        instead of an ARIA role override, converging on the same
+    //        native-heading pattern already working for QuizComponent's
+    //        own equivalent heading.
     //   - Narrator ALSO still carries over the certificate-badge link's
     //     speech from Quiz Selection in some cases. This remains
     //     UNRESOLVED. A DOM/focus/mutation trace found no evidence of the

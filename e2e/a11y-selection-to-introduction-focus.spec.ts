@@ -63,7 +63,7 @@ import { quizData } from './helpers';
  */
 
 async function introTitleState(page: import('@playwright/test').Page) {
-  const sel = 'mat-card-title[tabindex="-1"]';
+  const sel = 'h1[tabindex="-1"]';
   return page.evaluate((s) => {
     const el = document.querySelector(s) as HTMLElement | null;
     if (!el) return { found: false as const };
@@ -85,7 +85,7 @@ test.describe('Quiz Selection -> Introduction focus (scoped candidate, Narrator 
     await tile.scrollIntoViewIfNeeded();
     await tile.click();
 
-    await page.locator('mat-card-title[tabindex="-1"]').waitFor({ state: 'visible', timeout: 20_000 });
+    await page.locator('h1[tabindex="-1"]').waitFor({ state: 'visible', timeout: 20_000 });
     await page.waitForTimeout(300);
 
     const state = await introTitleState(page);
@@ -104,7 +104,7 @@ test.describe('Quiz Selection -> Introduction focus (scoped candidate, Narrator 
     await tile.scrollIntoViewIfNeeded();
     await tile.click();
 
-    await page.locator('mat-card-title[tabindex="-1"]').waitFor({ state: 'visible', timeout: 20_000 });
+    await page.locator('h1[tabindex="-1"]').waitFor({ state: 'visible', timeout: 20_000 });
     await page.waitForTimeout(300);
 
     // The app shell's OWN start-spinner overlay (app.component.html) and
@@ -123,7 +123,7 @@ test.describe('Quiz Selection -> Introduction focus (scoped candidate, Narrator 
     await tile.scrollIntoViewIfNeeded();
     await tile.click();
 
-    await page.locator('mat-card-title[tabindex="-1"]').waitFor({ state: 'visible', timeout: 20_000 });
+    await page.locator('h1[tabindex="-1"]').waitFor({ state: 'visible', timeout: 20_000 });
     await page.waitForTimeout(300);
 
     // Move focus elsewhere deliberately, then interact with the page in a

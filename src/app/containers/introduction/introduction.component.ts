@@ -193,12 +193,27 @@ export class IntroductionComponent implements OnInit {
     //        announced the heading role/level TWICE. A focus-event/
     //        accessibility-tree trace found exactly ONE heading-role node,
     //        ONE `.focus()` call, and ONE `focusin` event — ruling out any
-    //        duplicate node or repeated focus call as the cause. See
-    //        introduction.component.html's own comment on the title
-    //        element for the current fix: a native `<h1 matCardTitle>`
-    //        instead of an ARIA role override, converging on the same
-    //        native-heading pattern already working for QuizComponent's
-    //        own equivalent heading.
+    //        duplicate node or repeated focus call as the cause. Fixed the
+    //        override with a native `<h1 matCardTitle>` instead (see
+    //        introduction.component.html's own comment), converging on the
+    //        same native-heading pattern already working for
+    //        QuizComponent's own equivalent heading.
+    //     3. Narrator STILL announced "level 1" twice even on the native
+    //        `<h1>`. CONFIRMED, not assumed, to be Narrator's own
+    //        announcement behavior for a programmatically-focused native
+    //        heading in general, NOT specific to this app or to Material:
+    //        a minimal, framework-free HTML page (no Angular, no
+    //        Material — a single `<h1 tabindex="-1">`, focused the same
+    //        deferred-one-frame way as here) was built and real-Narrator
+    //        retested side by side with this component. It reproduced the
+    //        identical double "level 1" announcement. A DOM/accessibility-
+    //        tree trace of that minimal page also showed the exact same
+    //        signature already found here (one AX node, role "heading",
+    //        one `.focus()` call, one `focusin` event) — so there is no
+    //        application-level or DOM-level evidence of anything
+    //        app-specific left to fix. The native `<h1>` is therefore kept
+    //        as the correct, final markup — no further heading change is
+    //        justified by any evidence gathered.
     //   - Narrator ALSO still carries over the certificate-badge link's
     //     speech from Quiz Selection in some cases. This remains
     //     UNRESOLVED. A DOM/focus/mutation trace found no evidence of the

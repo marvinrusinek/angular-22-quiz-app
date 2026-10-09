@@ -34,17 +34,30 @@ import { quizData } from './helpers';
  *
  * ── Manual retest results ────────────────────────────────────────────────
  * Keyboard-only navigation through this transition: PASSED. Narrator:
- * mostly works — the title is announced and heard. Two things this manual
- * retest surfaced, both tracked, neither masked by this suite's DOM-level
- * assertions alone:
+ * mostly works — the title is announced and heard. Three things this
+ * manual retest surfaced, all tracked, none masked by this suite's
+ * DOM-level assertions alone:
  *   - The title was being announced as "[title], Group" — a SEPARATE,
  *     now-fixed semantic defect confirmed via Chromium's raw accessibility
  *     tree (role="generic" on `MatCardTitle`, which has no ARIA role of
- *     its own, mapping to Windows UIA's ControlType.Group). Fixed with
- *     `role="heading" aria-level="1"` — see introduction.component.html's
- *     own comment. Not something this candidate's focus mechanism caused;
- *     it is a pre-existing Angular Material default this candidate's new
+ *     its own, mapping to Windows UIA's ControlType.Group). Fixed first
+ *     with an ARIA override (role="heading" aria-level="1"), then with a
+ *     native `<h1 matCardTitle>` once that override was found to cause a
+ *     further issue (next item) — see introduction.component.html's own
+ *     comment. Not something this candidate's focus mechanism caused; it
+ *     is a pre-existing Angular Material default this candidate's new
  *     focus call simply gave a reason to be read aloud for the first time.
+ *   - Narrator then announced the heading role/level ("level 1") TWICE.
+ *     CONFIRMED (not assumed) to be Narrator's own announcement behavior
+ *     for a programmatically-focused native heading in general, NOT
+ *     specific to this app or Material: a minimal, framework-free HTML
+ *     page (one `<h1 tabindex="-1">`, no Angular, no Material, focused
+ *     the same deferred way) was built and real-Narrator retested side
+ *     by side with this component, and reproduced the IDENTICAL double
+ *     announcement, with the identical DOM/accessibility-tree signature
+ *     (one AX node, role "heading", one `.focus()` call, one `focusin`
+ *     event) already found here. No further heading markup change is
+ *     justified by any evidence gathered — the native `<h1>` is final.
  *   - The certificate-badge link's own speech from Quiz Selection still
  *     carries over in some cases. This remains UNRESOLVED. A DOM/focus/
  *     mutation trace found no evidence of that link being refocused or

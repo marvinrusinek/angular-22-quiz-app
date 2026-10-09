@@ -39,7 +39,21 @@
              new. MatCardTitle's selector (`mat-card-title, [mat-card-title],
              [matCardTitle]`) supports this directly; only the host CSS
              class changes carrier element, Material's own styling and
-             mat-card-title-group's layout are unaffected. -->
+             mat-card-title-group's layout are unaffected.
+
+             FINAL: Narrator still said "level 1" twice even on this
+             native `<h1>`. A minimal, framework-free HTML page (no
+             Angular, no Material — one `<h1 tabindex="-1">`, focused the
+             same deferred way) was built and real-Narrator retested
+             side by side with this component, and reproduced the
+             identical double "level 1" announcement, with the identical
+             DOM/accessibility-tree signature (one AX node, role
+             "heading", one `.focus()` call, one `focusin` event) already
+             found here. CONFIRMED, not assumed: this is Narrator's own
+             announcement behavior for a programmatically-focused native
+             heading, not specific to this app or to Material. No further
+             heading markup change is justified by any evidence
+             gathered — this native `<h1>` is the final markup. -->
         <h1 matCardTitle #introTitle tabindex="-1" i18n>
           {{ quiz.milestone }} Quiz
         </h1>

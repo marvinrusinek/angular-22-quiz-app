@@ -766,3 +766,118 @@ describe('IntroductionComponent — bounded 45s Start Quiz timeout', () => {
     await jest.advanceTimersByTimeAsync(45_000);
   });
 });
+
+/**
+ * Document-title fix: index.html's static "Angular Quiz App" title never
+ * updated for a Topic Quiz in progress. These specs use the REAL Angular
+ * `Title` service (not a fake) so `document.title` itself is the
+ * assertion target, exactly as a browser tab would show it.
+ */
+describe('IntroductionComponent — browser tab title (document-title fix)', () => {
+  const questionCountMap = new Map<string, number | null>([['dependency-injection', 7]]);
+  const milestoneMap = new Map<string, string>([['dependency-injection', 'Dependency Injection']]);
+  const difficultyMap = new Map<string, string | null>([['dependency-injection', 'intermediate']]);
+  const imageMap = new Map<string, string>();
+  const factsMap = new Map<string, readonly string[]>();
+
+  const makeMetadataApi = (): any => ({
+    load: jest.fn(() => of([{ quizId: 'dependency-injection' }])),
+    questionCountByQuiz: signal(questionCountMap),
+    milestoneByQuiz: signal(milestoneMap),
+    difficultyByQuiz: signal(difficultyMap),
+    imageByQuiz: signal(imageMap),
+    factsByQuiz: signal(factsMap),
+    milestoneFor: (id: string) => milestoneMap.get(id) ?? id,
+    imageFor: (id: string) => imageMap.get(id) ?? '',
+    factsFor: (id: string) => factsMap.get(id) ?? []
+  });
+
+  function configureTestBed(): void {
+    TestBed.configureTestingModule({
+      imports: [IntroductionComponent],
+      providers: [
+        { provide: QuizDotStatusService, useValue: {} },
+        { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
+        { provide: QuizDataService, useValue: { clearQuizQuestionCache: jest.fn() } },
+        { provide: QuizNavigationService, useValue: {} },
+        { provide: QuizPersistenceService, useValue: {} },
+        {
+          provide: QuizService,
+          useValue: { clearStoredCorrectAnswersText: jest.fn(), setCheckedShuffle: jest.fn() }
+        },
+        { provide: QuizShuffleService, useValue: {} },
+        { provide: SelectedOptionService, useValue: {} },
+        { provide: TimerService, useValue: { timePerQuestion: 30 } },
+        { provide: QuizStartSpinnerService, useValue: {} },
+        { provide: ActivatedRoute, useValue: { params: of({ quizId: 'dependency-injection' }) } },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+      ]
+    });
+  }
+
+  const ORIGINAL_TITLE = 'Angular Quiz App';
+
+  beforeEach(() => {
+    document.title = ORIGINAL_TITLE;
+  });
+
+  it('sets the tab title to "<milestone> Quiz | Angular Quiz App" once the quiz loads', () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+
+    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz App');
+  });
+
+  it('restores the original title on destroy, if this instance ever changed it', () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz App');
+
+    fixture.destroy();
+    expect(document.title).toBe(ORIGINAL_TITLE);
+  });
+
+  it('never touches the title if the quiz never loads (no milestone available)', () => {
+    TestBed.configureTestingModule({
+      imports: [IntroductionComponent],
+      providers: [
+        { provide: QuizDotStatusService, useValue: {} },
+        {
+          provide: TopicQuizMetadataService,
+          useValue: {
+            load: jest.fn(() => of([])),
+            questionCountByQuiz: signal(new Map()),
+            milestoneByQuiz: signal(new Map()),
+            difficultyByQuiz: signal(new Map()),
+            imageByQuiz: signal(new Map()),
+            factsByQuiz: signal(new Map()),
+            milestoneFor: (id: string) => id,
+            imageFor: () => '',
+            factsFor: () => []
+          }
+        },
+        { provide: QuizDataService, useValue: { clearQuizQuestionCache: jest.fn() } },
+        { provide: QuizNavigationService, useValue: {} },
+        { provide: QuizPersistenceService, useValue: {} },
+        {
+          provide: QuizService,
+          useValue: { clearStoredCorrectAnswersText: jest.fn(), setCheckedShuffle: jest.fn() }
+        },
+        { provide: QuizShuffleService, useValue: {} },
+        { provide: SelectedOptionService, useValue: {} },
+        { provide: TimerService, useValue: { timePerQuestion: 30 } },
+        { provide: QuizStartSpinnerService, useValue: {} },
+        { provide: ActivatedRoute, useValue: { params: of({ quizId: 'nonexistent-quiz' }) } },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+      ]
+    });
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+
+    expect(document.title).toBe(ORIGINAL_TITLE);
+    fixture.destroy();
+    expect(document.title).toBe(ORIGINAL_TITLE);
+  });
+});

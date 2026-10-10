@@ -19,6 +19,7 @@ import {
 import { toObservable } from '@angular/core/rxjs-interop';
 import { NgClass } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Title } from '@angular/platform-browser';
 import { Observable, Subscription } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -82,6 +83,7 @@ import { swallow } from '@shared/utils/error-logging';
 import { verdictStateForDisplayIndex } from '@shared/services/features/verdict/authorized-correctness';
 import { buildVerdictNotice, type VerdictNotice } from '@shared/utils/verdict-notice';
 import { blocksIntermediateProgression, canSubmitFinalQuestion } from '@shared/services/features/verdict/progression-gate';
+import { topicQuizDocumentTitle } from '@shared/utils/topic-quiz-document-title';
 import { VerdictNoticeComponent } from '../../components/verdict-notice/verdict-notice.component';
 
 const INFO_ICON_COLOR = '#1e90ff';
@@ -142,6 +144,17 @@ export class QuizComponent implements OnInit, AfterViewInit {
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly answerAnnouncementCoordinator = inject(AnswerAnnouncementCoordinatorService);
+  private readonly documentTitle = inject(Title);
+
+  /**
+   * The document title captured the FIRST time this instance ever applies
+   * a quiz-specific title — the real pre-quiz value (normally the static
+   * "Angular Quiz App" from index.html), restored on destroy. Captured
+   * only once (never overwritten by a later quiz-title write) so a genuine
+   * quiz-to-quiz change mid-instance still restores to the true original,
+   * not to an intermediate quiz title.
+   */
+  private originalDocumentTitle: string | null = null;
 
   // ── viewChilds ──────────────────────────────────────────────────
   readonly quizQuestionComponent = viewChild(QuizQuestionComponent);
@@ -472,6 +485,32 @@ export class QuizComponent implements OnInit, AfterViewInit {
     // from Results. Runs as the index/total signals settle after the rebuild.
     effect(() => this.restoreShowResultsMessageOnReturn());
 
+    // Browser tab title fix: the document title set by index.html
+    // ("Angular Quiz App") never updated for a Topic Quiz in progress — it
+    // stayed generic through Introduction, every question, and Next/
+    // Previous. `quizService.selectedQuizSig()` is the SAME root-singleton
+    // signal IntroductionComponent already populates with the full `Quiz`
+    // object (via `setSelectedQuiz()`) before the user ever reaches this
+    // component, and `quiz-content-loader.service.ts` populates it
+    // independently too (covers a direct deep-link entry that skips
+    // Introduction). Reading it here — rather than loading quiz metadata a
+    // second time — needs no new network call and can never expose an
+    // answer or explanation: `milestone` is the same public catalog name
+    // already shown on the Introduction page and the Quiz Selection tile.
+    // Driven by the signal (not a one-shot constructor read) so a genuine
+    // quiz-to-quiz change, however unlikely under the current routing,
+    // still updates the title rather than leaving a stale one.
+    effect(() => {
+      const milestone = this.quizService.selectedQuizSig()?.milestone;
+      if (!milestone) return;
+      const next = topicQuizDocumentTitle(milestone);
+      if (this.documentTitle.getTitle() === next) return;
+      if (this.originalDocumentTitle === null) {
+        this.originalDocumentTitle = this.documentTitle.getTitle();
+      }
+      this.documentTitle.setTitle(next);
+    });
+
     // Screen-reader route-focus fix: an Angular SPA route change (e.g.
     // Introduction -> this component, or Next/Previous between questions)
     // is a DOM swap, not a real browser navigation, so it gives Narrator
@@ -577,6 +616,12 @@ export class QuizComponent implements OnInit, AfterViewInit {
     this.destroyRef.onDestroy(() => {
       this.removeScrollIndicator();
       this.quizSetupService.runOnDestroy(this);
+      // Never leave the tab titled for a quiz the user has left — restores
+      // whatever was genuinely there before THIS instance ever changed it.
+      if (this.originalDocumentTitle !== null) {
+        this.documentTitle.setTitle(this.originalDocumentTitle);
+        this.originalDocumentTitle = null;
+      }
     });
   }
 

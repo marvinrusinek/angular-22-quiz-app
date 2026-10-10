@@ -93,7 +93,11 @@ async function mount(): Promise<void> {
     getCurrentQuestionIndex: () => 0,
     questionCorrectness: new Map<string, boolean>(),
     selectedOptionsMap: new Map<number, unknown[]>(),
-    scoringService: { creditResolvedQuestion: jest.fn() }
+    scoringService: { creditResolvedQuestion: jest.fn() },
+    // Read by QuizComponent's browser-tab-title effect (document-title fix).
+    // null is inert: that effect no-ops with no milestone, so this test's
+    // own restart-progression behavior is unaffected either way.
+    selectedQuizSig: signal(null)
   };
 
   TestBed.resetTestingModule();

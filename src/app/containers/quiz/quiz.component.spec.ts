@@ -784,7 +784,9 @@ describe('QuizComponent — progression unlock call sites', () => {
 describe('QuizComponent — browser tab title (document-title fix)', () => {
   const ORIGINAL_TITLE = 'Angular Quiz App';
 
-  function mountWithSelectedQuiz(selectedQuiz: { milestone: string } | null): ComponentFixture<QuizComponent> {
+  function mountWithSelectedQuiz(
+    selectedQuiz: { milestone: string } | null
+  ): { fixture: ComponentFixture<QuizComponent>; selectedQuizSig: ReturnType<typeof signal<{ milestone: string } | null>> } {
     const selectedQuizSig = signal(selectedQuiz);
     const quizService = {
       quizId: 'dependency-injection',
@@ -833,7 +835,7 @@ describe('QuizComponent — browser tab title (document-title fix)', () => {
 
     const f = TestBed.createComponent(QuizComponent);
     f.detectChanges();
-    return f;
+    return { fixture: f, selectedQuizSig };
   }
 
   beforeEach(() => {
@@ -846,7 +848,7 @@ describe('QuizComponent — browser tab title (document-title fix)', () => {
   });
 
   it('restores the original title on destroy, if this instance ever changed it', () => {
-    const f = mountWithSelectedQuiz({ milestone: 'Dependency Injection' });
+    const { fixture: f } = mountWithSelectedQuiz({ milestone: 'Dependency Injection' });
     expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz App');
 
     f.destroy();
@@ -854,8 +856,20 @@ describe('QuizComponent — browser tab title (document-title fix)', () => {
   });
 
   it('never touches the title while selectedQuizSig is null (e.g. a direct deep-link before it resolves)', () => {
-    const f = mountWithSelectedQuiz(null);
+    const { fixture: f } = mountWithSelectedQuiz(null);
     expect(document.title).toBe(ORIGINAL_TITLE);
+
+    f.destroy();
+    expect(document.title).toBe(ORIGINAL_TITLE);
+  });
+
+  it('updates to the NEW quiz\'s title if selectedQuizSig changes within the same instance (quiz switch, never resets to generic in between)', () => {
+    const { fixture: f, selectedQuizSig } = mountWithSelectedQuiz({ milestone: 'Dependency Injection' });
+    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz App');
+
+    selectedQuizSig.set({ milestone: 'TypeScript' });
+    f.detectChanges();
+    expect(document.title).toBe('TypeScript Quiz | Angular Quiz App');
 
     f.destroy();
     expect(document.title).toBe(ORIGINAL_TITLE);

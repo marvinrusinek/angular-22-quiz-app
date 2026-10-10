@@ -432,13 +432,12 @@ export class IntroductionComponent implements OnInit {
   }
 
   // Build a synthetic Quiz from API metadata alone — no client bank read.
-  // summary is intentionally blank; Introduction never displayed it.
   private buildQuizFromMetadata(quizId: string): Quiz | null {
     if (!this.metadataApi.questionCountByQuiz().has(quizId)) return null;
     return {
       quizId,
       milestone: this.metadataApi.milestoneFor(quizId) ?? '',
-      summary: '',
+      summary: this.metadataApi.summaryFor(quizId),
       image: this.metadataApi.imageFor(quizId) ?? '',
       difficulty: this.metadataApi.difficultyByQuiz().get(quizId) as QuizDifficulty | undefined,
       facts: [...this.metadataApi.factsFor(quizId)]

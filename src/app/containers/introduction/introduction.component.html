@@ -12,9 +12,51 @@
       />
 
       <mat-card-title-group>
-        <mat-card-title i18n>
+        <!-- #introTitle/tabindex="-1": focus target for the screen-reader
+             navigation-speech mitigation (introduction.component.ts) —
+             mirrors QuizComponent's #qText heading focus pattern. Not in
+             the normal Tab sequence.
+
+             A NATIVE <h1>, not <mat-card-title> with an ARIA role
+             override: MatCardTitle (Angular Material) applies no ARIA
+             role of its own, so <mat-card-title>'s default computed role
+             is "generic" — confirmed via Chromium's raw accessibility
+             tree (CDP Accessibility.getFullAXTree). Chromium maps that to
+             Windows UIA's ControlType.Group, which Narrator announced as
+             "Group" right after the title text. Overriding it with
+             role="heading" aria-level="1" fixed that, but a real Narrator
+             retest then found the role/level being announced TWICE on
+             this element — a difference from QuizComponent's own
+             equivalent heading (a real `<h3>`, never an ARIA override),
+             which was re-traced and confirmed to have exactly ONE
+             heading-role node, ONE `.focus()` call and ONE `focusin`
+             event here too, ruling out any duplicate node or repeated
+             focus call as the cause. Applying `matCardTitle` to a native
+             `<h1>` instead gives it an IMPLICIT heading role straight
+             from the HTML-AAM mapping, with no ARIA override at all —
+             converging on the same native-heading pattern already
+             working for Next/Previous/Q1, rather than adding anything
+             new. MatCardTitle's selector (`mat-card-title, [mat-card-title],
+             [matCardTitle]`) supports this directly; only the host CSS
+             class changes carrier element, Material's own styling and
+             mat-card-title-group's layout are unaffected.
+
+             FINAL: Narrator still said "level 1" twice even on this
+             native `<h1>`. A minimal, framework-free HTML page (no
+             Angular, no Material — one `<h1 tabindex="-1">`, focused the
+             same deferred way) was built and real-Narrator retested
+             side by side with this component, and reproduced the
+             identical double "level 1" announcement, with the identical
+             DOM/accessibility-tree signature (one AX node, role
+             "heading", one `.focus()` call, one `focusin` event) already
+             found here. CONFIRMED, not assumed: this is Narrator's own
+             announcement behavior for a programmatically-focused native
+             heading, not specific to this app or to Material. No further
+             heading markup change is justified by any evidence
+             gathered — this native `<h1>` is the final markup. -->
+        <h1 matCardTitle #introTitle tabindex="-1" i18n>
           {{ quiz.milestone }} Quiz
-        </mat-card-title>
+        </h1>
 
         <mat-card-subtitle i18n>
           <span>

@@ -40,10 +40,15 @@ import { quizData, startQuizViaUi, advanceToQuestion, HEADING, NEXT_BTN } from '
  *
  * ── What this suite does NOT and cannot prove ───────────────────────────
  * That Narrator (or any other assistive technology) actually interrupts
- * its speech queue when this focus change happens. Focus movement is a
- * CANDIDATE mitigation, not a guaranteed fix — only a manual Narrator
- * retest can confirm it. See this task's final report for the manual
- * verification steps.
+ * its speech queue when this focus change happens, beyond what has
+ * already been manually retested. For Next/Previous, focus is paired with
+ * a coordinated navigation announcement (see
+ * a11y-navigation-announcement.spec.ts) — confirmed passing by a real
+ * Narrator retest. For the INITIAL Introduction -> Q1 cold-start arrival,
+ * focus runs ALONE (the announcement is deliberately withheld there — a
+ * real Narrator retest of the combined approach failed on this exact
+ * transition, while focus alone, retested separately, passed). The cause
+ * of that cold-start-specific difference is not established.
  *
  * Navigation uses startQuizViaUi + advanceToQuestion (real progression),
  * never a direct page.goto to a non-first question — QuizGuard redirects
@@ -74,6 +79,31 @@ test.describe('Topic Quiz route focus — every question change, never on answer
     expect(state.isFocused).toBe(true);
     expect(state.text.length).toBeGreaterThan(0);
     expect(state.text).toContain(doohickeys.questions[0].questionText.slice(0, 20));
+  });
+
+  test('arriving at Q1 from Introduction (cold start): focus lands on the heading exactly once and is never stolen back afterward', async ({ page }) => {
+    // Regression coverage for a reopened investigation: a live diagnostic on
+    // this exact cold-start path (Introduction's own "Preparing quiz…"
+    // overlay + the slower first-time dynamic AnswerComponent/option-load
+    // chain, both unique to this transition and absent from Next/Previous)
+    // confirmed focus moves to the heading exactly once and holds — this
+    // locks that in so a future regression (e.g. something re-stealing
+    // focus back to <body> after the heading already has it) is caught.
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+
+    const first = await headingState(page);
+    if (!first.found) throw new Error('heading element not found');
+    expect(first.isFocused).toBe(true);
+
+    // Give any later-settling work (the cold-start overlay's own minimum
+    // display floor, any trailing async option-binding work) a full window
+    // to finish, then confirm focus is still exactly where it was.
+    await page.waitForTimeout(1800);
+
+    const second = await headingState(page);
+    expect(second.found).toBe(true);
+    expect(second.isFocused).toBe(true);
+    expect(second.text).toBe(first.text);
   });
 
   test('clicking Next moves focus BACK onto the heading, now with the NEW question text', async ({ page }) => {

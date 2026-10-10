@@ -1,5 +1,6 @@
 import {
-  ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnInit, signal
+  afterNextRender, ChangeDetectionStrategy, Component, computed, DestroyRef, effect,
+  ElementRef, inject, Injector, OnInit, signal, viewChild
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgClass, NgOptimizedImage, TitleCasePipe } from '@angular/common';
@@ -85,10 +86,21 @@ export class IntroductionComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
   private readonly startSpinner = inject(QuizStartSpinnerService);
+  private readonly injector = inject(Injector);
 
   // ── remaining variables ─────────────────────────────────────────
   quizId: string | undefined;
   readonly selectedQuiz = signal<Quiz | null>(null);
+  /**
+   * Template ref on the quiz title (`#introTitle`, `tabindex="-1"` in
+   * introduction.component.html) — this component's OWN template, so
+   * `viewChild` resolves it directly; no cross-component-boundary issue
+   * here (unlike QuizComponent's unrelated, pre-existing
+   * `sharedOptionComponent` viewChild).
+   */
+  private readonly introTitle = viewChild<ElementRef<HTMLElement>>('introTitle');
+  /** One-shot guard: this page is entered once per instance, never re-arrives. */
+  private hasFocusedIntroTitle = false;
   // ── Signal Forms: quiz preferences ──────────────────────────────
   // A typed model replaces the FormBuilder group. The former group also carried
   // an `isImmediateFeedback` control that nothing ever read — dropped rather
@@ -149,6 +161,78 @@ export class IntroductionComponent implements OnInit {
     // Mirror the toggle into QuizService whenever it changes. The write path is
     // now onSlideToggleChange() alone; this effect only propagates.
     effect(() => this.quizService.setCheckedShuffle(this.isChecked()));
+
+    // Screen-reader navigation-speech mitigation, scoped to THIS component
+    // only (no app/router-level focus management, no new delay): moving
+    // from Quiz Selection to Introduction is a client-side DOM swap, not a
+    // real browser navigation, so an AT's in-progress/queued Selection-page
+    // speech gets no unload/load cue to stop. QuizComponent's own
+    // Introduction -> Q1 cold-start transition hit the same class of
+    // problem; a real Narrator retest there found that focus ALONE
+    // (without pairing it with a live-region announcement) is what
+    // actually worked, so this mirrors exactly that: focus only, once,
+    // when the real quiz content first becomes available — no new
+    // aria-live region, no setTimeout/delay. (Introduction already has its
+    // own unrelated "Loading…" aria-live region for a slow fetch; this
+    // does not touch it.) `afterNextRender` runs after the DOM paints the
+    // real card, same mechanism QuizComponent already uses for its own
+    // heading focus — not a timer.
+    //
+    // Manual retest results on THIS transition:
+    //   - Keyboard-only navigation through Selection -> Introduction:
+    //     PASSED.
+    //   - Narrator: mostly works, but exposed two SEPARATE, now-fixed
+    //     semantic issues with the title element itself:
+    //     1. It originally announced "Group" after the title — confirmed
+    //        (via raw Chromium accessibility-tree inspection, not assumed)
+    //        to be <mat-card-title>'s default "generic" computed role
+    //        (Material applies no ARIA role of its own), which Chromium
+    //        maps to Windows UIA's ControlType.Group.
+    //     2. Overriding that with role="heading" aria-level="1" fixed the
+    //        "Group" announcement, but a later retest found Narrator then
+    //        announced the heading role/level TWICE. A focus-event/
+    //        accessibility-tree trace found exactly ONE heading-role node,
+    //        ONE `.focus()` call, and ONE `focusin` event — ruling out any
+    //        duplicate node or repeated focus call as the cause. Fixed the
+    //        override with a native `<h1 matCardTitle>` instead (see
+    //        introduction.component.html's own comment), converging on the
+    //        same native-heading pattern already working for
+    //        QuizComponent's own equivalent heading.
+    //     3. Narrator STILL announced "level 1" twice even on the native
+    //        `<h1>`. CONFIRMED, not assumed, to be Narrator's own
+    //        announcement behavior for a programmatically-focused native
+    //        heading in general, NOT specific to this app or to Material:
+    //        a minimal, framework-free HTML page (no Angular, no
+    //        Material — a single `<h1 tabindex="-1">`, focused the same
+    //        deferred-one-frame way as here) was built and real-Narrator
+    //        retested side by side with this component. It reproduced the
+    //        identical double "level 1" announcement. A DOM/accessibility-
+    //        tree trace of that minimal page also showed the exact same
+    //        signature already found here (one AX node, role "heading",
+    //        one `.focus()` call, one `focusin` event) — so there is no
+    //        application-level or DOM-level evidence of anything
+    //        app-specific left to fix. The native `<h1>` is therefore kept
+    //        as the correct, final markup — no further heading change is
+    //        justified by any evidence gathered.
+    //   - Narrator ALSO still carries over the certificate-badge link's
+    //     speech from Quiz Selection in some cases. This remains
+    //     UNRESOLVED. A DOM/focus/mutation trace found no evidence of the
+    //     link being refocused or of any DOM mutation on it after the
+    //     click — but that is NOT proof no accessibility event occurred:
+    //     DOM-level MutationObserver/focus events cannot see every
+    //     platform accessibility notification Chromium may fire
+    //     internally, so an AT-level event invisible to this
+    //     instrumentation remains possible. Only a real Narrator retest
+    //     after a targeted change could confirm or rule that out, and no
+    //     such change has been made or proposed here.
+    effect(() => {
+      if (this.hasFocusedIntroTitle || !this.selectedQuiz()) return;
+      this.hasFocusedIntroTitle = true;
+      afterNextRender(
+        () => this.introTitle()?.nativeElement.focus(),
+        { injector: this.injector }
+      );
+    });
 
     // Defensive safety net: if this component is destroyed while a start
     // attempt is still in flight (e.g. the user navigated away some other

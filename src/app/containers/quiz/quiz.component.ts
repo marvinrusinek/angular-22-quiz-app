@@ -52,6 +52,7 @@ import { QuizService } from '@shared/services/data/quiz.service';
 import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
 import { QuizQuestionManagerService } from '@shared/services/flow/quizquestionmgr.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
+import { AnswerAnnouncementCoordinatorService } from '@shared/services/features/shared-option/answer-announcement-coordinator.service';
 import { QuizSetupService } from '@shared/services/flow/quiz-setup.service';
 import { QuizStateService } from '@shared/services/state/quizstate.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
@@ -140,9 +141,18 @@ export class QuizComponent implements OnInit, AfterViewInit {
   public readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
+  private readonly answerAnnouncementCoordinator = inject(AnswerAnnouncementCoordinatorService);
 
   // ── viewChilds ──────────────────────────────────────────────────
   readonly quizQuestionComponent = viewChild(QuizQuestionComponent);
+  // Pre-existing, independently broken: `<app-shared-option>` lives several
+  // component-template boundaries below this one (QuizComponent -> ... ->
+  // AnswerComponent -> SharedOptionComponent), so a viewChild query from
+  // here can never resolve it — confirmed live, not assumed. Kept only
+  // because quiz-setup.service.ts's restart flow still references it
+  // (`host.sharedOptionComponent?.()?.generateOptionBindings()`, itself
+  // therefore already a silent no-op); out of scope for the navigation-
+  // speech fix this field's removal would otherwise be part of.
   readonly sharedOptionComponent = viewChild(SharedOptionComponent);
   readonly nextButtonTooltip = viewChild<MatTooltip>('nextButton');
   // The projected question heading (declared in THIS component's own
@@ -470,15 +480,43 @@ export class QuizComponent implements OnInit, AfterViewInit {
     // previous-question text anywhere after navigation (the `/check`
     // response is question-keyed, the heading/message-area are pure
     // computeds off the live index, and the feedback announcer's pending
-    // restore is cancelled on transition). The remaining overlap a
-    // Narrator user hears after Next is CONSISTENT WITH the AT finishing
-    // speech it had already started; that is an inference from DOM and
-    // focus events, not a measurement of the speech queue, and DOM state
-    // cannot un-queue speech. Moving focus onto the question heading is a
-    // genuine focus change (NOT another live region, NOT a delay, NOT
-    // assertive). Browsers/AT often treat it as an interrupt cue, but that
-    // is not guaranteed; it does not reliably cancel speech already underway
-    // in the tested Chrome/Narrator setup.
+    // restore is cancelled on transition).
+    //
+    // A real Narrator retest then showed focus alone is NOT a reliable fix
+    // for Next/Previous: moving focus to the heading does not consistently
+    // interrupt speech Narrator had already queued from the question just
+    // left. So on Next/Previous this effect ALSO writes a coordinated
+    // NAVIGATION-arrival announcement (the new question's own text)
+    // through AnswerAnnouncementCoordinatorService — the SAME mechanism
+    // already field-verified to reliably reach Narrator for answer
+    // feedback, rather than inventing an untested second channel. Real
+    // Narrator retest on Next: PASSED — old speech stopped, the new
+    // question was announced.
+    //
+    // The INITIAL arrival (Introduction -> Q1, a cold start) is the ONE
+    // exception: it does NOT get that announcement, only focus. A real
+    // Narrator retest with the announcement included FAILED on this one
+    // transition specifically (Introduction's own speech kept playing past
+    // Q1's load); a controlled retest of focus ALONE on this exact
+    // transition PASSED. `isInitialArrival` below captures this — it is
+    // true only once per QuizComponent instance (the very first time this
+    // effect fires), so it can never affect Next/Previous, which keep the
+    // announcement unconditionally. The cause of the cold-start failure is
+    // not established (a live DOM/focus trace found the mechanism itself
+    // structurally correct — the announcer was always observed empty
+    // before any restore, never born pre-populated, and focus landed
+    // cleanly once and stayed — so this is not a known defect being
+    // patched, only an empirically-verified behavioral difference between
+    // the two transitions).
+    //
+    // NOT escalated to assertive for Next/Previous: this session's own
+    // earlier research (Adrian Roselli's cross-browser/AT live-region test
+    // matrix) found Windows Narrator treats ALL live regions as polite
+    // regardless of the declared politeness — so an assertive region would
+    // not change Narrator's behavior here, only add risk for OTHER screen
+    // readers that DO honor it (e.g. cutting off in-progress FET speech on
+    // rapid navigation). Reusing the already-proven polite channel is the
+    // smallest evidence-supported escalation available.
     //
     // Gated on currentQuestionIndex() actually changing (lastFocusedQuestionIndex
     // above), not a one-shot latch, so this fires on initial arrival AND on
@@ -491,24 +529,46 @@ export class QuizComponent implements OnInit, AfterViewInit {
       const qa = this.combinedQuestionDataView();
       const ready = !!qa?.options?.length;
       if (!ready || idx === this.lastFocusedQuestionIndex) return;
+      // Captured BEFORE the overwrite below: true only for the very first
+      // time this effect ever fires on THIS QuizComponent instance (the
+      // Introduction -> Q1 cold-start arrival). Every subsequent Next/
+      // Previous on this same instance sees `lastFocusedQuestionIndex`
+      // already set to a number, so this is always false for them —
+      // used below to withhold the announcement on cold start only.
+      const isInitialArrival = this.lastFocusedQuestionIndex === null;
       this.lastFocusedQuestionIndex = idx;
 
       // afterNextRender's callback is automatically cancelled by Angular if
       // `this.injector` (this component) is destroyed before the next
       // render happens — e.g. the user navigates away to Results entirely
       // while this is still pending — so no extra destroy-guard is needed.
+      // It also runs strictly AFTER OptionInteractionEffectsService's own
+      // Q→Q cleanup (a synchronous effect that clears the announcer on
+      // every index change) has already run for this SAME transition, so
+      // that cleanup's clear can never land after this write and wipe it
+      // out — the two are different effects on different components, with
+      // no other ordering guarantee between them.
       afterNextRender(
         () => {
           const el = this.qTextHeading()?.nativeElement;
-          // Only focus once CodelabQuizContentComponent's own DOM-write
+          // Only act once CodelabQuizContentComponent's own DOM-write
           // effect has actually populated the heading for THIS question —
-          // focusing an empty element would announce nothing, and could
+          // acting on an empty element would announce nothing, and could
           // even read as a SECOND, duplicate announcement once the text
           // does land a moment later. Rapid Next/Next/Next clicking can
           // mean this callback fires once the heading already shows a
           // LATER question's text than the one that scheduled it — that is
-          // still the correct, current text, so focusing it is harmless.
-          if (el && (el.textContent ?? '').trim().length > 0) el.focus();
+          // still the correct, current text, so acting on it is harmless.
+          const text = (el?.textContent ?? '').trim();
+          if (!text) return;
+          el!.focus();
+          // Withhold the navigation-arrival announcement ONLY on the
+          // cold-start (Introduction -> Q1) transition — see this effect's
+          // own doc comment above for the real-Narrator evidence behind
+          // this split. Next/Previous always get it.
+          if (!isInitialArrival) {
+            this.answerAnnouncementCoordinator.announceQuestionArrival();
+          }
         },
         { injector: this.injector }
       );

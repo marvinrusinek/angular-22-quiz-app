@@ -126,6 +126,45 @@ describe('IntroductionComponent — API-backed question count (Stage 14 regressi
       'TypeScript makes it easier to read and debug JavaScript code.'
     );
   });
+
+  /**
+   * Regression, confirmed by a real localhost Narrator retest: the
+   * subtitle's source had a newline + indentation between `<br />` and
+   * "Take the quiz and find out!", which becomes a literal leading-space
+   * TEXT NODE after the line break — Angular's whitespace collapsing only
+   * removes insignificant INTER-ELEMENT whitespace, not this inter-word
+   * text-node content. Narrator read that collapsed space aloud as "space"
+   * before the sentence; the retest confirms that announcement is gone.
+   * This asserts the actual markup shape (text node boundaries), not just
+   * the flattened/trimmed textContent, which would pass even with the
+   * stray space present.
+   */
+  it('has no leading-space text node after the subtitle line break, while keeping the line break, wording, and reading order intact', () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+
+    const subtitleSpan = (fixture.nativeElement as HTMLElement).querySelector('mat-card-subtitle span');
+    expect(subtitleSpan).toBeTruthy();
+
+    const childNodes = Array.from(subtitleSpan!.childNodes);
+    const brIndex = childNodes.findIndex((n) => n.nodeName === 'BR');
+    expect(brIndex).toBeGreaterThanOrEqual(0);
+
+    // The line break itself is still there (visible line break preserved).
+    const textAfterBr = childNodes[brIndex + 1];
+    expect(textAfterBr?.nodeType).toBe(Node.TEXT_NODE);
+    // No leading space/newline before "Take" — the actual regression.
+    expect(textAfterBr?.textContent).toMatch(/^Take the quiz and find out!/);
+    expect(textAfterBr?.textContent?.startsWith(' ')).toBe(false);
+
+    // Wording and reading order are unchanged end to end. The two lines are
+    // separated by the <br> itself (a real line break), which contributes no
+    // text of its own, so there is no space between them at the text-node
+    // level — exactly the point of this fix.
+    const fullText = (subtitleSpan!.textContent ?? '').replace(/\s+/g, ' ').trim();
+    expect(fullText).toBe('How well versed are you in TypeScript?Take the quiz and find out!');
+  });
 });
 
 /**

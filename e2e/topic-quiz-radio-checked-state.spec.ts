@@ -189,3 +189,148 @@ test.describe('Topic Quiz radio checked-state matches native/AX reality (fix reg
     expect(checkboxChecked[correctIdxs[0]]).toBe(true);
   });
 });
+
+/**
+ * A live Narrator retest reported "not selected", then the option text, then
+ * "selected" on a question's FIRST mouse selection. A minimal framework-free
+ * HTML page (plain native `<input type="radio">` group, no Angular, no
+ * Material, no JS) reproduced the identical sequence on its own first mouse
+ * selection — so that exact announcement is not this app's defect, and no
+ * app-specific fix is proposed for it here. The internal browser/AT cause
+ * was not isolated or proven; only that the same sequence occurs with zero
+ * app code involved.
+ *
+ * What IS a real, independently verified app behavior this app's own code
+ * controls: `isNativelyChecked()` depended entirely on `getOptionClasses()`,
+ * whose default path deliberately returns `correct-option: false` AND
+ * `incorrect-option: false` while `currentOptionCorrectness()` is still
+ * pending (see getDefaultOptionClasses's own "/check is still in flight"
+ * comment). On a fast local backend this is masked by how quickly the first
+ * click's own selection state already resolves — but REPLACING a pick while
+ * that first `/check` is still pending is where this measurably mattered
+ * (proven below by removing the fix and observing the replacement test fail).
+ *
+ * These tests delay the real `/check` response explicitly so a fast response
+ * can never hide that one scenario: they assert native checked state WHILE
+ * the verdict is still deliberately pending, not after it resolves.
+ *
+ * Fix under test: `isNativelyChecked()` now also OR's in `_wasSelected` — the
+ * same synchronous, same-change-detection-cycle flag the visual highlight
+ * already uses — so checked tracks SELECTION, not correctness-resolution.
+ */
+test.describe('Native radio checked state is independent of verdict-arrival timing (replacement-under-pending-verdict fix)', () => {
+  const CHECK_DELAY_MS = 1500;
+  const ASSERT_BEFORE_MS = 250; // well inside the delay window
+
+  function delayCheckResponses(page: Page): void {
+    page.route('**/api/quizzes/*/check', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, CHECK_DELAY_MS));
+      await route.continue();
+    });
+  }
+
+  test('mouse selection: native .checked goes true almost immediately, well before the delayed /check response arrives', async ({ page }) => {
+    const qIdx = SINGLE_ANSWER_IDX[0];
+    delayCheckResponses(page);
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+
+    const wrongIdx = doohickeys.questions[qIdx].options.findIndex(
+      (o: any) => !(o.correct === true || o.correct === 'true')
+    );
+    await page.locator('.option-row').nth(wrongIdx).click();
+    await page.waitForTimeout(ASSERT_BEFORE_MS);
+
+    // The delayed /check has NOT resolved yet (CHECK_DELAY_MS=1500 > 250ms
+    // elapsed) — if native checked depended on verdict arrival, this would
+    // still read false here.
+    const nativeChecked = await nativeCheckedStates(page);
+    expect(nativeChecked[wrongIdx]).toBe(true);
+    expect(nativeChecked.filter(Boolean).length).toBe(1);
+
+    // Let the delayed verdict land and confirm the final state still agrees.
+    await page.waitForTimeout(CHECK_DELAY_MS);
+    const finalChecked = await nativeCheckedStates(page);
+    expect(finalChecked[wrongIdx]).toBe(true);
+  });
+
+  test('keyboard selection (Tab + Space): native .checked goes true almost immediately, well before the delayed /check response arrives', async ({ page }) => {
+    delayCheckResponses(page);
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+
+    let tries = 0;
+    while (tries < 15) {
+      const onRadio = await page.evaluate(() => document.activeElement?.getAttribute('type') === 'radio');
+      if (onRadio) break;
+      await page.keyboard.press('Tab');
+      tries++;
+    }
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(ASSERT_BEFORE_MS);
+
+    const nativeChecked = await nativeCheckedStates(page);
+    expect(nativeChecked.filter(Boolean).length).toBe(1);
+
+    await page.waitForTimeout(CHECK_DELAY_MS);
+    const finalChecked = await nativeCheckedStates(page);
+    expect(finalChecked.filter(Boolean).length).toBe(1);
+  });
+
+  test('replacement while /check is still pending: the OLD pick clears and the NEW pick checks immediately, no stale double-checked state', async ({ page }) => {
+    const qIdx = SINGLE_ANSWER_IDX[0];
+    delayCheckResponses(page);
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+
+    const wrongIdx = doohickeys.questions[qIdx].options.findIndex(
+      (o: any) => !(o.correct === true || o.correct === 'true')
+    );
+    await page.locator('.option-row').nth(wrongIdx).click();
+    await page.waitForTimeout(ASSERT_BEFORE_MS);
+    expect((await nativeCheckedStates(page))[wrongIdx]).toBe(true);
+
+    // Replace with a different option WHILE the first /check is still
+    // in flight (CHECK_DELAY_MS=1500 hasn't elapsed since the first click).
+    const replaceIdx = (wrongIdx + 1) % doohickeys.questions[qIdx].options.length;
+    await page.locator('.option-row').nth(replaceIdx).click();
+    await page.waitForTimeout(ASSERT_BEFORE_MS);
+
+    const afterReplace = await nativeCheckedStates(page);
+    expect(afterReplace[replaceIdx]).toBe(true);
+    expect(afterReplace[wrongIdx]).toBe(false);
+    expect(afterReplace.filter(Boolean).length).toBe(1);
+
+    // Let both delayed verdicts resolve; exclusivity and the final pick
+    // must still hold.
+    await page.waitForTimeout(CHECK_DELAY_MS * 2);
+    const final = await nativeCheckedStates(page);
+    expect(final[replaceIdx]).toBe(true);
+    expect(final.filter(Boolean).length).toBe(1);
+  });
+
+  test('Next -> Previous revisit after a delayed first /check: native checked still matches the visual highlight once everything has settled', async ({ page }) => {
+    const qIdx = SINGLE_ANSWER_IDX[0];
+    delayCheckResponses(page);
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+
+    const wrongIdx = doohickeys.questions[qIdx].options.findIndex(
+      (o: any) => !(o.correct === true || o.correct === 'true')
+    );
+    await page.locator('.option-row').nth(wrongIdx).click();
+    // Let the delayed verdict resolve before navigating away.
+    await page.waitForTimeout(CHECK_DELAY_MS + 300);
+
+    await page.locator(NEXT_BTN).click();
+    await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
+    await page.waitForTimeout(600);
+
+    await page.locator(PREV_BTN).click();
+    await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
+    await page.waitForTimeout(800);
+
+    const nativeChecked = await nativeCheckedStates(page);
+    expect(nativeChecked[wrongIdx]).toBe(true);
+    expect(nativeChecked.filter(Boolean).length).toBe(1);
+
+    const bg = await page.locator('.option-row').nth(wrongIdx).evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(bg).toBe('rgb(255, 0, 0)');
+  });
+});

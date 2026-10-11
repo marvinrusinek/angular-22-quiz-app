@@ -59,14 +59,33 @@
         </h1>
 
         <mat-card-subtitle i18n>
-          <!-- No whitespace between <br /> and the next line's text: a
-               newline + indentation here becomes a literal leading-space
-               text node after the line break, which Angular's whitespace
-               collapsing doesn't remove (it's inter-word, not
-               inter-element, whitespace) — Narrator read that collapsed
-               space aloud as "space" before "Take the quiz...". -->
+          <!-- Two fixes for the same reported Narrator "space" before
+               "Take the quiz...", each addressing a DIFFERENT real cause —
+               removing one did not remove the other:
+
+               1. No whitespace between <br /> and the next line's text: a
+                  newline + indentation here becomes a literal leading-space
+                  text node after the line break, which Angular's whitespace
+                  collapsing doesn't remove (it's inter-word, not
+                  inter-element, whitespace).
+
+               2. aria-hidden="true" on the <br> itself: independent of any
+                  surrounding whitespace, Chromium exposes the <br> element
+                  as its own accessibility-tree object (role "LineBreak",
+                  name "\n") between the two sentences' StaticText nodes —
+                  confirmed via CDP on both localhost and the deployed
+                  build, unaffected by fix 1. aria-hidden removes that
+                  standalone node from the tree (confirmed via CDP) while
+                  leaving the VISUAL line break and both sentences' own
+                  text completely unaffected (confirmed via layout
+                  measurement — see e2e-cert-claim/
+                  a11y-introduction-subtitle-linebreak.spec.ts).
+
+               Confirmed by a real localhost Narrator retest: the "space"
+               announcement is gone specifically with fix 2 in place, not
+               merely fix 1. -->
           <span>
-            How well versed are you in {{ quiz.milestone }}?<br />Take the quiz and find out!
+            How well versed are you in {{ quiz.milestone }}?<br aria-hidden="true" />Take the quiz and find out!
           </span>
         </mat-card-subtitle>
       </mat-card-title-group>

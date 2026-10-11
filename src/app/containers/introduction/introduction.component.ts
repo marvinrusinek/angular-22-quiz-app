@@ -5,6 +5,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgClass, NgOptimizedImage, TitleCasePipe } from '@angular/common';
 import { ActivatedRoute, Params, Router } from '@angular/router';
+import { Title } from '@angular/platform-browser';
 import { form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -27,6 +28,7 @@ import { SelectedOptionService } from '@shared/services/state/selectedoption.ser
 import { TimerService } from '@shared/services/features/timer/timer.service';
 import { QuizStartSpinnerHandle, QuizStartSpinnerService } from '@shared/services/ui/quiz-start-spinner.service';
 import { swallow } from '@shared/utils/error-logging';
+import { topicQuizDocumentTitle } from '@shared/utils/topic-quiz-document-title';
 
 /** The Introduction page's quiz preferences, as a typed Signal Forms model. */
 export interface QuizPreferencesModel {
@@ -87,10 +89,18 @@ export class IntroductionComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly startSpinner = inject(QuizStartSpinnerService);
   private readonly injector = inject(Injector);
+  private readonly documentTitle = inject(Title);
 
   // ── remaining variables ─────────────────────────────────────────
   quizId: string | undefined;
   readonly selectedQuiz = signal<Quiz | null>(null);
+  /**
+   * The document title captured the FIRST time this instance ever applies
+   * a quiz-specific title (see the constructor effect below) — restored on
+   * destroy. See QuizComponent's own equivalent field for why it's
+   * captured only once.
+   */
+  private originalDocumentTitle: string | null = null;
   /**
    * Template ref on the quiz title (`#introTitle`, `tabindex="-1"` in
    * introduction.component.html) — this component's OWN template, so
@@ -161,6 +171,26 @@ export class IntroductionComponent implements OnInit {
     // Mirror the toggle into QuizService whenever it changes. The write path is
     // now onSlideToggleChange() alone; this effect only propagates.
     effect(() => this.quizService.setCheckedShuffle(this.isChecked()));
+
+    // Browser tab title fix: see QuizComponent's own equivalent effect for
+    // the full rationale (same root cause — index.html's static
+    // "Angular Quiz App" title never updated for a Topic Quiz in
+    // progress). This component sets it from its OWN local `selectedQuiz`
+    // signal (already populated before `quizService.setSelectedQuiz()` is
+    // even called — see onStartQuiz below), so the tab title is already
+    // correct as soon as Introduction itself loads, not only once Q1
+    // does. `milestone` is the same public catalog name already shown in
+    // this page's own title card.
+    effect(() => {
+      const milestone = this.selectedQuiz()?.milestone;
+      if (!milestone) return;
+      const next = topicQuizDocumentTitle(milestone);
+      if (this.documentTitle.getTitle() === next) return;
+      if (this.originalDocumentTitle === null) {
+        this.originalDocumentTitle = this.documentTitle.getTitle();
+      }
+      this.documentTitle.setTitle(next);
+    });
 
     // Screen-reader navigation-speech mitigation, scoped to THIS component
     // only (no app/router-level focus management, no new delay): moving
@@ -243,6 +273,20 @@ export class IntroductionComponent implements OnInit {
     // completed (currentSpinnerAttempt is null) or been superseded by a
     // newer attempt (forceCancel() checks generation ownership itself).
     this.destroyRef.onDestroy(() => this.currentSpinnerAttempt?.forceCancel());
+
+    // Never leave the tab titled for a quiz the user has left — restores
+    // whatever was genuinely there before THIS instance ever changed it.
+    // On the normal Start-the-Quiz path, QuizComponent's OWN equivalent
+    // effect re-applies the same quiz title again immediately afterward
+    // (same derivation, same quizId), so this never produces a visible
+    // flash of the generic title — it only matters when leaving the quiz
+    // entirely (e.g. back to Quiz Selection) without ever starting it.
+    this.destroyRef.onDestroy(() => {
+      if (this.originalDocumentTitle !== null) {
+        this.documentTitle.setTitle(this.originalDocumentTitle);
+        this.originalDocumentTitle = null;
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -388,13 +432,12 @@ export class IntroductionComponent implements OnInit {
   }
 
   // Build a synthetic Quiz from API metadata alone — no client bank read.
-  // summary is intentionally blank; Introduction never displayed it.
   private buildQuizFromMetadata(quizId: string): Quiz | null {
     if (!this.metadataApi.questionCountByQuiz().has(quizId)) return null;
     return {
       quizId,
       milestone: this.metadataApi.milestoneFor(quizId) ?? '',
-      summary: '',
+      summary: this.metadataApi.summaryFor(quizId),
       image: this.metadataApi.imageFor(quizId) ?? '',
       difficulty: this.metadataApi.difficultyByQuiz().get(quizId) as QuizDifficulty | undefined,
       facts: [...this.metadataApi.factsFor(quizId)]

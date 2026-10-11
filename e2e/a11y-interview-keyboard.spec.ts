@@ -549,6 +549,93 @@ test.describe('Interview Review — all three outcomes, keyboard only', () => {
  * still exercised via keyboard) to reach Results, per instructions not to
  * duplicate the full Interview setup.
  */
+/**
+ * Submit dialog focus management — NEW coverage, not a regression fix. An
+ * accessibility audit of Interview Mode found this already works (Material's
+ * own MatDialog focus trap/restore, per the dialog component's own doc
+ * comment — no custom focus code exists for it anywhere in app code), but no
+ * e2e test previously exercised the Cancel path at all. Locks in what was
+ * already correct but unverified.
+ */
+test.describe('Interview Submit dialog focus management (new coverage)', () => {
+  async function reachSubmitDialog(page: Page, count = 10): Promise<void> {
+    await page.goto('/interview');
+    await page.locator('.chip:has-text("Beginner")').first().click();
+    const boxes = page.locator('.topic-check input[type="checkbox"]');
+    await expect(boxes.first()).toBeVisible();
+    await page.locator('.topics-toolbar button:has-text("Select All")').click();
+    await expect(boxes.first()).toBeChecked();
+    await page.locator(`.chip--button:has-text("${count}")`).first().click();
+    await page.locator('.start-interview-btn').click();
+    await page.waitForURL(/\/interview\/session\/[^/?#]+/);
+    for (let i = 1; i <= count; i++) {
+      await page.locator('.io-option').first().click();
+      if (i < count) {
+        await page.locator('.pg-next').first().click();
+        await expect(page.locator('.interview-progress')).toContainText(`Question ${i + 1}`);
+      }
+    }
+    await page.locator('.show-results-btn').click();
+    await expect(page.getByText('Submit Assessment?')).toBeVisible();
+  }
+
+  test('on open, focus lands on the labelled dialog container (autoFocus: \'dialog\', consistent with this app\'s other dialogs), not left on the trigger', async ({ page }) => {
+    await reachSubmitDialog(page);
+
+    // MatDialog's focus-trap applies autoFocus asynchronously (after its own
+    // open animation) — poll rather than check once immediately on the
+    // dialog text becoming visible.
+    await expect.poll(() =>
+      page.evaluate(() => document.activeElement?.tagName)
+    ).toBe('MAT-DIALOG-CONTAINER');
+
+    const focused = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null;
+      const labelledbyId = el?.getAttribute('aria-labelledby') || '';
+      const labelText = labelledbyId ? (document.getElementById(labelledbyId)?.textContent || '').trim() : '';
+      return { role: el?.getAttribute('role'), labelText };
+    });
+    expect(focused.role).toBe('dialog');
+    expect(focused.labelText).toBe('Submit Assessment?');
+  });
+
+  test('Cancel ("Continue Assessment") restores focus to the Show Results trigger button, not <body>; session is unchanged', async ({ page }) => {
+    await reachSubmitDialog(page);
+
+    await page.locator('button:has-text("Continue Assessment")').click();
+    await expect(page.getByText('Submit Assessment?')).toBeHidden();
+
+    const after = await page.evaluate(() => ({
+      tag: document.activeElement?.tagName,
+      cls: (document.activeElement as HTMLElement)?.className || '',
+    }));
+    expect(after.tag).not.toBe('BODY');
+    expect(after.cls).toContain('show-results-btn');
+
+    // Cancelling must not have submitted — still on the session route.
+    await expect(page).toHaveURL(/\/interview\/session\//);
+  });
+
+  test('Cancel via keyboard (Tab to it, Enter) restores focus the same way', async ({ page }) => {
+    await reachSubmitDialog(page);
+
+    // Don't assume which button MatDialog's autofocus lands on first — Tab
+    // within the dialog's own focus trap until "Continue Assessment" itself
+    // has focus, bounded so a genuine regression (trap escaping the dialog,
+    // or the button never reachable) still fails instead of looping forever.
+    await tabUntil(
+      page,
+      async () => page.evaluate(() => (document.activeElement?.textContent || '').trim() === 'Continue Assessment'),
+      5
+    );
+    await page.keyboard.press('Enter');
+    await expect(page.getByText('Submit Assessment?')).toBeHidden();
+
+    const after = await page.evaluate(() => (document.activeElement as HTMLElement)?.className || '');
+    expect(after).toContain('show-results-btn');
+  });
+});
+
 test.describe('Interview Review focus management (fix regression)', () => {
   /**
    * Builder -> a Custom Interview -> answered -> submitted -> Results.

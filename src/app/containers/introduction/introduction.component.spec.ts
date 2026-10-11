@@ -32,6 +32,7 @@ describe('IntroductionComponent — API-backed question count (Stage 14 regressi
   const difficultyMap = new Map<string, string | null>([['typescript', 'beginner']]);
   const imageMap = new Map<string, string>();
   const factsMap = new Map<string, readonly string[]>();
+  const summaryMap = new Map<string, string>();
 
   const makeMetadataApi = (): any => ({
     load: jest.fn(() => of([{ quizId: 'typescript' }])),
@@ -40,9 +41,11 @@ describe('IntroductionComponent — API-backed question count (Stage 14 regressi
     difficultyByQuiz: signal(difficultyMap),
     imageByQuiz: signal(imageMap),
     factsByQuiz: signal(factsMap),
+    summaryByQuiz: signal(summaryMap),
     milestoneFor: (id: string) => milestoneMap.get(id) ?? id,
     imageFor: (id: string) => imageMap.get(id) ?? '',
-    factsFor: (id: string) => factsMap.get(id) ?? []
+    factsFor: (id: string) => factsMap.get(id) ?? [],
+    summaryFor: (id: string) => summaryMap.get(id) ?? ''
   });
 
   function configureTestBed(): void {
@@ -98,6 +101,31 @@ describe('IntroductionComponent — API-backed question count (Stage 14 regressi
 
     expect(fixture.componentInstance.selectedQuiz()?.questions).toBeUndefined();
   });
+
+  /**
+   * Regression: buildQuizFromMetadata hardcoded `summary: ''` since
+   * 13123098 ("remove introduction bank dependency"), even though
+   * TopicQuizMetadataService.summaryFor() carries the real per-quiz summary
+   * (same catalog data already used for Quiz Selection tiles) and the
+   * template's very first body paragraph
+   * (`<strong class="bold-text">{{ quiz.summary }}</strong>`) has always
+   * rendered it — so that paragraph was silently empty for every quiz, with
+   * no text for sighted users to see or an AT to read.
+   */
+  it('renders the real API summary in the opening bolded paragraph, not blank', () => {
+    summaryMap.set('typescript', 'TypeScript makes it easier to read and debug JavaScript code.');
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedQuiz()?.summary).toBe(
+      'TypeScript makes it easier to read and debug JavaScript code.'
+    );
+    const boldText = (fixture.nativeElement as HTMLElement).querySelector('.bold-text');
+    expect(boldText?.textContent?.trim()).toBe(
+      'TypeScript makes it easier to read and debug JavaScript code.'
+    );
+  });
 });
 
 /**
@@ -116,6 +144,7 @@ describe('IntroductionComponent — instant first paint from seeded metadata (St
   const difficultyMap = new Map<string, string | null>([['typescript', 'beginner']]);
   const imageMap = new Map<string, string>();
   const factsMap = new Map<string, readonly string[]>();
+  const summaryMap = new Map<string, string>();
 
   function makeMetadataApi(loadSource: Subject<any[]>): any {
     return {
@@ -125,9 +154,11 @@ describe('IntroductionComponent — instant first paint from seeded metadata (St
       difficultyByQuiz: signal(difficultyMap),
       imageByQuiz: signal(imageMap),
       factsByQuiz: signal(factsMap),
+      summaryByQuiz: signal(summaryMap),
       milestoneFor: (id: string) => milestoneMap.get(id) ?? id,
       imageFor: (id: string) => imageMap.get(id) ?? '',
-      factsFor: (id: string) => factsMap.get(id) ?? []
+      factsFor: (id: string) => factsMap.get(id) ?? [],
+      summaryFor: (id: string) => summaryMap.get(id) ?? ''
     };
   }
 
@@ -292,9 +323,11 @@ describe('IntroductionComponent — Start Quiz spinner lifecycle (cold-start fix
             difficultyByQuiz: signal(new Map()),
             imageByQuiz: signal(new Map()),
             factsByQuiz: signal(new Map()),
+            summaryByQuiz: signal(new Map()),
             milestoneFor: (id: string) => id,
             imageFor: () => '',
-            factsFor: () => []
+            factsFor: () => [],
+            summaryFor: () => ''
           }
         },
         { provide: QuizDataService, useValue: quizDataService },
@@ -574,9 +607,11 @@ describe('IntroductionComponent — bounded 45s Start Quiz timeout', () => {
             difficultyByQuiz: signal(new Map()),
             imageByQuiz: signal(new Map()),
             factsByQuiz: signal(new Map()),
+            summaryByQuiz: signal(new Map()),
             milestoneFor: (id: string) => id,
             imageFor: () => '',
-            factsFor: () => []
+            factsFor: () => [],
+            summaryFor: () => ''
           }
         },
         { provide: QuizDataService, useValue: quizDataService },
@@ -764,5 +799,125 @@ describe('IntroductionComponent — bounded 45s Start Quiz timeout', () => {
     // Let the bounded timeout actually fire after destruction — must not
     // throw or surface as an unhandled rejection.
     await jest.advanceTimersByTimeAsync(45_000);
+  });
+});
+
+/**
+ * Document-title fix: index.html's static "Angular Quiz App" title never
+ * updated for a Topic Quiz in progress. These specs use the REAL Angular
+ * `Title` service (not a fake) so `document.title` itself is the
+ * assertion target, exactly as a browser tab would show it.
+ */
+describe('IntroductionComponent — browser tab title (document-title fix)', () => {
+  const questionCountMap = new Map<string, number | null>([['dependency-injection', 7]]);
+  const milestoneMap = new Map<string, string>([['dependency-injection', 'Dependency Injection']]);
+  const difficultyMap = new Map<string, string | null>([['dependency-injection', 'intermediate']]);
+  const imageMap = new Map<string, string>();
+  const factsMap = new Map<string, readonly string[]>();
+  const summaryMap = new Map<string, string>();
+
+  const makeMetadataApi = (): any => ({
+    load: jest.fn(() => of([{ quizId: 'dependency-injection' }])),
+    questionCountByQuiz: signal(questionCountMap),
+    milestoneByQuiz: signal(milestoneMap),
+    difficultyByQuiz: signal(difficultyMap),
+    imageByQuiz: signal(imageMap),
+    factsByQuiz: signal(factsMap),
+    summaryByQuiz: signal(summaryMap),
+    milestoneFor: (id: string) => milestoneMap.get(id) ?? id,
+    imageFor: (id: string) => imageMap.get(id) ?? '',
+    factsFor: (id: string) => factsMap.get(id) ?? [],
+    summaryFor: (id: string) => summaryMap.get(id) ?? ''
+  });
+
+  function configureTestBed(): void {
+    TestBed.configureTestingModule({
+      imports: [IntroductionComponent],
+      providers: [
+        { provide: QuizDotStatusService, useValue: {} },
+        { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
+        { provide: QuizDataService, useValue: { clearQuizQuestionCache: jest.fn() } },
+        { provide: QuizNavigationService, useValue: {} },
+        { provide: QuizPersistenceService, useValue: {} },
+        {
+          provide: QuizService,
+          useValue: { clearStoredCorrectAnswersText: jest.fn(), setCheckedShuffle: jest.fn() }
+        },
+        { provide: QuizShuffleService, useValue: {} },
+        { provide: SelectedOptionService, useValue: {} },
+        { provide: TimerService, useValue: { timePerQuestion: 30 } },
+        { provide: QuizStartSpinnerService, useValue: {} },
+        { provide: ActivatedRoute, useValue: { params: of({ quizId: 'dependency-injection' }) } },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+      ]
+    });
+  }
+
+  const ORIGINAL_TITLE = 'Angular Quiz App';
+
+  beforeEach(() => {
+    document.title = ORIGINAL_TITLE;
+  });
+
+  it('sets the tab title to "<milestone> Quiz | Angular Quiz App" once the quiz loads', () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+
+    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz App');
+  });
+
+  it('restores the original title on destroy, if this instance ever changed it', () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz App');
+
+    fixture.destroy();
+    expect(document.title).toBe(ORIGINAL_TITLE);
+  });
+
+  it('never touches the title if the quiz never loads (no milestone available)', () => {
+    TestBed.configureTestingModule({
+      imports: [IntroductionComponent],
+      providers: [
+        { provide: QuizDotStatusService, useValue: {} },
+        {
+          provide: TopicQuizMetadataService,
+          useValue: {
+            load: jest.fn(() => of([])),
+            questionCountByQuiz: signal(new Map()),
+            milestoneByQuiz: signal(new Map()),
+            difficultyByQuiz: signal(new Map()),
+            imageByQuiz: signal(new Map()),
+            factsByQuiz: signal(new Map()),
+            summaryByQuiz: signal(new Map()),
+            milestoneFor: (id: string) => id,
+            imageFor: () => '',
+            factsFor: () => [],
+            summaryFor: () => ''
+          }
+        },
+        { provide: QuizDataService, useValue: { clearQuizQuestionCache: jest.fn() } },
+        { provide: QuizNavigationService, useValue: {} },
+        { provide: QuizPersistenceService, useValue: {} },
+        {
+          provide: QuizService,
+          useValue: { clearStoredCorrectAnswersText: jest.fn(), setCheckedShuffle: jest.fn() }
+        },
+        { provide: QuizShuffleService, useValue: {} },
+        { provide: SelectedOptionService, useValue: {} },
+        { provide: TimerService, useValue: { timePerQuestion: 30 } },
+        { provide: QuizStartSpinnerService, useValue: {} },
+        { provide: ActivatedRoute, useValue: { params: of({ quizId: 'nonexistent-quiz' }) } },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+      ]
+    });
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+
+    expect(document.title).toBe(ORIGINAL_TITLE);
+    fixture.destroy();
+    expect(document.title).toBe(ORIGINAL_TITLE);
   });
 });

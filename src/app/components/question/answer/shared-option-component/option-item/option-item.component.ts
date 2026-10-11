@@ -306,6 +306,49 @@ export class OptionItemComponent implements OnInit {
     return this.getDefaultOptionClasses(classes);
   }
 
+  /**
+   * The native radio's own `[checked]` state for single-answer questions —
+   * ONE consistent source of truth, derived from the SAME computed classes
+   * that already determine this option's visible incorrect/correct/
+   * selected highlight (getOptionClasses(), just above), rather than the
+   * raw `optionBinding.isSelected` flag alone.
+   *
+   * Why: `mat-radio-group`'s own value-comparison mechanism
+   * (`formControlName="selectedOptionId"` + each button's `[value]="index"`)
+   * depends on its `@ContentChildren(MatRadioButton)` query — confirmed
+   * live, via `ng.getDirectives()` + `Accessibility.getFullAXTree`, to
+   * never populate in this app (it reads back empty even during an
+   * ordinary, currently-working click, because these buttons are
+   * projected through shared-option.component.html's
+   * `*ngTemplateOutlet="optionsList"` indirection). A real click still
+   * looks correct only because the browser's own native same-`name`
+   * radio-group behaviour takes over — Material's reactive-forms sync
+   * never engages at all. On a revisit, nothing re-fires a native click,
+   * so without this, the native input's real `checked` (and the
+   * accessibility tree's reported checked state) stayed false even
+   * though `getOptionClasses()` correctly keeps painting the
+   * incorrect/correct highlight from
+   * `SelectedOptionService`'s revisit snapshot — the native control and
+   * the screen simply disagreed. Binding `[checked]` directly to
+   * `MatRadioButton` (mirroring the exact pattern `mat-checkbox` already
+   * uses for the multi-answer case) bypasses the broken ContentChildren
+   * path entirely: `MatRadioButton`'s own `checked` setter (confirmed via
+   * its library source) updates its `radioGroup`'s value AND notifies its
+   * `UniqueSelectionDispatcher` to uncheck every sibling sharing the same
+   * `name`, so mutual exclusivity and the group's own value stay correct
+   * regardless. A real user click still goes through
+   * `MatRadioButton._onInputInteraction`, unaffected by this binding,
+   * which is what still correctly propagates a live pick back into the
+   * `selectedOptionId` form control via `registerOnChange` — this binding
+   * only supplies what that native-interaction path never had a reason to
+   * run for: a revisit with no new click at all.
+   */
+  isNativelyChecked(): boolean {
+    const classes = this.getOptionClasses();
+    return !!(classes['selected-option'] || classes['correct-option'] || classes['incorrect-option'])
+      || !!this.binding().isSelected;
+  }
+
   private getTimerExpiredOptionClasses(
     classes: { [key: string]: boolean }
   ): { [key: string]: boolean } {

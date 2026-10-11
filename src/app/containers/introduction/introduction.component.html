@@ -59,9 +59,14 @@
         </h1>
 
         <mat-card-subtitle i18n>
+          <!-- No whitespace between <br /> and the next line's text: a
+               newline + indentation here becomes a literal leading-space
+               text node after the line break, which Angular's whitespace
+               collapsing doesn't remove (it's inter-word, not
+               inter-element, whitespace) — Narrator read that collapsed
+               space aloud as "space" before "Take the quiz...". -->
           <span>
-            How well versed are you in {{ quiz.milestone }}?<br />
-            Take the quiz and find out!
+            How well versed are you in {{ quiz.milestone }}?<br />Take the quiz and find out!
           </span>
         </mat-card-subtitle>
       </mat-card-title-group>

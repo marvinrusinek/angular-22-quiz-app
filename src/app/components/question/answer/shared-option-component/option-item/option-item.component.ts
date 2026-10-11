@@ -342,11 +342,51 @@ export class OptionItemComponent implements OnInit {
    * `selectedOptionId` form control via `registerOnChange` — this binding
    * only supplies what that native-interaction path never had a reason to
    * run for: a revisit with no new click at all.
+   *
+   * INVESTIGATED (live-Narrator retest), then CLOSED as not app-specific:
+   * Narrator was reported announcing "not selected", then the option text,
+   * then "selected" on a question's first mouse selection. A live
+   * checked-property interceptor traced a real, code-level gap — on the
+   * render pass immediately after a click, `getDefaultOptionClasses()`
+   * deliberately returns `correct-option: false` AND `incorrect-option:
+   * false` while `currentOptionCorrectness()` is still pending ("NEITHER
+   * CLASS WHILE UNKNOWN", see getDefaultOptionClasses's own comment,
+   * written for the color-flash case). But a minimal, framework-free HTML
+   * page — a plain `<fieldset>` + native `<input type="radio">` group, no
+   * Angular, no Material, no JS at all — reproduced the IDENTICAL "not
+   * selected … selected" sequence on its own first mouse selection in
+   * Chrome with Narrator. That result means this sequence is not a
+   * defect this app introduces, so no app-specific fix is proposed for
+   * it here — but the exact internal browser/AT cause was NOT isolated or
+   * proven; only that the same observable sequence occurs with zero app
+   * code involved. See the e2e radio-checked-state spec's own comment for
+   * what IS confirmed on the real DOM `checked` property.
+   *
+   * KEPT, for a separate and independently verified reason: whether a
+   * radio is CHECKED is a SELECTION fact, not a CORRECTNESS fact — it has
+   * nothing to do with whether /check has resolved yet. `_wasSelected`
+   * already latches synchronously, in the same change-detection pass as
+   * the click (see onChanged/onContentClick above), and already drives
+   * the exact same fast-path for the VISUAL highlight gate
+   * (shouldHighlightOption(), getDefaultOptionClasses's own local
+   * `wasSelected`) — this OR-term applies that same, already-proven
+   * synchronous source to the native checked state instead of only to
+   * color/classes. Proven via the e2e radio-checked-state spec's delayed-
+   * `/check` tests: with this term removed, REPLACING a pick while the
+   * first `/check` is still pending can leave native checked state
+   * inconsistent; with it, replacement stays correct regardless of
+   * verdict-arrival timing. It cannot introduce a new true where there
+   * wasn't already one from the existing class-based terms in the case
+   * that matters for mutual exclusivity (a replaced-away option keeps
+   * `incorrect-option: true`, by this app's own locked-question-reveal
+   * design, with or without this term), and it resets with `_wasSelected`
+   * on every question change.
    */
   isNativelyChecked(): boolean {
     const classes = this.getOptionClasses();
     return !!(classes['selected-option'] || classes['correct-option'] || classes['incorrect-option'])
-      || !!this.binding().isSelected;
+      || !!this.binding().isSelected
+      || this._wasSelected;
   }
 
   private getTimerExpiredOptionClasses(

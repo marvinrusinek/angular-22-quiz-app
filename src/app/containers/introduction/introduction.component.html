@@ -129,13 +129,22 @@
           <strong class="bold-text">{{ quiz.summary }}</strong>
         </p>
 
-        <p class="intro-centered-text">
-          Test your wits with
-          <strong class="bold-text">
-            {{ questionCountSig() }}
-          </strong>
-          timed multiple-choice {{ questionLabelSig() }}! Have fun and share!
-        </p>
+        <!-- Narrator required multiple Down Arrow presses to read this
+             sentence. Splitting the dynamic count into its own <strong>
+             (even role="presentation", which only changes the AX-tree
+             ROLE, not the fact that it was still a separate DOM/AX LEAF
+             object from its neighbors) gave 3 separate accessible leaf
+             nodes for one paragraph — confirmed wrong by a real retest,
+             not merely an AX-tree-shape assumption. A single Angular
+             interpolation producing ONE DOM text node (confirmed via CDP:
+             exactly one StaticText node, matching a plain single-text-node
+             paragraph's own AX shape) is the only structure tested so far
+             that is actually indistinguishable, at the DOM/AX level, from
+             ordinary prose Narrator already reads as one unit. Trade-off:
+             the question count is no longer individually bolded — any
+             wrapping element around just the count reintroduces a second
+             leaf node, which is the exact defect being removed here. -->
+        <p class="intro-centered-text">{{ introDetailsTextSig() }}</p>
       </div>
     </mat-card-content>
 

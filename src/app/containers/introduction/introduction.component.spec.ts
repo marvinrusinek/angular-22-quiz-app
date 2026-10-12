@@ -165,6 +165,52 @@ describe('IntroductionComponent — API-backed question count (Stage 14 regressi
     const fullText = (subtitleSpan!.textContent ?? '').replace(/\s+/g, ' ').trim();
     expect(fullText).toBe('How well versed are you in TypeScript?Take the quiz and find out!');
   });
+
+  /**
+   * REOPENED: a real localhost Narrator retest still required multiple
+   * Down Arrow presses after an earlier `role="presentation"` attempt —
+   * that attribute only changes the accessibility tree's ROLE for the
+   * `<strong>`, not the fact that it was still a separate DOM element (and
+   * therefore a separate rendered text run/leaf object) from its
+   * neighbors. The AX-tree shape alone does not establish what Narrator's
+   * own scan-mode navigation actually stops on, and claiming otherwise was
+   * an unproven assumption, now disproven by a real retest.
+   *
+   * Fix: the ENTIRE sentence is now one Angular interpolation
+   * (`introDetailsTextSig()`), compiling to exactly ONE DOM text node —
+   * confirmed via CDP to produce exactly one `StaticText` accessibility
+   * node, structurally identical to a plain single-text-node paragraph's
+   * own AX shape (see e2e-cert-claim/
+   * a11y-introduction-question-count-paragraph.spec.ts for the real-
+   * browser comparison against that baseline). No wrapping element
+   * remains around the count, because ANY wrapping element — role or not
+   * — reintroduces a second leaf object, which is the actual defect.
+   *
+   * Trade-off, not hidden: the question count is no longer individually
+   * bolded (there is no longer a separate element to apply it to); the
+   * paragraph's own centering (`.intro-centered-text`) is unaffected.
+   */
+  it('renders the full "Test your wits..." sentence as one interpolation, preserving the real dynamic count and exact wording', () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+
+    const paragraph = (fixture.nativeElement as HTMLElement).querySelector('p.intro-centered-text');
+    expect(paragraph).toBeTruthy();
+
+    // No child elements at all — exactly one text node, the actual point
+    // of this fix.
+    expect(paragraph!.childNodes.length).toBe(1);
+    expect(paragraph!.childNodes[0].nodeType).toBe(Node.TEXT_NODE);
+    expect(paragraph!.querySelector('strong')).toBeNull();
+
+    // The real, dynamic count is preserved, not hidden or replaced.
+    expect(fixture.componentInstance.questionCountSig()).toBe(10);
+
+    // Exact wording and reading order, built from the real count.
+    const fullText = (paragraph!.textContent ?? '').trim();
+    expect(fullText).toBe('Test your wits with 10 timed multiple-choice questions! Have fun and share!');
+  });
 });
 
 /**

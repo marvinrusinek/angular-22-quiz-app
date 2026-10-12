@@ -148,6 +148,16 @@ export class IntroductionComponent implements OnInit {
   readonly questionLabelSig = computed(() =>
     this.questionCountSig() === 1 ? 'question' : 'questions'
   );
+  /**
+   * The full "Test your wits..." sentence as ONE string, for a SINGLE
+   * Angular text binding — see introDetailsText's own doc comment in the
+   * template for why: splitting the dynamic count into its own element
+   * (even one marked role="presentation") still gave Narrator multiple
+   * separate stops for one paragraph, confirmed wrong by a real retest.
+   */
+  readonly introDetailsTextSig = computed(() =>
+    `Test your wits with ${this.questionCountSig()} timed multiple-choice ${this.questionLabelSig()}! Have fun and share!`
+  );
 
   // Rough completion-time estimate: question count × per-question seconds
   // (TimerService.timePerQuestion, default 30s), rounded up to whole minutes.

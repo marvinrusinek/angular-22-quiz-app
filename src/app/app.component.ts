@@ -14,7 +14,7 @@ import { ThemeService } from '@shared/services/ui/theme.service';
   imports: [RouterOutlet, GoogleSpinnerComponent],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppComponent {
   questionIndexKey = '';

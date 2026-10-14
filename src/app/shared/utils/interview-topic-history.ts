@@ -11,7 +11,7 @@ export interface AggregatedTopic {
   topicName: string;
   correct: number;
   total: number;
-  percentage: number;   // raw: correct/total across ALL attempts (0–100)
+  percentage: number; // raw: correct/total across ALL attempts (0–100)
 }
 
 /** Aggregate topicPerformance history by topic (raw correct/total sums). */
@@ -21,7 +21,7 @@ export function aggregateTopicPercentages(
   const map = new Map<string, { topicName: string; correct: number; total: number }>();
   for (const a of attempts) {
     for (const t of a.topicPerformance) {
-      if (!(t.total > 0)) continue;   // skip empty/invalid topic samples
+      if (!(t.total > 0)) continue; // skip empty/invalid topic samples
       const cur = map.get(t.topicId) ?? { topicName: t.topicName, correct: 0, total: 0 };
       cur.correct += t.correct;
       cur.total += t.total;

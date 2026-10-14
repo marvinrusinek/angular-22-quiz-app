@@ -1,5 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router, convertToParamMap, type ActivatedRouteSnapshot } from '@angular/router';
+import {
+  provideRouter,
+  Router,
+  convertToParamMap,
+  type ActivatedRouteSnapshot
+} from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { BackendInterviewSessionGuard } from './backend-interview-session-guard';
@@ -33,15 +38,22 @@ import type {
 const TOKEN = 'a'.repeat(43);
 
 const SESSION: InterviewSessionViewModel = {
-  sessionId: 'is_1', status: 'active',
-  createdAtMs: 1_700_000_000_000, expiresAtMs: 1_700_000_900_000,
-  durationSeconds: 900, remainingSeconds: 640,
+  sessionId: 'is_1',
+  status: 'active',
+  createdAtMs: 1_700_000_000_000,
+  expiresAtMs: 1_700_000_900_000,
+  durationSeconds: 900,
+  remainingSeconds: 640,
   config: { mode: 'custom', topicIds: ['rxjs'], questionCount: 1 },
-  questions: [{
-    questionId: 'rxjs:q:0', sourceQuizId: 'rxjs',
-    questionText: 'Q', type: 'single',
-    options: [{ optionId: 101, text: 'A' }]
-  }],
+  questions: [
+    {
+      questionId: 'rxjs:q:0',
+      sourceQuizId: 'rxjs',
+      questionText: 'Q',
+      type: 'single',
+      options: [{ optionId: 101, text: 'A' }]
+    }
+  ],
   answers: new Map(),
   flags: new Map()
 };
@@ -52,18 +64,44 @@ function result(over: Partial<InterviewResultViewModel> = {}): InterviewResultVi
     sessionId: 'is_1',
     submittedAtMs: Date.parse('2026-08-01T12:00:00.000Z'),
     submittedByExpiry: false,
-    total: 10, answered: 9, unanswered: 1, correct: 7, incorrect: 2, percentage: 70,
-    durationSeconds: 900, timeUsedSeconds: 540,
+    total: 10,
+    answered: 9,
+    unanswered: 1,
+    correct: 7,
+    incorrect: 2,
+    percentage: 70,
+    durationSeconds: 900,
+    timeUsedSeconds: 540,
     config: { mode: 'custom', difficulty: 'beginner', topicIds: ['rxjs'], questionCount: 10 },
     byTopic: [
-      { topicId: 'rxjs', title: 'RxJS', correct: 7, incorrect: 2, unanswered: 1, total: 10, percentage: 70 }
+      {
+        topicId: 'rxjs',
+        title: 'RxJS',
+        correct: 7,
+        incorrect: 2,
+        unanswered: 1,
+        total: 10,
+        percentage: 70
+      }
     ],
-    review: [{
-      questionId: 'rxjs:q:0', sourceQuizId: 'rxjs', questionText: 'Q?', type: 'single',
-      options: [{ optionId: 1, text: 'A' }, { optionId: 2, text: 'B' }],
-      selectedOptionIds: [1], correctOptionIds: [1], explanation: 'Because.',
-      isCorrect: true, isAnswered: true, flagged: false
-    }],
+    review: [
+      {
+        questionId: 'rxjs:q:0',
+        sourceQuizId: 'rxjs',
+        questionText: 'Q?',
+        type: 'single',
+        options: [
+          { optionId: 1, text: 'A' },
+          { optionId: 2, text: 'B' }
+        ],
+        selectedOptionIds: [1],
+        correctOptionIds: [1],
+        explanation: 'Because.',
+        isCorrect: true,
+        isAnswered: true,
+        flagged: false
+      }
+    ],
     ...over
   };
 }
@@ -74,7 +112,7 @@ let router: Router;
 let api: { resumeSession: jest.Mock; getResult: jest.Mock };
 
 const snapshot = (sessionId: string) =>
-  ({ paramMap: convertToParamMap({ sessionId }) } as unknown as ActivatedRouteSnapshot);
+  ({ paramMap: convertToParamMap({ sessionId }) }) as unknown as ActivatedRouteSnapshot;
 
 const run = (sessionId = 'is_1') => guard.canActivate(snapshot(sessionId));
 
@@ -134,10 +172,12 @@ it('ACTIVE: allows, hydrates once, and never asks the backend twice', async () =
 
 it('restores the stored question position', async () => {
   storage.write('is_1', TOKEN, 0);
-  api.resumeSession.mockReturnValue(of({
-    ...SESSION,
-    questions: [SESSION.questions[0]!, { ...SESSION.questions[0]!, questionId: 'rxjs:q:1' }]
-  }));
+  api.resumeSession.mockReturnValue(
+    of({
+      ...SESSION,
+      questions: [SESSION.questions[0]!, { ...SESSION.questions[0]!, questionId: 'rxjs:q:1' }]
+    })
+  );
   storage.write('is_1', TOKEN, 1);
 
   await run();
@@ -214,42 +254,48 @@ describe.each([
       fails(resumeCode, 409);
       resultFails('CONFLICT', 409);
 
-      expect(await run()).toBe(true);   // component renders its own error state
+      expect(await run()).toBe(true); // component renders its own error state
       const session = TestBed.inject(BackendInterviewSessionService);
       expect(session.status()).toBe('error');
       expect(session.loading()).toBe(false);
       // The service ANSWERED; the interview's state is what is unknown — so the
       // card must not say the service cannot be reached.
       expect(session.errorReason()).toBe('unconfirmed');
-      expect(api.getResult).toHaveBeenCalledTimes(1);   // no ping-pong with the Results guard
-      expect(storage.read()?.sessionId).toBe('is_1');   // the live reference survives
+      expect(api.getResult).toHaveBeenCalledTimes(1); // no ping-pong with the Results guard
+      expect(storage.read()?.sessionId).toBe('is_1'); // the live reference survives
     });
 
     it.each([
       ['500', 'BACKEND_UNAVAILABLE', 500],
       ['network failure', 'BACKEND_UNAVAILABLE', 0]
-    ] as const)('%s: stable error state with retry, reference preserved, no navigation', async (_l, code, status) => {
-      fails(resumeCode, 409);
-      resultFails(code, status);
+    ] as const)(
+      '%s: stable error state with retry, reference preserved, no navigation',
+      async (_l, code, status) => {
+        fails(resumeCode, 409);
+        resultFails(code, status);
 
-      expect(await run()).toBe(true);
-      const session = TestBed.inject(BackendInterviewSessionService);
-      expect(session.status()).toBe('error');
-      expect(session.errorReason()).toBe('unconfirmed');
-      expect(session.loading()).toBe(false);
-      expect(storage.read()?.sessionId).toBe('is_1');
-    });
+        expect(await run()).toBe(true);
+        const session = TestBed.inject(BackendInterviewSessionService);
+        expect(session.status()).toBe('error');
+        expect(session.errorReason()).toBe('unconfirmed');
+        expect(session.loading()).toBe(false);
+        expect(storage.read()?.sessionId).toBe('is_1');
+      }
+    );
 
     it.each([
       ['401 invalid token', 'UNAUTHORIZED', 401],
       ['404 unknown session', 'UNAUTHORIZED', 404]
-    ] as const)('%s: dead reference cleared and sent to the builder — never to Results', async (_l, code, status) => {
-      fails(resumeCode, 409);
-      resultFails(code, status);
+    ] as const)(
+      '%s: dead reference cleared and sent to the builder — never to Results',
+      async (_l, code, status) => {
+        fails(resumeCode, 409);
+        resultFails(code, status);
 
-      expect(url(await run())).toBe('/interview');
-      expect(storage.read()).toBeNull();
-    });
+        expect(url(await run())).toBe('/interview');
+        expect(storage.read()).toBeNull();
+      }
+    );
 
     it('a response that is not a result at all (malformed) is not rendered as one', async () => {
       fails(resumeCode, 409);
@@ -302,7 +348,7 @@ it('BACKEND UNREACHABLE: allows the retry state and PRESERVES the reference', as
   // so this is NOT the "could not confirm the interview's status" case.
   expect(session.errorReason()).toBe('unreachable');
   expect(storage.read()?.sessionId).toBe('is_1');
-  expect(api.getResult).not.toHaveBeenCalled();   // nothing finished was claimed, nothing to confirm
+  expect(api.getResult).not.toHaveBeenCalled(); // nothing finished was claimed, nothing to confirm
 });
 
 it('a MALFORMED reference is treated as absent and removed', async () => {
@@ -314,10 +360,16 @@ it('a MALFORMED reference is treated as absent and removed', async () => {
 });
 
 it('a reference carrying answer-bearing fields is rejected outright', async () => {
-  sessionStorage.setItem(SK_INTERVIEW_SESSION_REF, JSON.stringify({
-    version: 2, sessionId: 'is_1', sessionToken: TOKEN, currentIndex: 0,
-    correctOptionIds: [101]
-  }));
+  sessionStorage.setItem(
+    SK_INTERVIEW_SESSION_REF,
+    JSON.stringify({
+      version: 2,
+      sessionId: 'is_1',
+      sessionToken: TOKEN,
+      currentIndex: 0,
+      correctOptionIds: [101]
+    })
+  );
 
   expect(url(await run())).toBe('/interview');
   expect(api.resumeSession).not.toHaveBeenCalled();

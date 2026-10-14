@@ -1,18 +1,10 @@
-﻿import { inject, Service, signal } from '@angular/core';
+import { inject, Service, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { firstValueFrom, Observable, of, throwError } from 'rxjs';
-import {
-  catchError,
-  distinctUntilChanged,
-  filter,
-  map,
-  switchMap,
-  take,
-} from 'rxjs/operators';
+import { catchError, distinctUntilChanged, filter, map, switchMap, take } from 'rxjs/operators';
 
 import { Option, QuestionType, Quiz, QuizQuestion } from '@shared/models';
 import { resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
-
 
 import { TopicQuizQuestionsService } from '@shared/services/api/topic-quiz-questions.service';
 import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
@@ -105,8 +97,7 @@ export class QuizDataService {
         // API-sourced, like every other content path since S4.
         return this.topicQuizQuestions.loadQuestions(quizId).pipe(
           map((views) => {
-            const base = questionsFromApiViews(views)
-              .map((q, i) => this.normalizeQuestion(q, i));
+            const base = questionsFromApiViews(views).map((q, i) => this.normalizeQuestion(q, i));
             this.baseQuizQuestionCache.set(quizId, base);
             this.quizService.setCanonicalQuestions(quizId, base);
             return this.cloneQuestions(this.quizService.shuffledQuestions!);
@@ -136,8 +127,8 @@ export class QuizDataService {
         }
 
         // Build normalized base questions (clone options per question)
-        const baseQuestions: QuizQuestion[] = questionsFromApiViews(views).map(
-          (question, index) => this.normalizeQuestion(question, index)
+        const baseQuestions: QuizQuestion[] = questionsFromApiViews(views).map((question, index) =>
+          this.normalizeQuestion(question, index)
         );
 
         this.baseQuizQuestionCache.set(quizId, this.cloneQuestions(baseQuestions));
@@ -283,7 +274,7 @@ export class QuizDataService {
         ...(option.correct === undefined ? {} : { correct: isOptionCorrect(option) }),
         selected: option.selected === true,
         highlight: option.highlight ?? false,
-        showIcon: option.showIcon ?? false,
+        showIcon: option.showIcon ?? false
       };
     });
   }
@@ -311,7 +302,7 @@ export class QuizDataService {
     const finalOptions = hasAnswerKey
       ? sanitizedOptions.map((o) => ({
           ...o,
-          correct: correctIds.has(Number(o.optionId)),
+          correct: correctIds.has(Number(o.optionId))
         }))
       : sanitizedOptions;
 
@@ -326,7 +317,7 @@ export class QuizDataService {
         : undefined,
       selectedOptionIds: Array.isArray(question.selectedOptionIds)
         ? [...question.selectedOptionIds]
-        : undefined,
+        : undefined
     };
   }
 
@@ -344,7 +335,7 @@ export class QuizDataService {
         : undefined,
       selectedOptionIds: Array.isArray(question.selectedOptionIds)
         ? [...question.selectedOptionIds]
-        : undefined,
+        : undefined
     }));
   }
 
@@ -377,9 +368,9 @@ export class QuizDataService {
       return of(this.cloneQuestions(cached));
     }
 
-    return this.topicQuizQuestions.loadQuestions(quizId).pipe(
-      map((views) => this.ensureBaseQuestions(quizId, questionsFromApiViews(views)))
-    );
+    return this.topicQuizQuestions
+      .loadQuestions(quizId)
+      .pipe(map((views) => this.ensureBaseQuestions(quizId, questionsFromApiViews(views))));
   }
 
   private ensureBaseQuestions(quizId: string, apiQuestions: QuizQuestion[]): QuizQuestion[] {
@@ -450,13 +441,16 @@ export class QuizDataService {
           ...option,
           selected: option.selected === true,
           highlight: option.highlight ?? false,
-          showIcon: option.showIcon ?? false,
+          showIcon: option.showIcon ?? false
         }));
 
         question.options = [...options];
         // Only align an answer key that actually exists — see normalizeQuestion.
         if (Array.isArray(question.answer) && question.answer.length > 0) {
-          question.answer = this.quizShuffleService.alignAnswersWithOptions(question.answer, options);
+          question.answer = this.quizShuffleService.alignAnswersWithOptions(
+            question.answer,
+            options
+          );
         }
 
         return [question, options] as [QuizQuestion | null, Option[] | null];
@@ -604,10 +598,7 @@ export class QuizDataService {
     // removed along with the client-bank catalog it read from
     // (quizzesSig) — it could only ever contribute a value when the bank
     // was loaded, which no production path does anymore.
-    const baseQuiz =
-      sourceQuiz ??
-      this.selectedQuizSig() ??
-      this.quizService.selectedQuiz;
+    const baseQuiz = sourceQuiz ?? this.selectedQuizSig() ?? this.quizService.selectedQuiz;
 
     if (!baseQuiz) return;
 
@@ -615,13 +606,13 @@ export class QuizDataService {
       ...question,
       options: Array.isArray(question.options)
         ? question.options.map((option) => ({ ...option }))
-        : [],
+        : []
     }));
 
     const syncedQuiz: Quiz = {
       ...baseQuiz,
       quizId: baseQuiz.quizId ?? quizId,
-      questions: sanitizedQuestions,
+      questions: sanitizedQuestions
     };
 
     this.setSelectedQuiz(syncedQuiz);

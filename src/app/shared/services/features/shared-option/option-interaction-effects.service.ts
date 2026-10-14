@@ -125,7 +125,9 @@ export class OptionInteractionEffectsService {
     // mat-radio-button's (change) event on subsequent clicks.
     try {
       h.form?.get('selectedOptionId')?.setValue(null, { emitEvent: false });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   /**
@@ -179,7 +181,7 @@ export class OptionInteractionEffectsService {
         // in-place mutations are invisible to change detection and
         // leftover inline styles + cssClasses persist on DOM-reused
         // elements (mat-checkbox keeps mat-mdc-checkbox-checked, etc.).
-        h.optionBindings.set(current.map((b: OptionBindings) => b ? { ...b } : b));
+        h.optionBindings.set(current.map((b: OptionBindings) => (b ? { ...b } : b)));
         h.cdRef.markForCheck();
       });
     }

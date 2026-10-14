@@ -123,7 +123,9 @@ export function toEarnedEntry(
   } = {
     questionText,
     phase: state.phase,
-    selectedVerdicts: [...state.selectedVerdicts].map(([text, correct]) => [text, correct] as const),
+    selectedVerdicts: [...state.selectedVerdicts].map(
+      ([text, correct]) => [text, correct] as const
+    ),
     isResolvedCorrect: state.isResolvedCorrect ?? null
   };
 
@@ -147,10 +149,7 @@ export function saveEarnedVerdict(
 
   try {
     const existing = readPayload(quizId);
-    const merged = [
-      ...existing.filter((e) => e.questionText !== entry.questionText),
-      entry
-    ];
+    const merged = [...existing.filter((e) => e.questionText !== entry.questionText), entry];
     const payload: EarnedVerdictPayload = { v: SCHEMA_VERSION, quizId, entries: merged };
     sessionStorage.setItem(keyFor(quizId), JSON.stringify(payload));
   } catch {
@@ -178,7 +177,7 @@ export function readPayload(quizId: string): readonly EarnedVerdictEntry[] {
 
     return payload['entries'].filter(validEntry);
   } catch {
-    return [];   // malformed JSON — discard
+    return []; // malformed JSON — discard
   }
 }
 

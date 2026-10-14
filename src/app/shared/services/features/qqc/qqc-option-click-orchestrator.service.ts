@@ -1,9 +1,8 @@
-﻿import { inject, Service } from '@angular/core';
+import { inject, Service } from '@angular/core';
 
 import { Option, QuestionType, QuizQuestion, SelectedOption } from '@shared/models';
 
 import { SK_DOT_CONFIRMED } from '@shared/constants/session-keys';
-
 
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { QuizService } from '@shared/services/data/quiz.service';
@@ -184,16 +183,23 @@ export class QqcOptionClickOrchestratorService {
 
     const canonicalOpts: Option[] = (question.options ?? []).map((o, i) => {
       const stableId = getStableId(o, i);
-      const isSelected = currentSelectedFromService.some(sel => {
+      const isSelected = currentSelectedFromService.some((sel) => {
         const selId = sel.optionId;
         const oId = o.optionId;
-        if (selId != null && oId != null && String(selId) !== '-1' && String(oId) !== '-1' && String(selId) === String(oId)) return true;
+        if (
+          selId != null &&
+          oId != null &&
+          String(selId) !== '-1' &&
+          String(oId) !== '-1' &&
+          String(selId) === String(oId)
+        )
+          return true;
         return getStableId(sel, (sel as any).index ?? -1) === stableId;
       });
 
       return {
         ...o,
-        optionId: (o.optionId != null && String(o.optionId) !== '-1') ? Number(o.optionId) : i,
+        optionId: o.optionId != null && String(o.optionId) !== '-1' ? Number(o.optionId) : i,
         selected: isSelected
       };
     });
@@ -276,12 +282,12 @@ export class QqcOptionClickOrchestratorService {
     const { canonicalOpts, question, questionIndex, evtOpt, isMultiForSelection } = params;
     const getStableId = (o: Option | SelectedOption, idx?: number) => this.getStableId(o, idx);
 
-    const correctOpts = canonicalOpts.filter(o => !!o.correct);
+    const correctOpts = canonicalOpts.filter((o) => !!o.correct);
     const selKeys = new Set(
-      canonicalOpts.filter(o => o.selected).map((o, i) => getStableId(o, i))
+      canonicalOpts.filter((o) => o.selected).map((o, i) => getStableId(o, i))
     );
     const selectedCorrectCount = correctOpts.filter((o) => {
-      const originalIdx = (question.options ?? []).findIndex(orig => orig === o);
+      const originalIdx = (question.options ?? []).findIndex((orig) => orig === o);
       return selKeys.has(getStableId(o, originalIdx !== -1 ? originalIdx : -1));
     }).length;
 
@@ -304,21 +310,23 @@ export class QqcOptionClickOrchestratorService {
             .filter((t: string) => !!t);
           if (rawCorrectTexts.length > 0) {
             const selTexts = new Set(
-              canonicalOpts.filter(o => o.selected).map((o: any) => norm(o?.text)).filter((t: string) => !!t)
+              canonicalOpts
+                .filter((o) => o.selected)
+                .map((o: any) => norm(o?.text))
+                .filter((t: string) => !!t)
             );
             rawAllCorrect = rawCorrectTexts.every((t: string) => selTexts.has(t));
           }
         }
-      } catch { /* trust canonical */ }
+      } catch {
+        /* trust canonical */
+      }
     }
-    const allCorrect =
-      isMultiForSelection
-        ? correctOpts.length > 0
-          && selectedCorrectCount === correctOpts.length
-          && rawAllCorrect
-        : !!evtOpt?.correct;
+    const allCorrect = isMultiForSelection
+      ? correctOpts.length > 0 && selectedCorrectCount === correctOpts.length && rawAllCorrect
+      : !!evtOpt?.correct;
 
-    const hasAnySelection = canonicalOpts.some(o => o.selected);
+    const hasAnySelection = canonicalOpts.some((o) => o.selected);
     const enableNext = isMultiForSelection ? hasAnySelection : allCorrect;
 
     return { allCorrect, enableNext, hasAnySelection };
@@ -331,7 +339,10 @@ export class QqcOptionClickOrchestratorService {
   isOptionLocked(questionIndex: number, optionId: number | undefined): boolean {
     try {
       const lockIdNum = Number(optionId);
-      if (Number.isFinite(lockIdNum) && this.selectedOptionService.isOptionLocked(questionIndex, lockIdNum)) {
+      if (
+        Number.isFinite(lockIdNum) &&
+        this.selectedOptionService.isOptionLocked(questionIndex, lockIdNum)
+      ) {
         return true;
       }
     } catch (err: unknown) {
@@ -359,20 +370,22 @@ export class QqcOptionClickOrchestratorService {
    * Uses shuffle mapping first, then falls back to text-based lookup.
    * Extracted from onOptionClicked post-click RAF block (lines 2296â€“2317).
    */
-  resolvePristineQuestion(params: {
-    quizId: string;
-    questionText: string | undefined;
-  }): { origIdx: number | null; pristine: QuizQuestion | null } {
+  resolvePristineQuestion(params: { quizId: string; questionText: string | undefined }): {
+    origIdx: number | null;
+    pristine: QuizQuestion | null;
+  } {
     const qIdx = this.quizService.getCurrentQuestionIndex();
 
     let origIdx = this.quizShuffleService.toOriginalIndex(params.quizId, qIdx);
-    let pristine = (origIdx !== null) ? this.quizService.getPristineQuestion(origIdx) : null;
+    let pristine = origIdx !== null ? this.quizService.getPristineQuestion(origIdx) : null;
 
     // Try to find origIdx by question text if mapping fails
     if (!pristine && params.questionText) {
       const canonical = this.quizService.quizDataLoader.getCanonicalQuestions(params.quizId);
       const normalize = (s: string) => s.replace(/\s/g, '').toLowerCase();
-      const foundIdx = canonical.findIndex(q => normalize(q.questionText) === normalize(params.questionText!));
+      const foundIdx = canonical.findIndex(
+        (q) => normalize(q.questionText) === normalize(params.questionText!)
+      );
       if (foundIdx !== -1) {
         origIdx = foundIdx;
         pristine = canonical[foundIdx];
@@ -396,8 +409,17 @@ export class QqcOptionClickOrchestratorService {
     event: { option: SelectedOption | null; index: number; checked: boolean };
     quizId: string;
     generateFeedbackText: (q: QuizQuestion) => Promise<string>;
-    postClickTasks: (opt: SelectedOption, idx: number, checked: boolean, wasPreviouslySelected: boolean, questionIndex: number) => Promise<void>;
-    handleCoreSelection: (ev: { option: SelectedOption; index: number; checked: boolean }, idx: number) => void;
+    postClickTasks: (
+      opt: SelectedOption,
+      idx: number,
+      checked: boolean,
+      wasPreviouslySelected: boolean,
+      questionIndex: number
+    ) => Promise<void>;
+    handleCoreSelection: (
+      ev: { option: SelectedOption; index: number; checked: boolean },
+      idx: number
+    ) => void;
     markBindingSelected: (opt: Option) => void;
     refreshFeedbackFor: (opt: Option) => void;
   }): Promise<void> {
@@ -410,7 +432,13 @@ export class QqcOptionClickOrchestratorService {
     });
 
     await params.generateFeedbackText(params.question);
-    await params.postClickTasks(params.evtOpt as SelectedOption, params.evtIdx, true, false, params.idx);
+    await params.postClickTasks(
+      params.evtOpt as SelectedOption,
+      params.evtIdx,
+      true,
+      false,
+      params.idx
+    );
     if (params.event.option) {
       params.handleCoreSelection(
         params.event as { option: SelectedOption; index: number; checked: boolean },
@@ -424,10 +452,7 @@ export class QqcOptionClickOrchestratorService {
   /**
    * Applies next-button state and answered/selection flags after correctness is computed.
    */
-  applyCorrectnessState(params: {
-    enableNext: boolean;
-    isMultiForSelection: boolean;
-  }): void {
+  applyCorrectnessState(params: { enableNext: boolean; isMultiForSelection: boolean }): void {
     if (params.enableNext) {
       if (params.isMultiForSelection) {
         this.nextButtonStateService.forceEnable(800);
@@ -446,9 +471,7 @@ export class QqcOptionClickOrchestratorService {
    * Builds the selected-options set for highlighting from canonical options.
    */
   buildSelectedKeysSet(canonicalOpts: Option[]): Set<string | number> {
-    return new Set(
-      canonicalOpts.filter(o => o.selected).map((o, i) => this.getStableId(o, i))
-    );
+    return new Set(canonicalOpts.filter((o) => o.selected).map((o, i) => this.getStableId(o, i)));
   }
 
   /**
@@ -479,13 +502,14 @@ export class QqcOptionClickOrchestratorService {
     hasAnySelection: boolean;
     msgTok: number;
   } {
-    const { question, questionIndex, evtIdx, evtOpt, checked, optionsToDisplay, totalQuestions } = params;
+    const { question, questionIndex, evtIdx, evtOpt, checked, optionsToDisplay, totalQuestions } =
+      params;
     let msgTok = params.msgTok;
 
     // Build a mutable snapshot of options
     const optionsNow: Option[] =
-      optionsToDisplay?.map(o => ({ ...o })) ??
-      params.currentQuestionOptions?.map(o => ({ ...o })) ??
+      optionsToDisplay?.map((o) => ({ ...o })) ??
+      params.currentQuestionOptions?.map((o) => ({ ...o })) ??
       [];
 
     // Apply local selection state
@@ -571,9 +595,17 @@ export class QqcOptionClickOrchestratorService {
   ): void {
     try {
       const selectionToPersist = { ...evtOpt, index: evtIdx };
-      this.selectedOptionService.setSelectedOption(selectionToPersist, questionIndex, undefined, isMultiForSelection);
+      this.selectedOptionService.setSelectedOption(
+        selectionToPersist,
+        questionIndex,
+        undefined,
+        isMultiForSelection
+      );
     } catch (err: unknown) {
-      console.error('QqcOptionClickOrchestratorService.performSynchronousClickFlow selection-persist failed:', err);
+      console.error(
+        'QqcOptionClickOrchestratorService.performSynchronousClickFlow selection-persist failed:',
+        err
+      );
     }
   }
 
@@ -615,7 +647,9 @@ export class QqcOptionClickOrchestratorService {
       if (this.selectedOptionService.isQuestionLocked?.(questionIndex)) {
         effectiveEnableNext = true;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     this.applyCorrectnessState({ enableNext: effectiveEnableNext, isMultiForSelection });
   }
 

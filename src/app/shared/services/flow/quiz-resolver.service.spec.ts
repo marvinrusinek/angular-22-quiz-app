@@ -29,7 +29,13 @@ describe('QuizResolverService', () => {
   }
 
   const METADATA_ENTRIES = [
-    { quizId: 'angular', milestone: 'Angular', image: 'https://cdn.test/angular.png', difficulty: 'beginner', facts: ['fact 1'] },
+    {
+      quizId: 'angular',
+      milestone: 'Angular',
+      image: 'https://cdn.test/angular.png',
+      difficulty: 'beginner',
+      facts: ['fact 1']
+    },
     { quizId: 'rxjs', milestone: 'RxJS', difficulty: 'intermediate' }
   ];
 
@@ -43,8 +49,8 @@ describe('QuizResolverService', () => {
         QuizResolverService,
         { provide: Router, useValue: router },
         { provide: QuizService, useValue: quizService },
-        { provide: TopicQuizMetadataService, useValue: metadataApi },
-      ],
+        { provide: TopicQuizMetadataService, useValue: metadataApi }
+      ]
     });
     resolver = TestBed.inject(QuizResolverService);
   });
@@ -94,7 +100,13 @@ describe('QuizResolverService', () => {
   });
 
   it('fast path: an already-selected quiz with a matching id is returned without calling metadataApi.load()', (done) => {
-    const active: Quiz = { quizId: 'angular', milestone: 'Angular', summary: '', image: '', questions: [] };
+    const active: Quiz = {
+      quizId: 'angular',
+      milestone: 'Angular',
+      summary: '',
+      image: '',
+      questions: []
+    };
     quizService.selectedQuiz = active;
 
     resolver.resolve(makeRoute({ quizId: 'angular' }), mockRouterState).subscribe((result) => {
@@ -105,7 +117,13 @@ describe('QuizResolverService', () => {
   });
 
   it('does NOT take the fast path when the active quiz id does not match the route', (done) => {
-    quizService.selectedQuiz = { quizId: 'other', milestone: '', summary: '', image: '', questions: [] };
+    quizService.selectedQuiz = {
+      quizId: 'other',
+      milestone: '',
+      summary: '',
+      image: '',
+      questions: []
+    };
 
     resolver.resolve(makeRoute({ quizId: 'angular' }), mockRouterState).subscribe((result) => {
       expect(metadataApi.load).toHaveBeenCalled();

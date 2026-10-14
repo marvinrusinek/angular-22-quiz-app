@@ -155,8 +155,13 @@ export function computePracticeResult(params: {
   authorizedCorrectTexts: (question: QuizQuestion) => readonly string[];
 }): PracticeResult {
   const {
-    sessionId, questions, answersByIndex, completedAt, topicNameFor,
-    authorizedResolved, authorizedCorrectTexts
+    sessionId,
+    questions,
+    answersByIndex,
+    completedAt,
+    topicNameFor,
+    authorizedResolved,
+    authorizedCorrectTexts
   } = params;
 
   const total = questions.length;
@@ -177,8 +182,13 @@ export function computePracticeResult(params: {
     const topicId = question.sourceQuizId ?? 'unknown';
     const topicName = topicNameFor(topicId);
 
-    const entry =
-      perTopicMap.get(topicId) ?? { topicId, topicName, correct: 0, total: 0, percentage: 0 };
+    const entry = perTopicMap.get(topicId) ?? {
+      topicId,
+      topicName,
+      correct: 0,
+      total: 0,
+      percentage: 0
+    };
     entry.total++;
     if (isCorrect) entry.correct++;
     perTopicMap.set(topicId, entry);

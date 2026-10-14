@@ -76,7 +76,10 @@ function configure(shuffled: boolean): void {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: TOPIC_QUIZ_VERDICT_ADAPTER, useValue: capturingAdapter() },
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
 
@@ -96,7 +99,10 @@ function configure(shuffled: boolean): void {
 const answerAt = (displayIndex: number, texts: string[]) =>
   selectedOptionService.setUiSelectedTextsForQuestion(displayIndex, texts);
 
-beforeEach(() => { submitted = []; configure(true); });
+beforeEach(() => {
+  submitted = [];
+  configure(true);
+});
 afterEach(() => setQuizDataCache([], []));
 
 describe('submitted identity follows the DISPLAYED question (shuffled)', () => {
@@ -113,13 +119,15 @@ describe('submitted identity follows the DISPLAYED question (shuffled)', () => {
     answerAt(0, ['a']);
     answerAt(0, ['a', 'b']);
 
-    expect(submitted.map((s) => s.questionText))
-      .toEqual(['Q3 which statements', 'Q3 which statements']);
+    expect(submitted.map((s) => s.questionText)).toEqual([
+      'Q3 which statements',
+      'Q3 which statements'
+    ]);
     expect(submitted.map((s) => s.texts.length)).toEqual([1, 2]);
   });
 
   it('submits the real Q1 under its own identity when it is displayed', () => {
-    answerAt(1, ['x']);   // display 1 is Q1
+    answerAt(1, ['x']); // display 1 is Q1
 
     expect(submitted[0].questionText).toBe('Q1 what is DI');
   });
@@ -154,7 +162,10 @@ describe('submitted identity follows the DISPLAYED question (shuffled)', () => {
 });
 
 describe('non-shuffle behaviour is unchanged', () => {
-  beforeEach(() => { submitted = []; configure(false); });
+  beforeEach(() => {
+    submitted = [];
+    configure(false);
+  });
 
   it('submits the canonical question when shuffle is off', () => {
     answerAt(0, ['a']);

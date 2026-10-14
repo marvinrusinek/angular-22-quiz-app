@@ -59,8 +59,8 @@ describe('QuizService pristine helpers', () => {
         options: [
           { optionId: 1, text: '3', correct: false } as any,
           { optionId: 2, text: '4', correct: true } as any,
-          { optionId: 3, text: '5', correct: false } as any,
-        ],
+          { optionId: 3, text: '5', correct: false } as any
+        ]
       } as any,
       {
         questionText: 'Which fruits are red?',
@@ -70,10 +70,10 @@ describe('QuizService pristine helpers', () => {
           { optionId: 1, text: 'Apple', correct: true } as any,
           { optionId: 2, text: 'Banana', correct: false } as any,
           { optionId: 3, text: 'Strawberry', correct: true } as any,
-          { optionId: 4, text: 'Blueberry', correct: false } as any,
-        ],
-      } as any,
-    ],
+          { optionId: 4, text: 'Blueberry', correct: false } as any
+        ]
+      } as any
+    ]
   } as Quiz;
 
   beforeEach(() => {
@@ -81,8 +81,11 @@ describe('QuizService pristine helpers', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
-      ],
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
+      ]
     });
     service = TestBed.inject(QuizService);
     // Replace real quiz data with the test fixture; reset memo caches so

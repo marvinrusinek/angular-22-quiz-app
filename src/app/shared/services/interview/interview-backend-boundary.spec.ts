@@ -66,7 +66,9 @@ describe('the legacy Interview pipeline is gone', () => {
   });
 
   it('computeInterviewResult is no longer exported', () => {
-    expect(read('shared/utils/interview-scoring.ts')).not.toContain('export function computeInterviewResult');
+    expect(read('shared/utils/interview-scoring.ts')).not.toContain(
+      'export function computeInterviewResult'
+    );
   });
 
   it('the review-snapshot builders are gone', () => {
@@ -132,8 +134,9 @@ describe('Topic Quizzes are untouched', () => {
 
   it('still score locally over the local questions', () => {
     expect(read('shared/services/data/quiz-scoring.service.ts')).toBeTruthy();
-    expect(read('shared/services/features/practice/practice-session.service.ts'))
-      .toContain('AssessmentBuilderService');
+    expect(read('shared/services/features/practice/practice-session.service.ts')).toContain(
+      'AssessmentBuilderService'
+    );
   });
 });
 

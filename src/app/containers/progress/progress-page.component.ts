@@ -78,14 +78,16 @@ export class ProgressPageComponent implements OnInit {
     const milestones = this.metadataApi.milestoneByQuiz();
     const counts = this.metadataApi.questionCountByQuiz();
 
-    return [...difficulties.keys()].map((quizId): Quiz => ({
-      quizId,
-      milestone: milestones.get(quizId) ?? quizId,
-      summary: '',
-      image: '',
-      difficulty: (difficulties.get(quizId) ?? undefined) as QuizDifficulty | undefined,
-      questionCount: counts.get(quizId) ?? undefined
-    }));
+    return [...difficulties.keys()].map(
+      (quizId): Quiz => ({
+        quizId,
+        milestone: milestones.get(quizId) ?? quizId,
+        summary: '',
+        image: '',
+        difficulty: (difficulties.get(quizId) ?? undefined) as QuizDifficulty | undefined,
+        questionCount: counts.get(quizId) ?? undefined
+      })
+    );
   });
 
   /** Completion summary (overall, difficulty, stats, strongest). Same service Quiz Selection used. */

@@ -1,4 +1,4 @@
-﻿import { Service } from '@angular/core';
+import { Service } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 
 import { Option, OptionBindings, QuestionPayload, QuizQuestion } from '@shared/models';
@@ -14,15 +14,12 @@ import { isOptionCorrect } from '@shared/utils/is-option-correct';
  */
 @Service()
 export class QqcDisplayStateManagerService {
-
   /**
    * Builds display-ready options from a source question.
    * Returns null if the question has no valid options.
    * Extracted from setOptionsToDisplay().
    */
-  buildOptionsToDisplay(
-    sourceQuestion: QuizQuestion | null | undefined
-  ): Option[] | null {
+  buildOptionsToDisplay(sourceQuestion: QuizQuestion | null | undefined): Option[] | null {
     if (!sourceQuestion || !Array.isArray(sourceQuestion.options)) return null;
 
     const validOptions = (sourceQuestion.options ?? []).filter(
@@ -48,10 +45,7 @@ export class QqcDisplayStateManagerService {
    * Returns null if no change is needed.
    * Extracted from updateOptionsSafely().
    */
-  prepareOptionSwap(params: {
-    newOptions: Option[];
-    currentOptionsJson: string;
-  }): {
+  prepareOptionSwap(params: { newOptions: Option[]; currentOptionsJson: string }): {
     needsSwap: boolean;
     cleanedOptions: Option[];
     formGroup: FormGroup;
@@ -71,10 +65,7 @@ export class QqcDisplayStateManagerService {
       // Rebuild the reactive form
       const formGroup = new FormGroup({});
       for (const o of params.newOptions) {
-        formGroup.addControl(
-          `opt_${o.optionId}`,
-          new FormControl(false)
-        );
+        formGroup.addControl(`opt_${o.optionId}`, new FormControl(false));
       }
 
       return {
@@ -118,7 +109,8 @@ export class QqcDisplayStateManagerService {
       incomingQuestionText &&
       incomingQuestionText === currentQuestionText &&
       params.isAlreadyRendered
-    ) return null;
+    )
+      return null;
 
     const { question, options, explanation } = params.payload;
 
@@ -183,7 +175,7 @@ export class QqcDisplayStateManagerService {
         return answerValues.includes(option.value);
       }
 
-      return undefined;   // unknown, not "not correct"
+      return undefined; // unknown, not "not correct"
     };
 
     return options.map((option, index) => {
@@ -220,7 +212,9 @@ export class QqcDisplayStateManagerService {
     visibilityRestoreInProgress: boolean;
     suppressDisplayStateUntil: number;
   }): boolean {
-    return params.visibilityRestoreInProgress || performance.now() < params.suppressDisplayStateUntil;
+    return (
+      params.visibilityRestoreInProgress || performance.now() < params.suppressDisplayStateUntil
+    );
   }
 
   /**
@@ -232,15 +226,16 @@ export class QqcDisplayStateManagerService {
     optionBindings: OptionBindings[],
     optionsToDisplay: Option[]
   ): { optionBindings: OptionBindings[]; optionsToDisplay: Option[] } {
-    const disabledBindings = (optionBindings ?? []).map(binding => {
+    const disabledBindings = (optionBindings ?? []).map((binding) => {
       const updated = { ...binding, disabled: true } as OptionBindings;
       if (updated.option) {
         updated.option = { ...updated.option, active: false } as Option;
       }
       return updated;
     });
-    const disabledOptions = (optionsToDisplay ?? []).map(option => ({
-      ...option, active: false
+    const disabledOptions = (optionsToDisplay ?? []).map((option) => ({
+      ...option,
+      active: false
     }));
     return { optionBindings: disabledBindings, optionsToDisplay: disabledOptions };
   }

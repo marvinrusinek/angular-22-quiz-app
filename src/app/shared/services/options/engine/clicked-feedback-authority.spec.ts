@@ -11,7 +11,10 @@ import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import {
+  IDLE_VERDICT_STATE,
+  type QuestionVerdictState
+} from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * The feedback shown for the option the user just clicked.
@@ -33,8 +36,10 @@ const QUESTION = 'Select every operator';
 let service: SocAnswerProcessingService;
 let verdictState: QuestionVerdictState;
 
-const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState =>
-  ({ ...IDLE_VERDICT_STATE, ...over });
+const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState => ({
+  ...IDLE_VERDICT_STATE,
+  ...over
+});
 
 const OPTIONS = [
   { optionId: 1, text: 'map', correct: true },
@@ -49,7 +54,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       {
         provide: QuizService,
@@ -72,7 +80,10 @@ beforeEach(() => {
           clickConfirmedDotStatus: new Map()
         }
       },
-      { provide: TimerService, useValue: { stopTimer: () => undefined, resetTimer: () => undefined } },
+      {
+        provide: TimerService,
+        useValue: { stopTimer: () => undefined, resetTimer: () => undefined }
+      },
       { provide: FeedbackService, useValue: { setCorrectMessage: () => 'correct message' } },
       { provide: QuestionVerdictService, useValue: { verdictFor: () => verdictState } }
     ]
@@ -92,13 +103,13 @@ function comp(options = OPTIONS) {
 }
 
 /** Invoke the private builder and read the correctness it stamped. */
-function clickedCorrect(
-  c: any,
-  index: number,
-  effectiveCorrectIndices: number[]
-): boolean {
+function clickedCorrect(c: any, index: number, effectiveCorrectIndices: number[]): boolean {
   (service as any).buildMultiAnswerFeedbackDisplay(
-    c, index, { option: c.optionsToDisplay[index] }, effectiveCorrectIndices, 'feedback'
+    c,
+    index,
+    { option: c.optionsToDisplay[index] },
+    effectiveCorrectIndices,
+    'feedback'
   );
   return c._feedbackDisplay.config.selectedOption.correct;
 }
@@ -129,7 +140,10 @@ describe('the clicked option carries its own verdict', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     expect(clickedCorrect(comp(), 1, [])).toBe(true);
@@ -206,7 +220,7 @@ describe('with no verdict for the pick, the previous behaviour stands', () => {
     verdictState = state({
       phase: 'incomplete',
       remainingCorrectCount: 1,
-      selectedVerdicts: new Map([['filter', true]])   // nothing for 'map'
+      selectedVerdicts: new Map([['filter', true]]) // nothing for 'map'
     });
 
     expect(clickedCorrect(comp(), 0, [0, 1])).toBe(true);
@@ -215,14 +229,17 @@ describe('with no verdict for the pick, the previous behaviour stands', () => {
 
 describe('identity is textual, not positional', () => {
   it('follows the option text when the display order is reversed', () => {
-    const reversed = [...OPTIONS].reverse();   // Observable, filter, map
+    const reversed = [...OPTIONS].reverse(); // Observable, filter, map
     verdictState = state({
       phase: 'incomplete',
       remainingCorrectCount: 1,
-      selectedVerdicts: new Map([['map', true], ['Observable', false]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['Observable', false]
+      ])
     });
 
-    expect(clickedCorrect(comp(reversed), 2, [])).toBe(true);    // map, now last
-    expect(clickedCorrect(comp(reversed), 0, [])).toBe(false);   // Observable, now first
+    expect(clickedCorrect(comp(reversed), 2, [])).toBe(true); // map, now last
+    expect(clickedCorrect(comp(reversed), 0, [])).toBe(false); // Observable, now first
   });
 });

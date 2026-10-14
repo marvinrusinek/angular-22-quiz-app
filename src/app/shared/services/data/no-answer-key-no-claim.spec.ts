@@ -46,27 +46,36 @@ const API_RESPONSE = {
   quizId: QUIZ,
   questions: [
     {
-      questionText: MULTI_TEXT, type: 'multiple', difficulty: null, correctCount: 3,
+      questionText: MULTI_TEXT,
+      type: 'multiple',
+      difficulty: null,
+      correctCount: 3,
       options: [
-        { text: 'Reduces coupling' }, { text: 'Eases testing' },
-        { text: 'Is a technique' }, { text: 'Slows startup' }
+        { text: 'Reduces coupling' },
+        { text: 'Eases testing' },
+        { text: 'Is a technique' },
+        { text: 'Slows startup' }
       ]
     },
     {
-      questionText: SINGLE_TEXT, type: 'single', difficulty: null, correctCount: 1,
+      questionText: SINGLE_TEXT,
+      type: 'single',
+      difficulty: null,
+      correctCount: 1,
       options: [{ text: 'A pattern' }, { text: 'A compiler' }]
     }
   ]
 };
 
 /** What `GET /questions` produces: content only. */
-const apiViews = () => API_RESPONSE.questions.map((q) => ({
-  questionText: q.questionText,
-  type: q.type as any,
-  difficulty: q.difficulty,
-  correctCount: q.correctCount,
-  options: q.options.map((o) => ({ text: o.text }))
-}));
+const apiViews = () =>
+  API_RESPONSE.questions.map((q) => ({
+    questionText: q.questionText,
+    type: q.type as any,
+    difficulty: q.difficulty,
+    correctCount: q.correctCount,
+    options: q.options.map((o) => ({ text: o.text }))
+  }));
 
 /**
  * The assertion every stage must satisfy. Reports WHICH question and option
@@ -74,14 +83,15 @@ const apiViews = () => API_RESPONSE.questions.map((q) => ({
  */
 function assertNoClaims(questions: readonly QuizQuestion[], stage: string): void {
   for (const question of questions) {
-    expect(`${stage}: ${question.questionText} answer`)
-      .toBe(`${stage}: ${question.questionText} answer`);
+    expect(`${stage}: ${question.questionText} answer`).toBe(
+      `${stage}: ${question.questionText} answer`
+    );
 
     // `answer` must be absent, not an empty array.
     if (question.answer !== undefined) {
       throw new Error(
         `${stage} materialized an answer array (${JSON.stringify(question.answer)}) ` +
-        `for "${question.questionText}", which carries no answer key.`
+          `for "${question.questionText}", which carries no answer key.`
       );
     }
 
@@ -89,8 +99,8 @@ function assertNoClaims(questions: readonly QuizQuestion[], stage: string): void
       if (Object.prototype.hasOwnProperty.call(option, 'correct')) {
         throw new Error(
           `${stage} materialized correct=${JSON.stringify((option as any).correct)} ` +
-          `on option "${option.text}" of "${question.questionText}", which carries no answer key. ` +
-          `Absence is not "false" — correctness comes from the verdict.`
+            `on option "${option.text}" of "${question.questionText}", which carries no answer key. ` +
+            `Absence is not "false" — correctness comes from the verdict.`
         );
       }
     }
@@ -115,8 +125,12 @@ describe('no answer key, no claim — across every live transformation', () => {
   beforeAll(() => {
     store = {};
     jest.spyOn(Storage.prototype, 'getItem').mockImplementation((k) => store[k] ?? null);
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation((k, v) => { store[k] = v; });
-    jest.spyOn(Storage.prototype, 'removeItem').mockImplementation((k) => { delete store[k]; });
+    jest.spyOn(Storage.prototype, 'setItem').mockImplementation((k, v) => {
+      store[k] = v;
+    });
+    jest.spyOn(Storage.prototype, 'removeItem').mockImplementation((k) => {
+      delete store[k];
+    });
   });
 
   afterAll(() => jest.restoreAllMocks());
@@ -125,9 +139,12 @@ describe('no answer key, no claim — across every live transformation', () => {
     store = {};
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(), provideHttpClientTesting(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: BASE },
-        TopicQuizTypeRegistry, QuizShuffleService, QuizQuestionResolverService
+        TopicQuizTypeRegistry,
+        QuizShuffleService,
+        QuizQuestionResolverService
       ]
     });
     registry = TestBed.inject(TopicQuizTypeRegistry);
@@ -200,16 +217,21 @@ describe('no answer key, no claim — across every live transformation', () => {
   it('the bank path is UNAFFECTED — a real answer key still aligns', () => {
     // Absence is preserved; presence must not be discarded, or the local-bank
     // features (Weak Areas, pristine lookups) would silently lose correctness.
-    const withKey: QuizQuestion[] = [{
-      questionText: 'Bank question',
-      type: QuestionType.MultipleAnswer,
-      options: [
-        { text: 'a', correct: true, value: 1 } as any,
-        { text: 'b', correct: false, value: 2 } as any,
-        { text: 'c', correct: true, value: 3 } as any
-      ],
-      answer: [{ text: 'a', correct: true, value: 1 } as any, { text: 'c', correct: true, value: 3 } as any]
-    } as QuizQuestion];
+    const withKey: QuizQuestion[] = [
+      {
+        questionText: 'Bank question',
+        type: QuestionType.MultipleAnswer,
+        options: [
+          { text: 'a', correct: true, value: 1 } as any,
+          { text: 'b', correct: false, value: 2 } as any,
+          { text: 'c', correct: true, value: 3 } as any
+        ],
+        answer: [
+          { text: 'a', correct: true, value: 1 } as any,
+          { text: 'c', correct: true, value: 3 } as any
+        ]
+      } as QuizQuestion
+    ];
 
     shuffle.prepareShuffle('bank', withKey);
     const shuffled = shuffle.buildShuffledQuestions('bank', withKey);

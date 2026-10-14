@@ -56,7 +56,11 @@ export class QqcComponentOrchestratorService {
 
   // ─── Question Load ───
 
-  async runLoadDynamicComponent(host: Host, question: QuizQuestion, options: Option[]): Promise<void> {
+  async runLoadDynamicComponent(
+    host: Host,
+    question: QuizQuestion,
+    options: Option[]
+  ): Promise<void> {
     return this.orchQuestionLoad.runLoadDynamicComponent(host, question, options);
   }
 
@@ -108,7 +112,11 @@ export class QqcComponentOrchestratorService {
     this.orchExplanation.runUpdateExplanationUI(host, questionIndex, explanationText);
   }
 
-  async runUpdateExplanationIfAnswered(host: Host, index: number, question: QuizQuestion): Promise<void> {
+  async runUpdateExplanationIfAnswered(
+    host: Host,
+    index: number,
+    question: QuizQuestion
+  ): Promise<void> {
     return this.orchExplanation.runUpdateExplanationIfAnswered(host, index, question);
   }
 
@@ -163,10 +171,21 @@ export class QqcComponentOrchestratorService {
     wasPreviouslySelected: boolean,
     questionIndex?: number
   ): Promise<void> {
-    return this.orchSelection.runPostClickTasks(host, opt, idx, checked, wasPreviouslySelected, questionIndex);
+    return this.orchSelection.runPostClickTasks(
+      host,
+      opt,
+      idx,
+      checked,
+      wasPreviouslySelected,
+      questionIndex
+    );
   }
 
-  async runPerformInitialSelectionFlow(host: Host, event: any, option: SelectedOption): Promise<void> {
+  async runPerformInitialSelectionFlow(
+    host: Host,
+    event: any,
+    option: SelectedOption
+  ): Promise<void> {
     return this.orchSelection.runPerformInitialSelectionFlow(host, event, option);
   }
 
@@ -267,11 +286,18 @@ export class QqcComponentOrchestratorService {
     this.orchDisplay.runInitializeForm(host);
   }
 
-  async runResolveFormatted(host: Host, index: number, opts: { useCache?: boolean; setCache?: boolean; timeoutMs?: number } = {}): Promise<string> {
+  async runResolveFormatted(
+    host: Host,
+    index: number,
+    opts: { useCache?: boolean; setCache?: boolean; timeoutMs?: number } = {}
+  ): Promise<string> {
     return this.orchDisplay.runResolveFormatted(host, index, opts);
   }
 
-  runDisableAllBindingsAndOptions(host: Host): { optionBindings: any[]; optionsToDisplay: Option[] } {
+  runDisableAllBindingsAndOptions(host: Host): {
+    optionBindings: any[];
+    optionsToDisplay: Option[];
+  } {
     return this.orchDisplay.runDisableAllBindingsAndOptions(host);
   }
 
@@ -283,7 +309,10 @@ export class QqcComponentOrchestratorService {
     this.orchDisplay.runUpdateShouldRenderOptions(host, options);
   }
 
-  runSafeSetDisplayState(host: Host, state: { mode: 'question' | 'explanation'; answered: boolean }): void {
+  runSafeSetDisplayState(
+    host: Host,
+    state: { mode: 'question' | 'explanation'; answered: boolean }
+  ): void {
     this.orchDisplay.runSafeSetDisplayState(host, state);
   }
 }

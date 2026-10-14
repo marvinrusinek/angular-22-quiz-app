@@ -47,11 +47,14 @@ describe('BestScoreService', () => {
   });
 
   it('seeds best scores from legacy highScoresLocal when empty', () => {
-    localStorage.setItem('highScoresLocal', JSON.stringify([
-      { quizId: 'q1', score: 88 },
-      { quizId: 'q1', score: 60 },  // lower dup — best kept
-      { quizId: 'q2', score: 42 }
-    ]));
+    localStorage.setItem(
+      'highScoresLocal',
+      JSON.stringify([
+        { quizId: 'q1', score: 88 },
+        { quizId: 'q1', score: 60 }, // lower dup — best kept
+        { quizId: 'q2', score: 42 }
+      ])
+    );
     const best = service.getBestScores();
     expect(best['q1']).toBe(88);
     expect(best['q2']).toBe(42);

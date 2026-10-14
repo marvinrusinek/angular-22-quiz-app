@@ -4,7 +4,7 @@ import {
   computed,
   DestroyRef,
   inject,
-  OnInit,
+  OnInit
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 
@@ -14,7 +14,7 @@ import {
   ActivatedRouteSnapshot,
   NavigationEnd,
   Params,
-  Router,
+  Router
 } from '@angular/router';
 import { combineLatest, fromEvent, merge, Observable, of } from 'rxjs';
 import {
@@ -24,7 +24,7 @@ import {
   map,
   shareReplay,
   startWith,
-  switchMap,
+  switchMap
 } from 'rxjs/operators';
 
 import { QuizService } from '@shared/services/data/quiz.service';
@@ -39,7 +39,7 @@ import { TimerComponent } from './timer/timer.component';
   imports: [MatCardModule, ScoreComponent, TimerComponent],
   templateUrl: './scoreboard.component.html',
   styleUrls: ['./scoreboard.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ScoreboardComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ export class ScoreboardComponent implements OnInit {
     this.quizService.totalQuestions$.pipe(
       map((t) => Number(t)),
       startWith(-1)
-    ),
+    )
   ]).pipe(
     map(([n, total]) => (Number.isFinite(total) && total > 0 ? `Question ${n} of ${total}` : '')),
     distinctUntilChanged(),
@@ -116,7 +116,7 @@ export class ScoreboardComponent implements OnInit {
   // the two disagree, trust the route.
   private readonly badgeText$: Observable<string> = combineLatest([
     this.serviceBadgeText$,
-    this.computedBadgeText$,
+    this.computedBadgeText$
   ]).pipe(
     map(([svc, cmp]) => {
       if (svc === '') return cmp;
@@ -183,7 +183,7 @@ export class ScoreboardComponent implements OnInit {
       this.quizService.totalQuestions$.pipe(
         map((total) => Number(total)),
         filter((total) => Number.isFinite(total) && total > 0)
-      ),
+      )
     ])
       .pipe(
         takeUntilDestroyed(this.destroyRef),

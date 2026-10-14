@@ -4,7 +4,7 @@ import {
   computed,
   inject,
   OnInit,
-  signal,
+  signal
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -22,7 +22,7 @@ import { swallow } from '@shared/utils/error-logging';
   imports: [MatButtonModule, MatMenuModule],
   templateUrl: './score.component.html',
   styleUrls: ['./score.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ScoreComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ export class ScoreComponent implements OnInit {
   // Source signals derived directly from QuizService streams.
   private readonly correctAnswersCountSig = this.quizService.correctAnswersCountSig;
   private readonly questionsSig = toSignal(this.quizService.questions$, {
-    initialValue: [] as QuizQuestion[],
+    initialValue: [] as QuizQuestion[]
   });
   private readonly totalQuestionsSig = computed<number>(() => {
     const fromStream = this.questionsSig()?.length ?? 0;

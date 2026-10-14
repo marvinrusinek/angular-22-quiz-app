@@ -33,7 +33,7 @@ import { ScrollDownIndicatorComponent } from '../../../components/scroll-down-in
 
 interface HistoryCard {
   entry: InterviewAttemptHistoryEntry;
-  number: number;          // chronological attempt number (1 = oldest retained)
+  number: number; // chronological attempt number (1 = oldest retained)
   topics: string[];
 }
 

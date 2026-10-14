@@ -18,8 +18,12 @@ function ready(over: Partial<InterviewReadiness> = {}): InterviewReadiness {
     eligibleTopicCount: 8,
     strongestFactor: 'recent-performance',
     limitingFactor: 'topic-coverage',
-    explanation: 'Your recent interview scores are strong. Topic coverage is currently limiting your readiness.',
-    recommendations: ['Review Signals and HTTP.', 'Complete interviews covering additional Angular topics to broaden your coverage.'],
+    explanation:
+      'Your recent interview scores are strong. Topic coverage is currently limiting your readiness.',
+    recommendations: [
+      'Review Signals and HTTP.',
+      'Complete interviews covering additional Angular topics to broaden your coverage.'
+    ],
     attemptsUsed: 4,
     totalAttempts: 4,
     ...over
@@ -27,7 +31,15 @@ function ready(over: Partial<InterviewReadiness> = {}): InterviewReadiness {
 }
 
 function insufficient(): InterviewReadiness {
-  return { ...ready(), status: 'insufficient', score: 0, totalAttempts: 1, attemptsUsed: 1, recommendations: [], explanation: '' };
+  return {
+    ...ready(),
+    status: 'insufficient',
+    score: 0,
+    totalAttempts: 1,
+    attemptsUsed: 1,
+    recommendations: [],
+    explanation: ''
+  };
 }
 
 describe('InterviewReadinessComponent', () => {
@@ -68,34 +80,42 @@ describe('InterviewReadinessComponent', () => {
 
   it('29. displays the limited-data state for one attempt', () => {
     const el = render(insufficient());
-    expect(el.querySelector('.readiness__limited')?.textContent).toContain('Complete at least one more interview');
-    expect(el.querySelector('.readiness__limited-sub')?.textContent).toContain('first result has been recorded');
+    expect(el.querySelector('.readiness__limited')?.textContent).toContain(
+      'Complete at least one more interview'
+    );
+    expect(el.querySelector('.readiness__limited-sub')?.textContent).toContain(
+      'first result has been recorded'
+    );
     expect(el.querySelector('.readiness__factors')).toBeNull();
   });
 
   it('30. includes an accessible readiness summary', () => {
     const el = render(ready());
-    expect(el.querySelector('.readiness__sr')?.textContent).toContain('Interview readiness score: 84 out of 100');
+    expect(el.querySelector('.readiness__sr')?.textContent).toContain(
+      'Interview readiness score: 84 out of 100'
+    );
     expect(el.querySelector('.readiness__sr')?.textContent).toContain('Strong');
     // Each bar has an accessible label (not colour-only).
     expect(el.querySelector('.readiness__bar')?.getAttribute('aria-label')).toContain('out of 100');
   });
 
   it('shows "Based on N completed interviews" for 2–4 attempts', () => {
-    expect(render(ready({ totalAttempts: 3 })).querySelector('.readiness__basedon')?.textContent).toContain(
-      'Based on 3 completed interviews'
-    );
+    expect(
+      render(ready({ totalAttempts: 3 })).querySelector('.readiness__basedon')?.textContent
+    ).toContain('Based on 3 completed interviews');
   });
 
   it('shows the 5-most-recent note for 5+ attempts', () => {
-    expect(render(ready({ totalAttempts: 7 })).querySelector('.readiness__basedon')?.textContent).toContain(
-      '5 most recent'
-    );
+    expect(
+      render(ready({ totalAttempts: 7 })).querySelector('.readiness__basedon')?.textContent
+    ).toContain('5 most recent');
   });
 
   it('surfaces a practiced-topic note when coverage is unavailable', () => {
     const el = render(ready({ coverageAvailable: false, practicedTopicCount: 4 }));
-    expect(el.querySelector('.readiness__factor-note')?.textContent).toContain('4 topics practiced');
+    expect(el.querySelector('.readiness__factor-note')?.textContent).toContain(
+      '4 topics practiced'
+    );
   });
 
   it('compact mode hides the factor breakdown and recommendations', () => {

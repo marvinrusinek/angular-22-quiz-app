@@ -47,24 +47,27 @@ const quizServiceStub = () => ({
   currentQuestionIndex: 0,
   getCurrentQuestionIndex: () => 0,
   isMultiAnswerComplete: jest.fn(() => false),
-  getQuestionsInDisplayOrder: jest.fn(function (this: any) { return this.questions; })
+  getQuestionsInDisplayOrder: jest.fn(function (this: any) {
+    return this.questions;
+  })
 });
 
 const q = (
   type: QuestionType | undefined,
   correctCount: number,
   questionText = 'Which of these apply?'
-): QuizQuestion => ({
-  questionText,
-  explanation: 'e',
-  type,
-  options: Array.from({ length: 4 }, (_, i) => ({
-    optionId: i + 1,
-    text: `opt${i + 1}`,
-    value: i + 1,
-    correct: i < correctCount
-  }))
-} as unknown as QuizQuestion);
+): QuizQuestion =>
+  ({
+    questionText,
+    explanation: 'e',
+    type,
+    options: Array.from({ length: 4 }, (_, i) => ({
+      optionId: i + 1,
+      text: `opt${i + 1}`,
+      value: i + 1,
+      correct: i < correctCount
+    }))
+  }) as unknown as QuizQuestion;
 
 // ══════════════════════════════════════════════════════════════════════
 // option-click-handler — determineQuestionType
@@ -86,7 +89,10 @@ describe('determineQuestionType: declared type is the ONLY source, never the cou
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test/api' },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
       ]
     });
     handler = TestBed.inject(OptionClickHandlerService);
@@ -148,7 +154,7 @@ describe('option-click-handler disable logic: declared type beats the count', ()
     (handler as any).correctOptionStaysEnabled(question.options![0], 0, false);
     const consultedCompletion = spy.mock.calls.length > 0;
     spy.mockRestore();
-    return consultedCompletion;   // only the MULTI branch asks about completion
+    return consultedCompletion; // only the MULTI branch asks about completion
   };
 
   beforeEach(() => {
@@ -160,7 +166,10 @@ describe('option-click-handler disable logic: declared type beats the count', ()
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test/api' },
         { provide: QuizService, useValue: quizService },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
       ]
     });
     handler = TestBed.inject(OptionClickHandlerService);
@@ -248,7 +257,10 @@ describe('soc-option-ui handleSelection: declared type decides clear-vs-toggle',
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test/api' },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
       ]
     });
     service = TestBed.inject(SocOptionUiService);
@@ -293,7 +305,10 @@ describe('shared-option-binding resolveBuildIsMulti: declared type beats the cou
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test/api' },
         { provide: QuizService, useValue: quizService },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
       ]
     });
     service = TestBed.inject(SharedOptionBindingService);

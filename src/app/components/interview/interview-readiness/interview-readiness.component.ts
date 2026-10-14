@@ -3,7 +3,7 @@ import {
   Component,
   computed,
   input,
-  ViewEncapsulation,
+  ViewEncapsulation
 } from '@angular/core';
 
 import {
@@ -25,14 +25,14 @@ const BAND_LABEL: Record<InterviewReadinessBand, string> = {
   developing: $localize`Developing`,
   progressing: $localize`Progressing`,
   strong: $localize`Strong`,
-  'interview-ready': $localize`Interview Ready`,
+  'interview-ready': $localize`Interview Ready`
 };
 
 const FACTOR_LABEL: Record<InterviewReadinessFactor, string> = {
   'recent-performance': $localize`Recent Performance`,
   consistency: $localize`Consistency`,
   'topic-coverage': $localize`Topic Coverage`,
-  'topic-strength': $localize`Topic Strength`,
+  'topic-strength': $localize`Topic Strength`
 };
 
 /**
@@ -48,7 +48,7 @@ const FACTOR_LABEL: Record<InterviewReadinessFactor, string> = {
   templateUrl: './interview-readiness.component.html',
   styleUrls: ['./interview-readiness.component.scss'],
   encapsulation: ViewEncapsulation.None,
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class InterviewReadinessComponent {
   readonly readiness = input<InterviewReadiness | null>(null);
@@ -68,29 +68,27 @@ export class InterviewReadinessComponent {
         key: 'recent-performance',
         label: FACTOR_LABEL['recent-performance'],
         value: r.recentPerformance,
-        showBar: true,
+        showBar: true
       },
       {
         key: 'consistency',
         label: FACTOR_LABEL['consistency'],
         value: r.consistency,
-        showBar: true,
+        showBar: true
       },
       {
         key: 'topic-coverage',
         label: FACTOR_LABEL['topic-coverage'],
         value: r.topicCoverage,
         showBar: r.coverageAvailable,
-        note: r.coverageAvailable
-          ? undefined
-          : $localize`${r.practicedTopicCount} topics practiced`,
+        note: r.coverageAvailable ? undefined : $localize`${r.practicedTopicCount} topics practiced`
       },
       {
         key: 'topic-strength',
         label: FACTOR_LABEL['topic-strength'],
         value: r.topicStrength,
-        showBar: true,
-      },
+        showBar: true
+      }
     ];
   });
 

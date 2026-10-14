@@ -20,11 +20,10 @@ export class AnswerBindingsService {
 
     const cloned: Option[] =
       typeof structuredClone === 'function'
-        ? structuredClone(options) : JSON.parse(JSON.stringify(options));
+        ? structuredClone(options)
+        : JSON.parse(JSON.stringify(options));
 
-    const rebuilt = cloned.map((option, index) =>
-      this.buildFallbackBinding(option, index)
-    );
+    const rebuilt = cloned.map((option, index) => this.buildFallbackBinding(option, index));
 
     for (const binding of rebuilt) {
       binding.allOptions = cloned;
@@ -78,7 +77,7 @@ export class AnswerBindingsService {
   updateVisualBindings(
     currentBindings: OptionBindings[],
     enrichedOption: SelectedOption,
-    type: 'single' | 'multiple',
+    type: 'single' | 'multiple'
   ): OptionBindings[] {
     if (!currentBindings?.length) return [];
 
@@ -95,14 +94,10 @@ export class AnswerBindingsService {
     // not a wrong answer, and leaving the rest selectable is what preserves
     // retry-until-correct.
     const isSingle = type === 'single';
-    const lockUnselected =
-      isSingle && enrichedOption.selected === true && this.isResolvedCorrect();
+    const lockUnselected = isSingle && enrichedOption.selected === true && this.isResolvedCorrect();
 
     return currentBindings.map((binding, index) => {
-      const bindingId = this.answerOptionsService.getEffectiveOptionId(
-        binding.option,
-        index
-      );
+      const bindingId = this.answerOptionsService.getEffectiveOptionId(binding.option, index);
 
       const matchesClickedOption = bindingId === enrichedOption.optionId;
 
@@ -152,7 +147,7 @@ export class AnswerBindingsService {
    */
   private buildUnselectedSingleAnswerBinding(
     binding: OptionBindings,
-    lockUnselected: boolean,
+    lockUnselected: boolean
   ): OptionBindings {
     const newOption = {
       ...binding.option,
@@ -199,21 +194,16 @@ export class AnswerBindingsService {
       return currentBindings ?? [];
     }
 
-    const savedIds = new Set(savedSelections.map(selection => String(selection.optionId)));
+    const savedIds = new Set(savedSelections.map((selection) => String(selection.optionId)));
 
-    const savedTexts = new Set(
-      savedSelections.map(selection =>
-        norm(selection.text),
-      )
-    );
+    const savedTexts = new Set(savedSelections.map((selection) => norm(selection.text)));
 
-    return currentBindings.map(binding => {
+    return currentBindings.map((binding) => {
       const id = binding.option?.optionId;
       const text = binding.option?.text;
 
       const idMatch = id != null && savedIds.has(String(id));
-      const textMatch =
-        !!(text && savedTexts.has(norm(text)));
+      const textMatch = !!(text && savedTexts.has(norm(text)));
 
       const isSelected = isMulti ? false : idMatch || textMatch;
 

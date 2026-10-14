@@ -47,8 +47,8 @@ const LYING_QUESTIONS = [
     explanation: 'LOCAL explanation that must never be shown.',
     options: [
       { text: 'map', correct: true },
-      { text: 'filter' },                     // backend says CORRECT
-      { text: 'Observable', correct: true }    // backend says INCORRECT
+      { text: 'filter' }, // backend says CORRECT
+      { text: 'Observable', correct: true } // backend says INCORRECT
     ]
   }
 ];
@@ -69,17 +69,19 @@ let verdicts: QuestionVerdictService;
 let quizService: QuizService;
 
 const bindingFor = (text: string): OptionBindings =>
-  ({ option: { text } } as unknown as OptionBindings);
+  ({ option: { text } }) as unknown as OptionBindings;
 
 /** What option-item asks when deciding whether to paint an option green. */
 const paintsCorrect = (text: string): boolean =>
-  isTimeoutRevealAuthorized(quizService, 0, verdicts)
-  && isCurrentOptionCorrect(bindingFor(text), quizService, 0, verdicts);
+  isTimeoutRevealAuthorized(quizService, 0, verdicts) &&
+  isCurrentOptionCorrect(bindingFor(text), quizService, 0, verdicts);
 
 function flushReveal(): void {
-  http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/attempts` })
+  http
+    .expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/attempts` })
     .flush({ attemptReceipt: 'a' });
-  http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/questions/start` })
+  http
+    .expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/questions/start` })
     .flush({ questionReceipt: 'q' });
   http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/check` }).flush({
     status: 'expired',
@@ -97,7 +99,10 @@ beforeEach(() => {
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: BASE },
       { provide: TOPIC_QUIZ_VERDICT_ADAPTER, useExisting: ApiTopicQuizVerdictAdapter },
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
 
@@ -223,11 +228,14 @@ describe('failure stays closed', () => {
       }
     });
 
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/attempts` })
+    http
+      .expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/attempts` })
       .flush({ attemptReceipt: 'a' });
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/questions/start` })
+    http
+      .expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/questions/start` })
       .flush({ questionReceipt: 'q' });
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/check` })
+    http
+      .expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/check` })
       .error(new ProgressEvent('network error'));
   });
 
@@ -239,12 +247,15 @@ describe('failure stays closed', () => {
       }
     });
 
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/attempts` })
+    http
+      .expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/attempts` })
       .flush({ attemptReceipt: 'a' });
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/questions/start` })
+    http
+      .expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/questions/start` })
       .flush({ questionReceipt: 'q' });
     // The signed deadline has not passed, so the server answers normally.
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/check` })
+    http
+      .expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/check` })
       .flush({ status: 'incomplete', selectedVerdicts: [], remainingCorrectCount: 2 });
   });
 });
@@ -281,9 +292,11 @@ describe('duplicate expiry and revisit', () => {
   it('a stale normal /check response cannot overwrite the expired verdict', () => {
     // A selection check is already in flight when the timer runs out.
     verdicts.checkAnswer(QUIZ, QUESTION, ['map']).subscribe({ error: () => undefined });
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/attempts` })
+    http
+      .expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/attempts` })
       .flush({ attemptReceipt: 'a' });
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/questions/start` })
+    http
+      .expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/questions/start` })
       .flush({ questionReceipt: 'q' });
     const pendingCheck = http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${QUIZ}/check` });
 

@@ -1,9 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { TopicQuizResourcesService } from './topic-quiz-resources.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
@@ -43,17 +40,18 @@ beforeEach(() => {
 
 afterEach(() => http.verify());
 
-const expectOne = (quizId: string) =>
-  http.expectOne(`${BASE}/quizzes/${quizId}/resources`);
+const expectOne = (quizId: string) => http.expectOne(`${BASE}/quizzes/${quizId}/resources`);
 
 function collect(quizId: string): { value: Resource[] | null } {
   const out: { value: Resource[] | null } = { value: null };
-  service.loadResources(quizId).subscribe((r) => { out.value = r; });
+  service.loadResources(quizId).subscribe((r) => {
+    out.value = r;
+  });
   return out;
 }
 
 describe('loading resources', () => {
-  it('requests the quiz\'s resources endpoint', () => {
+  it("requests the quiz's resources endpoint", () => {
     collect('rxjs');
     expect(expectOne('rxjs').request.method).toBe('GET');
   });
@@ -109,8 +107,12 @@ describe('failure is supplemental, not fatal', () => {
     let errored = false;
     const got: { value: Resource[] | null } = { value: null };
     service.loadResources('rxjs').subscribe({
-      next: (r) => { got.value = r; },
-      error: () => { errored = true; }
+      next: (r) => {
+        got.value = r;
+      },
+      error: () => {
+        errored = true;
+      }
     });
     expectOne('rxjs').flush('boom', { status: 500, statusText: 'Server Error' });
 

@@ -20,7 +20,7 @@ export interface ScoreAnalysisItem {
   correctOptionTexts?: string[];
   explanation?: string | null;
 }
-  
+
 /**
  * Strip authorized ANSWER DETAIL before a result is written to browser storage.
  *

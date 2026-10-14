@@ -51,7 +51,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       {
         provide: QuizService,
@@ -75,8 +78,8 @@ const clickWithBankSayingComplete = () =>
     IDX,
     OPTIONS_CLAIMING_COMPLETE as any,
     SELECTED_ALL_CORRECT as any,
-    true,   // isMultiAnswer
-    true    // complete
+    true, // isMultiAnswer
+    true // complete
   );
 
 describe('the click-time path records no completion', () => {
@@ -139,7 +142,10 @@ describe('with `correct` structurally absent the click still claims nothing', ()
     // and fell through; the point is that nothing here can claim completion.
     service.updateScoringAndAnswerSelectedState(
       IDX,
-      [{ optionId: 1, text: 'map' }, { optionId: 2, text: 'filter' }] as any,
+      [
+        { optionId: 1, text: 'map' },
+        { optionId: 2, text: 'filter' }
+      ] as any,
       [{ optionId: 1, text: 'map', selected: true }] as any,
       true,
       true

@@ -1,4 +1,4 @@
-﻿import { DestroyRef, inject, Service } from '@angular/core';
+import { DestroyRef, inject, Service } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
@@ -60,8 +60,7 @@ export class QqcSubscriptionWiringService {
     return this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => {
-        const paramIndex =
-          params.activatedRoute.snapshot.paramMap.get('questionIndex');
+        const paramIndex = params.activatedRoute.snapshot.paramMap.get('questionIndex');
         const index = paramIndex ? +paramIndex : 0;
 
         const questionsLength = params.getQuestionsLength();
@@ -76,9 +75,7 @@ export class QqcSubscriptionWiringService {
    * Creates navigation flag subscription.
    * Extracted from subscribeToNavigationFlags().
    */
-  createNavigationFlagSubscription(
-    onNavigating: (isNavigating: boolean) => void
-  ): Subscription {
+  createNavigationFlagSubscription(onNavigating: (isNavigating: boolean) => void): Subscription {
     return this.quizNavigationService.getIsNavigatingToPrevious().subscribe(onNavigating);
   }
 
@@ -91,7 +88,8 @@ export class QqcSubscriptionWiringService {
     destroyRef: DestroyRef;
     onTotal: (total: number) => void;
   }): Subscription {
-    return this.quizService.getTotalQuestionsCount(params.quizId)
+    return this.quizService
+      .getTotalQuestionsCount(params.quizId)
       .pipe(takeUntilDestroyed(params.destroyRef))
       .subscribe(params.onTotal);
   }
@@ -227,11 +225,11 @@ export class QqcSubscriptionWiringService {
     return this.quizService.preReset$
       .pipe(
         takeUntilDestroyed(params.destroyRef),
-        filter(idx => Number.isFinite(idx as number) && (idx as number) >= 0),
-        filter(idx => idx !== params.getLastResetFor()),
-        tap(idx => params.setLastResetFor(idx as number))
+        filter((idx) => Number.isFinite(idx as number) && (idx as number) >= 0),
+        filter((idx) => idx !== params.getLastResetFor()),
+        tap((idx) => params.setLastResetFor(idx as number))
       )
-      .subscribe(idx => {
+      .subscribe((idx) => {
         params.onPreReset(idx as number);
       });
   }
@@ -245,11 +243,9 @@ export class QqcSubscriptionWiringService {
     timerExpired$: Observable<void>;
     onExpired: () => void;
   }): Subscription {
-    return params.timerExpired$
-      .pipe(takeUntilDestroyed(params.destroyRef))
-      .subscribe(() => {
-        params.onExpired();
-      });
+    return params.timerExpired$.pipe(takeUntilDestroyed(params.destroyRef)).subscribe(() => {
+      params.onExpired();
+    });
   }
 
   /**
@@ -262,13 +258,11 @@ export class QqcSubscriptionWiringService {
     timerStop$: Observable<any>;
     onTimerStopped: () => void;
   }): Subscription {
-    return params.timerStop$
-      .pipe(skip(1), takeUntilDestroyed(params.destroyRef))
-      .subscribe(() => {
-        queueMicrotask(() => {
-          params.onTimerStopped();
-        });
+    return params.timerStop$.pipe(skip(1), takeUntilDestroyed(params.destroyRef)).subscribe(() => {
+      queueMicrotask(() => {
+        params.onTimerStopped();
       });
+    });
   }
 
   /**
@@ -298,7 +292,7 @@ export class QqcSubscriptionWiringService {
     return params.activatedRoute.paramMap.subscribe(async (paramMap) => {
       const rawParam = paramMap.get('questionIndex');
       const routeIndex = Number(rawParam);
-      const questionIndex = Math.max(0, routeIndex - 1);  // normalize to 0-based
+      const questionIndex = Math.max(0, routeIndex - 1); // normalize to 0-based
 
       await params.onRouteChange(questionIndex);
     });
@@ -320,11 +314,13 @@ export class QqcSubscriptionWiringService {
 
       // Delegate route parsing
       const zeroBasedIndex = params.parseRouteIndex(rawParam);
-      const displayIndex = zeroBasedIndex + 1;  // 1-based for logging
+      const displayIndex = zeroBasedIndex + 1; // 1-based for logging
 
       try {
         await params.onRouteChange(zeroBasedIndex, displayIndex);
-      } catch (err: unknown) { swallow('qqc-subscription-wiring.service.ts onRouteChange', err); }
+      } catch (err: unknown) {
+        swallow('qqc-subscription-wiring.service.ts onRouteChange', err);
+      }
     });
   }
 }

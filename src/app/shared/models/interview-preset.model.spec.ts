@@ -40,15 +40,21 @@ describe('INTERVIEW_PRESETS — configuration integrity', () => {
     const known = new Set(catalog.map((q) => q.quizId));
     for (const preset of INTERVIEW_PRESETS) {
       for (const topicId of preset.topicIds) {
-        expect({ preset: preset.id, topicId, known: known.has(topicId) })
-          .toEqual({ preset: preset.id, topicId, known: true });
+        expect({ preset: preset.id, topicId, known: known.has(topicId) }).toEqual({
+          preset: preset.id,
+          topicId,
+          known: true
+        });
       }
     }
   });
 
   it('ships the documented question counts and durations', () => {
     expect(findInterviewPreset('junior')).toMatchObject({ questionCount: 15, durationMinutes: 20 });
-    expect(findInterviewPreset('mid-level')).toMatchObject({ questionCount: 20, durationMinutes: 30 });
+    expect(findInterviewPreset('mid-level')).toMatchObject({
+      questionCount: 20,
+      durationMinutes: 30
+    });
     expect(findInterviewPreset('senior')).toMatchObject({ questionCount: 25, durationMinutes: 40 });
   });
 
@@ -78,7 +84,12 @@ describe('INTERVIEW_PRESETS — configuration integrity', () => {
 describe('validateInterviewPresets', () => {
   it('reports unknown topic ids', () => {
     const bad: InterviewPreset = {
-      id: 'junior', name: 'x', shortLabel: 'x', description: 'x', questionCount: 5, durationMinutes: 5,
+      id: 'junior',
+      name: 'x',
+      shortLabel: 'x',
+      description: 'x',
+      questionCount: 5,
+      durationMinutes: 5,
       difficultyDistribution: { beginner: 100, intermediate: 0, advanced: 0 },
       topicIds: ['no-such-topic']
     };
@@ -88,16 +99,25 @@ describe('validateInterviewPresets', () => {
 
   it('reports a distribution that does not total 100', () => {
     const bad: InterviewPreset = {
-      id: 'junior', name: 'x', shortLabel: 'x', description: 'x', questionCount: 5, durationMinutes: 5,
+      id: 'junior',
+      name: 'x',
+      shortLabel: 'x',
+      description: 'x',
+      questionCount: 5,
+      durationMinutes: 5,
       difficultyDistribution: { beginner: 50, intermediate: 40, advanced: 0 },
       topicIds: ['typescript']
     };
-    expect(validateInterviewPresets(catalog, [bad]).some((i) => i.problem.includes('total 100'))).toBe(true);
+    expect(
+      validateInterviewPresets(catalog, [bad]).some((i) => i.problem.includes('total 100'))
+    ).toBe(true);
   });
 
   it('reports duplicate ids', () => {
     const one = INTERVIEW_PRESETS[0];
-    expect(validateInterviewPresets(catalog, [one, one]).some((i) => i.problem === 'duplicate preset id')).toBe(true);
+    expect(
+      validateInterviewPresets(catalog, [one, one]).some((i) => i.problem === 'duplicate preset id')
+    ).toBe(true);
   });
 
   // KNOWN, DELIBERATE: Senior weights 10% beginner but configures no beginner
@@ -107,7 +127,10 @@ describe('validateInterviewPresets', () => {
     const issues = validateInterviewPresets(catalog);
     const senior = issues.filter((i) => i.presetId === 'senior');
     expect(senior).toEqual([
-      { presetId: 'senior', problem: '10% weighted to "beginner" but no beginner topic is configured' }
+      {
+        presetId: 'senior',
+        problem: '10% weighted to "beginner" but no beginner topic is configured'
+      }
     ]);
   });
 
@@ -124,8 +147,9 @@ describe('interviewConfigLabel', () => {
   });
 
   it('prefers the snapshot taken at completion over the live definition', () => {
-    expect(interviewConfigLabel('preset', 'junior', 'Junior Angular Developer (2026)'))
-      .toBe('Junior Angular Developer (2026)');
+    expect(interviewConfigLabel('preset', 'junior', 'Junior Angular Developer (2026)')).toBe(
+      'Junior Angular Developer (2026)'
+    );
   });
 
   it('treats custom, missing and unrecognisable records as Custom Interview', () => {

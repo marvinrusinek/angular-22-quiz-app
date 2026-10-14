@@ -7,7 +7,7 @@ import {
   inject,
   isDevMode,
   provideAppInitializer,
-  provideZonelessChangeDetection,
+  provideZonelessChangeDetection
 } from '@angular/core';
 import { provideServiceWorker } from '@angular/service-worker';
 
@@ -79,7 +79,7 @@ bootstrapApplication(AppComponent, {
     provideAppInitializer(() => inject(PwaUpdateService).init()),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
-      registrationStrategy: 'registerWhenStable:30000',
-    }),
-  ],
+      registrationStrategy: 'registerWhenStable:30000'
+    })
+  ]
 }).catch((err: any) => console.error(err));

@@ -39,9 +39,12 @@ import { swallow } from '@shared/utils/error-logging';
         [attr.aria-label]="direction() === 'up' ? upAria : downAria"
         [attr.title]="direction() === 'up' ? upTitle : downTitle"
       >
-        <i class="material-icons" aria-hidden="true">{{
-          direction() === 'up' ? 'keyboard_arrow_up' : 'keyboard_arrow_down'
-        }}</i>
+        <i
+          class="material-icons"
+          aria-hidden="true"
+        >
+          {{ direction() === 'up' ? 'keyboard_arrow_up' : 'keyboard_arrow_down' }}
+        </i>
       </button>
     }
   `,
@@ -106,7 +109,7 @@ export class ScrollDownIndicatorComponent implements OnInit {
   private recompute(): void {
     const doc = document.documentElement;
     const scrollable = doc.scrollHeight - window.innerHeight;
-    this.visible.set(scrollable > 20);          // hide entirely on non-scrolling pages
+    this.visible.set(scrollable > 20); // hide entirely on non-scrolling pages
 
     // 4px slack for sub-pixel rounding. Only the extremes change direction; in
     // between we keep the current one so repeated clicks travel the same way.

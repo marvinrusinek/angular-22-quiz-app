@@ -80,7 +80,11 @@ function makeComp(clicked: number[]) {
   }));
   return {
     optionsToDisplay: opts,
-    optionBindings: Object.assign(() => bindings, { set: (n: any[]) => { bindings = n; } }),
+    optionBindings: Object.assign(() => bindings, {
+      set: (n: any[]) => {
+        bindings = n;
+      }
+    }),
     currentQuestion: () => ({ questionText: QUESTION, options: opts }),
     disabledOptionsPerQuestion: new Map<number, Set<number>>(),
     _multiSelectByQuestion: new Map<number, Set<number>>([[0, new Set(clicked)]]),
@@ -114,7 +118,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       {
         provide: ExplanationTextService,
@@ -135,12 +142,17 @@ beforeEach(() => {
       {
         provide: NextButtonStateService,
         useValue: {
-          setNextButtonState: (v: boolean) => { nextButtonEnabled = v; },
+          setNextButtonState: (v: boolean) => {
+            nextButtonEnabled = v;
+          },
           forceEnable: () => undefined
         }
       },
       { provide: SelectionMessageService, useValue: { forceNextButtonMessage: () => undefined } },
-      { provide: SharedOptionExplanationService, useValue: { resolveExplanationText: () => 'fet' } },
+      {
+        provide: SharedOptionExplanationService,
+        useValue: { resolveExplanationText: () => 'fet' }
+      },
       {
         provide: QuizService,
         useValue: {
@@ -157,8 +169,11 @@ beforeEach(() => {
           // from the fixture's own correct-count so the single-answer test,
           // which swaps that fixture, stays consistent without a second knob.
           isDeclaredMultiAnswer: () =>
-            ((TestBed.inject(QuizService) as any)
-              .getPristineCorrectTextsForQuestion() as Set<string>).size > 1,
+            (
+              (
+                TestBed.inject(QuizService) as any
+              ).getPristineCorrectTextsForQuestion() as Set<string>
+            ).size > 1,
           // TRI-STATE, straight off the verdict: a text the server judged
           // answers true/false, anything it did not judge answers null.
           authorizedCorrectnessForOption: (_q: string, optionText: string) => {
@@ -190,7 +205,12 @@ beforeEach(() => {
       },
       {
         provide: TimerService,
-        useValue: { stopTimer: () => { timerStopped = true; }, resetTimer: () => undefined }
+        useValue: {
+          stopTimer: () => {
+            timerStopped = true;
+          },
+          resetTimer: () => undefined
+        }
       },
       { provide: FeedbackService, useValue: { setCorrectMessage: () => '' } },
       { provide: QuestionVerdictService, useValue: { verdictFor: () => verdictState } }

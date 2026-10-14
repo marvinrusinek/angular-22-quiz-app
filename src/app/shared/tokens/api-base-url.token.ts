@@ -38,7 +38,7 @@ import { InjectionToken, isDevMode, type Provider } from '@angular/core';
  */
 export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL', {
   providedIn: 'root',
-  factory: () => normalizeBaseUrl(resolveApiBaseUrl()),
+  factory: () => normalizeBaseUrl(resolveApiBaseUrl())
 });
 
 /**
@@ -52,7 +52,7 @@ export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL', {
  */
 export const INTERVIEW_API_BASE_URL = new InjectionToken<string>('INTERVIEW_API_BASE_URL', {
   providedIn: 'root',
-  factory: () => normalizeBaseUrl(resolveInterviewApiBaseUrl()),
+  factory: () => normalizeBaseUrl(resolveInterviewApiBaseUrl())
 });
 
 /** Node's local backend during `ng serve` — its established dev port (`backend/src/config.ts`'s default, used throughout `scripts/dev.js`). */
@@ -164,7 +164,7 @@ export function normalizeBaseUrl(url: string): string {
 export function provideApiBaseUrl(url?: string): Provider {
   return {
     provide: API_BASE_URL,
-    useFactory: () => normalizeBaseUrl(url ?? resolveApiBaseUrl()),
+    useFactory: () => normalizeBaseUrl(url ?? resolveApiBaseUrl())
   };
 }
 
@@ -175,6 +175,6 @@ export function provideApiBaseUrl(url?: string): Provider {
 export function provideInterviewApiBaseUrl(url?: string): Provider {
   return {
     provide: INTERVIEW_API_BASE_URL,
-    useFactory: () => normalizeBaseUrl(url ?? resolveInterviewApiBaseUrl()),
+    useFactory: () => normalizeBaseUrl(url ?? resolveInterviewApiBaseUrl())
   };
 }

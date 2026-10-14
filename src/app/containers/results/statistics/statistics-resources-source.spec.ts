@@ -1,9 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
 
@@ -40,9 +37,7 @@ function quizServiceStub() {
     // The local path this slice removes. Present so a regression CALLS it and
     // the spy catches it, rather than throwing an unrelated TypeError.
     loadResourcesForQuiz,
-    resources: [
-      { title: 'LOCAL BANK LINK', url: 'https://local.test', host: 'local' }
-    ],
+    resources: [{ title: 'LOCAL BANK LINK', url: 'https://local.test', host: 'local' }],
     totalQuestions: () => 5,
     correctAnswersCountSig: signal(3),
     getFinalResultSnapshot: () => null,
@@ -76,7 +71,7 @@ function build() {
         provide: TopicQuizMetadataService,
         useValue: {
           load: () => of([]),
-          milestoneFor: (quizId: string) => quizId === QUIZ_ID ? 'Angular Router' : quizId
+          milestoneFor: (quizId: string) => (quizId === QUIZ_ID ? 'Angular Router' : quizId)
         }
       }
     ]
@@ -100,7 +95,7 @@ describe('resources are sourced from the API', () => {
     expect(resourcesRequest().request.method).toBe('GET');
   });
 
-  it('renders what the API returned, in the API\'s order', () => {
+  it("renders what the API returned, in the API's order", () => {
     const fixture = build();
     resourcesRequest().flush({
       quizId: QUIZ_ID,
@@ -111,8 +106,10 @@ describe('resources are sourced from the API', () => {
     });
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.resources().map((r) => r.title))
-      .toEqual(['Router guide', 'Router API']);
+    expect(fixture.componentInstance.resources().map((r) => r.title)).toEqual([
+      'Router guide',
+      'Router API'
+    ]);
   });
 
   it('renders an empty panel when the quiz has no resources', () => {
@@ -133,7 +130,7 @@ describe('THE LOCAL BANK IS NOT THE SOURCE, AND NOT A FALLBACK', () => {
     expect(loadResourcesForQuiz).not.toHaveBeenCalled();
   });
 
-  it('never renders the local bank\'s list, even though the stub still exposes one', () => {
+  it("never renders the local bank's list, even though the stub still exposes one", () => {
     const fixture = build();
     resourcesRequest().flush({
       quizId: QUIZ_ID,

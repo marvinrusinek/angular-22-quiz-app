@@ -42,16 +42,12 @@ export interface QuizDataValidationResult {
 const DIFFICULTIES: readonly string[] = ['beginner', 'intermediate', 'advanced'];
 
 /** Report-only: markup that Angular's sanitizer will strip at render time. */
-const ACTIVE_CONTENT = /<\s*script\b|<\s*iframe\b|<\s*object\b|<\s*embed\b|\son\w+\s*=|javascript\s*:/i;
+const ACTIVE_CONTENT =
+  /<\s*script\b|<\s*iframe\b|<\s*object\b|<\s*embed\b|\son\w+\s*=|javascript\s*:/i;
 
-const isNonEmptyString = (v: unknown): v is string =>
-  typeof v === 'string' && v.trim().length > 0;
+const isNonEmptyString = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0;
 
-function validateOptions(
-  raws: readonly unknown[],
-  label: string,
-  problems: string[]
-): Option[] {
+function validateOptions(raws: readonly unknown[], label: string, problems: string[]): Option[] {
   const out: Option[] = [];
 
   for (const [i, raw] of raws.entries()) {
@@ -72,7 +68,7 @@ function validateOptions(
       continue;
     }
 
-    out.push(raw as Option);   // pass through by reference
+    out.push(raw as Option); // pass through by reference
   }
 
   return out;
@@ -212,7 +208,7 @@ export function validateQuizData(raw: unknown): QuizDataValidationResult {
       }
     }
 
-    quizzes.push(raw2 as Quiz);   // pass through by reference (no-op path)
+    quizzes.push(raw2 as Quiz); // pass through by reference (no-op path)
   }
 
   return { quizzes, resources, problems };

@@ -18,7 +18,7 @@ export interface InterviewResult {
   unanswered: number;
   correct: number;
   incorrect: number;
-  percentage: number;            // 0–100, rounded
+  percentage: number; // 0–100, rounded
   timeUsedSeconds: number;
   timeRemainingSeconds: number;
   difficulty: InterviewDifficulty;

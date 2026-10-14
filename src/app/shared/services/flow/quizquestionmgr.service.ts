@@ -10,7 +10,7 @@ export class QuizQuestionManagerService {
   // ── public methods ──────────────────────────────────────────────
   getNumberOfCorrectAnswersText(
     numberOfCorrectAnswers: number | undefined,
-    totalOptions: number | undefined,
+    totalOptions: number | undefined
   ): string {
     if ((numberOfCorrectAnswers ?? 0) === 0) return 'No correct answers';
 
@@ -20,16 +20,13 @@ export class QuizQuestionManagerService {
         : `(${numberOfCorrectAnswers} answers are correct)`;
     }
 
-    const pluralSuffix =
-      numberOfCorrectAnswers === 1 ? 'answer is' : 'answers are';
+    const pluralSuffix = numberOfCorrectAnswers === 1 ? 'answer is' : 'answers are';
     return `(${numberOfCorrectAnswers} ${pluralSuffix} correct)`;
   }
 
   calculateNumberOfCorrectAnswers(options: Option[]): number {
     const validOptions = options ?? [];
-    return validOptions.reduce(
-      (count, option) => count + (option.correct ? 1 : 0), 0
-    );
+    return validOptions.reduce((count, option) => count + (option.correct ? 1 : 0), 0);
   }
 
   /**
@@ -55,10 +52,7 @@ export class QuizQuestionManagerService {
   public isMultipleAnswerInteractionSync(question: QuizQuestion): boolean {
     // REMOVE THE COUNT IN /questions CONTENT CUTOVER — a declared type wins,
     // and the legacy count survives only for questions that carry none.
-    return resolveIsMultiAnswer(
-      question,
-      this.isMultipleAnswerFromLegacyCount(question)
-    );
+    return resolveIsMultiAnswer(question, this.isMultipleAnswerFromLegacyCount(question));
   }
 
   /**
@@ -82,9 +76,7 @@ export class QuizQuestionManagerService {
   private isMultipleAnswerFromLegacyCount(question: QuizQuestion): boolean {
     try {
       if (question && Array.isArray(question.options)) {
-        const correctAnswersCount = question.options.filter(
-          (option) => option.correct,
-        ).length;
+        const correctAnswersCount = question.options.filter((option) => option.correct).length;
         return correctAnswersCount > 1;
       }
       return false;

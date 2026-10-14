@@ -1,4 +1,4 @@
-﻿﻿import { Service } from '@angular/core';
+﻿import { Service } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
@@ -17,7 +17,6 @@ type Host = QuizQuestionComponent;
  */
 @Service()
 export class QqcOrchLifecycleService {
-
   async runOnInit(host: Host): Promise<void> {
     this.wireQuestionStateSubscriptions(host);
     this.wireNavigationSubscriptions(host);
@@ -74,10 +73,18 @@ export class QqcOrchLifecycleService {
   private setupRenderReadyStream(host: Host): void {
     const renderReady$ = host.lifecycle.createRenderReadyObservable({
       questionPayload$: host.questionPayload$,
-      setCurrentQuestion: (q: QuizQuestion | null) => { host.currentQuestion.set(q); },
-      setOptionsToDisplay: (opts: Option[]) => { host.optionsToDisplay.set(opts); },
-      setExplanationToDisplay: (text: string) => { host.explanationToDisplay.set(text); },
-      setRenderReady: (val: boolean) => { host.renderReady.set(val); },
+      setCurrentQuestion: (q: QuizQuestion | null) => {
+        host.currentQuestion.set(q);
+      },
+      setOptionsToDisplay: (opts: Option[]) => {
+        host.optionsToDisplay.set(opts);
+      },
+      setExplanationToDisplay: (text: string) => {
+        host.explanationToDisplay.set(text);
+      },
+      setRenderReady: (val: boolean) => {
+        host.renderReady.set(val);
+      },
       // renderReadySubject was replaced with the renderReady signal
       // in commit 2e084f59; .set() drives both the signal and any
       // toObservable-derived stream consumers.
@@ -94,22 +101,28 @@ export class QqcOrchLifecycleService {
    * Fire-and-forget (matches the original inline .then).
    */
   private bootstrapComponentState(host: Host): void {
-    host.questionLoader.initializeComponentState({
-      questionsArray: host.questionsArray(),
-      currentQuestionIndex: host.currentQuestionIndex(),
-    }).then((result: any) => {
-      if (!result) return;
-      host.questionsArray.set(result.questionsArray);
-      host.currentQuestionIndex.set(result.currentQuestionIndex);
-      host.currentQuestion.set(result.currentQuestion);
-      const cq = host.currentQuestion();
-      if (cq) {
-        host.generateFeedbackText(cq).then(
-          (text: string) => { host.feedbackText.set(text); },
-          () => { host.feedbackText.set('Unable to generate feedback.'); }
-        );
-      }
-    });
+    host.questionLoader
+      .initializeComponentState({
+        questionsArray: host.questionsArray(),
+        currentQuestionIndex: host.currentQuestionIndex()
+      })
+      .then((result: any) => {
+        if (!result) return;
+        host.questionsArray.set(result.questionsArray);
+        host.currentQuestionIndex.set(result.currentQuestionIndex);
+        host.currentQuestion.set(result.currentQuestion);
+        const cq = host.currentQuestion();
+        if (cq) {
+          host.generateFeedbackText(cq).then(
+            (text: string) => {
+              host.feedbackText.set(text);
+            },
+            () => {
+              host.feedbackText.set('Unable to generate feedback.');
+            }
+          );
+        }
+      });
   }
 
   /**
@@ -117,25 +130,32 @@ export class QqcOrchLifecycleService {
    * apply prior-selection feedback, and (re)initialize the form. Fire-and-forget.
    */
   private bootstrapQuestionData(host: Host): void {
-    host.questionLoader.waitForQuestionData({
-      currentQuestionIndex: host.currentQuestionIndex(),
-      quizId: host.quizService.quizId,
-    }).then((waitResult: any) => {
-      if (!waitResult.currentQuestion) return;
-      host.currentQuestionIndex.set(waitResult.currentQuestionIndex);
-      host.currentQuestion.set(waitResult.currentQuestion);
-      host.optionsToDisplay.set(waitResult.optionsToDisplay);
-      host.quizService.getCurrentOptions(host.currentQuestionIndex()).pipe(take(1)).subscribe((options: Option[]) => {
-        host.optionsToDisplay.set(Array.isArray(options) ? options : []);
-        const previouslySelectedOption = host.optionsToDisplay().find((opt: Option) => opt.selected);
-        if (previouslySelectedOption) {
-          host.applyOptionFeedback(previouslySelectedOption);
-        }
+    host.questionLoader
+      .waitForQuestionData({
+        currentQuestionIndex: host.currentQuestionIndex(),
+        quizId: host.quizService.quizId
+      })
+      .then((waitResult: any) => {
+        if (!waitResult.currentQuestion) return;
+        host.currentQuestionIndex.set(waitResult.currentQuestionIndex);
+        host.currentQuestion.set(waitResult.currentQuestion);
+        host.optionsToDisplay.set(waitResult.optionsToDisplay);
+        host.quizService
+          .getCurrentOptions(host.currentQuestionIndex())
+          .pipe(take(1))
+          .subscribe((options: Option[]) => {
+            host.optionsToDisplay.set(Array.isArray(options) ? options : []);
+            const previouslySelectedOption = host
+              .optionsToDisplay()
+              .find((opt: Option) => opt.selected);
+            if (previouslySelectedOption) {
+              host.applyOptionFeedback(previouslySelectedOption);
+            }
+          });
+        host.initializeForm();
+        host.questionForm.updateValueAndValidity();
+        window.scrollTo(0, 0);
       });
-      host.initializeForm();
-      host.questionForm.updateValueAndValidity();
-      window.scrollTo(0, 0);
-    });
   }
 
   /** Seed the initial data model from the current question and start loading. */
@@ -168,7 +188,10 @@ export class QqcOrchLifecycleService {
     if (firstQResult) {
       host.currentQuestion.set(firstQResult.currentQuestion);
       host.optionsToDisplay.set(firstQResult.optionsToDisplay);
-      if (host.lastProcessedQuestionIndex !== firstQResult.questionIndex || firstQResult.questionIndex === 0) {
+      if (
+        host.lastProcessedQuestionIndex !== firstQResult.questionIndex ||
+        firstQResult.questionIndex === 0
+      ) {
         host.lastProcessedQuestionIndex = firstQResult.questionIndex;
       }
       setTimeout(() => {
@@ -229,9 +252,12 @@ export class QqcOrchLifecycleService {
    * currentQuestion/options/explanation), and the shuffle-preference watcher.
    */
   private wireCoreStateSubscriptions(host: Host): void {
-    host.subscriptionWiring.createCurrentQuestionIndexSubscription(host.destroyRef, (index: number) => {
-      host.currentQuestionIndex.set(index);
-    });
+    host.subscriptionWiring.createCurrentQuestionIndexSubscription(
+      host.destroyRef,
+      (index: number) => {
+        host.currentQuestionIndex.set(index);
+      }
+    );
 
     host.subscriptionWiring.createQuestionPayloadSubscription({
       destroyRef: host.destroyRef,
@@ -245,7 +271,9 @@ export class QqcOrchLifecycleService {
 
     host.subscriptionWiring.createShufflePreferenceSubscription({
       destroyRef: host.destroyRef,
-      onShuffle: (shouldShuffle: boolean) => { host.shuffleOptions = shouldShuffle; }
+      onShuffle: (shouldShuffle: boolean) => {
+        host.shuffleOptions = shouldShuffle;
+      }
     });
   }
 
@@ -274,7 +302,13 @@ export class QqcOrchLifecycleService {
         }
         host.resetUIForNewQuestion();
       },
-      onNavigationToQuestion: ({ question, options }: { question: QuizQuestion; options: Option[] }) => {
+      onNavigationToQuestion: ({
+        question,
+        options
+      }: {
+        question: QuizQuestion;
+        options: Option[];
+      }) => {
         // Only latch containerInitialized when options are present —
         // loadDynamicComponent early-returns on empty options, so latching
         // unconditionally permanently skips creation on a cold-load race and
@@ -289,7 +323,9 @@ export class QqcOrchLifecycleService {
         host.sharedOptionConfig = null;
       },
       onExplanationReset: () => host.resetExplanation(),
-      onRenderReset: () => { host.renderReady.set(false); },
+      onRenderReset: () => {
+        host.renderReady.set(false);
+      },
       onResetUIForNewQuestion: () => host.resetUIForNewQuestion()
     });
     for (const sub of navSubs) {
@@ -303,7 +339,9 @@ export class QqcOrchLifecycleService {
       destroyRef: host.destroyRef,
       onPreReset: (idx: number) => host.resetPerQuestionState(idx),
       getLastResetFor: () => host.lastResetFor,
-      setLastResetFor: (idx: number) => { host.lastResetFor = idx; }
+      setLastResetFor: (idx: number) => {
+        host.lastResetFor = idx;
+      }
     });
 
     host.subscriptionWiring.createRouteParamSubscription({
@@ -314,7 +352,9 @@ export class QqcOrchLifecycleService {
         try {
           const question = await firstValueFrom(host.quizService.getQuestionByIndex(questionIndex));
           if (!question) return;
-        } catch (err: unknown) { swallow('qqc-orch-lifecycle.service.ts getQuestionByIndex', err); }
+        } catch (err: unknown) {
+          swallow('qqc-orch-lifecycle.service.ts getQuestionByIndex', err);
+        }
       }
     });
   }
@@ -378,7 +418,9 @@ export class QqcOrchLifecycleService {
     host.subscriptionWiring.createTotalQuestionsSubscription({
       quizId: host.quizId()!,
       destroyRef: host.destroyRef,
-      onTotal: (totalQuestions: number) => { host.totalQuestions.set(totalQuestions); }
+      onTotal: (totalQuestions: number) => {
+        host.totalQuestions.set(totalQuestions);
+      }
     });
   }
 
@@ -422,7 +464,9 @@ export class QqcOrchLifecycleService {
   private async runAfterViewQuestionSetup(host: Host): Promise<void> {
     host.lifecycle.createOptionsLoaderSubscription({
       options$: host.quizQuestionLoaderService.options$,
-      setCurrentOptions: (opts: Option[]) => { host.currentOptions = opts; }
+      setCurrentOptions: (opts: Option[]) => {
+        host.currentOptions = opts;
+      }
     });
 
     const index = host.currentQuestionIndex();
@@ -430,7 +474,8 @@ export class QqcOrchLifecycleService {
     const setupResult = await host.questionLoader.performAfterViewInitQuestionSetup({
       questionsArray: host.questionsArray(),
       currentQuestionIndex: index,
-      getFormattedExplanation: (q: QuizQuestion, i: number) => host.explanationManager.getFormattedExplanation(q, i),
+      getFormattedExplanation: (q: QuizQuestion, i: number) =>
+        host.explanationManager.getFormattedExplanation(q, i),
       updateExplanationUI: (i: number, text: string) => host.updateExplanationUI(i, text)
     });
 
@@ -441,15 +486,25 @@ export class QqcOrchLifecycleService {
   }
 
   runOnDestroy(host: Host): void {
-    try { document.removeEventListener('visibilitychange', host.onVisibilityChange.bind(host)); } catch (err: unknown) { swallow('qqc-orch-lifecycle.service.ts removeEventListener', err); }
-    try { host.nextButtonStateService.cleanupNextButtonStateStream(); } catch (err: unknown) { swallow('qqc-orch-lifecycle.service.ts cleanupNextButtonStateStream', err); }
+    try {
+      document.removeEventListener('visibilitychange', host.onVisibilityChange.bind(host));
+    } catch (err: unknown) {
+      swallow('qqc-orch-lifecycle.service.ts removeEventListener', err);
+    }
+    try {
+      host.nextButtonStateService.cleanupNextButtonStateStream();
+    } catch (err: unknown) {
+      swallow('qqc-orch-lifecycle.service.ts cleanupNextButtonStateStream', err);
+    }
     // Defence in depth: every subscription pushed onto displaySubscriptions now
     // also carries takeUntilDestroyed, but this array was previously ONLY cleared
     // by the page-visibility handler — so a plain destroy left them live. Clear it
     // here too, so the teardown never depends on a visibility event happening.
     try {
-      for (const sub of (host.displaySubscriptions ?? [])) sub.unsubscribe();
+      for (const sub of host.displaySubscriptions ?? []) sub.unsubscribe();
       host.displaySubscriptions = [];
-    } catch (err: unknown) { swallow('qqc-orch-lifecycle.service.ts displaySubscriptions', err); }
+    } catch (err: unknown) {
+      swallow('qqc-orch-lifecycle.service.ts displaySubscriptions', err);
+    }
   }
 }

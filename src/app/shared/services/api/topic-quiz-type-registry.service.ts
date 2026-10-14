@@ -164,10 +164,14 @@ export class TopicQuizTypeRegistry {
    */
   questionTypeOf(questionText: string | null | undefined): QuestionType | null {
     switch (this.typeOf(questionText)) {
-      case 'multiple': return QuestionType.MultipleAnswer;
-      case 'trueFalse': return QuestionType.TrueFalse;
-      case 'single': return QuestionType.SingleAnswer;
-      default: return null;
+      case 'multiple':
+        return QuestionType.MultipleAnswer;
+      case 'trueFalse':
+        return QuestionType.TrueFalse;
+      case 'single':
+        return QuestionType.SingleAnswer;
+      default:
+        return null;
     }
   }
 

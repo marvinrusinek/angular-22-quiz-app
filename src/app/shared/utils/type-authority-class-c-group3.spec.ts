@@ -36,28 +36,30 @@ const q = (
   type: QuestionType | undefined,
   correctCount: number,
   questionText = 'Which of these apply?'
-): QuizQuestion => ({
-  questionText,
-  explanation: 'e',
-  type,
-  options: Array.from({ length: 4 }, (_, i) => ({
-    optionId: i + 1,
-    text: `opt${i + 1}`,
-    value: i + 1,
-    correct: i < correctCount
-  }))
-} as unknown as QuizQuestion);
+): QuizQuestion =>
+  ({
+    questionText,
+    explanation: 'e',
+    type,
+    options: Array.from({ length: 4 }, (_, i) => ({
+      optionId: i + 1,
+      text: `opt${i + 1}`,
+      value: i + 1,
+      correct: i < correctCount
+    }))
+  }) as unknown as QuizQuestion;
 
 /** Options with no `correct` property at all — the post-cutover shape. */
-const bare = (type: QuestionType | undefined): QuizQuestion => ({
-  questionText: 'No answer key at all',
-  explanation: 'e',
-  type,
-  options: [
-    { optionId: 1, text: 'a', value: 1 },
-    { optionId: 2, text: 'b', value: 2 }
-  ]
-} as unknown as QuizQuestion);
+const bare = (type: QuestionType | undefined): QuizQuestion =>
+  ({
+    questionText: 'No answer key at all',
+    explanation: 'e',
+    type,
+    options: [
+      { optionId: 1, text: 'a', value: 1 },
+      { optionId: 2, text: 'b', value: 2 }
+    ]
+  }) as unknown as QuizQuestion;
 
 describe('interaction mode follows the DECLARED type', () => {
   let mgr: QuizQuestionManagerService;
@@ -133,15 +135,13 @@ describe('the BANNER path is deliberately still count-based', () => {
 
   it('the two resolvers DISAGREE on purpose — that is the split', async () => {
     const declaredSingleButFlaggedMulti = q(QuestionType.SingleAnswer, 3);
-    expect(await bannerGate(declaredSingleButFlaggedMulti)).toBe(true);    // count
-    expect(await interactionOf(mgr, declaredSingleButFlaggedMulti)).toBe(false);  // declared
+    expect(await bannerGate(declaredSingleButFlaggedMulti)).toBe(true); // count
+    expect(await interactionOf(mgr, declaredSingleButFlaggedMulti)).toBe(false); // declared
   });
 });
 
-const interactionOf = (
-  mgr: QuizQuestionManagerService,
-  question: QuizQuestion
-): Promise<boolean> => firstValueFrom(mgr.isMultipleAnswerInteraction(question));
+const interactionOf = (mgr: QuizQuestionManagerService, question: QuizQuestion): Promise<boolean> =>
+  firstValueFrom(mgr.isMultipleAnswerInteraction(question));
 
 describe('cold-load chain: BOTH primary and fallback are declared-first', () => {
   let service: QqcOrchQuestionLoadService;
@@ -165,9 +165,9 @@ describe('cold-load chain: BOTH primary and fallback are declared-first', () => 
         primary === 'real'
           ? mgr
           : {
-            isMultipleAnswerInteraction: () =>
-              throwError(() => new Error('cold load: no emission'))
-          },
+              isMultipleAnswerInteraction: () =>
+                throwError(() => new Error('cold load: no emission'))
+            },
       dynamicComponentService: {
         loadComponent: (_c: unknown, isMulti: boolean) => {
           loadedAsMulti = isMulti;
@@ -189,7 +189,10 @@ describe('cold-load chain: BOTH primary and fallback are declared-first', () => 
         provideHttpClientTesting(),
         QuizQuestionManagerService,
         { provide: API_BASE_URL, useValue: 'https://api.test/api' },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
       ]
     });
     service = TestBed.inject(QqcOrchQuestionLoadService);

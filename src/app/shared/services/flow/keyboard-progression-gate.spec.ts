@@ -74,7 +74,7 @@ function mount(): void {
   host = {
     activatedRoute: { snapshot: { paramMap: { get: () => null } } },
     shouldShowNextButton: jest.fn(() => true),
-    nextButtonEnabled: jest.fn(() => false),   // the shared gate's current verdict
+    nextButtonEnabled: jest.fn(() => false), // the shared gate's current verdict
     advanceToNextQuestion: jest.fn(async () => undefined),
     shouldShowResultsButton: false,
     advanceToResults: jest.fn()

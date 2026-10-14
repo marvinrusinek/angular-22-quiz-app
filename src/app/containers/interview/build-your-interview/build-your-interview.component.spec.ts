@@ -26,11 +26,22 @@ const CREATED: CreatedInterviewSession = {
     expiresAtMs: 1_700_000_900_000,
     durationSeconds: 900,
     remainingSeconds: 900,
-    config: { mode: 'custom', difficulty: 'beginner', topicIds: ['ts', 'templates'], questionCount: 20 },
+    config: {
+      mode: 'custom',
+      difficulty: 'beginner',
+      topicIds: ['ts', 'templates'],
+      questionCount: 20
+    },
     questions: [
       {
-        questionId: 'ts:q:0', sourceQuizId: 'ts', questionText: 'Q?', type: 'single',
-        options: [{ optionId: 101, text: 'a' }, { optionId: 102, text: 'b' }]
+        questionId: 'ts:q:0',
+        sourceQuizId: 'ts',
+        questionText: 'Q?',
+        type: 'single',
+        options: [
+          { optionId: 101, text: 'a' },
+          { optionId: 102, text: 'b' }
+        ]
       }
     ],
     answers: new Map(),
@@ -57,16 +68,10 @@ function toMetadata(quizzes: Quiz[]) {
   }));
 }
 
-
 function makeQuiz(quizId: string, difficulty: QuizDifficulty, n: number): Quiz {
   const questions = Array.from({ length: n }, (_, i) => ({
     questionText: `${quizId}-q${i + 1}`,
-    options: [
-      { text: 'A', correct: true },
-      { text: 'B' },
-      { text: 'C' },
-      { text: 'D' }
-    ],
+    options: [{ text: 'A', correct: true }, { text: 'B' }, { text: 'C' }, { text: 'D' }],
     explanation: 'e'
   }));
   return { quizId, milestone: quizId.toUpperCase(), summary: '', image: '', difficulty, questions };
@@ -119,7 +124,10 @@ describe('BuildYourInterviewComponent', () => {
         // InterviewApiService directly — see its own spec suite for that
         // service's real dedup/reset behavior. This block only cares that
         // it's CALLED, never that it makes a real request.
-        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
+        {
+          provide: InterviewWarmupCoordinatorService,
+          useValue: { warmUp: jest.fn(() => of(undefined)) }
+        },
         { provide: Router, useValue: router },
         { provide: QuizStartSpinnerService, useValue: spinner },
         // Stage 9C: the builder now creates the session through the API.
@@ -153,13 +161,23 @@ describe('BuildYourInterviewComponent', () => {
   // 2
   it('shows only Beginner topics for Beginner', () => {
     setDifficulty('beginner');
-    expect(component.availableTopics().map((t) => t.id).sort()).toEqual(['templates', 'ts']);
+    expect(
+      component
+        .availableTopics()
+        .map((t) => t.id)
+        .sort()
+    ).toEqual(['templates', 'ts']);
   });
 
   // 3
   it('shows only Intermediate topics for Intermediate', () => {
     setDifficulty('intermediate');
-    expect(component.availableTopics().map((t) => t.id).sort()).toEqual(['forms', 'router']);
+    expect(
+      component
+        .availableTopics()
+        .map((t) => t.id)
+        .sort()
+    ).toEqual(['forms', 'router']);
   });
 
   // 4
@@ -180,17 +198,22 @@ describe('BuildYourInterviewComponent', () => {
 
   it('groups topics into categories without dropping any topic', () => {
     setDifficulty('mixed');
-    const flatIds = component.availableTopics().map((t) => t.id).sort();
+    const flatIds = component
+      .availableTopics()
+      .map((t) => t.id)
+      .sort();
     const groupedIds = component
       .groupedTopics()
       .flatMap((g) => g.topics.map((t) => t.id))
       .sort();
-    expect(groupedIds).toEqual(flatIds);   // same set, nothing lost
+    expect(groupedIds).toEqual(flatIds); // same set, nothing lost
   });
 
   it('places known ids under the right category, unknown ids under "Other"', () => {
     setDifficulty('mixed');
-    const byTitle = new Map(component.groupedTopics().map((g) => [g.title, g.topics.map((t) => t.id)]));
+    const byTitle = new Map(
+      component.groupedTopics().map((g) => [g.title, g.topics.map((t) => t.id)])
+    );
     // templates/forms/router are Core Angular; rxjs is Reactive; 'ts' (not a real
     // quizId) falls through to Other.
     expect(byTitle.get('Core Angular')).toEqual(['templates', 'forms', 'router']);
@@ -209,10 +232,10 @@ describe('BuildYourInterviewComponent', () => {
   });
 
   it('omits categories that have no visible topic for the chosen difficulty', () => {
-    setDifficulty('beginner');   // only ts + templates are eligible
+    setDifficulty('beginner'); // only ts + templates are eligible
     const titles = component.groupedTopics().map((g) => g.title);
-    expect(titles).toContain('Core Angular');   // templates
-    expect(titles).toContain('Other');          // ts
+    expect(titles).toContain('Core Angular'); // templates
+    expect(titles).toContain('Other'); // ts
     expect(titles).not.toContain('Reactive Angular');
     expect(titles).not.toContain('Dependency Injection');
   });
@@ -252,7 +275,7 @@ describe('BuildYourInterviewComponent', () => {
   // 9
   it('disables question counts that exceed the eligible pool', () => {
     setDifficulty('beginner');
-    component.toggleTopic('ts', true);        // pool = 10
+    component.toggleTopic('ts', true); // pool = 10
     expect(component.isCountDisabled(10)).toBe(false);
     expect(component.isCountDisabled(20)).toBe(true);
     expect(component.isCountDisabled(30)).toBe(true);
@@ -270,7 +293,7 @@ describe('BuildYourInterviewComponent', () => {
   // 11
   it('disables Start when the pool is insufficient for the count', () => {
     setDifficulty('beginner');
-    component.toggleTopic('ts', true);        // pool 10, default count 20
+    component.toggleTopic('ts', true); // pool 10, default count 20
     expect(component.startDisabled()).toBe(true);
     expect(component.invalidReason()).toContain('Only 10 questions');
   });
@@ -282,7 +305,7 @@ describe('BuildYourInterviewComponent', () => {
     component.toggleTopic('templates', true);
     expect(component.eligiblePool().total).toBe(20);
     expect(component.selectedTopicNames().sort()).toEqual(['TEMPLATES', 'TS']);
-    expect(component.startDisabled()).toBe(false);   // 20 available, count 20
+    expect(component.startDisabled()).toBe(false); // 20 available, count 20
   });
 
   // 13
@@ -299,7 +322,7 @@ describe('BuildYourInterviewComponent', () => {
 
     setDifficulty('beginner');
     component.toggleTopic('ts', true);
-    component.toggleTopic('templates', true);   // pool 20, count 20 → valid
+    component.toggleTopic('templates', true); // pool 20, count 20 → valid
 
     await component.startInterview();
 
@@ -323,13 +346,13 @@ describe('BuildYourInterviewComponent', () => {
   });
 
   it('does NOT fall back to local generation when the API fails', async () => {
-    sessionStorage.clear();   // isolate from the successful-create test above
+    sessionStorage.clear(); // isolate from the successful-create test above
     const api = TestBed.inject(InterviewApiService);
     const builder = TestBed.inject(AssessmentBuilderService);
 
-    jest.spyOn(api, 'createSession').mockReturnValue(
-      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
-    );
+    jest
+      .spyOn(api, 'createSession')
+      .mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
     const buildSpy = jest.spyOn(builder, 'build');
 
     setDifficulty('beginner');
@@ -373,11 +396,24 @@ describe('BuildYourInterviewComponent', () => {
     await component.startInterview();
 
     const raw = sessionStorage.getItem('interviewSessionRef:v2')!;
-    expect(Object.keys(JSON.parse(raw)).sort())
-      .toEqual(['currentIndex', 'sessionId', 'sessionToken', 'version']);
+    expect(Object.keys(JSON.parse(raw)).sort()).toEqual([
+      'currentIndex',
+      'sessionId',
+      'sessionToken',
+      'version'
+    ]);
     for (const banned of [
-      'questions', 'options', 'answers', 'correct', 'correctOptionIds',
-      'explanation', 'GeneratedAssessment', 'durationSeconds', 'expiresAt', 'result', 'score'
+      'questions',
+      'options',
+      'answers',
+      'correct',
+      'correctOptionIds',
+      'explanation',
+      'GeneratedAssessment',
+      'durationSeconds',
+      'expiresAt',
+      'result',
+      'score'
     ]) {
       expect(raw).not.toContain(banned);
     }
@@ -389,9 +425,9 @@ describe('BuildYourInterviewComponent', () => {
 
   it('a non-retryable BAD_REQUEST is not treated as a cold start: no Retry offered, nothing left to retry', async () => {
     const api = TestBed.inject(InterviewApiService);
-    const createSpy = jest.spyOn(api, 'createSession').mockReturnValue(
-      throwError(() => new InterviewApiError('BAD_REQUEST', 400))
-    );
+    const createSpy = jest
+      .spyOn(api, 'createSession')
+      .mockReturnValue(throwError(() => new InterviewApiError('BAD_REQUEST', 400)));
 
     setDifficulty('beginner');
     component.toggleTopic('ts', true);
@@ -419,7 +455,8 @@ describe('BuildYourInterviewComponent', () => {
    */
   it('a single Start click automatically recovers from a first HTTP 504 — two POSTs, same key/body, one navigation, no manual click', async () => {
     const api = TestBed.inject(InterviewApiService);
-    const createSpy = jest.spyOn(api, 'createSession')
+    const createSpy = jest
+      .spyOn(api, 'createSession')
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
       .mockReturnValueOnce(of(CREATED));
 
@@ -447,7 +484,8 @@ describe('BuildYourInterviewComponent', () => {
     jest.useFakeTimers();
     try {
       const api = TestBed.inject(InterviewApiService);
-      const createSpy = jest.spyOn(api, 'createSession')
+      const createSpy = jest
+        .spyOn(api, 'createSession')
         .mockReturnValueOnce(new Observable<never>()) // never emits — exhausts SESSION_CREATE_TIMEOUT_MS
         .mockReturnValueOnce(of(CREATED));
 
@@ -485,7 +523,8 @@ describe('BuildYourInterviewComponent', () => {
    */
   it('first two attempts time out/504, retry 2 succeeds — exactly three POSTs, identical body/key, no second user click, one navigation', async () => {
     const api = TestBed.inject(InterviewApiService);
-    const createSpy = jest.spyOn(api, 'createSession')
+    const createSpy = jest
+      .spyOn(api, 'createSession')
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
       .mockReturnValueOnce(of(CREATED));
@@ -497,7 +536,10 @@ describe('BuildYourInterviewComponent', () => {
     await component.startInterview(); // the ONLY call — no retryInterview() anywhere in this test
 
     expect(createSpy).toHaveBeenCalledTimes(3);
-    const [bodies, keys] = [createSpy.mock.calls.map((c) => c[0]), createSpy.mock.calls.map((c) => c[1])];
+    const [bodies, keys] = [
+      createSpy.mock.calls.map((c) => c[0]),
+      createSpy.mock.calls.map((c) => c[1])
+    ];
     expect(keys[0]).toMatch(UUID_RE);
     expect(keys[1]).toBe(keys[0]);
     expect(keys[2]).toBe(keys[0]);
@@ -519,9 +561,9 @@ describe('BuildYourInterviewComponent', () => {
    */
   it('all three attempts fail: exactly three POSTs, spinner clears, manual Retry appears, no navigation', async () => {
     const api = TestBed.inject(InterviewApiService);
-    const createSpy = jest.spyOn(api, 'createSession').mockReturnValue(
-      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504))
-    );
+    const createSpy = jest
+      .spyOn(api, 'createSession')
+      .mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)));
 
     setDifficulty('beginner');
     component.toggleTopic('ts', true);
@@ -543,7 +585,8 @@ describe('BuildYourInterviewComponent', () => {
   /** Manual Retry, invoked only after ALL THREE attempts already failed, still reuses the exact same key/request — and itself makes no further automatic attempt (one manual request per click). */
   it('manual Retry after all three attempts fail reuses the same key/request and does not itself chain another automatic retry', async () => {
     const api = TestBed.inject(InterviewApiService);
-    const createSpy = jest.spyOn(api, 'createSession')
+    const createSpy = jest
+      .spyOn(api, 'createSession')
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
@@ -567,9 +610,9 @@ describe('BuildYourInterviewComponent', () => {
 
   it('a 401 (UNAUTHORIZED) receives no automatic retry', async () => {
     const api = TestBed.inject(InterviewApiService);
-    const createSpy = jest.spyOn(api, 'createSession').mockReturnValue(
-      throwError(() => new InterviewApiError('UNAUTHORIZED', 401))
-    );
+    const createSpy = jest
+      .spyOn(api, 'createSession')
+      .mockReturnValue(throwError(() => new InterviewApiError('UNAUTHORIZED', 401)));
 
     setDifficulty('beginner');
     component.toggleTopic('ts', true);
@@ -585,9 +628,9 @@ describe('BuildYourInterviewComponent', () => {
 
   it('a same-key/different-request CONFLICT receives no automatic retry', async () => {
     const api = TestBed.inject(InterviewApiService);
-    const createSpy = jest.spyOn(api, 'createSession').mockReturnValue(
-      throwError(() => new InterviewApiError('CONFLICT', 409))
-    );
+    const createSpy = jest
+      .spyOn(api, 'createSession')
+      .mockReturnValue(throwError(() => new InterviewApiError('CONFLICT', 409)));
 
     setDifficulty('beginner');
     component.toggleTopic('ts', true);
@@ -605,11 +648,17 @@ describe('BuildYourInterviewComponent', () => {
   it('a duplicate Start click during the automatic-retry window remains a no-op', async () => {
     const api = TestBed.inject(InterviewApiService);
     let resolveSecond!: () => void;
-    const createSpy = jest.spyOn(api, 'createSession')
+    const createSpy = jest
+      .spyOn(api, 'createSession')
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
-      .mockReturnValueOnce(new Observable((subscriber) => {
-        resolveSecond = () => { subscriber.next(CREATED); subscriber.complete(); };
-      }));
+      .mockReturnValueOnce(
+        new Observable((subscriber) => {
+          resolveSecond = () => {
+            subscriber.next(CREATED);
+            subscriber.complete();
+          };
+        })
+      );
 
     setDifficulty('beginner');
     component.toggleTopic('ts', true);
@@ -635,10 +684,11 @@ describe('BuildYourInterviewComponent', () => {
   it('destroying the component before retry 1 fires prevents any further retry', async () => {
     const api = TestBed.inject(InterviewApiService);
     let rejectFirst!: (err: unknown) => void;
-    const createSpy = jest.spyOn(api, 'createSession')
-      .mockReturnValueOnce(new Observable((subscriber) => {
+    const createSpy = jest.spyOn(api, 'createSession').mockReturnValueOnce(
+      new Observable((subscriber) => {
         rejectFirst = (err) => subscriber.error(err);
-      }));
+      })
+    );
 
     setDifficulty('beginner');
     component.toggleTopic('ts', true);
@@ -659,11 +709,14 @@ describe('BuildYourInterviewComponent', () => {
   it('destroying the component between retry 1 and retry 2 prevents retry 2', async () => {
     const api = TestBed.inject(InterviewApiService);
     let rejectSecond!: (err: unknown) => void;
-    const createSpy = jest.spyOn(api, 'createSession')
+    const createSpy = jest
+      .spyOn(api, 'createSession')
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504))) // attempt 1 fails immediately
-      .mockReturnValueOnce(new Observable((subscriber) => {
-        rejectSecond = (err) => subscriber.error(err); // retry 1 — held open until we control it
-      }));
+      .mockReturnValueOnce(
+        new Observable((subscriber) => {
+          rejectSecond = (err) => subscriber.error(err); // retry 1 — held open until we control it
+        })
+      );
 
     setDifficulty('beginner');
     component.toggleTopic('ts', true);
@@ -700,16 +753,18 @@ describe('BuildYourInterviewComponent', () => {
     await component.startInterview();
 
     expect(router.navigate).toHaveBeenCalledWith(['/interview/session', 'is_test_1']);
-    const visibilityListenerCalls = addEventListenerSpy.mock.calls.filter((c) => c[0] === 'visibilitychange');
+    const visibilityListenerCalls = addEventListenerSpy.mock.calls.filter(
+      (c) => c[0] === 'visibilitychange'
+    );
     expect(visibilityListenerCalls).toHaveLength(0);
     addEventListenerSpy.mockRestore();
   });
 
   it('no sensitive value (idempotency key, token, Authorization header text) ever appears in the rendered error message', async () => {
     const api = TestBed.inject(InterviewApiService);
-    const createSpy = jest.spyOn(api, 'createSession').mockReturnValue(
-      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504))
-    );
+    const createSpy = jest
+      .spyOn(api, 'createSession')
+      .mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)));
 
     setDifficulty('beginner');
     component.toggleTopic('ts', true);
@@ -726,9 +781,9 @@ describe('BuildYourInterviewComponent', () => {
 
   it('a non-504 5xx (e.g. 503) stays on the generic BACKEND_UNAVAILABLE message, not the cold-start wording', async () => {
     const api = TestBed.inject(InterviewApiService);
-    jest.spyOn(api, 'createSession').mockReturnValue(
-      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 503))
-    );
+    jest
+      .spyOn(api, 'createSession')
+      .mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 503)));
 
     setDifficulty('beginner');
     component.toggleTopic('ts', true);
@@ -759,7 +814,10 @@ describe('BuildYourInterviewComponent', () => {
     const parsed = JSON.parse(raw!);
     expect(parsed.idempotencyKey).toMatch(UUID_RE);
     expect(parsed.request).toEqual({
-      mode: 'custom', difficulty: 'beginner', topicIds: ['ts', 'templates'], questionCount: 20
+      mode: 'custom',
+      difficulty: 'beginner',
+      topicIds: ['ts', 'templates'],
+      questionCount: 20
     });
     expect(raw).not.toContain('sessionToken');
     expect(raw).not.toContain(CREATED.sessionToken);
@@ -771,10 +829,20 @@ describe('BuildYourInterviewComponent', () => {
 
   it('restores a persisted pending attempt on init and lets Retry reuse its exact key/request, never auto-firing a request', async () => {
     const persistedKey = '11111111-2222-3333-4444-555555555555';
-    const persistedRequest = { mode: 'custom' as const, difficulty: 'beginner', topicIds: ['ts', 'templates'], questionCount: 20 };
-    sessionStorage.setItem('interviewPendingCreate:v1', JSON.stringify({
-      idempotencyKey: persistedKey, request: persistedRequest, expiresAtMs: Date.now() + 60_000
-    }));
+    const persistedRequest = {
+      mode: 'custom' as const,
+      difficulty: 'beginner',
+      topicIds: ['ts', 'templates'],
+      questionCount: 20
+    };
+    sessionStorage.setItem(
+      'interviewPendingCreate:v1',
+      JSON.stringify({
+        idempotencyKey: persistedKey,
+        request: persistedRequest,
+        expiresAtMs: Date.now() + 60_000
+      })
+    );
 
     // A FRESH component instance — simulating a reload.
     const freshFixture = TestBed.createComponent(BuildYourInterviewComponent);
@@ -795,11 +863,14 @@ describe('BuildYourInterviewComponent', () => {
   });
 
   it('ignores and clears an EXPIRED persisted pending attempt', async () => {
-    sessionStorage.setItem('interviewPendingCreate:v1', JSON.stringify({
-      idempotencyKey: 'stale-key',
-      request: { mode: 'custom', difficulty: 'beginner', topicIds: ['ts'], questionCount: 10 },
-      expiresAtMs: Date.now() - 1_000 // already expired
-    }));
+    sessionStorage.setItem(
+      'interviewPendingCreate:v1',
+      JSON.stringify({
+        idempotencyKey: 'stale-key',
+        request: { mode: 'custom', difficulty: 'beginner', topicIds: ['ts'], questionCount: 10 },
+        expiresAtMs: Date.now() - 1_000 // already expired
+      })
+    );
 
     const freshFixture = TestBed.createComponent(
       (await import('./build-your-interview.component')).BuildYourInterviewComponent
@@ -858,7 +929,9 @@ describe('BuildYourInterviewComponent — Spring warm-up (Phase 2)', () => {
 
     // Node's own topic-metadata request is unrelated — flush it too so
     // httpMock.verify() in afterEach doesn't fail on an outstanding request.
-    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    httpMock
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
   });
 
   it('fires the warm-up independently of Node metadata loading — both are outstanding at once, neither gates the other', () => {
@@ -887,7 +960,9 @@ describe('BuildYourInterviewComponent — Spring warm-up (Phase 2)', () => {
     // all, and the rest of the component is unaffected.
     expect(fixture.componentInstance.createError()).toBeNull();
 
-    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    httpMock
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
   });
 
   it('destroying the component before the warm-up resolves does NOT cancel it — it is app-scoped now, not component-scoped', () => {
@@ -923,8 +998,12 @@ describe('BuildYourInterviewComponent — Spring warm-up (Phase 2)', () => {
     const nodeHealthAttempts = httpMock.match((req) => req.url === 'http://node.test/api/health');
     expect(nodeHealthAttempts).toHaveLength(0);
 
-    httpMock.expectOne((req) => req.url === 'http://spring.test/api/health').flush({ status: 'UP' });
-    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    httpMock
+      .expectOne((req) => req.url === 'http://spring.test/api/health')
+      .flush({ status: 'UP' });
+    httpMock
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
   });
 
   it('the warm-up carries no Authorization header, no idempotency key, and no body', () => {
@@ -936,7 +1015,9 @@ describe('BuildYourInterviewComponent — Spring warm-up (Phase 2)', () => {
     expect(healthReq.request.body).toBeNull();
 
     healthReq.flush({ status: 'UP' });
-    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    httpMock
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
   });
 
   // ── App-lifecycle warm-up coordinator: dedup + fallback semantics ──
@@ -959,18 +1040,24 @@ describe('BuildYourInterviewComponent — Spring warm-up (Phase 2)', () => {
     httpMock.expectNone((req) => req.url === 'http://spring.test/api/health');
     earlierReq.flush({ status: 'UP' });
 
-    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    httpMock
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
   });
 
   it('sends no request at all when an earlier app-level warm-up already succeeded', () => {
     const coordinator = TestBed.inject(InterviewWarmupCoordinatorService);
     coordinator.warmUp().subscribe();
-    httpMock.expectOne((req) => req.url === 'http://spring.test/api/health').flush({ status: 'UP' });
+    httpMock
+      .expectOne((req) => req.url === 'http://spring.test/api/health')
+      .flush({ status: 'UP' });
 
     fixture.detectChanges(); // Builder's own ngOnInit
 
     httpMock.expectNone((req) => req.url === 'http://spring.test/api/health');
-    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    httpMock
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
   });
 
   it('a failed early app-level warm-up is swallowed and permits exactly one Builder fallback attempt', () => {
@@ -989,13 +1076,19 @@ describe('BuildYourInterviewComponent — Spring warm-up (Phase 2)', () => {
     expect(fallbackReq.request.method).toBe('GET');
     fallbackReq.flush({ status: 'UP' });
 
-    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    httpMock
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
   });
 
   it('repeated Builder navigation after success sends no further health requests', () => {
     fixture.detectChanges(); // first Builder instance
-    httpMock.expectOne((req) => req.url === 'http://spring.test/api/health').flush({ status: 'UP' });
-    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    httpMock
+      .expectOne((req) => req.url === 'http://spring.test/api/health')
+      .flush({ status: 'UP' });
+    httpMock
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
     fixture.destroy();
 
     // A second Builder instance — simulates navigating away and back.
@@ -1003,7 +1096,9 @@ describe('BuildYourInterviewComponent — Spring warm-up (Phase 2)', () => {
     fixture2.detectChanges();
 
     httpMock.expectNone((req) => req.url === 'http://spring.test/api/health');
-    httpMock.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    httpMock
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
     fixture2.destroy();
   });
 });
@@ -1047,12 +1142,22 @@ describe('BuildYourInterviewComponent — spinner cleanup on destroy (concurrenc
             warmUp: jest.fn(() => of(undefined))
           }
         },
-        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
+        {
+          provide: InterviewWarmupCoordinatorService,
+          useValue: { warmUp: jest.fn(() => of(undefined)) }
+        },
         {
           // Never resolves within the test — startInterview() stays
           // suspended here, with the overlay already shown, until destroy.
           provide: Router,
-          useValue: { navigate: jest.fn(() => new Promise<boolean>((resolve) => { resolveNavigate = () => resolve(true); })) }
+          useValue: {
+            navigate: jest.fn(
+              () =>
+                new Promise<boolean>((resolve) => {
+                  resolveNavigate = () => resolve(true);
+                })
+            )
+          }
         },
         // The REAL service — this suite exists specifically to prove ITS
         // destroy-triggered behavior, unlike the describe blocks above.
@@ -1100,9 +1205,9 @@ describe('BuildYourInterviewComponent — spinner cleanup on destroy (concurrenc
 
   it('a createSession failure (before showForStart() is ever reached) still clears state cleanly, with nothing to hide/cancel', async () => {
     const api = TestBed.inject(InterviewApiService);
-    jest.spyOn(api, 'createSession').mockReturnValue(
-      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
-    );
+    jest
+      .spyOn(api, 'createSession')
+      .mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
 
     component.setDifficulty('beginner');
     component.toggleTopic('ts', true);
@@ -1130,7 +1235,8 @@ describe('BuildYourInterviewComponent — spinner cleanup on destroy (concurrenc
    */
   it('destroying the component while it is showing the overlay from an AUTOMATIC-retry success hides only that overlay', async () => {
     const api = TestBed.inject(InterviewApiService);
-    jest.spyOn(api, 'createSession')
+    jest
+      .spyOn(api, 'createSession')
       .mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 504)))
       .mockReturnValueOnce(of(CREATED));
 
@@ -1247,8 +1353,9 @@ describe('BuildYourInterviewComponent — production with NO configured API orig
     expect(component.availableTopics()).toEqual([]);
 
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.builder-error')?.textContent)
-      .toContain('Cannot reach the interview service');
+    expect(el.querySelector('.builder-error')?.textContent).toContain(
+      'Cannot reach the interview service'
+    );
     expect(el.textContent).toContain('Try Again');
   });
 
@@ -1271,4 +1378,3 @@ describe('BuildYourInterviewComponent — production with NO configured API orig
     http.expectNone(() => true);
   });
 });
-

@@ -29,7 +29,6 @@ export class CqcQuestionNavService {
   // ── injects ─────────────────────────────────────────────────────
   private readonly fetGuard = inject(CqcFetGuardService);
 
-
   /**
    * If the current browser nav is a page refresh AND the target idx
    * differs from the index we refreshed on, wipe all stale restored
@@ -40,9 +39,13 @@ export class CqcQuestionNavService {
     try {
       let isPageRefresh = false;
       try {
-        const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+        const navEntries = performance.getEntriesByType(
+          'navigation'
+        ) as PerformanceNavigationTiming[];
         isPageRefresh = navEntries.length > 0 && navEntries[0].type === 'reload';
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
 
       if (!isPageRefresh) return;
 
@@ -54,7 +57,9 @@ export class CqcQuestionNavService {
             const oneBased = parseInt(match[1], 10);
             if (Number.isFinite(oneBased) && oneBased >= 1) urlIdx = oneBased - 1;
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
         host._refreshInitialIdx = urlIdx ?? idx;
         if (host._refreshInitialIdx === idx) return;
       }
@@ -71,25 +76,42 @@ export class CqcQuestionNavService {
         host.quizStateService._hasUserInteracted?.delete(idx);
         host.quizStateService._answeredQuestionIndices?.delete(idx);
         host.quizStateService.persistInteractionState?.();
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       try {
         host.selectedOptionService.selectedOptionsMap?.delete(idx);
         host.selectedOptionService._refreshBackup?.delete(idx);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       try {
         host.quizService.selectedOptionsMap?.delete(idx);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       try {
         sessionStorage.removeItem(SK_SEL_Q + idx);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       try {
         host.explanationTextService.fetByIndex?.delete(idx);
         delete (host.explanationTextService.formattedExplanations as any)[idx];
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       try {
-        host.quizStateService.setDisplayState({ mode: 'question', answered: false }, { force: true });
-      } catch { /* ignore */ }
-    } catch { /* ignore */ }
+        host.quizStateService.setDisplayState(
+          { mode: 'question', answered: false },
+          { force: true }
+        );
+      } catch {
+        /* ignore */
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   runQuestionIndexSet(host: Host, idx: number): void {
@@ -115,17 +137,24 @@ export class CqcQuestionNavService {
     const ets = host.explanationTextService;
     ets._activeIndex = idx;
 
-    const isShuffled = host.quizService.isShuffleEnabled() && Array.isArray(host.quizService.shuffledQuestions) && host.quizService.shuffledQuestions.length > 0;
+    const isShuffled =
+      host.quizService.isShuffleEnabled() &&
+      Array.isArray(host.quizService.shuffledQuestions) &&
+      host.quizService.shuffledQuestions.length > 0;
     const currentQuestion = isShuffled
       ? host.quizService.shuffledQuestions[idx]
       : host.quizService.questions[idx];
 
     const hasSelectedOption = currentQuestion?.options?.some((o: Option) => o.selected) ?? false;
     const quizServiceHasSelections = host.quizService.selectedOptionsMap?.has(idx) ?? false;
-    const selectedOptionServiceHasSelections = (host.selectedOptionService.selectedOptionsMap?.get(idx)?.length ?? 0) > 0;
+    const selectedOptionServiceHasSelections =
+      (host.selectedOptionService.selectedOptionsMap?.get(idx)?.length ?? 0) > 0;
     const hasTrackedInteraction = host.quizStateService.hasUserInteracted(idx);
     const hasAnswerEvidence =
-      hasSelectedOption || quizServiceHasSelections || selectedOptionServiceHasSelections || hasTrackedInteraction;
+      hasSelectedOption ||
+      quizServiceHasSelections ||
+      selectedOptionServiceHasSelections ||
+      hasTrackedInteraction;
 
     // All navigation to an existing question — forward, backward, Next/Prev,
     // dot, or arrow key — shows the QUESTION TEXT, never the FET. The FET
@@ -143,9 +172,15 @@ export class CqcQuestionNavService {
       ets.latestExplanationIndex = -1;
       ets.formattedExplanationSig.set('');
 
-      try { (ets as any)._fetSubject?.next({ idx: -1, text: '', token: 0 }); } catch { }
-      try { ets.fetByIndex?.delete(idx); } catch { }
-      try { delete (ets.formattedExplanations as any)[idx]; } catch { }
+      try {
+        (ets as any)._fetSubject?.next({ idx: -1, text: '', token: 0 });
+      } catch {}
+      try {
+        ets.fetByIndex?.delete(idx);
+      } catch {}
+      try {
+        delete (ets.formattedExplanations as any)[idx];
+      } catch {}
 
       host._lastQuestionTextByIndex?.delete(idx);
       host.quizService.selectedOptionsMap?.delete(idx);
@@ -175,7 +210,9 @@ export class CqcQuestionNavService {
 
         try {
           host.quizService.scoringService?.restoreScoreFromPersistence?.(quizId);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
 
         host.currentIndex = zeroBasedIndex;
 
@@ -218,15 +255,20 @@ export class CqcQuestionNavService {
         this.applyQuestionLoad(host, question);
         this.runEagerFetRegeneration(host, question, zeroBasedIndex);
       }
-    } catch {
-    }
+    } catch {}
   }
 
   // Pick the question for this index, preferring the shuffled array when active.
-  private resolveQuestionForIndex(host: Host, questions: QuizQuestion[], zeroBasedIndex: number): QuizQuestion {
+  private resolveQuestionForIndex(
+    host: Host,
+    questions: QuizQuestion[],
+    zeroBasedIndex: number
+  ): QuizQuestion {
     let question = questions[zeroBasedIndex];
-    if (host.quizService.isShuffleEnabled() &&
-      host.quizService.shuffledQuestions?.length > zeroBasedIndex) {
+    if (
+      host.quizService.isShuffleEnabled() &&
+      host.quizService.shuffledQuestions?.length > zeroBasedIndex
+    ) {
       question = host.quizService.shuffledQuestions[zeroBasedIndex];
     }
     return question;
@@ -248,7 +290,11 @@ export class CqcQuestionNavService {
     host._fetLockedForIndex = -1;
   }
 
-  private runEagerFetRegeneration(host: Host, question: QuizQuestion, zeroBasedIndex: number): void {
+  private runEagerFetRegeneration(
+    host: Host,
+    question: QuizQuestion,
+    zeroBasedIndex: number
+  ): void {
     try {
       this.applyPostRefreshCleanup(host, zeroBasedIndex);
     } catch {
@@ -261,9 +307,13 @@ export class CqcQuestionNavService {
   private applyPostRefreshCleanup(host: Host, zeroBasedIndex: number): void {
     let isPageRefresh = false;
     try {
-      const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+      const navEntries = performance.getEntriesByType(
+        'navigation'
+      ) as PerformanceNavigationTiming[];
       isPageRefresh = navEntries.length > 0 && navEntries[0].type === 'reload';
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     if (host._refreshInitialLoadConsumed == null) {
       host._refreshInitialLoadConsumed = false;
     }
@@ -274,9 +324,9 @@ export class CqcQuestionNavService {
     host._refreshInitialLoadConsumed = true;
 
     const isPostRefreshNavToDifferentIdx =
-      isPageRefresh
-      && typeof host._refreshInitialIdx === 'number'
-      && host._refreshInitialIdx !== zeroBasedIndex;
+      isPageRefresh &&
+      typeof host._refreshInitialIdx === 'number' &&
+      host._refreshInitialIdx !== zeroBasedIndex;
     if (isPostRefreshNavToDifferentIdx) {
       this.wipeStaleIndexState(host, zeroBasedIndex);
     }
@@ -288,18 +338,24 @@ export class CqcQuestionNavService {
       host.quizStateService._hasUserInteracted?.delete(zeroBasedIndex);
       host.quizStateService._answeredQuestionIndices?.delete(zeroBasedIndex);
       host.quizStateService.persistInteractionState?.();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     try {
       host.selectedOptionService.selectedOptionsMap?.delete(zeroBasedIndex);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     try {
       sessionStorage.removeItem(SK_SEL_Q + zeroBasedIndex);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     try {
       host.explanationTextService.fetByIndex?.delete(zeroBasedIndex);
       delete (host.explanationTextService.formattedExplanations as any)[zeroBasedIndex];
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
-
-
 }

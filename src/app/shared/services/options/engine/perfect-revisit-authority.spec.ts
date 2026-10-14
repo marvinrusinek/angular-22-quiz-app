@@ -39,7 +39,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' }
     ]
   });
@@ -47,11 +50,8 @@ beforeEach(() => {
 });
 
 /** Reach the private restore helper without loosening its visibility. */
-const applyResolved = (
-  b: OptionBindings,
-  match: any,
-  authorized: ReadonlySet<string> | null
-) => (service as any).applyResolvedBindingState(b, match, authorized);
+const applyResolved = (b: OptionBindings, match: any, authorized: ReadonlySet<string> | null) =>
+  (service as any).applyResolvedBindingState(b, match, authorized);
 
 const binding = (text: string, correct?: boolean): OptionBindings =>
   ({
@@ -102,7 +102,7 @@ describe('the verdict decides what a perfect revisit shows', () => {
   });
 });
 
-describe('with no verdict recorded, the user\'s own picks are the authority', () => {
+describe("with no verdict recorded, the user's own picks are the authority", () => {
   it('lights up what the user actually chose', () => {
     // No verdict (fresh session). The bank says this option is wrong; the
     // user's remembered pick says they chose it, and on a PERFECT answer

@@ -15,23 +15,45 @@ import type { SaveInterviewAnswerResponse } from '@shared/models/api/interview-a
 const TOKEN = 'a'.repeat(43);
 
 const single: InterviewQuestionViewModel = {
-  questionId: 'q:single', sourceQuizId: 'rxjs', questionText: 'One?', type: 'single',
-  options: [{ optionId: 101, text: 'a' }, { optionId: 102, text: 'b' }]
+  questionId: 'q:single',
+  sourceQuizId: 'rxjs',
+  questionText: 'One?',
+  type: 'single',
+  options: [
+    { optionId: 101, text: 'a' },
+    { optionId: 102, text: 'b' }
+  ]
 };
 const multi: InterviewQuestionViewModel = {
-  questionId: 'q:multi', sourceQuizId: 'rxjs', questionText: 'Many?', type: 'multiple',
-  options: [{ optionId: 401, text: 'c' }, { optionId: 402, text: 'd' }, { optionId: 403, text: 'e' }]
+  questionId: 'q:multi',
+  sourceQuizId: 'rxjs',
+  questionText: 'Many?',
+  type: 'multiple',
+  options: [
+    { optionId: 401, text: 'c' },
+    { optionId: 402, text: 'd' },
+    { optionId: 403, text: 'e' }
+  ]
 };
 const trueFalse: InterviewQuestionViewModel = {
-  questionId: 'q:tf', sourceQuizId: 'signals', questionText: 'T/F?', type: 'trueFalse',
-  options: [{ optionId: 501, text: 'True' }, { optionId: 502, text: 'False' }]
+  questionId: 'q:tf',
+  sourceQuizId: 'signals',
+  questionText: 'T/F?',
+  type: 'trueFalse',
+  options: [
+    { optionId: 501, text: 'True' },
+    { optionId: 502, text: 'False' }
+  ]
 };
 
 function session(overrides: Partial<InterviewSessionViewModel> = {}): InterviewSessionViewModel {
   return {
-    sessionId: 'is_1', status: 'active',
-    createdAtMs: 1_700_000_000_000, expiresAtMs: 1_700_000_900_000,
-    durationSeconds: 900, remainingSeconds: 900,
+    sessionId: 'is_1',
+    status: 'active',
+    createdAtMs: 1_700_000_000_000,
+    expiresAtMs: 1_700_000_900_000,
+    durationSeconds: 900,
+    remainingSeconds: 900,
     config: { mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs'], questionCount: 3 },
     questions: [single, multi, trueFalse],
     answers: new Map(),
@@ -41,7 +63,9 @@ function session(overrides: Partial<InterviewSessionViewModel> = {}): InterviewS
 }
 
 function saveResponse(
-  questionId: string, ids: number[], answeredCount = 1
+  questionId: string,
+  ids: number[],
+  answeredCount = 1
 ): SaveInterviewAnswerResponse {
   return { saved: true, questionId, selectedOptionIds: ids, answeredCount, questionCount: 3 };
 }
@@ -73,7 +97,7 @@ describe('pure selection transitions', () => {
   it('SINGLE replaces, and re-clicking keeps it selected', () => {
     expect(toggleOption(single, [], 101)).toEqual([101]);
     expect(toggleOption(single, [101], 102)).toEqual([102]);
-    expect(toggleOption(single, [101], 101)).toEqual([101]);   // not cleared
+    expect(toggleOption(single, [101], 101)).toEqual([101]); // not cleared
   });
 
   it('TRUE/FALSE behaves exactly like single', () => {
@@ -107,7 +131,10 @@ describe('hydration', () => {
     expect(service.questionCount()).toBe(3);
     expect(service.currentIndex()).toBe(0);
     expect(TestBed.inject(InterviewSessionReferenceStorage).read()).toEqual({
-      version: 2, sessionId: 'is_1', sessionToken: TOKEN, currentIndex: 0
+      version: 2,
+      sessionId: 'is_1',
+      sessionToken: TOKEN,
+      currentIndex: 0
     });
   });
 
@@ -123,9 +150,7 @@ describe('hydration', () => {
   });
 
   it('restores saved answers and the answered count', () => {
-    service.activateCreatedSession(
-      session({ answers: new Map([['q:multi', [401, 403]]]) }), TOKEN
-    );
+    service.activateCreatedSession(session({ answers: new Map([['q:multi', [401, 403]]]) }), TOKEN);
     expect(service.selectionFor('q:multi')).toEqual([401, 403]);
     expect(service.answeredCount()).toBe(1);
   });
@@ -137,7 +162,14 @@ describe('hydration', () => {
       answers: [...service.displayedAnswers()],
       config: service.config()
     });
-    for (const banned of ['correct', 'isCorrect', 'correctOptionIds', 'explanation', 'score', 'percentage']) {
+    for (const banned of [
+      'correct',
+      'isCorrect',
+      'correctOptionIds',
+      'explanation',
+      'score',
+      'percentage'
+    ]) {
       expect(snapshot).not.toContain(banned);
     }
   });
@@ -147,7 +179,7 @@ describe('hydration', () => {
     api.resumeSession.mockReturnValue(of(session()));
 
     expect(await service.resumeFromStoredReference()).toEqual({ kind: 'active' });
-    expect(service.currentIndex()).toBe(2);   // clamped to last question
+    expect(service.currentIndex()).toBe(2); // clamped to last question
   });
 
   it('restores a valid index on resume', async () => {
@@ -186,9 +218,7 @@ describe('resume outcomes', () => {
   it('UNAUTHORIZED clears the dead reference', async () => {
     const storage = TestBed.inject(InterviewSessionReferenceStorage);
     storage.write('is_1', TOKEN, 0);
-    api.resumeSession.mockReturnValue(
-      throwError(() => new InterviewApiError('UNAUTHORIZED', 401))
-    );
+    api.resumeSession.mockReturnValue(throwError(() => new InterviewApiError('UNAUTHORIZED', 401)));
 
     expect(await service.resumeFromStoredReference()).toEqual({ kind: 'unauthorized' });
     expect(storage.read()).toBeNull();
@@ -286,7 +316,7 @@ describe('resume outcomes', () => {
 
       service.markResumeUnresolved();
 
-      expect(storage().read()?.sessionId).toBe('is_1');   // valid credentials are NOT cleared
+      expect(storage().read()?.sessionId).toBe('is_1'); // valid credentials are NOT cleared
       expect(api.resumeSession).toHaveBeenCalledTimes(1); // and nothing was re-requested
     });
   });
@@ -294,9 +324,7 @@ describe('resume outcomes', () => {
   it('markResumeUnresolved lands in the retry (error) state and KEEPS the reference', async () => {
     const storage = TestBed.inject(InterviewSessionReferenceStorage);
     storage.write('is_1', TOKEN, 0);
-    api.resumeSession.mockReturnValue(
-      throwError(() => new InterviewApiError('CONFLICT', 409))
-    );
+    api.resumeSession.mockReturnValue(throwError(() => new InterviewApiError('CONFLICT', 409)));
     expect(await service.resumeFromStoredReference()).toEqual({ kind: 'submitted' });
     expect(service.status()).toBe('submitted');
 
@@ -315,11 +343,11 @@ describe('optimistic saving', () => {
     api.saveAnswer.mockReturnValue(of(saveResponse('q:multi', [401, 403])));
 
     const promise = service.updateAnswer('q:multi', [403, 401]);
-    expect(service.selectionFor('q:multi')).toEqual([401, 403]);   // optimistic, canonicalized
+    expect(service.selectionFor('q:multi')).toEqual([401, 403]); // optimistic, canonicalized
 
     expect(await promise).toEqual({ kind: 'saved', selectedOptionIds: [401, 403] });
     expect(service.selectionFor('q:multi')).toEqual([401, 403]);
-    expect(service.answeredCount()).toBe(1);                        // from the SERVER
+    expect(service.answeredCount()).toBe(1); // from the SERVER
   });
 
   it('sends the COMPLETE replacement selection', async () => {
@@ -367,9 +395,9 @@ describe('optimistic saving', () => {
 });
 
 describe('failed saves', () => {
-  beforeEach(() => service.activateCreatedSession(
-    session({ answers: new Map([['q:single', [101]]]) }), TOKEN
-  ));
+  beforeEach(() =>
+    service.activateCreatedSession(session({ answers: new Map([['q:single', [101]]]) }), TOKEN)
+  );
 
   /**
    * What the user SEES is always the confirmed server state. A failed save is
@@ -378,11 +406,13 @@ describe('failed saves', () => {
    * though the backend had accepted it.
    */
   it('restores the last CONFIRMED selection when the latest save fails', async () => {
-    api.saveAnswer.mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.saveAnswer.mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
 
     const outcome = await service.updateAnswer('q:single', [102]);
     expect(outcome.kind).toBe('failed');
-    expect(service.selectionFor('q:single')).toEqual([101]);       // rolled back
+    expect(service.selectionFor('q:single')).toEqual([101]); // rolled back
     expect(service.confirmedAnswers().get('q:single')).toEqual([101]);
     expect(service.hasFailedSave('q:single')).toBe(true);
     expect(service.hasUnsavedChanges()).toBe(true);
@@ -390,7 +420,9 @@ describe('failed saves', () => {
   });
 
   it('a failed save does not leave the question CONFIRMED as answered', async () => {
-    api.saveAnswer.mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.saveAnswer.mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
     await service.updateAnswer('q:multi', [401]);
 
     expect(service.confirmedAnswers().has('q:multi')).toBe(false);
@@ -398,9 +430,11 @@ describe('failed saves', () => {
   });
 
   it('retryFailedSave resends the INTENDED selection, not the displayed one', async () => {
-    api.saveAnswer.mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.saveAnswer.mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
     await service.updateAnswer('q:single', [102]);
-    expect(service.selectionFor('q:single')).toEqual([101]);   // display shows the old answer
+    expect(service.selectionFor('q:single')).toEqual([101]); // display shows the old answer
 
     api.saveAnswer.mockClear();
     api.saveAnswer.mockReturnValue(of(saveResponse('q:single', [102])));
@@ -422,7 +456,9 @@ describe('failed saves', () => {
   });
 
   it('a NEWER selection supersedes the failed retry intent', async () => {
-    api.saveAnswer.mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.saveAnswer.mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
     await service.updateAnswer('q:single', [102]);
 
     // The user picks something else instead of retrying.
@@ -444,7 +480,11 @@ describe('failed saves', () => {
   it('a STALE failure cannot roll back a newer confirmed save', async () => {
     let failFirst!: (err: unknown) => void;
     api.saveAnswer
-      .mockReturnValueOnce(new Observable((subscriber) => { failFirst = (e) => subscriber.error(e); }))
+      .mockReturnValueOnce(
+        new Observable((subscriber) => {
+          failFirst = (e) => subscriber.error(e);
+        })
+      )
       .mockReturnValue(of(saveResponse('q:multi', [402])));
 
     const first = service.updateAnswer('q:multi', [401]);
@@ -464,7 +504,9 @@ describe('failed saves', () => {
   });
 
   it('a retry after failure succeeds', async () => {
-    api.saveAnswer.mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.saveAnswer.mockReturnValueOnce(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
     await service.updateAnswer('q:single', [102]);
 
     api.saveAnswer.mockReturnValue(of(saveResponse('q:single', [102])));
@@ -488,7 +530,7 @@ describe('per-question sequencing', () => {
     const second = service.updateAnswer('q:multi', [401, 403]);
     await Promise.all([first, second]);
 
-    expect(order).toEqual([[401], [401, 403]]);   // in order, never crossed
+    expect(order).toEqual([[401], [401, 403]]); // in order, never crossed
     expect(service.selectionFor('q:multi')).toEqual([401, 403]);
   });
 
@@ -515,7 +557,9 @@ describe('per-question sequencing', () => {
 
   it('a stale FAILURE does not roll back a newer optimistic value', async () => {
     const failing = new Subject<SaveInterviewAnswerResponse>();
-    api.saveAnswer.mockReturnValueOnce(failing).mockReturnValueOnce(of(saveResponse('q:multi', [401, 403])));
+    api.saveAnswer
+      .mockReturnValueOnce(failing)
+      .mockReturnValueOnce(of(saveResponse('q:multi', [401, 403])));
 
     const v1 = service.updateAnswer('q:multi', [401]);
     const v2 = service.updateAnswer('q:multi', [401, 403]);
@@ -545,8 +589,10 @@ describe('per-question sequencing', () => {
     // Both are in flight at once — neither blocks the other.
     expect(api.saveAnswer).toHaveBeenCalledTimes(2);
 
-    b.next(saveResponse('q:multi', [401], 1)); b.complete();
-    a.next(saveResponse('q:single', [101], 2)); a.complete();
+    b.next(saveResponse('q:multi', [401], 1));
+    b.complete();
+    a.next(saveResponse('q:single', [101], 2));
+    a.complete();
     await Promise.all([first, second]);
 
     expect(service.selectionFor('q:single')).toEqual([101]);
@@ -574,13 +620,17 @@ describe('awaitPendingSaves', () => {
   });
 
   it('REJECTS when the latest save failed', async () => {
-    api.saveAnswer.mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.saveAnswer.mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
     await service.updateAnswer('q:single', [101]);
     await expect(service.awaitPendingSaves()).rejects.toBeInstanceOf(InterviewApiError);
   });
 
   it('resolves when a later save repaired an earlier failure', async () => {
-    api.saveAnswer.mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.saveAnswer.mockReturnValueOnce(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
     await service.updateAnswer('q:single', [101]);
 
     api.saveAnswer.mockReturnValue(of(saveResponse('q:single', [102])));
@@ -606,7 +656,7 @@ describe('Mark for Review', () => {
   it('shows the optimistic mark immediately, then the confirmed value', async () => {
     api.setReviewFlag.mockReturnValue(of(flagResponse('q:single', true)));
     const promise = service.setFlagged('q:single', true);
-    expect(service.isFlagged('q:single')).toBe(true);   // optimistic
+    expect(service.isFlagged('q:single')).toBe(true); // optimistic
     await promise;
     expect(service.isFlagged('q:single')).toBe(true);
     expect(service.confirmedFlagged().has('q:single')).toBe(true);
@@ -630,20 +680,22 @@ describe('Mark for Review', () => {
     api.setReviewFlag.mockReturnValue(of(flagResponse('q:single', true)));
     await service.setFlagged('q:single', true);
 
-    expect(service.selectionFor('q:single')).toEqual([101]);   // answer untouched
-    expect(service.isFlagged('q:single')).toBe(true);          // AND marked
+    expect(service.selectionFor('q:single')).toEqual([101]); // answer untouched
+    expect(service.isFlagged('q:single')).toBe(true); // AND marked
 
     api.saveAnswer.mockReturnValue(of(saveResponse('q:single', [102])));
     await service.updateAnswer('q:single', [102]);
-    expect(service.isFlagged('q:single')).toBe(true);           // mark untouched by the answer save
+    expect(service.isFlagged('q:single')).toBe(true); // mark untouched by the answer save
     expect(service.selectionFor('q:single')).toEqual([102]);
   });
 
   it('a FAILED mark save rolls back to the last confirmed value — never blocks submission', async () => {
-    api.setReviewFlag.mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.setReviewFlag.mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
     await service.setFlagged('q:single', true);
 
-    expect(service.isFlagged('q:single')).toBe(false);   // rolled back
+    expect(service.isFlagged('q:single')).toBe(false); // rolled back
     await expect(service.awaitPendingSaves()).resolves.toBeUndefined();
   });
 
@@ -665,11 +717,13 @@ describe('Mark for Review', () => {
 
     const markPromise = service.setFlagged('q:single', true);
     let settled = false;
-    const waiter = service.awaitPendingSaves().then(() => { settled = true; });
+    const waiter = service.awaitPendingSaves().then(() => {
+      settled = true;
+    });
 
     await Promise.resolve();
     await Promise.resolve();
-    expect(settled).toBe(false);   // the mark save has not settled yet
+    expect(settled).toBe(false); // the mark save has not settled yet
 
     gate.next(flagResponse('q:single', true));
     gate.complete();
@@ -677,7 +731,7 @@ describe('Mark for Review', () => {
     await waiter;
 
     expect(settled).toBe(true);
-    expect(service.isFlagged('q:single')).toBe(true);   // the mark survived the race
+    expect(service.isFlagged('q:single')).toBe(true); // the mark survived the race
   });
 });
 

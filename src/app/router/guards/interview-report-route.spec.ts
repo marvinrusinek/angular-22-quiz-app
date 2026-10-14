@@ -1,5 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRouteSnapshot, convertToParamMap, provideRouter, Router, UrlTree } from '@angular/router';
+import {
+  ActivatedRouteSnapshot,
+  convertToParamMap,
+  provideRouter,
+  Router,
+  UrlTree
+} from '@angular/router';
 
 import { routes } from '../quiz-routing.routes';
 import { BackendInterviewResultGuard } from './backend-interview-result-guard';
@@ -33,8 +39,12 @@ describe('Interview Report route — guard contract', () => {
     });
 
     it('adds no other report route (no history/public/print variants)', () => {
-      expect(routes.filter((r) => (r.path ?? '').includes('report')).map((r) => r.path).sort())
-        .toEqual(['interview/report', 'interview/report/:sessionId']);
+      expect(
+        routes
+          .filter((r) => (r.path ?? '').includes('report'))
+          .map((r) => r.path)
+          .sort()
+      ).toEqual(['interview/report', 'interview/report/:sessionId']);
     });
   });
 
@@ -44,7 +54,9 @@ describe('Interview Report route — guard contract', () => {
 
     const run = async (sessionId: string): Promise<boolean | UrlTree> => {
       const guard = TestBed.inject(BackendInterviewResultGuard);
-      const route = { paramMap: convertToParamMap(sessionId ? { sessionId } : {}) } as ActivatedRouteSnapshot;
+      const route = {
+        paramMap: convertToParamMap(sessionId ? { sessionId } : {})
+      } as ActivatedRouteSnapshot;
       return guard.canActivate(route);
     };
     const url = (r: boolean | UrlTree): string => router.serializeUrl(r as UrlTree);
@@ -52,7 +64,10 @@ describe('Interview Report route — guard contract', () => {
     beforeEach(() => {
       load = jest.fn();
       TestBed.configureTestingModule({
-        providers: [provideRouter([]), { provide: BackendInterviewResultService, useValue: { load } }]
+        providers: [
+          provideRouter([]),
+          { provide: BackendInterviewResultService, useValue: { load } }
+        ]
       });
       router = TestBed.inject(Router);
     });

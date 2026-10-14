@@ -16,12 +16,21 @@ describe('buildVerdictNotice', () => {
   });
 
   it('a failure on the question on screen is retryable in place', () => {
-    expect(buildVerdictNotice('error', true)).toEqual({ message: CURRENT_CHECK_FAILED_MESSAGE, canRetry: true });
-    expect(buildVerdictNotice('error', false)).toEqual({ message: CURRENT_CHECK_FAILED_MESSAGE, canRetry: true });
+    expect(buildVerdictNotice('error', true)).toEqual({
+      message: CURRENT_CHECK_FAILED_MESSAGE,
+      canRetry: true
+    });
+    expect(buildVerdictNotice('error', false)).toEqual({
+      message: CURRENT_CHECK_FAILED_MESSAGE,
+      canRetry: true
+    });
   });
 
   it('a failure elsewhere is explained (it is why Results is hidden) but not retryable from here', () => {
-    expect(buildVerdictNotice('resolved', true)).toEqual({ message: EARLIER_CHECK_FAILED_MESSAGE, canRetry: false });
+    expect(buildVerdictNotice('resolved', true)).toEqual({
+      message: EARLIER_CHECK_FAILED_MESSAGE,
+      canRetry: false
+    });
   });
 });
 
@@ -56,7 +65,7 @@ describe('VerdictNoticeComponent', () => {
     expect(btn.tagName).toBe('BUTTON');
     expect(btn.type).toBe('button');
     expect(btn.disabled).toBe(false);
-    expect(btn.tabIndex).toBeGreaterThanOrEqual(0);      // keyboard reachable; Enter/Space activate a native button
+    expect(btn.tabIndex).toBeGreaterThanOrEqual(0); // keyboard reachable; Enter/Space activate a native button
     btn.focus();
     expect(document.activeElement).toBe(btn);
 

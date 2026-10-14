@@ -7,7 +7,10 @@ import { of } from 'rxjs';
 import { QqcOrchClickService } from './qqc-orch-click.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import {
+  IDLE_VERDICT_STATE,
+  type QuestionVerdictState
+} from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * Locking a correctly-answered single-answer question, in the QQC renderer.
@@ -31,8 +34,10 @@ const QUESTION = 'Which operator maps values?';
 let service: QqcOrchClickService;
 let verdictState: QuestionVerdictState;
 
-const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState =>
-  ({ ...IDLE_VERDICT_STATE, ...over });
+const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState => ({
+  ...IDLE_VERDICT_STATE,
+  ...over
+});
 
 beforeEach(() => {
   verdictState = IDLE_VERDICT_STATE;
@@ -40,7 +45,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       QqcOrchClickService,
       { provide: QuestionVerdictService, useValue: { verdictFor: () => verdictState } }
@@ -67,16 +75,21 @@ function host(bs: any[]) {
   return {
     quizService: {
       quizId: 'rxjs',
-      getQuestionsInDisplayOrder: () => [{
-        questionText: QUESTION,
-        options: [{ text: 'map', correct: true }, { text: 'Subject' }, { text: 'Observable' }]
-      }],
+      getQuestionsInDisplayOrder: () => [
+        {
+          questionText: QUESTION,
+          options: [{ text: 'map', correct: true }, { text: 'Subject' }, { text: 'Observable' }]
+        }
+      ],
       questions: [{ questionText: QUESTION }],
       isShuffleEnabled: () => false,
       shuffledQuestions: [],
       quizInitialState: []
     },
-    sharedOptionComponent: () => ({ optionBindings: () => bs, cdRef: { markForCheck: () => undefined } }),
+    sharedOptionComponent: () => ({
+      optionBindings: () => bs,
+      cdRef: { markForCheck: () => undefined }
+    }),
     optionBindings: () => bs,
     cdRef: { markForCheck: () => undefined }
   } as any;
@@ -135,19 +148,22 @@ describe('a correct answer locks the rest', () => {
 
     applyLock(host(bs), bs, bs[0].option);
 
-    expect(bs[0].disabled).toBe(false);   // map — the real answer
-    expect(bs[2].disabled).toBe(true);    // Observable — the lying flag
+    expect(bs[0].disabled).toBe(false); // map — the real answer
+    expect(bs[2].disabled).toBe(true); // Observable — the lying flag
   });
 
   it('marks a still-selected earlier wrong guess incorrect', () => {
     const bs = bindings();
     bs[0].isSelected = true;
-    bs[1].isSelected = true;   // an earlier wrong pick still showing
+    bs[1].isSelected = true; // an earlier wrong pick still showing
     verdictState = state({
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map'],
-      selectedVerdicts: new Map([['map', true], ['Subject', false]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['Subject', false]
+      ])
     });
 
     applyLock(host(bs), bs, bs[0].option);
@@ -213,7 +229,7 @@ describe('nothing locks until the verdict authorizes it', () => {
 
 describe('identity is textual, not positional', () => {
   it('locks correctly when the options are displayed in a different order', () => {
-    const bs = [...bindings()].reverse();   // map is now last
+    const bs = [...bindings()].reverse(); // map is now last
     const answer = bs.find((b) => b.option.text === 'map')!;
     answer.isSelected = true;
     verdictState = state({

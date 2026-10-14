@@ -1,4 +1,4 @@
-﻿import { Service, inject } from '@angular/core';
+import { Service, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, ParamMap, Params, Router } from '@angular/router';
 import { distinctUntilChanged, filter, map, tap } from 'rxjs/operators';
@@ -55,15 +55,15 @@ export class QuizSetupRouteService {
   // ── public methods ──────────────────────────────────────────────
 
   // â”€â”€ Route events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  subscribeToRouteEvents(
-    host: Host,
-    loadQuestions: (host: Host) => Promise<void>
-  ): void {
+  subscribeToRouteEvents(host: Host, loadQuestions: (host: Host) => Promise<void>): void {
     this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(async () => {
-        const { routeQuizId, index: idx, isQuizSwitch } =
-          this.quizRouteService.parseNavigationEndParams(host.activatedRoute, host.quizId());
+        const {
+          routeQuizId,
+          index: idx,
+          isQuizSwitch
+        } = this.quizRouteService.parseNavigationEndParams(host.activatedRoute, host.quizId());
 
         if (isQuizSwitch && routeQuizId) {
           this.quizNavigationService.resetForNewQuiz();
@@ -80,8 +80,7 @@ export class QuizSetupRouteService {
         // Force-update combinedQuestionData so the template always
         // has question data after URL navigation. Prefer quizService.questions
         // getter which returns shuffled data when shuffle is active.
-        const question = this.quizService.questions?.[idx]
-          ?? host.questionsArray()?.[idx] ?? null;
+        const question = this.quizService.questions?.[idx] ?? host.questionsArray()?.[idx] ?? null;
         if (question && question.options?.length > 0) {
           const payload = {
             question,
@@ -124,7 +123,8 @@ export class QuizSetupRouteService {
   }
 
   fetchTotalQuestions(host: Host): void {
-    this.quizService.getTotalQuestionsCount(host.quizId())
+    this.quizService
+      .getTotalQuestionsCount(host.quizId())
       .pipe()
       .subscribe((total: number) => {
         host.totalQuestions.set(total);
@@ -139,15 +139,21 @@ export class QuizSetupRouteService {
         const prevIdx = host.lastLoggedIndex;
         host.lastLoggedIndex = idx;
         host.currentQuestionIndex.set(idx);
-        const { question, isNavigation } = this.quizContentLoaderService.handleQuestionIndexTransition({
-          idx, prevIdx, quizId: host.quizId(), questionsArray: host.questionsArray()
-        });
+        const { question, isNavigation } =
+          this.quizContentLoaderService.handleQuestionIndexTransition({
+            idx,
+            prevIdx,
+            quizId: host.quizId(),
+            questionsArray: host.questionsArray()
+          });
 
         if (question) {
           host.currentQuestion.set(question);
           host.questionToDisplaySig.set(question.questionText?.trim() ?? '');
           host.combinedQuestionData.set({
-            question, options: question.options, explanation: question.explanation
+            question,
+            options: question.options,
+            explanation: question.explanation
           });
         }
         host.cdRef.markForCheck();
@@ -214,14 +220,19 @@ export class QuizSetupRouteService {
     this.timerService.resetTimerFlagsFor(index);
 
     try {
-      const result = await this.quizContentLoaderService.loadQuestionFromRouteChange({ quizId, index });
+      const result = await this.quizContentLoaderService.loadQuestionFromRouteChange({
+        quizId,
+        index
+      });
       if (!result.success || !result.question) return;
 
       host.totalQuestions.set(result.totalQuestions);
       host.currentQuestion.set(result.question);
       host.question.set(result.question);
       const payload = {
-        question: result.question, options: result.options, explanation: result.explanation
+        question: result.question,
+        options: result.options,
+        explanation: result.explanation
       };
       host.combinedQuestionData.set(payload);
       host.questionToDisplaySig.set(result.question.questionText?.trim() ?? '');
@@ -264,7 +275,10 @@ export class QuizSetupRouteService {
       this.timerService.restartForQuestion(index);
       localStorage.setItem(SK_SAVED_QUESTION_INDEX, index.toString());
     } catch (err: unknown) {
-      console.error('QuizSetupRouteService.subscribeToRouteParams param map change handling failed:', err);
+      console.error(
+        'QuizSetupRouteService.subscribeToRouteParams param map change handling failed:',
+        err
+      );
     }
   }
 
@@ -279,19 +293,17 @@ export class QuizSetupRouteService {
   }
 
   subscribeRouterAndInit(host: Host): void {
-    host.activatedRoute.data
-      .pipe(takeUntilDestroyed(host.destroyRef))
-      .subscribe((data: any) => {
-        const quizData = data['quizData'];
-        // S6f: existence only — quizData.questions is always [] now (the
-        // resolver no longer carries the bank's real question content).
-        if (!quizData?.quizId) {
-          void this.router.navigate(['/select']);
-          return;
-        }
-        host.quizId.set(quizData.quizId);
-        host.questionIndex.set(+host.activatedRoute.snapshot.params['questionIndex']);
-      });
+    host.activatedRoute.data.pipe(takeUntilDestroyed(host.destroyRef)).subscribe((data: any) => {
+      const quizData = data['quizData'];
+      // S6f: existence only — quizData.questions is always [] now (the
+      // resolver no longer carries the bank's real question content).
+      if (!quizData?.quizId) {
+        void this.router.navigate(['/select']);
+        return;
+      }
+      host.quizId.set(quizData.quizId);
+      host.questionIndex.set(+host.activatedRoute.snapshot.params['questionIndex']);
+    });
   }
 
   setupNavigation(host: Host): void {
@@ -347,7 +359,10 @@ export class QuizSetupRouteService {
   async loadQuestionByRouteIndex(host: Host, routeIndex: number): Promise<void> {
     try {
       const result = await this.quizContentLoaderService.loadQuestionByRoute({
-        routeIndex, quiz: host.quiz(), quizId: host.quizId(), totalQuestions: host.totalQuestions(),
+        routeIndex,
+        quiz: host.quiz(),
+        quizId: host.quizId(),
+        totalQuestions: host.totalQuestions()
       });
       if (result.questionIndex === -1) {
         void this.router.navigate(['/question/', host.quizId(), 1]);
@@ -364,11 +379,15 @@ export class QuizSetupRouteService {
       // countdown itself begins when the signed deadline arrives — never from
       // a local 30s guess started here.
       this.questionTimingService.activateQuestionTiming(
-        host.quizId(), result.question.questionText, result.questionIndex
+        host.quizId(),
+        result.question.questionText,
+        result.questionIndex
       );
 
       host.combinedQuestionData.set({
-        question: result.question, options: result.question.options ?? [], explanation: result.question.explanation ?? ''
+        question: result.question,
+        options: result.question.options ?? [],
+        explanation: result.question.explanation ?? ''
       });
       host.questionToDisplaySig.set(result.questionText);
       host.optionsToDisplaySig.set(result.optionsWithIds);
@@ -376,7 +395,11 @@ export class QuizSetupRouteService {
         this.quizContentLoaderService.restoreSelectedOptionsFromSession(host.optionsToDisplaySig());
         setTimeout(() => {
           const prev = host.optionsToDisplaySig().find((opt: Option) => opt.selected);
-          if (prev) this.selectedOptionService.reapplySelectionForQuestion(prev, host.currentQuestionIndex());
+          if (prev)
+            this.selectedOptionService.reapplySelectionForQuestion(
+              prev,
+              host.currentQuestionIndex()
+            );
         }, 50);
       }, 50);
     } catch (err: unknown) {

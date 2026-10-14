@@ -108,7 +108,10 @@ export class InterviewCertificateService {
           const completedMs = Date.parse(e.completedAt);
           return !Number.isNaN(completedMs) && completedMs >= qualStartMs;
         }).length;
-    const interviewsRemaining = Math.max(REQUIRED_CERTIFICATE_INTERVIEWS - qualifyingInterviewsCompleted, 0);
+    const interviewsRemaining = Math.max(
+      REQUIRED_CERTIFICATE_INTERVIEWS - qualifyingInterviewsCompleted,
+      0
+    );
 
     return {
       qualificationStartedAt,
@@ -117,7 +120,8 @@ export class InterviewCertificateService {
       qualifyingInterviewsCompleted,
       requiredInterviews: REQUIRED_CERTIFICATE_INTERVIEWS,
       interviewsRemaining,
-      isEligible: angularExplorerEarned && qualifyingInterviewsCompleted >= REQUIRED_CERTIFICATE_INTERVIEWS,
+      isEligible:
+        angularExplorerEarned && qualifyingInterviewsCompleted >= REQUIRED_CERTIFICATE_INTERVIEWS,
       isUnlocked: this._record()?.unlocked === true
     };
   });
@@ -132,9 +136,9 @@ export class InterviewCertificateService {
    * do NOT infer an older historical date).
    */
   ensureQualificationStarted(): void {
-    if (this._qualStartedAt()) return;                 // written once — never overwritten
+    if (this._qualStartedAt()) return; // written once — never overwritten
     const earned = this.achievements.earnedIds();
-    if (!CURRICULUM_ACHIEVEMENTS.every((id) => earned.has(id))) return;   // not qualified yet
+    if (!CURRICULUM_ACHIEVEMENTS.every((id) => earned.has(id))) return; // not qualified yet
 
     const now = new Date().toISOString();
     this._qualStartedAt.set(now);
@@ -149,8 +153,8 @@ export class InterviewCertificateService {
    */
   unlock(): InterviewCertificateRecord | null {
     const existing = this._record();
-    if (existing?.unlocked) return existing;          // already issued — stable
-    if (!this.progress().isEligible) return null;     // requirements not yet met
+    if (existing?.unlocked) return existing; // already issued — stable
+    if (!this.progress().isEligible) return null; // requirements not yet met
 
     const now = new Date().toISOString();
     const record: InterviewCertificateRecord = {

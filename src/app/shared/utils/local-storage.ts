@@ -21,7 +21,9 @@ export function readLocalString(key: string, fallback = ''): string {
 export function writeLocalString(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
-  } catch (err: unknown) { swallow('local-storage.ts', err); /* ignore */ }
+  } catch (err: unknown) {
+    swallow('local-storage.ts', err); /* ignore */
+  }
 }
 
 /** Read a JSON-serializable value from localStorage. Returns `fallback` on miss / parse error. */
@@ -46,12 +48,17 @@ export function writeLocalJson(key: string, value: unknown): boolean {
   try {
     localStorage.setItem(key, JSON.stringify(value));
     return true;
-  } catch (err: unknown) { swallow('local-storage.ts', err); return false; }
+  } catch (err: unknown) {
+    swallow('local-storage.ts', err);
+    return false;
+  }
 }
 
 /** Remove a key from localStorage. Errors are swallowed. */
 export function removeLocalKey(key: string): void {
   try {
     localStorage.removeItem(key);
-  } catch (err: unknown) { swallow('local-storage.ts', err); /* ignore */ }
+  } catch (err: unknown) {
+    swallow('local-storage.ts', err); /* ignore */
+  }
 }

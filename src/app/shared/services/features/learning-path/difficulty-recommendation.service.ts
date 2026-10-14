@@ -7,8 +7,8 @@ type Level = 'beginner' | 'intermediate' | 'advanced';
 interface LevelStats {
   total: number;
   completed: number;
-  ratio: number;   // completed / total (1 when the level has no quizzes)
-  avg: number;     // mean best score of completed quizzes (0 when none)
+  ratio: number; // completed / total (1 when the level has no quizzes)
+  avg: number; // mean best score of completed quizzes (0 when none)
 }
 
 /**
@@ -115,15 +115,16 @@ export class DifficultyRecommendationService {
         intermediate.avg < DifficultyRecommendationService.SCORE_THRESHOLD
           ? $localize`Continue strengthening your Intermediate topics.`
           : $localize`You're ready for Intermediate Angular topics.`;
-      return rec('intermediate', message, browse('intermediate', $localize`Browse Intermediate Quizzes`));
+      return rec(
+        'intermediate',
+        message,
+        browse('intermediate', $localize`Browse Intermediate Quizzes`)
+      );
     }
 
     // ── Advanced: ready for it ────────────────────────────────────────
     // "Keep Improving": already in Advanced but the average has dropped.
-    if (
-      advanced.completed > 0 &&
-      advanced.avg < DifficultyRecommendationService.SCORE_THRESHOLD
-    ) {
+    if (advanced.completed > 0 && advanced.avg < DifficultyRecommendationService.SCORE_THRESHOLD) {
       return rec(
         'advanced',
         $localize`Continue strengthening your Advanced knowledge.`,

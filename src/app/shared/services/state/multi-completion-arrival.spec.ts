@@ -35,14 +35,14 @@ let quiz: any;
 
 /** Display order differs from canonical, so a positional key would be wrong. */
 const DISPLAY_ORDER = [
-  { questionText: Q_OTHER,  options: [] },
-  { questionText: Q_MULTI,  options: [] },
+  { questionText: Q_OTHER, options: [] },
+  { questionText: Q_MULTI, options: [] },
   { questionText: Q_SINGLE, options: [] }
 ];
 const CANONICAL = [
-  { questionText: Q_MULTI,  options: [] },
+  { questionText: Q_MULTI, options: [] },
   { questionText: Q_SINGLE, options: [] },
-  { questionText: Q_OTHER,  options: [] }
+  { questionText: Q_OTHER, options: [] }
 ];
 
 const resolvedMulti = (): QuestionCheckResult => ({
@@ -76,7 +76,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       {
         provide: QuizService,

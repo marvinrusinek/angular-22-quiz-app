@@ -50,7 +50,8 @@ describe('validateQuizData', () => {
       const mutated: string[] = [];
       for (const [i, q] of quizzes.entries()) {
         // Identity, not deep-equality: proves nothing was cloned or rebuilt.
-        if (q !== raw.quizzes[i]) mutated.push(`quiz[${i}] (${q.quizId}) was not passed through by reference`);
+        if (q !== raw.quizzes[i])
+          mutated.push(`quiz[${i}] (${q.quizId}) was not passed through by reference`);
       }
       expect(mutated).toEqual([]);
     });
@@ -62,7 +63,9 @@ describe('validateQuizData', () => {
         list.reduce((n, q) => n + (q.questions?.length ?? 0), 0);
       const countOptions = (list: any[]) =>
         list.reduce(
-          (n, q) => n + (q.questions ?? []).reduce((m: number, qn: any) => m + (qn.options?.length ?? 0), 0),
+          (n, q) =>
+            n +
+            (q.questions ?? []).reduce((m: number, qn: any) => m + (qn.options?.length ?? 0), 0),
           0
         );
 
@@ -130,10 +133,10 @@ describe('validateQuizData', () => {
           {
             quizId: 'q',
             questions: [
-              { explanation: 'x', options: [{ text: 'a' }] },                      // no questionText
-              { questionText: 'Q?', options: [{ text: 'a' }] },                    // no explanation
-              { questionText: 'Q?', explanation: 'x' },                            // no options
-              { questionText: 'Q?', explanation: 'x', options: [] },               // empty options
+              { explanation: 'x', options: [{ text: 'a' }] }, // no questionText
+              { questionText: 'Q?', options: [{ text: 'a' }] }, // no explanation
+              { questionText: 'Q?', explanation: 'x' }, // no options
+              { questionText: 'Q?', explanation: 'x', options: [] }, // empty options
               { questionText: 'ok', explanation: 'x', options: [{ text: 'a', correct: true }] }
             ]
           }
@@ -155,7 +158,10 @@ describe('validateQuizData', () => {
               {
                 questionText: 'Q?',
                 explanation: 'x',
-                options: [{ text: 'a', correct: true }, { text: 'b', correct: 'false' }]
+                options: [
+                  { text: 'a', correct: true },
+                  { text: 'b', correct: 'false' }
+                ]
               }
             ]
           }
@@ -198,7 +204,7 @@ describe('validateQuizData', () => {
         ]
       });
 
-      expect(quizzes[0].questions![0].questionText).toBe(evil);   // untouched
+      expect(quizzes[0].questions![0].questionText).toBe(evil); // untouched
       expect(problems.join(' ')).toContain('active content');
     });
 

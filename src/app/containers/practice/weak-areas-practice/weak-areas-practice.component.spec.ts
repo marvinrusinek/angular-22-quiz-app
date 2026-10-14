@@ -6,10 +6,7 @@ import { WeakAreasPracticeComponent } from './weak-areas-practice.component';
 import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 import { PracticeVerdictService } from '@shared/services/features/practice/practice-verdict.service';
 import { QuestionType, QuizQuestion } from '@shared/models';
-import {
-  canAdvanceFromQuestion,
-  isQuestionResolved
-} from '@shared/utils/practice-scoring';
+import { canAdvanceFromQuestion, isQuestionResolved } from '@shared/utils/practice-scoring';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
 
 const SINGLE: QuizQuestion = {
@@ -76,7 +73,9 @@ function makeSessionStub(questions: QuizQuestion[]) {
     currentIndex,
     currentQuestion,
     answersByIndex,
-    answeredCount: computed(() => Object.values(answersByIndex()).filter((a) => a.length > 0).length),
+    answeredCount: computed(
+      () => Object.values(answersByIndex()).filter((a) => a.length > 0).length
+    ),
     allAnswered: computed(() => false),
     canGoPrevious: computed(() => currentIndex() > 0),
     canAdvance,
@@ -86,13 +85,19 @@ function makeSessionStub(questions: QuizQuestion[]) {
     isCurrentAnswered: computed(() => currentSelection().length > 0),
     // Declared-type driven, exactly as the real session computes it.
     isCurrentMultiAnswer: computed(() => currentQuestion()?.type === QuestionType.MultipleAnswer),
-    isCurrentResolved: computed(() => isQuestionResolved(currentQuestion(), currentSelection(), authorizedResolved)),
+    isCurrentResolved: computed(() =>
+      isQuestionResolved(currentQuestion(), currentSelection(), authorizedResolved)
+    ),
     currentSelection,
     submitted,
     select: (index: number, ids: number[]) =>
       answersByIndex.update((m) => ({ ...m, [index]: [...ids] })),
-    next: () => { if (canAdvance() && !isLastQuestion()) currentIndex.update((i) => i + 1); },
-    previous: () => { if (currentIndex() > 0) currentIndex.update((i) => i - 1); },
+    next: () => {
+      if (canAdvance() && !isLastQuestion()) currentIndex.update((i) => i + 1);
+    },
+    previous: () => {
+      if (currentIndex() > 0) currentIndex.update((i) => i - 1);
+    },
     submit: () => submitted.set(true),
     clear: jest.fn()
   };
@@ -163,7 +168,9 @@ async function mount(questions: QuizQuestion[]): Promise<{
 }
 
 function nextButton(fixture: ComponentFixture<WeakAreasPracticeComponent>): HTMLButtonElement {
-  const buttons = [...fixture.nativeElement.querySelectorAll('.wap__nav button')] as HTMLButtonElement[];
+  const buttons = [
+    ...fixture.nativeElement.querySelectorAll('.wap__nav button')
+  ] as HTMLButtonElement[];
   return buttons[buttons.length - 1];
 }
 
@@ -176,7 +183,10 @@ function pressArrowRight(): void {
 }
 
 describe('WeakAreasPracticeComponent — Next gating', () => {
-  beforeEach(() => { sessionStorage.clear(); setQuizDataCache([], []); });
+  beforeEach(() => {
+    sessionStorage.clear();
+    setQuizDataCache([], []);
+  });
 
   it('disables Next while the question is unanswered', async () => {
     const { fixture } = await mount([SINGLE, MULTI]);
@@ -212,7 +222,7 @@ describe('WeakAreasPracticeComponent — Next gating', () => {
     fixture.detectChanges();
 
     expect(nextButton(fixture).textContent).toContain('Finish Practice');
-    expect(nextButton(fixture).disabled).toBe(true);      // multi still unanswered
+    expect(nextButton(fixture).disabled).toBe(true); // multi still unanswered
 
     session.select(1, [1, 3]);
     fixture.detectChanges();
@@ -221,7 +231,10 @@ describe('WeakAreasPracticeComponent — Next gating', () => {
 });
 
 describe('WeakAreasPracticeComponent — right-arrow obeys the SAME gate as Next', () => {
-  beforeEach(() => { sessionStorage.clear(); setQuizDataCache([], []); });
+  beforeEach(() => {
+    sessionStorage.clear();
+    setQuizDataCache([], []);
+  });
 
   it('ArrowRight does nothing while Next is disabled (partial multi-answer)', async () => {
     const { fixture, session } = await mount([MULTI, SINGLE]);
@@ -231,7 +244,7 @@ describe('WeakAreasPracticeComponent — right-arrow obeys the SAME gate as Next
     expect(nextButton(fixture).disabled).toBe(true);
     pressArrowRight();
     fixture.detectChanges();
-    expect(session.currentIndex()).toBe(0);   // keyboard cannot bypass the gate
+    expect(session.currentIndex()).toBe(0); // keyboard cannot bypass the gate
   });
 
   it('ArrowRight advances exactly when Next is enabled', async () => {
@@ -268,7 +281,10 @@ describe('WeakAreasPracticeComponent — right-arrow obeys the SAME gate as Next
 });
 
 describe('WeakAreasPracticeComponent — FET reveal', () => {
-  beforeEach(() => { sessionStorage.clear(); setQuizDataCache([], []); });
+  beforeEach(() => {
+    sessionStorage.clear();
+    setQuizDataCache([], []);
+  });
 
   it('hides the FET while unanswered', async () => {
     const { fixture } = await mount([SINGLE]);
@@ -316,7 +332,10 @@ describe('WeakAreasPracticeComponent — FET reveal', () => {
 });
 
 describe('WeakAreasPracticeComponent — options stay changeable until resolved', () => {
-  beforeEach(() => { sessionStorage.clear(); setQuizDataCache([], []); });
+  beforeEach(() => {
+    sessionStorage.clear();
+    setQuizDataCache([], []);
+  });
 
   function inputs(fixture: ComponentFixture<WeakAreasPracticeComponent>): HTMLInputElement[] {
     return [...fixture.nativeElement.querySelectorAll('.io-input')] as HTMLInputElement[];
@@ -383,7 +402,10 @@ describe('WeakAreasPracticeComponent — options stay changeable until resolved'
 });
 
 describe('WeakAreasPracticeComponent — exits', () => {
-  beforeEach(() => { sessionStorage.clear(); setQuizDataCache([], []); });
+  beforeEach(() => {
+    sessionStorage.clear();
+    setQuizDataCache([], []);
+  });
 
   it('Back to Quizzes clears the session and navigates to Quiz Selection', async () => {
     const { fixture, session } = await mount([SINGLE]);
@@ -413,7 +435,7 @@ describe('WeakAreasPracticeComponent — exits', () => {
     const router = TestBed.inject(Router);
     const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    session.select(0, [1]);                 // partial
+    session.select(0, [1]); // partial
     fixture.detectChanges();
     await fixture.componentInstance.submit();
 

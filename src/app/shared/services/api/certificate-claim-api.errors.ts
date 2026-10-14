@@ -71,7 +71,8 @@ export function toCertificateClaimApiError(error: unknown): CertificateClaimApiE
     case 410:
       return new CertificateClaimApiError('TOKEN_EXPIRED', 410);
     default:
-      if (error.status >= 500) return new CertificateClaimApiError('BACKEND_UNAVAILABLE', error.status);
+      if (error.status >= 500)
+        return new CertificateClaimApiError('BACKEND_UNAVAILABLE', error.status);
       return new CertificateClaimApiError('UNKNOWN', error.status);
   }
 }

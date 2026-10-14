@@ -25,12 +25,22 @@ function summary(overrides: Partial<ProgressSummary> = {}): ProgressSummary {
 
 const WEAK: WeakTopic[] = [
   {
-    topicId: 'rxjs', topicName: 'RxJS', percentage: 42.4,
-    correct: 7, incorrect: 10, total: 17, lastActivityAt: '2026-07-30T00:00:00.000Z'
+    topicId: 'rxjs',
+    topicName: 'RxJS',
+    percentage: 42.4,
+    correct: 7,
+    incorrect: 10,
+    total: 17,
+    lastActivityAt: '2026-07-30T00:00:00.000Z'
   },
   {
-    topicId: 'signals', topicName: 'Signals', percentage: 61.1,
-    correct: 11, incorrect: 7, total: 18, lastActivityAt: '2026-07-29T00:00:00.000Z'
+    topicId: 'signals',
+    topicName: 'Signals',
+    percentage: 61.1,
+    correct: 11,
+    incorrect: 7,
+    total: 18,
+    lastActivityAt: '2026-07-29T00:00:00.000Z'
   }
 ];
 
@@ -57,7 +67,9 @@ const WITH_HIGHLIGHTS = {
   strongestQuiz: { milestone: 'Components', bestScore: 90 }
 } as Partial<ProgressSummary>;
 
-function mount(overrides: Partial<ProgressSummary> = {}): ComponentFixture<ProgressSummaryComponent> {
+function mount(
+  overrides: Partial<ProgressSummary> = {}
+): ComponentFixture<ProgressSummaryComponent> {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [ProgressSummaryComponent],
@@ -127,9 +139,33 @@ describe('Practice Weak Areas action — activation', () => {
 
 describe('Needs Review — one topic per row', () => {
   const THREE: WeakTopic[] = [
-    { topicId: 'signals', topicName: 'Angular Signals', percentage: 33.3, correct: 3, incorrect: 6, total: 9, lastActivityAt: '2026-07-30T00:00:00.000Z' },
-    { topicId: 'http', topicName: 'Angular HTTP', percentage: 66.7, correct: 2, incorrect: 1, total: 3, lastActivityAt: '2026-07-29T00:00:00.000Z' },
-    { topicId: 'di', topicName: 'Dependency Injection', percentage: 72, correct: 18, incorrect: 7, total: 25, lastActivityAt: '2026-07-28T00:00:00.000Z' }
+    {
+      topicId: 'signals',
+      topicName: 'Angular Signals',
+      percentage: 33.3,
+      correct: 3,
+      incorrect: 6,
+      total: 9,
+      lastActivityAt: '2026-07-30T00:00:00.000Z'
+    },
+    {
+      topicId: 'http',
+      topicName: 'Angular HTTP',
+      percentage: 66.7,
+      correct: 2,
+      incorrect: 1,
+      total: 3,
+      lastActivityAt: '2026-07-29T00:00:00.000Z'
+    },
+    {
+      topicId: 'di',
+      topicName: 'Dependency Injection',
+      percentage: 72,
+      correct: 18,
+      incorrect: 7,
+      total: 25,
+      lastActivityAt: '2026-07-28T00:00:00.000Z'
+    }
   ];
 
   beforeEach(() => {
@@ -139,7 +175,11 @@ describe('Needs Review — one topic per row', () => {
   });
 
   const items = (fixture: ComponentFixture<ProgressSummaryComponent>): HTMLElement[] =>
-    Array.from(fixture.nativeElement.querySelectorAll('.progress-summary__weak-list > .progress-summary__weak-topic'));
+    Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.progress-summary__weak-list > .progress-summary__weak-topic'
+      )
+    );
 
   it('renders several weak topics as separate list items, not run-on inline text', () => {
     // The reported defect was bare inline <span>s with no rule, flowing onto one
@@ -169,8 +209,11 @@ describe('Needs Review — one topic per row', () => {
   it('keeps the same order the Weak Areas service returned (weakest first)', () => {
     weakTopics.set(THREE);
     const fixture = mount();
-    expect(items(fixture).map((li) => li.textContent!.split(' — ')[0]))
-      .toEqual(['Angular Signals', 'Angular HTTP', 'Dependency Injection']);
+    expect(items(fixture).map((li) => li.textContent!.split(' — ')[0])).toEqual([
+      'Angular Signals',
+      'Angular HTTP',
+      'Dependency Injection'
+    ]);
   });
 
   it('still renders a single weak topic as a one-item list', () => {
@@ -185,8 +228,9 @@ describe('Needs Review — one topic per row', () => {
     const fixture = mount();
     expect(action(fixture)).not.toBeNull();
     expect(action(fixture)!.textContent!.trim()).toBe('Practice Weak Areas');
-    expect(action(fixture)!.getAttribute('aria-label'))
-      .toBe('Practice weak areas: Angular Signals, Angular HTTP, Dependency Injection');
+    expect(action(fixture)!.getAttribute('aria-label')).toBe(
+      'Practice weak areas: Angular Signals, Angular HTTP, Dependency Injection'
+    );
   });
 });
 

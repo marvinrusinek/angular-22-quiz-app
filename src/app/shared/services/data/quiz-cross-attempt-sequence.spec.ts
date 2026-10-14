@@ -61,7 +61,12 @@ describe('Cross-attempt sequence: A completed -> B started (new attemptId) -> di
     expect(quizSvc.hasValidResultFor('quizA')).toBe(true); // fresh-completion path (no snapshot yet)
 
     const snapshotA: FinalResult = {
-      quizId: 'quizA', correct: 5, total: 5, percentage: 100, analysis: [], completedAt: Date.now(),
+      quizId: 'quizA',
+      correct: 5,
+      total: 5,
+      percentage: 100,
+      analysis: [],
+      completedAt: Date.now()
     };
     persistSnapshot(snapshotA);
     scoringSvc.recordCompletedQuizScore('quizA', snapshotA.percentage, snapshotA.total, attA);
@@ -69,7 +74,12 @@ describe('Cross-attempt sequence: A completed -> B started (new attemptId) -> di
     expect(quizSvc.getCurrentAttemptId()).toBe(attA);
     expect(sessionStorage.getItem('finalResult')).not.toBeNull();
     expect(scoringSvc.highScoresLocal).toHaveLength(1);
-    expect(scoringSvc.highScoresLocal[0]).toMatchObject({ quizId: 'quizA', attemptId: attA, score: 100, totalQuestions: 5 });
+    expect(scoringSvc.highScoresLocal[0]).toMatchObject({
+      quizId: 'quizA',
+      attemptId: attA,
+      score: 100,
+      totalQuestions: 5
+    });
 
     // ── Step 2: Start a NEW Quiz B attempt (different attemptId) ────────
     // Mirrors resetQuizForFreshStart(): startNewAttempt() mints attB;
@@ -110,18 +120,27 @@ describe('Cross-attempt sequence: A completed -> B started (new attemptId) -> di
 
     // No Quiz A row was ever created attributed to B's attempt id, and
     // vice versa.
-    expect(scoringSvc.highScoresLocal.some((r: any) => r.quizId === 'quizA' && r.attemptId === attB)).toBe(false);
-    expect(scoringSvc.highScoresLocal.some((r: any) => r.quizId === 'quizB' && r.attemptId === attA)).toBe(false);
+    expect(
+      scoringSvc.highScoresLocal.some((r: any) => r.quizId === 'quizA' && r.attemptId === attB)
+    ).toBe(false);
+    expect(
+      scoringSvc.highScoresLocal.some((r: any) => r.quizId === 'quizB' && r.attemptId === attA)
+    ).toBe(false);
   });
 
-  it('re-viewing/refreshing B\'s own results after completion does not duplicate its row', () => {
+  it("re-viewing/refreshing B's own results after completion does not duplicate its row", () => {
     const attB = 'att-B-3';
     const scoringSvc = makeScoringService();
     const quizSvc = makeQuizService(4, attB);
 
     sessionStorage.setItem(SK_RESULTS_REACHED_ATTEMPT, `quizB|${attB}`);
     const snapshotB: FinalResult = {
-      quizId: 'quizB', correct: 3, total: 4, percentage: 75, analysis: [], completedAt: Date.now(),
+      quizId: 'quizB',
+      correct: 3,
+      total: 4,
+      percentage: 75,
+      analysis: [],
+      completedAt: Date.now()
     };
     persistSnapshot(snapshotB);
 

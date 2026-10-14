@@ -26,17 +26,11 @@ export class TimerComponent {
   readonly timerType = TimerType;
   readonly timePerQuestion = 30;
 
-  private readonly elapsedSig = toSignal(
-    this.timerService.elapsedTime$,
-    { initialValue: 0 }
-  );
+  private readonly elapsedSig = toSignal(this.timerService.elapsedTime$, { initialValue: 0 });
 
-  private readonly timerTypeSig = toSignal(
-    this.timerService.timerType$,
-    {
-      initialValue: this.timerService.isCountdown() ? 'countdown' : 'stopwatch'
-    }
-  );
+  private readonly timerTypeSig = toSignal(this.timerService.timerType$, {
+    initialValue: this.timerService.isCountdown() ? 'countdown' : 'stopwatch'
+  });
 
   readonly currentTimerType = computed<TimerType>(() =>
     this.timerTypeSig() === 'countdown' ? TimerType.Countdown : TimerType.Stopwatch
@@ -52,14 +46,12 @@ export class TimerComponent {
   /** True when the countdown has 5 or fewer seconds remaining. Used to flag
    *  the display red. Only applies in countdown mode — stopwatch never
    *  decrements so the "low time" concept doesn't apply. */
-  readonly isLowTime = computed<boolean>(() =>
-    this.currentTimerType() === TimerType.Countdown && this.displayTime() <= 5
+  readonly isLowTime = computed<boolean>(
+    () => this.currentTimerType() === TimerType.Countdown && this.displayTime() <= 5
   );
 
   setTimerType(type: TimerType): void {
     if (this.currentTimerType() === type) return;
-    this.timerService.setTimerType(
-      type === TimerType.Countdown ? 'countdown' : 'stopwatch'
-    );
+    this.timerService.setTimerType(type === TimerType.Countdown ? 'countdown' : 'stopwatch');
   }
 }

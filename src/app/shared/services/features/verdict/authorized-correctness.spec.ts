@@ -37,8 +37,10 @@ function verdictsStub(state: QuestionVerdictState): QuestionVerdictService {
   return { verdictFor: () => state } as unknown as QuestionVerdictService;
 }
 
-const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState =>
-  ({ ...IDLE_VERDICT_STATE, ...over });
+const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState => ({
+  ...IDLE_VERDICT_STATE,
+  ...over
+});
 
 describe('the full correct set is only readable once it is authorized', () => {
   it('is withheld while the question is incomplete', () => {
@@ -58,10 +60,16 @@ describe('the full correct set is only readable once it is authorized', () => {
   });
 
   it('is released once resolved', () => {
-    const s = state({ phase: 'resolved', correctOptionTexts: ['map', 'filter'], isResolvedCorrect: true });
+    const s = state({
+      phase: 'resolved',
+      correctOptionTexts: ['map', 'filter'],
+      isResolvedCorrect: true
+    });
 
-    expect([...(authorizedCorrectTexts(quizStub(), 0, verdictsStub(s)) ?? [])].sort())
-      .toEqual(['filter', 'map']);
+    expect([...(authorizedCorrectTexts(quizStub(), 0, verdictsStub(s)) ?? [])].sort()).toEqual([
+      'filter',
+      'map'
+    ]);
   });
 
   it('is released once expired — the deadline reveals it too', () => {
@@ -82,7 +90,10 @@ describe('the full correct set is only readable once it is authorized', () => {
 describe('a selected option carries its own verdict', () => {
   const s = state({
     phase: 'incomplete',
-    selectedVerdicts: new Map([['map', true], ['Observable', false]]),
+    selectedVerdicts: new Map([
+      ['map', true],
+      ['Observable', false]
+    ]),
     remainingCorrectCount: 1
   });
 
@@ -106,24 +117,24 @@ describe('a selected option carries its own verdict', () => {
 
 describe('completion is read from authorized facts only', () => {
   it('is true when the question resolved correctly', () => {
-    expect(allCorrectSelectedFromVerdict(
-      state({ phase: 'resolved', isResolvedCorrect: true })
-    )).toBe(true);
+    expect(
+      allCorrectSelectedFromVerdict(state({ phase: 'resolved', isResolvedCorrect: true }))
+    ).toBe(true);
   });
 
   it('is false when the question resolved incorrectly', () => {
-    expect(allCorrectSelectedFromVerdict(
-      state({ phase: 'resolved', isResolvedCorrect: false })
-    )).toBe(false);
+    expect(
+      allCorrectSelectedFromVerdict(state({ phase: 'resolved', isResolvedCorrect: false }))
+    ).toBe(false);
   });
 
   it('uses the outstanding COUNT while incomplete — never which options', () => {
-    expect(allCorrectSelectedFromVerdict(
-      state({ phase: 'incomplete', remainingCorrectCount: 0 })
-    )).toBe(true);
-    expect(allCorrectSelectedFromVerdict(
-      state({ phase: 'incomplete', remainingCorrectCount: 2 })
-    )).toBe(false);
+    expect(
+      allCorrectSelectedFromVerdict(state({ phase: 'incomplete', remainingCorrectCount: 0 }))
+    ).toBe(true);
+    expect(
+      allCorrectSelectedFromVerdict(state({ phase: 'incomplete', remainingCorrectCount: 2 }))
+    ).toBe(false);
   });
 
   it('is unknown when nothing has been checked', () => {

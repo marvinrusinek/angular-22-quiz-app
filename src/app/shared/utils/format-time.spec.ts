@@ -17,7 +17,7 @@ describe('formatMMSS', () => {
 
 describe('formatDuration', () => {
   it('reads as prose: minutes + seconds', () => {
-    expect(formatDuration(1471)).toBe('24m 31s');   // 24m 31s
+    expect(formatDuration(1471)).toBe('24m 31s'); // 24m 31s
     expect(formatDuration(65)).toBe('1m 5s');
   });
 

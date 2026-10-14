@@ -1,4 +1,4 @@
-﻿import { inject, Service } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { firstValueFrom, Observable, of } from 'rxjs';
 import { catchError, filter, map, take, timeout } from 'rxjs/operators';
 
@@ -52,8 +52,13 @@ export class QqcExplanationDisplayService {
   }): Promise<string> {
     const i0 = params.normalizeIndex(params.index);
 
-    const q = this.resolveQuestionForIndex(params.questionsArray, params.currentQuestionIndex, params.currentQuestion, i0);
-    if (!q) return '';  // Question object could not be resolved for this index
+    const q = this.resolveQuestionForIndex(
+      params.questionsArray,
+      params.currentQuestionIndex,
+      params.currentQuestion,
+      i0
+    );
+    if (!q) return ''; // Question object could not be resolved for this index
 
     // THE BODY IS AUTHORIZED; THE COMPOSITION IS STILL THE FORMATTER'S.
     //
@@ -67,13 +72,22 @@ export class QqcExplanationDisplayService {
     // answers only on a terminal verdict — and the local value is preferred
     // only while it still exists, so nothing changes for a bank-sourced quiz.
     const baseRaw = (
-      q?.explanation ?? authorizedExplanation(this.quizService, i0, this.verdicts) ?? ''
-    ).toString().trim();
+      q?.explanation ??
+      authorizedExplanation(this.quizService, i0, this.verdicts) ??
+      ''
+    )
+      .toString()
+      .trim();
 
     await this.prepareForFormat(i0);
 
     const cachedText = await this.resolveAndCacheFormatted(
-      params.optionsToDisplay, params.currentQuestionIndex, params.options, q, baseRaw, i0
+      params.optionsToDisplay,
+      params.currentQuestionIndex,
+      params.options,
+      q,
+      baseRaw,
+      i0
     );
     const nextText = cachedText.trim();
     if (!nextText) return cachedText;
@@ -91,15 +105,25 @@ export class QqcExplanationDisplayService {
     } catch (err: unknown) {
       console.error('QqcExplanationDisplayService.resolveFormatted purgeAndDefer failed:', err);
     }
-    await new Promise(res => requestAnimationFrame(res));
+    await new Promise((res) => requestAnimationFrame(res));
   }
 
   /** Resolve visual options, format the explanation, cache it, and return the cached text. Extracted verbatim. */
   private async resolveAndCacheFormatted(
-    optionsToDisplay: Option[], currentQuestionIndex: number, options: Option[],
-    q: QuizQuestion, baseRaw: string, i0: number
+    optionsToDisplay: Option[],
+    currentQuestionIndex: number,
+    options: Option[],
+    q: QuizQuestion,
+    baseRaw: string,
+    i0: number
   ): Promise<string> {
-    const visualOpts = await this.resolveVisualOptions(optionsToDisplay, currentQuestionIndex, options, q, i0);
+    const visualOpts = await this.resolveVisualOptions(
+      optionsToDisplay,
+      currentQuestionIndex,
+      options,
+      q,
+      i0
+    );
     const formatted = this.formatExplanationForIndex(q, visualOpts, baseRaw, i0);
     const clean = (formatted ?? '').trim();
     this.cacheFormattedExplanation(i0, clean, baseRaw);
@@ -107,7 +131,12 @@ export class QqcExplanationDisplayService {
   }
 
   /** Resolve the question for an index: input array, then current question, then the service. Extracted verbatim. */
-  private resolveQuestionForIndex(questionsArray: QuizQuestion[], currentQuestionIndex: number, currentQuestion: QuizQuestion | null, i0: number): QuizQuestion | null {
+  private resolveQuestionForIndex(
+    questionsArray: QuizQuestion[],
+    currentQuestionIndex: number,
+    currentQuestion: QuizQuestion | null,
+    i0: number
+  ): QuizQuestion | null {
     let q: QuizQuestion | null = null;
     try {
       if (questionsArray && questionsArray.length > i0) {
@@ -127,7 +156,13 @@ export class QqcExplanationDisplayService {
   }
 
   /** Resolve the visual options for formatting: live optionsToDisplay, target question, passed options, q, then fetched. Extracted verbatim. */
-  private async resolveVisualOptions(optionsToDisplay: Option[], currentQuestionIndex: number, options: Option[], q: QuizQuestion, i0: number): Promise<Option[]> {
+  private async resolveVisualOptions(
+    optionsToDisplay: Option[],
+    currentQuestionIndex: number,
+    options: Option[],
+    q: QuizQuestion,
+    i0: number
+  ): Promise<Option[]> {
     const quizSvc = this.quizService;
     let visualOpts: Option[] = [];
 
@@ -141,7 +176,10 @@ export class QqcExplanationDisplayService {
         const targetQ = questions[i0];
         if (targetQ?.options?.length) visualOpts = targetQ.options;
       } catch (err: unknown) {
-        console.error('QqcExplanationDisplayService.resolveFormatted visual options lookup failed:', err);
+        console.error(
+          'QqcExplanationDisplayService.resolveFormatted visual options lookup failed:',
+          err
+        );
       }
     }
 
@@ -153,21 +191,31 @@ export class QqcExplanationDisplayService {
         const fetchedOpts = await firstValueFrom(quizSvc.getOptions(i0));
         if (fetchedOpts?.length) visualOpts = fetchedOpts;
       } catch (err: unknown) {
-        console.error('QqcExplanationDisplayService.resolveFormatted getOptions fetch failed:', err);
+        console.error(
+          'QqcExplanationDisplayService.resolveFormatted getOptions fetch failed:',
+          err
+        );
       }
     }
     return visualOpts;
   }
 
   /** Format the explanation using the authoritative correct indices (falling back to flags/raw). Extracted verbatim. */
-  private formatExplanationForIndex(q: QuizQuestion, visualOpts: Option[], baseRaw: string, i0: number): string {
+  private formatExplanationForIndex(
+    q: QuizQuestion,
+    visualOpts: Option[],
+    baseRaw: string,
+    i0: number
+  ): string {
     const svc = this.explanationTextService;
     try {
       const correctIndices = svc.getCorrectOptionIndices(q, visualOpts, i0);
       if (correctIndices.length > 0) {
         return typeof svc.formatExplanation === 'function'
           ? svc.formatExplanation(q, correctIndices, baseRaw, i0)
-          : (baseRaw.includes('correct because') ? baseRaw : `Option ${correctIndices[0]} is correct because ${baseRaw}`);
+          : baseRaw.includes('correct because')
+            ? baseRaw
+            : `Option ${correctIndices[0]} is correct because ${baseRaw}`;
       }
       const findCorrect = visualOpts
         .map((opt, idx) => (isOptionCorrect(opt) ? idx + 1 : null))
@@ -245,10 +293,7 @@ export class QqcExplanationDisplayService {
   /**
    * Displays explanation text in the service and quiz state.
    */
-  displayExplanationText(
-    explanationText: string,
-    lastAllCorrect: boolean
-  ): void {
+  displayExplanationText(explanationText: string, lastAllCorrect: boolean): void {
     this.explanationTextService.setExplanationText(explanationText);
     this.explanationTextService.setShouldDisplayExplanation(true);
 
@@ -325,17 +370,14 @@ export class QqcExplanationDisplayService {
     );
     const currentQuestion = params.questionsArray[adjustedIndex];
 
-    if (!currentQuestion) return null;  // Question not found at adjusted index
+    if (!currentQuestion) return null; // Question not found at adjusted index
 
     this.quizService.setCurrentQuestion(currentQuestion);
 
     // Wait for rendering
     await delay(100);
 
-    if (
-      params.shouldDisplayExplanation &&
-      await params.isAnyOptionSelected(adjustedIndex)
-    ) {
+    if (params.shouldDisplayExplanation && (await params.isAnyOptionSelected(adjustedIndex))) {
       params.updateCombinedQuestionData(currentQuestion, params.explanationText);
       return {
         explanationToDisplay: params.explanationText,
@@ -367,9 +409,7 @@ export class QqcExplanationDisplayService {
 
         if (this.explanationTextService.explanationsInitialized) {
           const fetched = await firstValueFrom(
-            this.explanationTextService.getFormattedExplanationTextForQuestion(
-              currentQuestionIndex
-            )
+            this.explanationTextService.getFormattedExplanationTextForQuestion(currentQuestionIndex)
           );
           explanationText = fetched?.trim() || explanationText;
         }
@@ -453,7 +493,7 @@ export class QqcExplanationDisplayService {
     this.explanationTextService.resetExplanationText();
 
     const locked = this.explanationTextService.isExplanationLocked?.();
-    if (!force && locked) return true;  // blocked
+    if (!force && locked) return true; // blocked
 
     this.explanationTextService.setShouldDisplayExplanation(false);
 
@@ -471,11 +511,7 @@ export class QqcExplanationDisplayService {
   /**
    * Marks explanation as answered/displayed in quiz state.
    */
-  markExplanationDisplayed(
-    _quizId: string,
-    _questionIndex: number,
-    lastAllCorrect: boolean
-  ): void {
+  markExplanationDisplayed(_quizId: string, _questionIndex: number, lastAllCorrect: boolean): void {
     this.quizStateService.setDisplayState({
       mode: lastAllCorrect ? 'explanation' : 'question',
       answered: true
@@ -518,8 +554,7 @@ export class QqcExplanationDisplayService {
         throw new Error('Invalid question data');
       }
 
-      let explanationText =
-        questionData?.explanation ?? 'No explanation available';
+      let explanationText = questionData?.explanation ?? 'No explanation available';
 
       const processedExplanation = await this.explanationManager.processExplanationText(
         questionData!,
@@ -539,18 +574,11 @@ export class QqcExplanationDisplayService {
       }
 
       // Update quiz state
-      const questionState = this.quizStateService.getQuestionState(
-        quizId,
-        currentQuestionIndex
-      );
+      const questionState = this.quizStateService.getQuestionState(quizId, currentQuestionIndex);
       if (questionState) {
         questionState.explanationText = explanationText;
         questionState.explanationDisplayed = true;
-        this.quizStateService.setQuestionState(
-          quizId,
-          currentQuestionIndex,
-          questionState
-        );
+        this.quizStateService.setQuestionState(quizId, currentQuestionIndex, questionState);
       }
 
       return {
@@ -590,7 +618,8 @@ export class QqcExplanationDisplayService {
     explanationText: string;
     shouldShowExplanation: boolean;
   }> {
-    const { questionsArray, questionIndex, quizId, shouldDisplayExplanation, getExplanationText } = params;
+    const { questionsArray, questionIndex, quizId, shouldDisplayExplanation, getExplanationText } =
+      params;
 
     if (!questionsArray || questionsArray.length === 0) {
       return { explanationText: '', shouldShowExplanation: false };
@@ -667,7 +696,9 @@ export class QqcExplanationDisplayService {
       params.questionState.isAnswered = true;
       params.questionState.explanationDisplayed = true;
       this.quizStateService.setQuestionState(
-        params.quizId, params.questionIndex, params.questionState
+        params.quizId,
+        params.questionIndex,
+        params.questionState
       );
     }
 
@@ -712,9 +743,7 @@ export class QqcExplanationDisplayService {
 
         if (this.explanationTextService.explanationsInitialized) {
           const fetched = await firstValueFrom(
-            this.explanationTextService.getFormattedExplanationTextForQuestion(
-              currentQuestionIndex
-            )
+            this.explanationTextService.getFormattedExplanationTextForQuestion(currentQuestionIndex)
           );
           explanationText = fetched?.trim() || explanationText;
         }
@@ -804,21 +833,24 @@ export class QqcExplanationDisplayService {
         currentQuestionIndex: context.currentQuestionIndex,
         currentQuestion: context.currentQuestion,
         optionsToDisplay: context.optionsToDisplay,
-        options: context.options,
+        options: context.options
       });
       text = (out ?? '').toString().trim();
 
       // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // Fallback: formatter writes to a stream
       // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      if ((!text || text === 'No explanation available for this question.') &&
-        this.explanationTextService.formattedExplanation$) {
-
-        const src$ = this.explanationTextService.formattedExplanation$ as Observable<string | null | undefined>;
+      if (
+        (!text || text === 'No explanation available for this question.') &&
+        this.explanationTextService.formattedExplanation$
+      ) {
+        const src$ = this.explanationTextService.formattedExplanation$ as Observable<
+          string | null | undefined
+        >;
 
         const formatted$: Observable<string> = src$.pipe(
           filter((s: unknown): s is string => typeof s === 'string' && s.trim().length > 0),
-          map(s => s.trim()),
+          map((s) => s.trim()),
           timeout(timeoutMs),
           take(1)
         );
@@ -856,7 +888,10 @@ export class QqcExplanationDisplayService {
   async prepareAndSetExplanationText(
     questionIndex: number,
     context: {
-      processExplanationText: (q: QuizQuestion, idx: number) => Promise<FormattedExplanation | null>;
+      processExplanationText: (
+        q: QuizQuestion,
+        idx: number
+      ) => Promise<FormattedExplanation | null>;
     }
   ): Promise<string> {
     if (typeof document !== 'undefined' && document.hidden) {
@@ -864,9 +899,7 @@ export class QqcExplanationDisplayService {
     }
 
     try {
-      const questionData = await firstValueFrom(
-        this.quizService.getQuestionByIndex(questionIndex)
-      );
+      const questionData = await firstValueFrom(this.quizService.getQuestionByIndex(questionIndex));
 
       if (this.quizQuestionManagerService.isValidQuestionData(questionData!)) {
         const formattedExplanationObservable =

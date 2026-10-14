@@ -1,9 +1,12 @@
-﻿import { Service, inject } from '@angular/core';
+import { Service, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
-import { FET_WRITE_RETRY_CASCADE_MS, FET_WRITE_RETRY_LONG_CASCADE_MS } from '@shared/constants/timing';
+import {
+  FET_WRITE_RETRY_CASCADE_MS,
+  FET_WRITE_RETRY_LONG_CASCADE_MS
+} from '@shared/constants/timing';
 
 import { QuestionPayload, QuizQuestion } from '@shared/models';
 
@@ -26,7 +29,12 @@ import { SharedVisibilityService } from '@shared/services/ui/shared-visibility.s
 import { TimerService } from '@shared/services/features/timer/timer.service';
 
 import type { QuizComponent } from '../../../containers/quiz/quiz.component';
-import { SK_DISPLAY_MODE, SK_DOT_CONFIRMED, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP } from '@shared/constants/session-keys';
+import {
+  SK_DISPLAY_MODE,
+  SK_DOT_CONFIRMED,
+  SK_SEL_Q,
+  SK_SELECTED_OPTIONS_MAP
+} from '@shared/constants/session-keys';
 import { removeSessionKey } from '@shared/utils/session-storage';
 
 import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
@@ -69,10 +77,7 @@ export class QuizSetupService {
   // ─── Route (delegated) ───────────────────────────────────────
 
   subscribeToRouteEvents(host: Host): void {
-    this.routeService.subscribeToRouteEvents(
-      host,
-      (h: Host) => this.dataService.loadQuestions(h)
-    );
+    this.routeService.subscribeToRouteEvents(host, (h: Host) => this.dataService.loadQuestions(h));
   }
 
   fetchTotalQuestions(host: Host): void {
@@ -172,8 +177,7 @@ export class QuizSetupService {
         // overrides it — visible to the user as a "Q1 then Q3" flash, or
         // worse, as Q1 stuck if the override never lands.
         const currentIdx = host.currentQuestionIndex();
-        const seedIdx = Number.isFinite(currentIdx) && currentIdx >= 0
-          ? currentIdx : 0;
+        const seedIdx = Number.isFinite(currentIdx) && currentIdx >= 0 ? currentIdx : 0;
         const trimmed = (this.quizService.questions?.[seedIdx]?.questionText ?? '').trim();
         if (trimmed) host.questionToDisplaySig.set(trimmed);
         this.quizContentLoaderService.seedFirstQuestionText();
@@ -233,8 +237,7 @@ export class QuizSetupService {
         // nav-derived message with a first-visit framing on tab return.
         const alreadyTimedOut = this.dotStatusService.timedOutFetForced.has(idx);
         if (!isAnswered && !alreadyTimedOut) this.selectionMessageService.forceBaseline(idx);
-        const question = this.quizService.questions?.[idx]
-          ?? host.questionsArray()?.[idx] ?? null;
+        const question = this.quizService.questions?.[idx] ?? host.questionsArray()?.[idx] ?? null;
         if (question) {
           // Heading is rendered by the single-source headingHtml computed; the
           // setTimeout cascade that stamped question text into <h3> is no longer
@@ -253,8 +256,7 @@ export class QuizSetupService {
         if (questions?.length && (!host.quizId() || serviceQuizId === host.quizId())) {
           const shuffled = this.quizService.shuffledQuestions;
           const effectiveQuestions =
-            this.quizService.isShuffleEnabled() && shuffled?.length > 0
-              ? shuffled : questions;
+            this.quizService.isShuffleEnabled() && shuffled?.length > 0 ? shuffled : questions;
           host.questions.set(effectiveQuestions);
           host.questionsArray.set([...effectiveQuestions]);
           host.totalQuestions.set(effectiveQuestions.length);
@@ -274,9 +276,11 @@ export class QuizSetupService {
       next: (newQuestion: QuizQuestion | null) => {
         if (!newQuestion) return;
         host.currentQuestion.set(null);
-        setTimeout(() => { host.currentQuestion.set({ ...newQuestion }); }, 10);
+        setTimeout(() => {
+          host.currentQuestion.set({ ...newQuestion });
+        }, 10);
       },
-      error: () => { }
+      error: () => {}
     });
   }
 
@@ -285,27 +289,27 @@ export class QuizSetupService {
     if (!isUserAction) return;
     const id = option?.optionId ?? option?.id ?? option?.displayOrder ?? -1;
     const now = Date.now();
-    if (id !== -1 && id === (host._lastOptionId ?? -1) && (now - (host._lastClickTime ?? 0)) < 200) return;
+    if (id !== -1 && id === (host._lastOptionId ?? -1) && now - (host._lastClickTime ?? 0) < 200)
+      return;
     host._lastClickTime = now;
     host._lastOptionId = id;
 
     host._processingOptionClick = true;
     const idx = host.normalizeQuestionIndex(option?.questionIndex);
 
-    const _isShuf = this.quizService?.isShuffleEnabled?.()
-      && this.quizService?.shuffledQuestions?.length > 0;
+    const _isShuf =
+      this.quizService?.isShuffleEnabled?.() && this.quizService?.shuffledQuestions?.length > 0;
     const authQ = _isShuf
-      ? (this.quizService?.getQuestionsInDisplayOrder?.()?.[idx]
-        ?? this.quizService?.shuffledQuestions?.[idx]
-        ?? host.currentQuestion())
+      ? (this.quizService?.getQuestionsInDisplayOrder?.()?.[idx] ??
+        this.quizService?.shuffledQuestions?.[idx] ??
+        host.currentQuestion())
       : (this.quizService.questions?.[idx] ?? host.currentQuestion());
-    const correctCount = (authQ?.options ?? []).filter(
-      (o: any) => isOptionCorrect(o)
-    ).length;
+    const correctCount = (authQ?.options ?? []).filter((o: any) => isOptionCorrect(o)).length;
     // Declared type wins; the count is the REMOVE IN /questions CONTENT
     // CUTOVER fallback for questions the API has not typed yet.
     const isMultiAnswer = resolveIsMultiAnswer(
-      authQ, correctCount > 1 || this.quizService.multipleAnswer
+      authQ,
+      correctCount > 1 || this.quizService.multipleAnswer
     );
 
     let clickedIsCorrectForFET = false;
@@ -319,14 +323,18 @@ export class QuizSetupService {
             if (mo) clickedIsCorrectForFET = isOptionCorrect(mo);
           }
         }
-      } catch (err: unknown) { swallow('quiz-setup.service.ts', err); /* ignore */ }
+      } catch (err: unknown) {
+        swallow('quiz-setup.service.ts', err); /* ignore */
+      }
     }
     if (!isMultiAnswer && clickedIsCorrectForFET) {
       this.showExplanationForQuestion(host, idx);
     }
 
     await this.quizOptionProcessingService.processOptionClick({
-      option, idx, quizId: host.quizId(),
+      option,
+      idx,
+      quizId: host.quizId(),
       currentQuestionIndex: host.currentQuestionIndex(),
       questionsArray: host.questionsArray(),
       currentQuestion: host.currentQuestion(),
@@ -344,7 +352,9 @@ export class QuizSetupService {
     const hostIdx = host.currentQuestionIndex();
     const progressIdx = Number.isFinite(liveQIdx)
       ? liveQIdx
-      : (Number.isFinite(hostIdx) ? hostIdx : idx);
+      : Number.isFinite(hostIdx)
+        ? hostIdx
+        : idx;
     host.markQuestionAnswered(progressIdx);
     host.updateDotStatus(idx);
 
@@ -379,11 +389,13 @@ export class QuizSetupService {
       leavingIdx,
       leavingDotClass: host.getDotClass(leavingIdx),
       quizId: host.quizId(),
-      getScoringKey: (idx: number) => this.dotStatusService.getScoringKey(host.quizId(), idx),
+      getScoringKey: (idx: number) => this.dotStatusService.getScoringKey(host.quizId(), idx)
     });
     const leavingDotClass = host.getDotClass(leavingIdx);
-    if (leavingDotClass.includes('correct')) this.quizPersistence.setPersistedDotStatus(host.quizId(), leavingIdx, 'correct');
-    else if (leavingDotClass.includes('wrong')) this.quizPersistence.setPersistedDotStatus(host.quizId(), leavingIdx, 'wrong');
+    if (leavingDotClass.includes('correct'))
+      this.quizPersistence.setPersistedDotStatus(host.quizId(), leavingIdx, 'correct');
+    else if (leavingDotClass.includes('wrong'))
+      this.quizPersistence.setPersistedDotStatus(host.quizId(), leavingIdx, 'wrong');
     host.animationStateSig.set('animationStarted');
     this.selectedOptionService.setAnswered(false);
     this.quizStateService.resetInteraction();
@@ -393,8 +405,7 @@ export class QuizSetupService {
       // When advancing forward onto an already-answered question (revisit via
       // Next), preserve its dot status so it stays correct/wrong and its timer
       // stays frozen — deleting it here was re-arming the countdown.
-      const destAlreadyAnswered =
-        this.selectedOptionService.clickConfirmedDotStatus.has(destIndex);
+      const destAlreadyAnswered = this.selectedOptionService.clickConfirmedDotStatus.has(destIndex);
       if (destIndex < host.totalQuestions() && !destAlreadyAnswered) {
         this.dotStatusService.clearForIndex(destIndex);
         this.selectedOptionService.lastClickedCorrectByQuestion.delete(destIndex);
@@ -441,15 +452,20 @@ export class QuizSetupService {
       sessionStorage.removeItem('answeredQuestionIndices');
       sessionStorage.removeItem('quizProgress');
       sessionStorage.removeItem('quizProgressQuizId');
-    } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err);
+    }
     try {
       this.quizStateService._hasUserInteracted?.clear?.();
       this.quizStateService._answeredQuestionIndices?.clear?.();
       this.quizStateService._clickedInSession?.clear?.();
       this.quizStateService.persistInteractionState?.();
-    } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err);
+    }
 
-    this.router.navigate(['/quiz/question', host.quizId(), 1])
+    this.router
+      .navigate(['/quiz/question', host.quizId(), 1])
       .then(() => {
         host.currentQuestionIndex.set(0);
         this.quizResetService.applyPostRestartState(host.totalQuestions(), () => {
@@ -457,9 +473,7 @@ export class QuizSetupService {
           host.cdRef.markForCheck();
         });
 
-        const question = this.quizService.questions?.[0]
-          ?? host.questionsArray()?.[0]
-          ?? null;
+        const question = this.quizService.questions?.[0] ?? host.questionsArray()?.[0] ?? null;
         if (question) {
           // Heading is rendered by the single-source headingHtml computed; the
           // setTimeout cascade that stamped question text into <h3> is no longer
@@ -469,22 +483,20 @@ export class QuizSetupService {
       .catch((err: unknown) => reportError('restartQuiz navigation', err));
   }
 
-subscribeToTimerExpiry(host: Host): void {
-    this.timerService.expired$
-      .pipe(takeUntilDestroyed(host.destroyRef))
-      .subscribe(() => {
-        const idx = host.currentQuestionIndex();
-        // Use the authoritative committed-selection map, not
-        // getSelectionsForQuestion(): for the current question that helper
-        // reports every option as "active" (raw options carry no
-        // selected:false flag), so it never reads as unanswered.
-        const answered =
-          (this.selectedOptionService.getSelectedOptionsForQuestion?.(idx) ?? []).length > 0;
-        if (!answered) {
-          this.dotStatusService.timerExpiredUnanswered.add(idx);
-          host.cdRef.markForCheck();
-        }
-      });
+  subscribeToTimerExpiry(host: Host): void {
+    this.timerService.expired$.pipe(takeUntilDestroyed(host.destroyRef)).subscribe(() => {
+      const idx = host.currentQuestionIndex();
+      // Use the authoritative committed-selection map, not
+      // getSelectionsForQuestion(): for the current question that helper
+      // reports every option as "active" (raw options carry no
+      // selected:false flag), so it never reads as unanswered.
+      const answered =
+        (this.selectedOptionService.getSelectedOptionsForQuestion?.(idx) ?? []).length > 0;
+      if (!answered) {
+        this.dotStatusService.timerExpiredUnanswered.add(idx);
+        host.cdRef.markForCheck();
+      }
+    });
   }
 
   setupQuiz(host: Host): void {
@@ -499,8 +511,11 @@ subscribeToTimerExpiry(host: Host): void {
 
   showExplanationForQuestion(host: Host, qIdx: number): void {
     const { explanationHtml } = this.quizContentLoaderService.prepareExplanationForQuestion({
-      qIdx, questionsArray: host.questionsArray(), quiz: host.quiz(),
-      currentQuestionIndex: host.currentQuestionIndex(), currentQuestion: host.currentQuestion(),
+      qIdx,
+      questionsArray: host.questionsArray(),
+      quiz: host.quiz(),
+      currentQuestionIndex: host.currentQuestionIndex(),
+      currentQuestion: host.currentQuestion()
     });
     host.explanationToDisplay.set(explanationHtml);
     host.cdRef.markForCheck();
@@ -508,7 +523,9 @@ subscribeToTimerExpiry(host: Host): void {
 
   onExplanationChanged(host: Host, explanation: string | any, index?: number): void {
     const resolved = this.quizContentLoaderService.resolveExplanationChange(
-      explanation, index, host.explanationToDisplay()
+      explanation,
+      index,
+      host.explanationToDisplay()
     );
     if (!resolved) return;
 
@@ -536,12 +553,12 @@ subscribeToTimerExpiry(host: Host): void {
 
   // Resolve the display-order question (shuffle-aware) for an index.
   private resolveDisplayQuestion(qIdx: number): any {
-    const _isShufEC = this.quizService?.isShuffleEnabled?.()
-      && this.quizService?.shuffledQuestions?.length > 0;
+    const _isShufEC =
+      this.quizService?.isShuffleEnabled?.() && this.quizService?.shuffledQuestions?.length > 0;
     return _isShufEC
-      ? (this.quizService?.getQuestionsInDisplayOrder?.()?.[qIdx]
-        ?? this.quizService?.shuffledQuestions?.[qIdx]
-        ?? this.quizService?.questions?.[qIdx])
+      ? (this.quizService?.getQuestionsInDisplayOrder?.()?.[qIdx] ??
+          this.quizService?.shuffledQuestions?.[qIdx] ??
+          this.quizService?.questions?.[qIdx])
       : this.quizService?.questions?.[qIdx];
   }
 
@@ -553,18 +570,16 @@ subscribeToTimerExpiry(host: Host): void {
     try {
       const pq = this.quizService?.getPristineQuestionByText(rawQ?.questionText);
       if (pq) {
-        const pOpts = (pq.options ?? []).filter(
-          (o: any) => isOptionCorrect(o)
-        );
+        const pOpts = (pq.options ?? []).filter((o: any) => isOptionCorrect(o));
         correctCount = pOpts.length;
         correctTexts = pOpts.map((o: any) => norm(o?.text)).filter((t: string) => !!t);
       }
-    } catch (err: unknown) { swallow('quiz-setup.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err); /* ignore */
+    }
     if (correctCount === 0) {
       const rawOpts: any[] = rawQ?.options ?? [];
-      correctCount = rawOpts.filter(
-        (o: any) => isOptionCorrect(o)
-      ).length;
+      correctCount = rawOpts.filter((o: any) => isOptionCorrect(o)).length;
       correctTexts = rawOpts
         .filter((o: any) => isOptionCorrect(o))
         .map((o: any) => norm(o?.text))
@@ -578,11 +593,16 @@ subscribeToTimerExpiry(host: Host): void {
     let scoredCorrect = false;
     try {
       const scoringSvc = this.quizService?.scoringService;
-      const isShuf = this.quizService?.isShuffleEnabled?.() && this.quizService?.shuffledQuestions?.length > 0;
+      const isShuf =
+        this.quizService?.isShuffleEnabled?.() && this.quizService?.shuffledQuestions?.length > 0;
       if (isShuf && scoringSvc?.questionCorrectness) {
         let effectiveQuizId = this.quizService?.quizId || '';
         if (!effectiveQuizId) {
-          try { effectiveQuizId = localStorage.getItem('lastQuizId') || ''; } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
+          try {
+            effectiveQuizId = localStorage.getItem('lastQuizId') || '';
+          } catch (err: unknown) {
+            swallow('quiz-setup.service.ts', err);
+          }
         }
         if (effectiveQuizId) {
           const origIdx = scoringSvc.quizShuffleService?.toOriginalIndex?.(effectiveQuizId, qIdx);
@@ -596,7 +616,9 @@ subscribeToTimerExpiry(host: Host): void {
       if (!scoredCorrect) {
         scoredCorrect = this.explanationTextService.fetBypassForQuestion?.get(qIdx) === true;
       }
-    } catch (err: unknown) { swallow('quiz-setup.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err); /* ignore */
+    }
     return scoredCorrect;
   }
 
@@ -610,8 +632,8 @@ subscribeToTimerExpiry(host: Host): void {
         .map((s: any) => norm(s?.text))
         .filter((t: string) => !!t)
     );
-    const allCorrectSelected = correctTexts.length > 0
-      && correctTexts.every((t: string) => selTexts.has(t));
+    const allCorrectSelected =
+      correctTexts.length > 0 && correctTexts.every((t: string) => selTexts.has(t));
     if (allCorrectSelected) return true;
     return this.resolveScoredCorrect(qIdx);
   }
@@ -621,7 +643,10 @@ subscribeToTimerExpiry(host: Host): void {
   private bridgeQuestionPayload(host: Host): void {
     this.quizService.questionPayload$
       .pipe(
-        filter((p): p is QuestionPayload => !!p && !!p.question && Array.isArray(p.options) && p.options.length > 0)
+        filter(
+          (p): p is QuestionPayload =>
+            !!p && !!p.question && Array.isArray(p.options) && p.options.length > 0
+        )
       )
       .subscribe((payload) => {
         // URL-MISMATCH GUARD: when the user has navigated directly to
@@ -638,10 +663,12 @@ subscribeToTimerExpiry(host: Host): void {
             const urlText = norm(urlQuestion?.questionText);
             const payloadText = norm(payload.question?.questionText);
             if (urlText && payloadText && urlText !== payloadText) {
-              return;  // skip stale payload that doesn't match the URL question
+              return; // skip stale payload that doesn't match the URL question
             }
           }
-        } catch (err: unknown) { swallow('quiz-setup.service.ts', err); /* non-browser env */ }
+        } catch (err: unknown) {
+          swallow('quiz-setup.service.ts', err); /* non-browser env */
+        }
 
         host.combinedQuestionData.set(payload);
         host.questionToDisplaySig.set(payload.question.questionText?.trim() ?? '');
@@ -687,7 +714,11 @@ subscribeToTimerExpiry(host: Host): void {
     if (!quizId) return null;
     host.quizId.set(quizId);
 
-    try { localStorage.setItem('lastQuizId', quizId); } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
+    try {
+      localStorage.setItem('lastQuizId', quizId);
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err);
+    }
 
     host.initializeQuestionIndex();
     return quizId;
@@ -701,7 +732,9 @@ subscribeToTimerExpiry(host: Host): void {
     }
 
     const cleared = this.quizResetService.clearStaleProgressAndDotStateForFreshStart(
-      host.currentQuestionIndex(), host.quizId(), host.totalQuestions()
+      host.currentQuestionIndex(),
+      host.quizId(),
+      host.totalQuestions()
     );
     if (cleared) host.progressSig.set(0);
     return freshFromResults;
@@ -713,7 +746,9 @@ subscribeToTimerExpiry(host: Host): void {
     try {
       freshFromResults = sessionStorage.getItem('freshStartFromResults') === 'true';
       sessionStorage.removeItem('freshStartFromResults');
-    } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err);
+    }
     return freshFromResults;
   }
 
@@ -749,7 +784,9 @@ subscribeToTimerExpiry(host: Host): void {
       sessionStorage.removeItem('answeredQuestionIndices');
       sessionStorage.removeItem('quizProgress');
       sessionStorage.removeItem('quizProgressQuizId');
-    } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err);
+    }
   }
 
   // Seed answeredQuestionIndices / progress from confirmed dot status.
@@ -760,7 +797,9 @@ subscribeToTimerExpiry(host: Host): void {
       }
     }
     if (host.answeredQuestionIndices.size > 0) {
-      host.progressSig.set(Math.round((host.answeredQuestionIndices.size / host.totalQuestions()) * 100));
+      host.progressSig.set(
+        Math.round((host.answeredQuestionIndices.size / host.totalQuestions()) * 100)
+      );
     }
   }
 
@@ -783,7 +822,9 @@ subscribeToTimerExpiry(host: Host): void {
             }
           }
         }
-      } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
+      } catch (err: unknown) {
+        swallow('quiz-setup.service.ts', err);
+      }
     }
   }
 
@@ -806,7 +847,9 @@ subscribeToTimerExpiry(host: Host): void {
 
   // On refresh of an already-answered question, re-enable answered/Next state.
   private applyAnsweredOnRefresh(host: Host): void {
-    const confirmedStatus = this.selectedOptionService.clickConfirmedDotStatus.get(host.currentQuestionIndex());
+    const confirmedStatus = this.selectedOptionService.clickConfirmedDotStatus.get(
+      host.currentQuestionIndex()
+    );
     const isAnsweredOnRefresh = confirmedStatus === 'correct' || confirmedStatus === 'wrong';
     if (isAnsweredOnRefresh) {
       setTimeout(() => {
@@ -828,18 +871,44 @@ subscribeToTimerExpiry(host: Host): void {
   }
 
   runOnDestroy(host: Host): void {
-    try { host.subscriptions?.unsubscribe(); } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
-    try { this.dotStatusService.dotStatusCache.clear(); } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
-    try { this.dotStatusService.pendingDotStatusOverrides.clear(); } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
-    try { this.dotStatusService.activeDotClickStatus.clear(); } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
-    try { this.timerService.stopTimer(undefined, { force: true }); } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
-    try { this.nextButtonStateService.cleanupNextButtonStateStream(); } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
+    try {
+      host.subscriptions?.unsubscribe();
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err);
+    }
+    try {
+      this.dotStatusService.dotStatusCache.clear();
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err);
+    }
+    try {
+      this.dotStatusService.pendingDotStatusOverrides.clear();
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err);
+    }
+    try {
+      this.dotStatusService.activeDotClickStatus.clear();
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err);
+    }
+    try {
+      this.timerService.stopTimer(undefined, { force: true });
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err);
+    }
+    try {
+      this.nextButtonStateService.cleanupNextButtonStateStream();
+    } catch (err: unknown) {
+      swallow('quiz-setup.service.ts', err);
+    }
     const tooltip = host.nextButtonTooltip?.();
     if (tooltip) {
       try {
         tooltip.disabled = true;
         tooltip.hide();
-      } catch (err: unknown) { swallow('quiz-setup.service.ts', err); }
+      } catch (err: unknown) {
+        swallow('quiz-setup.service.ts', err);
+      }
     }
   }
 
@@ -857,7 +926,6 @@ subscribeToTimerExpiry(host: Host): void {
         }
       });
     }
-
   }
 
   async runOnGlobalKey(host: Host, event: KeyboardEvent): Promise<void> {
@@ -888,8 +956,7 @@ subscribeToTimerExpiry(host: Host): void {
           const answered =
             this.quizStateService.isQuestionAnswered(currentIdx) ||
             this.selectedOptionService.isQuestionAnswered(currentIdx);
-          const timerExpired =
-            this.timerService.expiredForQuestionIndexSig() === currentIdx;
+          const timerExpired = this.timerService.expiredForQuestionIndexSig() === currentIdx;
           if ((!answered && !timerExpired) || !host.nextButtonEnabled()) return;
           event.preventDefault();
           await host.advanceToNextQuestion();

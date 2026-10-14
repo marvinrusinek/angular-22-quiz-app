@@ -34,15 +34,16 @@ if (typeof (globalThis as any).structuredClone !== 'function') {
   (globalThis as any).structuredClone = (v: unknown) => JSON.parse(JSON.stringify(v));
 }
 
-const q = (type: QuestionType | undefined, correctCount: number): QuizQuestion => ({
-  questionText: 'Which of these?',
-  type,
-  options: Array.from({ length: 4 }, (_, i) => ({
-    optionId: i + 1,
-    text: `opt${i + 1}`,
-    ...(i < correctCount ? { correct: true } : {})
-  }))
-} as unknown as QuizQuestion);
+const q = (type: QuestionType | undefined, correctCount: number): QuizQuestion =>
+  ({
+    questionText: 'Which of these?',
+    type,
+    options: Array.from({ length: 4 }, (_, i) => ({
+      optionId: i + 1,
+      text: `opt${i + 1}`,
+      ...(i < correctCount ? { correct: true } : {})
+    }))
+  }) as unknown as QuizQuestion;
 
 let service: OptionInteractionService;
 
@@ -65,7 +66,10 @@ beforeEach(() => {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
   service = TestBed.inject(OptionInteractionService);
@@ -105,7 +109,10 @@ describe('interaction mode follows the DECLARED type, not the answer key', () =>
     const bare = {
       questionText: 'Which of these?',
       type: QuestionType.MultipleAnswer,
-      options: [{ optionId: 1, text: 'a' }, { optionId: 2, text: 'b' }]
+      options: [
+        { optionId: 1, text: 'a' },
+        { optionId: 2, text: 'b' }
+      ]
     } as unknown as QuizQuestion;
 
     expect(isMultiMode(bare, 0, 0)).toBe(true);

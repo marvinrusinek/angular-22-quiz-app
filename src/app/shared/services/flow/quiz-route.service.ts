@@ -1,7 +1,10 @@
 import { Service, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
-import { TRAILING_INDEX_REGEX, TRAILING_INDEX_STRICT_REGEX } from '@shared/constants/route-patterns';
+import {
+  TRAILING_INDEX_REGEX,
+  TRAILING_INDEX_STRICT_REGEX
+} from '@shared/constants/route-patterns';
 
 import { QuizService } from '@shared/services/data/quiz.service';
 
@@ -38,8 +41,8 @@ export class QuizRouteService {
     const routeQuizId = params.get('quizId');
     const raw = params.get('questionIndex');
     const index = Math.max(0, (Number(raw) || 1) - 1);
-    const prev = previousQuizId || this.quizService.quizId ||
-      localStorage.getItem('lastQuizId') || '';
+    const prev =
+      previousQuizId || this.quizService.quizId || localStorage.getItem('lastQuizId') || '';
     const isQuizSwitch = !!(routeQuizId && prev && routeQuizId !== prev);
     return { routeQuizId, index, isQuizSwitch };
   }
@@ -48,10 +51,7 @@ export class QuizRouteService {
   // ROUTE QUESTION NUMBER (1-based)
   // ═══════════════════════════════════════════════════════════════
 
-  getRouteQuestionNumber(
-    activatedRoute: ActivatedRoute,
-    router: Router
-  ): number | null {
+  getRouteQuestionNumber(activatedRoute: ActivatedRoute, router: Router): number | null {
     const parseNum = (raw: string | null): number | null => {
       if (raw == null) return null;
 
@@ -62,9 +62,7 @@ export class QuizRouteService {
       return qn >= 1 ? qn : null;
     };
 
-    const fromCurrent = parseNum(
-      activatedRoute.snapshot.paramMap.get('questionIndex')
-    );
+    const fromCurrent = parseNum(activatedRoute.snapshot.paramMap.get('questionIndex'));
     if (fromCurrent !== null) return fromCurrent;
 
     const walk = (snapshot: any): number | null => {
@@ -96,22 +94,17 @@ export class QuizRouteService {
   // ROUTE QUESTION INDEX (0-based)
   // ═══════════════════════════════════════════════════════════════
 
-  getRouteQuestionIndex(
-    activatedRoute: ActivatedRoute,
-    router: Router
-  ): number {
+  getRouteQuestionIndex(activatedRoute: ActivatedRoute, router: Router): number {
     const toIndex = (raw: string | null): number | null => {
       if (raw == null) return null;
-      
+
       const n = Number(raw);
       if (!Number.isFinite(n)) return null;
 
       return Math.max(0, Math.trunc(n) - 1);
     };
 
-    const fromCurrent = toIndex(
-      activatedRoute.snapshot.paramMap.get('questionIndex')
-    );
+    const fromCurrent = toIndex(activatedRoute.snapshot.paramMap.get('questionIndex'));
     if (fromCurrent !== null) return fromCurrent;
 
     const walk = (snapshot: any): number | null => {
@@ -119,7 +112,7 @@ export class QuizRouteService {
 
       const found = toIndex(snapshot.paramMap?.get?.('questionIndex') ?? null);
       if (found !== null) return found;
-      
+
       for (const child of snapshot.children ?? []) {
         const childFound = walk(child);
         if (childFound !== null) return childFound;
@@ -139,5 +132,4 @@ export class QuizRouteService {
 
     return 0;
   }
-
 }

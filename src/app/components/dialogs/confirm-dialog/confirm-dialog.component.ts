@@ -70,8 +70,8 @@ export interface ConfirmDialogData {
         color: var(--text-primary);
         border-color: var(--border-color);
       }
-    `,
-  ],
+    `
+  ]
 })
 export class ConfirmDialogComponent {
   // ── injects ─────────────────────────────────────────────────────

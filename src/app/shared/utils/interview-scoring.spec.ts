@@ -27,9 +27,9 @@ describe('isAnswerCorrect — exact set equality', () => {
 
   it('multi answer: the WHOLE correct set is required — no partial credit', () => {
     expect(isAnswerCorrect(multi, [10, 11])).toBe(true);
-    expect(isAnswerCorrect(multi, [11, 10])).toBe(true);        // order irrelevant
-    expect(isAnswerCorrect(multi, [10])).toBe(false);           // partial
-    expect(isAnswerCorrect(multi, [10, 11, 12])).toBe(false);   // extra wrong
+    expect(isAnswerCorrect(multi, [11, 10])).toBe(true); // order irrelevant
+    expect(isAnswerCorrect(multi, [10])).toBe(false); // partial
+    expect(isAnswerCorrect(multi, [10, 11, 12])).toBe(false); // extra wrong
   });
 
   it('unanswered is incorrect, never a free pass', () => {

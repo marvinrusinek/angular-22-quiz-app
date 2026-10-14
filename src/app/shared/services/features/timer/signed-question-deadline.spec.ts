@@ -60,7 +60,9 @@ let verdicts: QuestionVerdictService;
 
 /** Controllable wall clock — the deadline is expressed in these milliseconds. */
 let clock = 1_000_000;
-const advance = (ms: number) => { clock += ms; };
+const advance = (ms: number) => {
+  clock += ms;
+};
 
 beforeEach(() => {
   clock = 1_000_000;
@@ -98,7 +100,8 @@ afterEach(() => {
 
 /** Settle the attempt + question-start round trip, granting a 30s window. */
 function grantDeadline(questionText: string, receipt = 'q-receipt'): void {
-  http.expectOne({ method: 'POST', url: url.attempts })
+  http
+    .expectOne({ method: 'POST', url: url.attempts })
     .flush({ quizId: QUIZ, attemptReceipt: 'attempt-receipt', startedAt: 1, expiresAt: 30_001 });
 
   const start = http.expectOne({ method: 'POST', url: url.start });
@@ -106,8 +109,12 @@ function grantDeadline(questionText: string, receipt = 'q-receipt'): void {
   // Server clock is deliberately nothing like the local clock: only the
   // DURATION crosses the wire meaningfully.
   start.flush({
-    quizId: QUIZ, questionText, durationSeconds: 30,
-    startedAt: 1, expiresAt: 30_001, questionReceipt: receipt
+    quizId: QUIZ,
+    questionText,
+    durationSeconds: 30,
+    startedAt: 1,
+    expiresAt: 30_001,
+    questionReceipt: receipt
   });
 }
 
@@ -116,8 +123,12 @@ function grantSecondDeadline(questionText: string, receipt = 'q2-receipt'): void
   const start = http.expectOne({ method: 'POST', url: url.start });
   expect(start.request.body).toEqual({ questionText });
   start.flush({
-    quizId: QUIZ, questionText, durationSeconds: 30,
-    startedAt: 1, expiresAt: 30_001, questionReceipt: receipt
+    quizId: QUIZ,
+    questionText,
+    durationSeconds: 30,
+    startedAt: 1,
+    expiresAt: 30_001,
+    questionReceipt: receipt
   });
 }
 
@@ -194,7 +205,10 @@ describe('timing metadata is safe to hand out', () => {
   it('still attaches the receipt to the request that needs it', () => {
     let sent: Record<string, string> | null = null;
     attempts
-      .withQuestionReceipt(QUIZ, Q1, (headers) => { sent = headers; return of('done'); })
+      .withQuestionReceipt(QUIZ, Q1, (headers) => {
+        sent = headers;
+        return of('done');
+      })
       .subscribe();
     grantDeadline(Q1, 'super-secret-receipt');
 
@@ -345,13 +359,17 @@ describe('identity of a window', () => {
 
     timing.activateQuestionTiming('signals', Q1, 0);
 
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/signals/attempts` })
+    http
+      .expectOne({ method: 'POST', url: `${BASE}/quizzes/signals/attempts` })
       .flush({ quizId: 'signals', attemptReceipt: 'a2', startedAt: 1, expiresAt: 30_001 });
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/signals/questions/start` })
-      .flush({
-        quizId: 'signals', questionText: Q1, durationSeconds: 30,
-        startedAt: 1, expiresAt: 30_001, questionReceipt: 'r2'
-      });
+    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/signals/questions/start` }).flush({
+      quizId: 'signals',
+      questionText: Q1,
+      durationSeconds: 30,
+      startedAt: 1,
+      expiresAt: 30_001,
+      questionReceipt: 'r2'
+    });
 
     expect(timerService.hasAuthorizedDeadline(0)).toBe(true);
   });
@@ -401,17 +419,23 @@ describe('a new run does not inherit the previous run', () => {
   const OTHER = 'signals';
 
   /** Quiz identity, as the route layer supplies it. */
-  const useQuiz = (id: string): void => { quizService.quizId = id; };
+  const useQuiz = (id: string): void => {
+    quizService.quizId = id;
+  };
 
   /** Settles both legs for a quiz other than QUIZ. */
   function grantDeadlineFor(quizId: string, questionText: string): void {
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${quizId}/attempts` })
+    http
+      .expectOne({ method: 'POST', url: `${BASE}/quizzes/${quizId}/attempts` })
       .flush({ quizId, attemptReceipt: 'a2', startedAt: 1, expiresAt: 30_001 });
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${quizId}/questions/start` })
-      .flush({
-        quizId, questionText, durationSeconds: 30,
-        startedAt: 1, expiresAt: 30_001, questionReceipt: 'r2'
-      });
+    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/${quizId}/questions/start` }).flush({
+      quizId,
+      questionText,
+      durationSeconds: 30,
+      startedAt: 1,
+      expiresAt: 30_001,
+      questionReceipt: 'r2'
+    });
   }
 
   /**
@@ -452,7 +476,7 @@ describe('a new run does not inherit the previous run', () => {
     expect(timerService.expiredOnArrivalSig()).toBe(-1);
   });
 
-  it('does not let the previous quiz\'s deadlines authorize anything', () => {
+  it("does not let the previous quiz's deadlines authorize anything", () => {
     useQuiz(QUIZ);
     timing.activateQuestionTiming(QUIZ, Q1, 0);
     grantDeadline(Q1);
@@ -471,7 +495,7 @@ describe('a new run does not inherit the previous run', () => {
     expect(timerService.hasAuthorizedDeadline(0)).toBe(true);
   });
 
-  it('does not carry the previous quiz\'s recorded times into the freeze', () => {
+  it("does not carry the previous quiz's recorded times into the freeze", () => {
     useQuiz(QUIZ);
     timing.activateQuestionTiming(QUIZ, Q1, 0);
     grantDeadline(Q1);
@@ -534,9 +558,11 @@ describe('when the server will not authorize a window', () => {
   it('leaves the timer stopped rather than inventing a local one', () => {
     timing.activateQuestionTiming(QUIZ, Q1, 0);
 
-    http.expectOne({ method: 'POST', url: url.attempts })
+    http
+      .expectOne({ method: 'POST', url: url.attempts })
       .flush({ quizId: QUIZ, attemptReceipt: 'attempt-receipt', startedAt: 1, expiresAt: 30_001 });
-    http.expectOne({ method: 'POST', url: url.start })
+    http
+      .expectOne({ method: 'POST', url: url.start })
       .flush({ error: 'nope' }, { status: 500, statusText: 'Server Error' });
 
     expect(timerService.isTimerRunning).toBe(false);
@@ -545,8 +571,7 @@ describe('when the server will not authorize a window', () => {
 });
 
 describe('no production path starts an unsigned Topic Quiz countdown', () => {
-  const read = (rel: string) =>
-    readFileSync(join(__dirname, '..', '..', rel), 'utf8');
+  const read = (rel: string) => readFileSync(join(__dirname, '..', '..', rel), 'utf8');
 
   it.each([
     ['flow/quiz-setup-route.service.ts'],

@@ -29,9 +29,7 @@ import type { QuizQuestion } from '@shared/models';
  * request is in flight, which is worse than the count-based fallback it would
  * be replacing.
  */
-export function declaredIsMultiAnswer(
-  question: QuizQuestion | null | undefined
-): boolean | null {
+export function declaredIsMultiAnswer(question: QuizQuestion | null | undefined): boolean | null {
   switch (question?.type) {
     case QuestionType.MultipleAnswer:
       return true;
@@ -64,9 +62,7 @@ export function resolveIsMultiAnswer(
 }
 
 /** True only for an explicitly declared true/false question. */
-export function isDeclaredTrueFalse(
-  question: QuizQuestion | null | undefined
-): boolean {
+export function isDeclaredTrueFalse(question: QuizQuestion | null | undefined): boolean {
   return question?.type === QuestionType.TrueFalse;
 }
 
@@ -98,7 +94,10 @@ export function isDeclaredTrueFalse(
  * multiple.
  */
 export function declaredCorrectCount(
-  typeRegistry: { correctCountOf?: (text: string | null | undefined) => number | null } | null | undefined,
+  typeRegistry:
+    | { correctCountOf?: (text: string | null | undefined) => number | null }
+    | null
+    | undefined,
   questionText: string | null | undefined
 ): number | null {
   if (!typeRegistry?.correctCountOf || !questionText) return null;
@@ -114,7 +113,10 @@ export function declaredCorrectCount(
  */
 export function bannerCorrectCount(
   isMultiAnswer: boolean,
-  typeRegistry: { correctCountOf?: (text: string | null | undefined) => number | null } | null | undefined,
+  typeRegistry:
+    | { correctCountOf?: (text: string | null | undefined) => number | null }
+    | null
+    | undefined,
   questionText: string | null | undefined
 ): number | null {
   if (!isMultiAnswer) return null;

@@ -55,7 +55,10 @@ function authorizeAll(verdicts: VerdictStub, questions: QuizQuestion[]): void {
   }
 }
 
-function q(questionText: string, opts: { text: string; correct?: boolean; optionId?: number }[]): QuizQuestion {
+function q(
+  questionText: string,
+  opts: { text: string; correct?: boolean; optionId?: number }[]
+): QuizQuestion {
   return {
     questionText,
     options: opts.map((o, i) => ({
@@ -116,12 +119,20 @@ describe('ScoreAnalysisService', () => {
     expect(analyse(questions)[0].wasCorrect).toBe(false);
 
     // Both correct answers selected.
-    selection.rawSelectionsMap.set(0, [{ optionId: 0, text: 'A' }, { optionId: 1, text: 'B' }]);
+    selection.rawSelectionsMap.set(0, [
+      { optionId: 0, text: 'A' },
+      { optionId: 1, text: 'B' }
+    ]);
     expect(analyse(questions)[0].wasCorrect).toBe(true);
   });
 
   it('matches selections by TEXT when option ids differ (shuffle-safe)', () => {
-    const questions = [q('Q?', [{ text: 'Right', correct: true, optionId: 42 }, { text: 'Wrong', optionId: 7 }])];
+    const questions = [
+      q('Q?', [
+        { text: 'Right', correct: true, optionId: 42 },
+        { text: 'Wrong', optionId: 7 }
+      ])
+    ];
     // Stored selection has a stale id but the right text.
     selection.rawSelectionsMap.set(0, [{ optionId: 999, text: 'Right' }]);
     expect(analyse(questions)[0].wasCorrect).toBe(true);
@@ -134,7 +145,12 @@ describe('ScoreAnalysisService', () => {
   });
 
   it('captures selected + correct option ids', () => {
-    const questions = [q('Q?', [{ text: 'A', correct: true, optionId: 5 }, { text: 'B', optionId: 6 }])];
+    const questions = [
+      q('Q?', [
+        { text: 'A', correct: true, optionId: 5 },
+        { text: 'B', optionId: 6 }
+      ])
+    ];
     selection.rawSelectionsMap.set(0, [{ optionId: 5, text: 'A' }]);
 
     const [item] = analyse(questions);

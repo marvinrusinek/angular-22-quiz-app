@@ -10,21 +10,56 @@ function result(over: Partial<InterviewResultViewModel> = {}): InterviewResultVi
     sessionId: 'is_1',
     submittedAtMs: Date.parse('2026-08-01T12:00:00.000Z'),
     submittedByExpiry: false,
-    total: 10, answered: 9, unanswered: 1, correct: 7, incorrect: 2, percentage: 70,
-    durationSeconds: 900, timeUsedSeconds: 540,
-    config: { mode: 'custom', difficulty: 'beginner', topicIds: ['rxjs', 'signals'], questionCount: 10 },
+    total: 10,
+    answered: 9,
+    unanswered: 1,
+    correct: 7,
+    incorrect: 2,
+    percentage: 70,
+    durationSeconds: 900,
+    timeUsedSeconds: 540,
+    config: {
+      mode: 'custom',
+      difficulty: 'beginner',
+      topicIds: ['rxjs', 'signals'],
+      questionCount: 10
+    },
     byTopic: [
-      { topicId: 'rxjs', title: 'RxJS', correct: 4, incorrect: 1, unanswered: 0, total: 5, percentage: 80 },
-      { topicId: 'signals', title: 'Signals', correct: 3, incorrect: 1, unanswered: 1, total: 5, percentage: 60 }
+      {
+        topicId: 'rxjs',
+        title: 'RxJS',
+        correct: 4,
+        incorrect: 1,
+        unanswered: 0,
+        total: 5,
+        percentage: 80
+      },
+      {
+        topicId: 'signals',
+        title: 'Signals',
+        correct: 3,
+        incorrect: 1,
+        unanswered: 1,
+        total: 5,
+        percentage: 60
+      }
     ],
     review: [
       {
-        questionId: 'rxjs:q:0', sourceQuizId: 'rxjs', questionText: 'Which operator flattens?',
+        questionId: 'rxjs:q:0',
+        sourceQuizId: 'rxjs',
+        questionText: 'Which operator flattens?',
         type: 'single',
-        options: [{ optionId: 1, text: 'switchMap' }, { optionId: 2, text: 'tap' }],
-        selectedOptionIds: [1], correctOptionIds: [1],
+        options: [
+          { optionId: 1, text: 'switchMap' },
+          { optionId: 2, text: 'tap' }
+        ],
+        selectedOptionIds: [1],
+        correctOptionIds: [1],
         explanation: 'switchMap cancels the previous inner observable.',
-        isCorrect: true, isAnswered: true, flagged: false
+        isCorrect: true,
+        isAnswered: true,
+        flagged: false
       }
     ],
     ...over
@@ -40,9 +75,9 @@ describe('field mapping', () => {
     expect(attempt).toMatchObject({
       sessionId: 'is_1',
       completedAt: '2026-08-01T12:00:00.000Z',
-      score: 7,               // backend correct → score
-      totalQuestions: 10,     // backend total   → totalQuestions
-      percentage: 42,         // copied, NOT 7/10
+      score: 7, // backend correct → score
+      totalQuestions: 10, // backend total   → totalQuestions
+      percentage: 42, // copied, NOT 7/10
       answered: 9,
       unanswered: 1,
       incorrect: 2,
@@ -54,15 +89,32 @@ describe('field mapping', () => {
   });
 
   it('maps submittedByExpiry onto the completion reason', () => {
-    expect(toSanitizedAttempt(result({ submittedByExpiry: true }), 0).completionReason)
-      .toBe('time-expired');
+    expect(toSanitizedAttempt(result({ submittedByExpiry: true }), 0).completionReason).toBe(
+      'time-expired'
+    );
   });
 
   it('maps per-topic buckets using the FROZEN backend titles', () => {
     const attempt = toSanitizedAttempt(result(), 0);
     expect(attempt.topicPerformance).toEqual([
-      { topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5, percentage: 80, incorrect: 1, unanswered: 0 },
-      { topicId: 'signals', topicName: 'Signals', correct: 3, total: 5, percentage: 60, incorrect: 1, unanswered: 1 }
+      {
+        topicId: 'rxjs',
+        topicName: 'RxJS',
+        correct: 4,
+        total: 5,
+        percentage: 80,
+        incorrect: 1,
+        unanswered: 0
+      },
+      {
+        topicId: 'signals',
+        topicName: 'Signals',
+        correct: 3,
+        total: 5,
+        percentage: 60,
+        incorrect: 1,
+        unanswered: 1
+      }
     ]);
   });
 });
@@ -80,7 +132,15 @@ describe('difficulty and preset rule', () => {
     // A role preset mixes difficulties by design; recording one would make
     // History claim the attempt was e.g. entirely "Beginner".
     const attempt = toSanitizedAttempt(
-      result({ config: { mode: 'preset', presetId: 'junior', difficulty: 'beginner', topicIds: ['rxjs'], questionCount: 10 } }),
+      result({
+        config: {
+          mode: 'preset',
+          presetId: 'junior',
+          difficulty: 'beginner',
+          topicIds: ['rxjs'],
+          questionCount: 10
+        }
+      }),
       0
     );
     expect(attempt.configKind).toBe('preset');
@@ -91,7 +151,14 @@ describe('difficulty and preset rule', () => {
 
   it('falls back to the preset id when the preset is no longer defined', () => {
     const attempt = toSanitizedAttempt(
-      result({ config: { mode: 'preset', presetId: 'retired-preset', topicIds: ['rxjs'], questionCount: 10 } }),
+      result({
+        config: {
+          mode: 'preset',
+          presetId: 'retired-preset',
+          topicIds: ['rxjs'],
+          questionCount: 10
+        }
+      }),
       0
     );
     expect(attempt.presetName).toBe('retired-preset');
@@ -119,9 +186,17 @@ describe('sanitization', () => {
     const serialized = JSON.stringify(toSanitizedAttempt(result(), 3));
 
     for (const banned of [
-      'review', 'questions', 'options', 'selectedOptionIds', 'correctOptionIds',
-      'explanation', 'answerKey', 'sessionToken', 'questionText',
-      'switchMap', 'cancels the previous'
+      'review',
+      'questions',
+      'options',
+      'selectedOptionIds',
+      'correctOptionIds',
+      'explanation',
+      'answerKey',
+      'sessionToken',
+      'questionText',
+      'switchMap',
+      'cancels the previous'
     ]) {
       expect(serialized).not.toContain(banned);
     }
@@ -129,10 +204,25 @@ describe('sanitization', () => {
 
   it('exposes only the expected top-level keys', () => {
     expect(Object.keys(toSanitizedAttempt(result(), 1)).sort()).toEqual([
-      'answered', 'completedAt', 'completionReason', 'configKind', 'configuredDifficulty',
-      'durationSeconds', 'focusChanges', 'incorrect', 'percentage', 'presetId', 'presetName',
-      'score', 'selectedTopicIds', 'sessionId', 'submittedByExpiry', 'timeUsedSeconds',
-      'topicPerformance', 'totalQuestions', 'unanswered'
+      'answered',
+      'completedAt',
+      'completionReason',
+      'configKind',
+      'configuredDifficulty',
+      'durationSeconds',
+      'focusChanges',
+      'incorrect',
+      'percentage',
+      'presetId',
+      'presetName',
+      'score',
+      'selectedTopicIds',
+      'sessionId',
+      'submittedByExpiry',
+      'timeUsedSeconds',
+      'topicPerformance',
+      'totalQuestions',
+      'unanswered'
     ]);
   });
 });

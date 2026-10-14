@@ -43,9 +43,9 @@ export class AssessmentIntegrityService {
   private _lastFocusLossAt: number | undefined;
 
   // ── internal flags ──────────────────────────────────────────────
-  private active = false;              // listeners registered & counting enabled
-  private isAway = false;              // currently blurred/hidden (transition gate)
-  private recentFullscreenExitAt = 0;  // dedupe a fullscreen-exit's paired blur only
+  private active = false; // listeners registered & counting enabled
+  private isAway = false; // currently blurred/hidden (transition gate)
+  private recentFullscreenExitAt = 0; // dedupe a fullscreen-exit's paired blur only
   private wasFullscreen = false;
 
   // Fires when the user RETURNS with a pending warning — the session component
@@ -71,7 +71,9 @@ export class AssessmentIntegrityService {
 
     fromEvent(document, 'visibilitychange')
       .pipe(takeUntilDestroyed(destroyRef))
-      .subscribe(() => (document.visibilityState === 'hidden' ? this.registerLeave() : this.registerReturn()));
+      .subscribe(() =>
+        document.visibilityState === 'hidden' ? this.registerLeave() : this.registerReturn()
+      );
 
     fromEvent(window, 'blur')
       .pipe(takeUntilDestroyed(destroyRef))
@@ -114,7 +116,7 @@ export class AssessmentIntegrityService {
   private registerLeave(): void {
     if (!this.active || this.isAway) return;
     if (Date.now() - this.recentFullscreenExitAt < AssessmentIntegrityService.COALESCE_MS) {
-      this.isAway = true;   // already counted via the fullscreen-exit path
+      this.isAway = true; // already counted via the fullscreen-exit path
       return;
     }
     this.isAway = true;
@@ -149,17 +151,23 @@ export class AssessmentIntegrityService {
   // ── fullscreen (optional, user gesture) ─────────────────────────
   /** Request fullscreen on the given element. Resolves false if unsupported/denied. */
   enterFullscreen(el: Element): Promise<boolean> {
-    const req = (el as any).requestFullscreen?.bind(el)
-      ?? (el as any).webkitRequestFullscreen?.bind(el);
+    const req =
+      (el as any).requestFullscreen?.bind(el) ?? (el as any).webkitRequestFullscreen?.bind(el);
     if (!req) return Promise.resolve(false);
     return Promise.resolve(req())
-      .then(() => { this.wasFullscreen = true; this._isFullscreen.set(true); return true; })
+      .then(() => {
+        this.wasFullscreen = true;
+        this._isFullscreen.set(true);
+        return true;
+      })
       .catch(() => false);
   }
 
   fullscreenSupported(): boolean {
-    return !!(document as any).fullscreenEnabled
-      || typeof (document.documentElement as any).requestFullscreen === 'function';
+    return (
+      !!(document as any).fullscreenEnabled ||
+      typeof (document.documentElement as any).requestFullscreen === 'function'
+    );
   }
 
   private fullscreenElement(): Element | null {

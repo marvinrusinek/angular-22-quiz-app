@@ -11,7 +11,10 @@ import { InterviewApiError } from '@shared/services/api/interview-api.errors';
 import { BackendInterviewTimerService } from '@shared/services/interview/backend-interview-timer.service';
 import { BackendInterviewResultService } from '@shared/services/interview/backend-interview-result.service';
 import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
-import type { InterviewResultViewModel, InterviewSessionViewModel } from '@shared/models/interview/interview-view-models';
+import type {
+  InterviewResultViewModel,
+  InterviewSessionViewModel
+} from '@shared/models/interview/interview-view-models';
 import type { SaveInterviewAnswerResponse } from '@shared/models/api/interview-api.dto';
 
 /**
@@ -22,21 +25,37 @@ const TOKEN = 'a'.repeat(43);
 
 const QUESTIONS = [
   {
-    questionId: 'rxjs:q:0', sourceQuizId: 'rxjs',
-    questionText: 'Which answer is correct?', type: 'single' as const,
-    options: [{ optionId: 101, text: 'A' }, { optionId: 102, text: 'B' }],
+    questionId: 'rxjs:q:0',
+    sourceQuizId: 'rxjs',
+    questionText: 'Which answer is correct?',
+    type: 'single' as const,
+    options: [
+      { optionId: 101, text: 'A' },
+      { optionId: 102, text: 'B' }
+    ],
     flagged: false
   },
   {
-    questionId: 'rxjs:q:1', sourceQuizId: 'rxjs',
-    questionText: 'Select all that apply', type: 'multiple' as const,
-    options: [{ optionId: 201, text: 'C' }, { optionId: 202, text: 'D' }, { optionId: 203, text: 'E' }],
+    questionId: 'rxjs:q:1',
+    sourceQuizId: 'rxjs',
+    questionText: 'Select all that apply',
+    type: 'multiple' as const,
+    options: [
+      { optionId: 201, text: 'C' },
+      { optionId: 202, text: 'D' },
+      { optionId: 203, text: 'E' }
+    ],
     flagged: false
   },
   {
-    questionId: 'signals:q:0', sourceQuizId: 'signals',
-    questionText: 'True or false?', type: 'trueFalse' as const,
-    options: [{ optionId: 301, text: 'True' }, { optionId: 302, text: 'False' }],
+    questionId: 'signals:q:0',
+    sourceQuizId: 'signals',
+    questionText: 'True or false?',
+    type: 'trueFalse' as const,
+    options: [
+      { optionId: 301, text: 'True' },
+      { optionId: 302, text: 'False' }
+    ],
     flagged: false
   }
 ];
@@ -46,9 +65,12 @@ function session(
   flags = new Map<string, boolean>()
 ): InterviewSessionViewModel {
   return {
-    sessionId: 'is_1', status: 'active',
-    createdAtMs: 1_700_000_000_000, expiresAtMs: 1_700_000_900_000,
-    durationSeconds: 900, remainingSeconds: 900,
+    sessionId: 'is_1',
+    status: 'active',
+    createdAtMs: 1_700_000_000_000,
+    expiresAtMs: 1_700_000_900_000,
+    durationSeconds: 900,
+    remainingSeconds: 900,
     config: { mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs'], questionCount: 3 },
     questions: QUESTIONS,
     answers,
@@ -56,15 +78,27 @@ function session(
   };
 }
 
-const saved = (questionId: string, ids: number[], answeredCount = 1): SaveInterviewAnswerResponse =>
-  ({ saved: true, questionId, selectedOptionIds: ids, answeredCount, questionCount: 3 });
+const saved = (
+  questionId: string,
+  ids: number[],
+  answeredCount = 1
+): SaveInterviewAnswerResponse => ({
+  saved: true,
+  questionId,
+  selectedOptionIds: ids,
+  answeredCount,
+  questionCount: 3
+});
 
 let fixture: ComponentFixture<InterviewSessionComponent>;
 let rendered = false;
 let component: InterviewSessionComponent;
 let backend: BackendInterviewSessionService;
 let api: {
-  saveAnswer: jest.Mock; submitSession: jest.Mock; resumeSession: jest.Mock; setReviewFlag: jest.Mock;
+  saveAnswer: jest.Mock;
+  submitSession: jest.Mock;
+  resumeSession: jest.Mock;
+  setReviewFlag: jest.Mock;
   getResult: jest.Mock;
 };
 let router: Router;
@@ -96,8 +130,11 @@ beforeEach(() => {
   sessionStorage.clear();
   localStorage.clear();
   api = {
-    saveAnswer: jest.fn(), submitSession: jest.fn(), resumeSession: jest.fn(),
-    setReviewFlag: jest.fn(), getResult: jest.fn()
+    saveAnswer: jest.fn(),
+    submitSession: jest.fn(),
+    resumeSession: jest.fn(),
+    setReviewFlag: jest.fn(),
+    getResult: jest.fn()
   };
 
   TestBed.resetTestingModule();
@@ -130,8 +167,9 @@ afterEach(() => {
 describe('rendering', () => {
   it('renders the hydrated question text', () => {
     render();
-    expect(fixture.nativeElement.querySelector('.interview-question').textContent)
-      .toContain('Which answer is correct?');
+    expect(fixture.nativeElement.querySelector('.interview-question').textContent).toContain(
+      'Which answer is correct?'
+    );
   });
 
   it('does NOT resume again — the guard already hydrated', () => {
@@ -170,8 +208,11 @@ describe('rendering', () => {
 
   it('restores saved answers and preserves question/option order', () => {
     render(new Map([['rxjs:q:1', [201, 203]]]));
-    expect(component.questions().map((q) => q.questionId))
-      .toEqual(['rxjs:q:0', 'rxjs:q:1', 'signals:q:0']);
+    expect(component.questions().map((q) => q.questionId)).toEqual([
+      'rxjs:q:0',
+      'rxjs:q:1',
+      'signals:q:0'
+    ]);
     component.onNavigate(1);
     expect(component.selectedIds()).toEqual([201, 203]);
     expect(component.currentOptions().map((o) => o.optionId)).toEqual([201, 202, 203]);
@@ -192,13 +233,19 @@ describe('code snippet', () => {
 
   it('renders app-code-snippet with the question when present', () => {
     backend = TestBed.inject(BackendInterviewSessionService);
-    backend.activateCreatedSession({
-      ...session(),
-      questions: [
-        { ...QUESTIONS[0]!, codeSnippet: { language: 'typescript', code: 'const x = 1;', filename: 'x.ts' } },
-        ...QUESTIONS.slice(1)
-      ]
-    }, TOKEN);
+    backend.activateCreatedSession(
+      {
+        ...session(),
+        questions: [
+          {
+            ...QUESTIONS[0]!,
+            codeSnippet: { language: 'typescript', code: 'const x = 1;', filename: 'x.ts' }
+          },
+          ...QUESTIONS.slice(1)
+        ]
+      },
+      TOKEN
+    );
     fixture = TestBed.createComponent(InterviewSessionComponent);
     rendered = true;
     component = fixture.componentInstance;
@@ -269,7 +316,9 @@ describe('saving', () => {
 
   it('ROLLS BACK to the confirmed answer, flags it and BLOCKS navigation when a save fails', async () => {
     render(new Map([['rxjs:q:0', [101]]]));
-    api.saveAnswer.mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.saveAnswer.mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
 
     await component.onSelectionChange([102]);
     fixture.detectChanges();
@@ -286,7 +335,9 @@ describe('saving', () => {
 
   it('retry resends the INTENDED selection and unblocks on success', async () => {
     render(new Map([['rxjs:q:0', [101]]]));
-    api.saveAnswer.mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.saveAnswer.mockReturnValueOnce(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
     await component.onSelectionChange([102]);
     expect(component.selectedIds()).toEqual([101]);
     expect(component.navigationBlocked()).toBe(true);
@@ -305,7 +356,9 @@ describe('saving', () => {
 
   it('a newer selection supersedes the failed retry intent', async () => {
     render(new Map([['rxjs:q:0', [101]]]));
-    api.saveAnswer.mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.saveAnswer.mockReturnValueOnce(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
     await component.onSelectionChange([102]);
 
     api.saveAnswer.mockReturnValue(of(saved('rxjs:q:0', [101])));
@@ -314,14 +367,16 @@ describe('saving', () => {
     api.saveAnswer.mockClear();
     await component.retrySave();
 
-    expect(api.saveAnswer).not.toHaveBeenCalled();   // no stale [102] resend
+    expect(api.saveAnswer).not.toHaveBeenCalled(); // no stale [102] resend
     expect(component.selectedIds()).toEqual([101]);
     expect(component.navigationBlocked()).toBe(false);
   });
 
   it('a FAILED save leaves no paginator marker', async () => {
     render();
-    api.saveAnswer.mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.saveAnswer.mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
     await component.onSelectionChange([101]);
     expect([...component.answeredIndices()]).toEqual([]);
   });
@@ -338,7 +393,7 @@ describe('navigation', () => {
   it('forward keyboard needs an answer; backward is always allowed', () => {
     render();
     component.onGlobalKey(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
-    expect(component.currentIndex()).toBe(0);          // unanswered → blocked
+    expect(component.currentIndex()).toBe(0); // unanswered → blocked
 
     component.onNavigate(1);
     expect(component.currentIndex()).toBe(1);
@@ -347,7 +402,7 @@ describe('navigation', () => {
   });
 
   it('gating never consults correctness or completeness', () => {
-    render(new Map([['rxjs:q:1', [201]]]));   // one of three on a multiple
+    render(new Map([['rxjs:q:1', [201]]])); // one of three on a multiple
     component.onNavigate(1);
     expect(component.canNavigateNext()).toBe(true);
   });
@@ -362,7 +417,10 @@ describe('timer', () => {
   });
 
   it('has no pause/resume — the server deadline never stops', () => {
-    const timer = TestBed.inject(BackendInterviewTimerService) as unknown as Record<string, unknown>;
+    const timer = TestBed.inject(BackendInterviewTimerService) as unknown as Record<
+      string,
+      unknown
+    >;
     expect(timer['pause']).toBeUndefined();
     expect(timer['resume']).toBeUndefined();
   });
@@ -390,7 +448,9 @@ describe('submission', () => {
 
   it('a failed save blocks submission', async () => {
     render();
-    api.saveAnswer.mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.saveAnswer.mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
     await component.onSelectionChange([101]);
 
     component.onShowResults();
@@ -411,7 +471,9 @@ describe('submission', () => {
 
   it('a backend outage keeps the session locked and offers retry', async () => {
     render();
-    api.submitSession.mockReturnValue(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.submitSession.mockReturnValue(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
 
     await invokeSubmit();
     fixture.detectChanges();
@@ -428,8 +490,12 @@ describe('submission', () => {
 
     expect(JSON.stringify(localStorage)).not.toContain('correctOptionIds');
     const raw = sessionStorage.getItem('interviewSessionRef:v2') ?? '';
-    expect(Object.keys(JSON.parse(raw)).sort())
-      .toEqual(['currentIndex', 'sessionId', 'sessionToken', 'version']);
+    expect(Object.keys(JSON.parse(raw)).sort()).toEqual([
+      'currentIndex',
+      'sessionId',
+      'sessionToken',
+      'version'
+    ]);
   });
 });
 
@@ -438,8 +504,17 @@ describe('storage security during an active session', () => {
     render(new Map([['rxjs:q:0', [101]]]));
     const raw = sessionStorage.getItem('interviewSessionRef:v2') ?? '';
     for (const banned of [
-      'questions', 'options', 'answers', 'correct', 'correctOptionIds',
-      'explanation', 'GeneratedAssessment', 'result', 'score', 'durationSeconds', 'expiresAt'
+      'questions',
+      'options',
+      'answers',
+      'correct',
+      'correctOptionIds',
+      'explanation',
+      'GeneratedAssessment',
+      'result',
+      'score',
+      'durationSeconds',
+      'expiresAt'
     ]) {
       expect(raw).not.toContain(banned);
     }
@@ -460,20 +535,47 @@ describe('recovering a finished session from the retry state', () => {
     sessionId: 'is_1',
     submittedAtMs: Date.parse('2026-08-01T12:00:00.000Z'),
     submittedByExpiry: false,
-    total: 10, answered: 9, unanswered: 1, correct: 7, incorrect: 2, percentage: 70,
-    durationSeconds: 900, timeUsedSeconds: 540,
+    total: 10,
+    answered: 9,
+    unanswered: 1,
+    correct: 7,
+    incorrect: 2,
+    percentage: 70,
+    durationSeconds: 900,
+    timeUsedSeconds: 540,
     config: { mode: 'custom', difficulty: 'beginner', topicIds: ['rxjs'], questionCount: 10 },
-    byTopic: [{ topicId: 'rxjs', title: 'RxJS', correct: 7, incorrect: 2, unanswered: 1, total: 10, percentage: 70 }],
-    review: [{
-      questionId: 'rxjs:q:0', sourceQuizId: 'rxjs', questionText: 'Q?', type: 'single',
-      options: [{ optionId: 1, text: 'A' }, { optionId: 2, text: 'B' }],
-      selectedOptionIds: [1], correctOptionIds: [1], explanation: 'Because.',
-      isCorrect: true, isAnswered: true, flagged: false
-    }]
+    byTopic: [
+      {
+        topicId: 'rxjs',
+        title: 'RxJS',
+        correct: 7,
+        incorrect: 2,
+        unanswered: 1,
+        total: 10,
+        percentage: 70
+      }
+    ],
+    review: [
+      {
+        questionId: 'rxjs:q:0',
+        sourceQuizId: 'rxjs',
+        questionText: 'Q?',
+        type: 'single',
+        options: [
+          { optionId: 1, text: 'A' },
+          { optionId: 2, text: 'B' }
+        ],
+        selectedOptionIds: [1],
+        correctOptionIds: [1],
+        explanation: 'Because.',
+        isCorrect: true,
+        isAnswered: true,
+        flagged: false
+      }
+    ]
   });
 
-  const unreachable = () =>
-    throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0));
+  const unreachable = () => throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0));
   const conflict = () => throwError(() => new InterviewApiError('CONFLICT', 409));
   const expired = () => throwError(() => new InterviewApiError('SESSION_EXPIRED', 409));
 
@@ -496,41 +598,47 @@ describe('recovering a finished session from the retry state', () => {
   it.each([
     ['submitted (CONFLICT)', conflict],
     ['expired and never finalized (SESSION_EXPIRED)', expired]
-  ])('%s: confirmed by the result, then ONE navigation to Results for the right session', async (_label, resume) => {
-    await renderInErrorState();
-    api.resumeSession.mockReturnValue(resume());
-    api.getResult.mockReturnValue(of(finished()));
+  ])(
+    '%s: confirmed by the result, then ONE navigation to Results for the right session',
+    async (_label, resume) => {
+      await renderInErrorState();
+      api.resumeSession.mockReturnValue(resume());
+      api.getResult.mockReturnValue(of(finished()));
 
-    await component.retryResume();
+      await component.retryResume();
 
-    expect(router.navigate).toHaveBeenCalledTimes(1);
-    expect(router.navigate).toHaveBeenCalledWith(['/interview/results', 'is_1']);
-    expect(api.getResult).toHaveBeenCalledTimes(1);
-    expect(component.retrying()).toBe(false);
-  });
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+      expect(router.navigate).toHaveBeenCalledWith(['/interview/results', 'is_1']);
+      expect(api.getResult).toHaveBeenCalledTimes(1);
+      expect(component.retrying()).toBe(false);
+    }
+  );
 
   it.each([
     ['a 409 from the result endpoint (the session is really still running)', () => conflict()],
     ['a 500', () => throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 500))],
     ['a network failure', () => unreachable()]
-  ])('an unconfirmed finish (%s): no navigation, and the retry card stays usable — never "Preparing…"', async (_label, resultError) => {
-    await renderInErrorState();
-    api.resumeSession.mockReturnValue(expired());
-    api.getResult.mockReturnValue(resultError());
+  ])(
+    'an unconfirmed finish (%s): no navigation, and the retry card stays usable — never "Preparing…"',
+    async (_label, resultError) => {
+      await renderInErrorState();
+      api.resumeSession.mockReturnValue(expired());
+      api.getResult.mockReturnValue(resultError());
 
-    await component.retryResume();
-    fixture.detectChanges();
+      await component.retryResume();
+      fixture.detectChanges();
 
-    expect(router.navigate).not.toHaveBeenCalled();
-    expect(component.retrying()).toBe(false);
-    expect(backend.status()).toBe('error');
-    expect(fixture.nativeElement.querySelector('.interview-unavailable')).not.toBeNull();
-    expect(text()).not.toContain('Preparing interview');
-    // …and it can be retried again, once per click.
-    api.resumeSession.mockClear();
-    await component.retryResume();
-    expect(api.resumeSession).toHaveBeenCalledTimes(1);
-  });
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(component.retrying()).toBe(false);
+      expect(backend.status()).toBe('error');
+      expect(fixture.nativeElement.querySelector('.interview-unavailable')).not.toBeNull();
+      expect(text()).not.toContain('Preparing interview');
+      // …and it can be retried again, once per click.
+      api.resumeSession.mockClear();
+      await component.retryResume();
+      expect(api.resumeSession).toHaveBeenCalledTimes(1);
+    }
+  );
 
   it('a dead credential found while confirming goes to the builder, not Results', async () => {
     await renderInErrorState();
@@ -591,7 +699,8 @@ describe('recovering a finished session from the retry state', () => {
    */
   describe('retry card wording', () => {
     const UNCONFIRMED = 'We couldn’t confirm the status of this interview. Please try again.';
-    const NETWORK = 'Cannot reach the interview service. Your assessment is safe — check your connection and try again.';
+    const NETWORK =
+      'Cannot reach the interview service. Your assessment is safe — check your connection and try again.';
 
     const server500 = () => throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 500));
     const notFound = () => throwError(() => new InterviewApiError('UNAUTHORIZED', 404));
@@ -603,15 +712,17 @@ describe('recovering a finished session from the retry state', () => {
     };
     const cardText = (): string =>
       (fixture.nativeElement.querySelector('.interview-unavailable__text')?.textContent ?? '')
-        .replace(/\s+/g, ' ').trim();
-    const card = (): HTMLElement | null => fixture.nativeElement.querySelector('.interview-unavailable');
+        .replace(/\s+/g, ' ')
+        .trim();
+    const card = (): HTMLElement | null =>
+      fixture.nativeElement.querySelector('.interview-unavailable');
     const tryAgain = (): HTMLButtonElement =>
       fixture.nativeElement.querySelector('.interview-unavailable .show-results-btn');
 
     /** What the user sees after the retry, given how the two calls answer. */
     async function retryWith(resume: () => unknown, result?: () => unknown): Promise<void> {
       await renderInErrorState();
-      expect(cardText()).toBe(NETWORK);   // the starting point is a genuine outage
+      expect(cardText()).toBe(NETWORK); // the starting point is a genuine outage
       api.resumeSession.mockReturnValue(resume());
       if (result) api.getResult.mockReturnValue(result());
       await component.retryResume();
@@ -626,14 +737,19 @@ describe('recovering a finished session from the retry state', () => {
         ['result 500', server500],
         ['a network failure', unreachable],
         ['result 409 (still running — contradicts the resume)', conflict]
-      ])('%s → the accurate "could not confirm" wording, not a connectivity claim', async (_l, result) => {
-        await retryWith(resume, result);
+      ])(
+        '%s → the accurate "could not confirm" wording, not a connectivity claim',
+        async (_l, result) => {
+          await retryWith(resume, result);
 
-        expect(cardText()).toBe(UNCONFIRMED);
-        expect(fixture.nativeElement.textContent).not.toContain('Cannot reach the interview service');
-        expect(fixture.nativeElement.textContent).not.toContain('Preparing interview');
-        expect(router.navigate).not.toHaveBeenCalled();   // no false Results navigation
-      });
+          expect(cardText()).toBe(UNCONFIRMED);
+          expect(fixture.nativeElement.textContent).not.toContain(
+            'Cannot reach the interview service'
+          );
+          expect(fixture.nativeElement.textContent).not.toContain('Preparing interview');
+          expect(router.navigate).not.toHaveBeenCalled(); // no false Results navigation
+        }
+      );
     });
 
     it('screen readers get it through the card’s existing status semantics — one message, one live region', async () => {
@@ -642,7 +758,7 @@ describe('recovering a finished session from the retry state', () => {
       expect(card()?.getAttribute('role')).toBe('status');
       expect(card()?.getAttribute('aria-live')).toBe('polite');
       const messages = card()?.querySelectorAll('.interview-unavailable__text') ?? [];
-      expect(messages.length).toBe(1);   // never both messages at once
+      expect(messages.length).toBe(1); // never both messages at once
       expect(card()?.contains(messages[0])).toBe(true);
     });
 
@@ -651,7 +767,7 @@ describe('recovering a finished session from the retry state', () => {
       api.resumeSession.mockReturnValue(expired());
       backend = TestBed.inject(BackendInterviewSessionService);
       await backend.resumeFromStoredReference();
-      backend.markResumeUnresolved();   // what BackendInterviewResultService.confirmFinished does
+      backend.markResumeUnresolved(); // what BackendInterviewResultService.confirmFinished does
 
       fixture = TestBed.createComponent(InterviewSessionComponent);
       rendered = true;
@@ -696,7 +812,7 @@ describe('recovering a finished session from the retry state', () => {
         expect(tryAgain().disabled).toBe(false);
       }
       expect(router.navigate).not.toHaveBeenCalled();
-      expect(TestBed.inject(InterviewSessionReferenceStorage).read()?.sessionId).toBe('is_1');   // credentials kept
+      expect(TestBed.inject(InterviewSessionReferenceStorage).read()?.sessionId).toBe('is_1'); // credentials kept
     });
 
     describe('a genuine connectivity failure keeps its own wording', () => {
@@ -708,7 +824,7 @@ describe('recovering a finished session from the retry state', () => {
 
         expect(cardText()).toBe(NETWORK);
         expect(cardText()).not.toBe(UNCONFIRMED);
-        expect(api.getResult).not.toHaveBeenCalled();   // nothing finished was claimed, nothing to confirm
+        expect(api.getResult).not.toHaveBeenCalled(); // nothing finished was claimed, nothing to confirm
         expect(router.navigate).not.toHaveBeenCalled();
       });
 
@@ -742,14 +858,17 @@ describe('recovering a finished session from the retry state', () => {
       it.each([
         ['401 (invalid token)', unauthorized],
         ['404 (unknown session)', notFound]
-      ])('confirming with the result and getting a %s goes to the builder, not Results', async (_l, result) => {
-        await retryWith(expired, result);
+      ])(
+        'confirming with the result and getting a %s goes to the builder, not Results',
+        async (_l, result) => {
+          await retryWith(expired, result);
 
-        expect(router.navigate).toHaveBeenCalledTimes(1);
-        expect(router.navigate).toHaveBeenCalledWith(['/interview']);
-        expect(fixture.nativeElement.textContent).not.toContain(UNCONFIRMED);
-        expect(TestBed.inject(InterviewSessionReferenceStorage).read()).toBeNull();   // dead credential cleared, as before
-      });
+          expect(router.navigate).toHaveBeenCalledTimes(1);
+          expect(router.navigate).toHaveBeenCalledWith(['/interview']);
+          expect(fixture.nativeElement.textContent).not.toContain(UNCONFIRMED);
+          expect(TestBed.inject(InterviewSessionReferenceStorage).read()).toBeNull(); // dead credential cleared, as before
+        }
+      );
     });
 
     it.each([
@@ -770,7 +889,9 @@ describe('recovering a finished session from the retry state', () => {
 
       expect(backend.status()).toBe('active');
       expect(card()).toBeNull();
-      expect(fixture.nativeElement.querySelector('.interview-question')?.textContent).toContain('Which answer is correct?');
+      expect(fixture.nativeElement.querySelector('.interview-question')?.textContent).toContain(
+        'Which answer is correct?'
+      );
       expect(fixture.nativeElement.textContent).not.toContain(UNCONFIRMED);
       expect(fixture.nativeElement.textContent).not.toContain('Cannot reach the interview service');
       expect(api.getResult).not.toHaveBeenCalled();

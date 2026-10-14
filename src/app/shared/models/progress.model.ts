@@ -4,7 +4,7 @@ import { QuizDifficulty } from './Quiz.model';
 export interface QuizProgress {
   quizId: string;
   completed: boolean;
-  bestScore: number | null;   // null when not completed (or no reliable score)
+  bestScore: number | null; // null when not completed (or no reliable score)
   difficulty?: QuizDifficulty;
 }
 

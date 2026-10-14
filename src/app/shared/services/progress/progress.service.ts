@@ -29,7 +29,7 @@ export class ProgressService {
   /** Per-quiz progress for the given quiz list (does not mutate the input). */
   getQuizProgress(quizzes: Quiz[]): QuizProgress[] {
     const best = this.bestScoreService.getBestScores();
-    return (quizzes ?? []).map(quiz => {
+    return (quizzes ?? []).map((quiz) => {
       const completed = Object.prototype.hasOwnProperty.call(best, quiz.quizId);
       const score = best[quiz.quizId];
       return {
@@ -79,8 +79,8 @@ export class ProgressService {
     // Only difficulties actually present in the data, in canonical order.
     const byDifficulty: DifficultyProgress[] = [];
     for (const difficulty of DIFFICULTY_ORDER) {
-      const group = list.filter(q => (q.difficulty ?? '').toLowerCase() === difficulty);
-      if (group.length === 0) continue;  // omit empty groups
+      const group = list.filter((q) => (q.difficulty ?? '').toLowerCase() === difficulty);
+      if (group.length === 0) continue; // omit empty groups
       byDifficulty.push({
         difficulty,
         completed: group.filter(isCompleted).length,
@@ -93,7 +93,7 @@ export class ProgressService {
     // No reliable per-quiz timestamps exist, so the timestamp tie-breaker is skipped.
     const ranked = list
       .map((quiz, index) => ({ quiz, index, bestScore: best[quiz.quizId] }))
-      .filter(x => isCompleted(x.quiz) && typeof x.bestScore === 'number');
+      .filter((x) => isCompleted(x.quiz) && typeof x.bestScore === 'number');
 
     const toSummary = (x: { quiz: Quiz; bestScore: number }): QuizProgressSummary => ({
       quizId: x.quiz.quizId,
@@ -113,9 +113,7 @@ export class ProgressService {
     // Hide "weakest / needs review" until at least two quizzes are completed, so a
     // single completed quiz isn't shown as both strongest and weakest.
     if (ranked.length >= 2) {
-      const weakest = [...ranked].sort(
-        (a, b) => a.bestScore - b.bestScore || a.index - b.index
-      )[0];
+      const weakest = [...ranked].sort((a, b) => a.bestScore - b.bestScore || a.index - b.index)[0];
       weakestQuiz = toSummary(weakest);
     }
 

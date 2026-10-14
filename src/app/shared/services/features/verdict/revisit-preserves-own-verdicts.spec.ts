@@ -127,7 +127,6 @@ describe('a revisit does not erase the verdicts a player earned', () => {
       remainingCorrectCount: 0
     });
 
-    
     expect(verdictOf('map')).toBe(true);
     expect(verdictOf('filter')).toBe(true);
   });
@@ -139,7 +138,9 @@ describe('a revisit does not erase the verdicts a player earned', () => {
     // The whole point of the migration: merging preserves earned facts, it does
     // not manufacture them. An untouched option has no verdict, ever.
     expect(verdictOf('Directives')).toBeUndefined();
-    expect(service.verdictFor(QUIZ, QUESTION).selectedVerdicts.has(canonicalize('Services'))).toBe(false);
+    expect(service.verdictFor(QUIZ, QUESTION).selectedVerdicts.has(canonicalize('Services'))).toBe(
+      false
+    );
   });
 
   it('still replaces the outstanding count, which IS current', async () => {

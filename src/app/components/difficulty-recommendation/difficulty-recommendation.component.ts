@@ -5,7 +5,7 @@ import {
   inject,
   input,
   OnInit,
-  output,
+  output
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -219,8 +219,8 @@ import { certificateNextAction } from '@shared/utils/interview-certificate-progr
           width: 100%;
         }
       }
-    `,
-  ],
+    `
+  ]
 })
 export class DifficultyRecommendationComponent implements OnInit {
   private readonly cert = inject(InterviewCertificateService);
@@ -236,7 +236,9 @@ export class DifficultyRecommendationComponent implements OnInit {
   // Certificate state — a VERIFIED claim or a LEGACY local record, same
   // precedence as the other certificate-status surfaces (see
   // CertificateEarnedBadgeComponent / InterviewCertificateCalloutComponent).
-  readonly certUnlocked = computed(() => this.claimService.status() === 'verified' || this.cert.unlocked());
+  readonly certUnlocked = computed(
+    () => this.claimService.status() === 'verified' || this.cert.unlocked()
+  );
   readonly certProgress = this.cert.progress;
 
   // Reuses the shared helper rather than restating the requirement, so this

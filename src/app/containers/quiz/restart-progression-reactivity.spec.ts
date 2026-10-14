@@ -47,13 +47,22 @@ const OPTIONS = [
   { optionId: 2, text: 'turbo mode', correct: undefined }
 ];
 const RESOLVED_CORRECT: QuestionCheckResult = {
-  status: 'resolved', correct: true, correctOptionTexts: ['low-power mode'], explanation: 'e'
+  status: 'resolved',
+  correct: true,
+  correctOptionTexts: ['low-power mode'],
+  explanation: 'e'
 } as QuestionCheckResult;
 const RESOLVED_INCORRECT: QuestionCheckResult = {
-  status: 'resolved', correct: false, correctOptionTexts: ['low-power mode'], explanation: 'e'
+  status: 'resolved',
+  correct: false,
+  correctOptionTexts: ['low-power mode'],
+  explanation: 'e'
 } as QuestionCheckResult;
 
-interface Ch { texts: readonly string[]; subject: Subject<QuestionCheckResult> }
+interface Ch {
+  texts: readonly string[];
+  subject: Subject<QuestionCheckResult>;
+}
 let checks: Ch[];
 let fixture: ComponentFixture<QuizComponent>;
 let component: QuizComponent;
@@ -80,7 +89,9 @@ async function mount(): Promise<void> {
 
   const adapter = { check: () => channel(), revealExpired: () => channel() };
   const quizService = {
-    get quizId() { return quizIdRef.value; },
+    get quizId() {
+      return quizIdRef.value;
+    },
     questions: [{ questionText: Q1 }],
     shuffledQuestions: [],
     questionsSig: signal([{ questionText: Q1 }]),
@@ -110,16 +121,25 @@ async function mount(): Promise<void> {
       {
         provide: QuizSetupService,
         useValue: {
-          wireConstructor: jest.fn(), runOnInit: jest.fn(async () => undefined),
-          runAfterViewInit: jest.fn(async () => undefined), runOnDestroy: jest.fn(),
-          runOnGlobalKey: jest.fn(async () => undefined), advanceQuestion: jest.fn(async () => undefined)
+          wireConstructor: jest.fn(),
+          runOnInit: jest.fn(async () => undefined),
+          runAfterViewInit: jest.fn(async () => undefined),
+          runOnDestroy: jest.fn(),
+          runOnGlobalKey: jest.fn(async () => undefined),
+          advanceQuestion: jest.fn(async () => undefined)
         }
       },
-      { provide: SelectionMessageService, useValue: { selectionMessageSig: signal(''), isCompletedInSession: () => false } }
+      {
+        provide: SelectionMessageService,
+        useValue: { selectionMessageSig: signal(''), isCompletedInSession: () => false }
+      }
     ]
   });
   TestBed.overrideComponent(QuizComponent, {
-    set: { imports: [NgClass, MatTooltipModule, VerdictNoticeComponent], schemas: [NO_ERRORS_SCHEMA] }
+    set: {
+      imports: [NgClass, MatTooltipModule, VerdictNoticeComponent],
+      schemas: [NO_ERRORS_SCHEMA]
+    }
   });
 
   fixture = TestBed.createComponent(QuizComponent);
@@ -130,15 +150,24 @@ async function mount(): Promise<void> {
   component.totalQuestions.set(2);
   component.isQuizDataLoaded.set(true);
   component.currentQuestionIndex.set(0);
-  component.combinedQuestionData.set({ question: { questionText: Q1, options: OPTIONS }, options: OPTIONS, explanation: '' } as never);
+  component.combinedQuestionData.set({
+    question: { questionText: Q1, options: OPTIONS },
+    options: OPTIONS,
+    explanation: ''
+  } as never);
   TestBed.inject(NextButtonStateService).isButtonEnabled.set(true);
   fixture.detectChanges();
 }
 
 const nextButton = (): HTMLButtonElement | null =>
   (fixture.nativeElement as HTMLElement).querySelector('.nav-btn[aria-label="Next Question"]');
-function pick(): void { verdicts.checkAnswer(QUIZ, Q1, ['low-power mode']).subscribe({ error: () => undefined }); }
-function resolve(i: number, r: QuestionCheckResult): void { checks[i]!.subject.next(r); fixture.detectChanges(); }
+function pick(): void {
+  verdicts.checkAnswer(QUIZ, Q1, ['low-power mode']).subscribe({ error: () => undefined });
+}
+function resolve(i: number, r: QuestionCheckResult): void {
+  checks[i]!.subject.next(r);
+  fixture.detectChanges();
+}
 
 beforeEach(mount);
 afterEach(() => fixture?.destroy());
@@ -159,8 +188,8 @@ describe('Restart: the progression gate keeps reacting after a transient quizId-
     // question list) reads empty for one render — exactly what
     // return.component.ts's restartQuiz() produces before the route settles.
     quizIdRef.value = '';
-    fixture.detectChanges();       // forces the FIRST post-clear evaluation
-    quizIdRef.value = QUIZ;        // settles, as it does moments later in the app
+    fixture.detectChanges(); // forces the FIRST post-clear evaluation
+    quizIdRef.value = QUIZ; // settles, as it does moments later in the app
     fixture.detectChanges();
 
     // 3. Question 1 begins blocked before any selection in the new run.
@@ -174,9 +203,14 @@ describe('Restart: the progression gate keeps reacting after a transient quizId-
   });
 
   it('4. a pending verdict in the restarted run remains blocked', () => {
-    pick(); resolve(0, RESOLVED_CORRECT);
-    verdicts.clearAll(); verdicts.clearEarnedVerdicts(QUIZ);
-    quizIdRef.value = ''; fixture.detectChanges(); quizIdRef.value = QUIZ; fixture.detectChanges();
+    pick();
+    resolve(0, RESOLVED_CORRECT);
+    verdicts.clearAll();
+    verdicts.clearEarnedVerdicts(QUIZ);
+    quizIdRef.value = '';
+    fixture.detectChanges();
+    quizIdRef.value = QUIZ;
+    fixture.detectChanges();
 
     pick();
     fixture.detectChanges();
@@ -184,9 +218,14 @@ describe('Restart: the progression gate keeps reacting after a transient quizId-
   });
 
   it('6. resolved incorrect in the restarted run remains blocked', () => {
-    pick(); resolve(0, RESOLVED_CORRECT);
-    verdicts.clearAll(); verdicts.clearEarnedVerdicts(QUIZ);
-    quizIdRef.value = ''; fixture.detectChanges(); quizIdRef.value = QUIZ; fixture.detectChanges();
+    pick();
+    resolve(0, RESOLVED_CORRECT);
+    verdicts.clearAll();
+    verdicts.clearEarnedVerdicts(QUIZ);
+    quizIdRef.value = '';
+    fixture.detectChanges();
+    quizIdRef.value = QUIZ;
+    fixture.detectChanges();
 
     pick();
     resolve(1, RESOLVED_INCORRECT);
@@ -194,14 +233,18 @@ describe('Restart: the progression gate keeps reacting after a transient quizId-
   });
 
   it('7. timer state belongs to the new run — an expiry flag from the OLD run does not leak in, and a fresh one still unblocks', () => {
-    timer.expiredForQuestionIndexSig.set(0);   // stale from the completed run
-    verdicts.clearAll(); verdicts.clearEarnedVerdicts(QUIZ);
-    timer.expiredForQuestionIndexSig.set(-1);  // what beginNewRun() does on restart
-    quizIdRef.value = ''; fixture.detectChanges(); quizIdRef.value = QUIZ; fixture.detectChanges();
+    timer.expiredForQuestionIndexSig.set(0); // stale from the completed run
+    verdicts.clearAll();
+    verdicts.clearEarnedVerdicts(QUIZ);
+    timer.expiredForQuestionIndexSig.set(-1); // what beginNewRun() does on restart
+    quizIdRef.value = '';
+    fixture.detectChanges();
+    quizIdRef.value = QUIZ;
+    fixture.detectChanges();
 
-    expect(nextButton()!.disabled).toBe(true);  // the stale expiry must not carry over
+    expect(nextButton()!.disabled).toBe(true); // the stale expiry must not carry over
 
-    timer.expiredForQuestionIndexSig.set(0);    // a genuine expiry in the NEW run
+    timer.expiredForQuestionIndexSig.set(0); // a genuine expiry in the NEW run
     fixture.detectChanges();
     expect(nextButton()!.disabled).toBe(false);
   });
@@ -222,12 +265,15 @@ describe('Restart: the progression gate keeps reacting after a transient quizId-
     }
   });
 
-  it('9. no previous-run verdict leaks into the new run\'s question identity', () => {
+  it("9. no previous-run verdict leaks into the new run's question identity", () => {
     pick();
-    resolve(0, RESOLVED_INCORRECT);   // old run: Q1 answered WRONG
+    resolve(0, RESOLVED_INCORRECT); // old run: Q1 answered WRONG
     verdicts.clearAll();
     verdicts.clearEarnedVerdicts(QUIZ);
-    quizIdRef.value = ''; fixture.detectChanges(); quizIdRef.value = QUIZ; fixture.detectChanges();
+    quizIdRef.value = '';
+    fixture.detectChanges();
+    quizIdRef.value = QUIZ;
+    fixture.detectChanges();
 
     // The new run's Q1 must read as genuinely unanswered, not carry the old
     // run's resolved-incorrect verdict forward.

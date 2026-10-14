@@ -26,7 +26,10 @@ import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { SelectionMessageService } from './selection-message.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import {
+  IDLE_VERDICT_STATE,
+  type QuestionVerdictState
+} from '@shared/services/features/verdict/question-verdict.types';
 import { QuestionType } from '@shared/models';
 
 describe('SelectionMessageService integration', () => {
@@ -75,11 +78,16 @@ describe('SelectionMessageService integration', () => {
     verdictTick.update((n) => n + 1);
   };
 
-  const singleCorrect = (idx: number) => setVerdict(idx, { phase: 'resolved', isResolvedCorrect: true });
-  const singleWrong = (idx: number) => setVerdict(idx, { phase: 'resolved', isResolvedCorrect: false });
-  const multiPartial = (idx: number) => setVerdict(idx, { phase: 'incomplete', remainingCorrectCount: 2 });
-  const multiComplete = (idx: number) => setVerdict(idx, { phase: 'resolved', isResolvedCorrect: true, remainingCorrectCount: 0 });
-  const timedOutUnanswered = (idx: number) => setVerdict(idx, { phase: 'expired', isResolvedCorrect: null });
+  const singleCorrect = (idx: number) =>
+    setVerdict(idx, { phase: 'resolved', isResolvedCorrect: true });
+  const singleWrong = (idx: number) =>
+    setVerdict(idx, { phase: 'resolved', isResolvedCorrect: false });
+  const multiPartial = (idx: number) =>
+    setVerdict(idx, { phase: 'incomplete', remainingCorrectCount: 2 });
+  const multiComplete = (idx: number) =>
+    setVerdict(idx, { phase: 'resolved', isResolvedCorrect: true, remainingCorrectCount: 0 });
+  const timedOutUnanswered = (idx: number) =>
+    setVerdict(idx, { phase: 'expired', isResolvedCorrect: null });
 
   /** Declare a question multi-answer so the multi completion rule applies. */
   const asMulti = (idx: number) => {
@@ -95,7 +103,7 @@ describe('SelectionMessageService integration', () => {
       currentQuestionIndexSig: currentIdxSig,
       currentQuestionIndex: 0,
       totalQuestions: () => 6,
-      quizId: "integration-quiz",
+      quizId: 'integration-quiz',
       questions: Array.from({ length: 6 }, (_, i) => ({
         questionText: `Q${i} text`,
         type: QuestionType.SingleAnswer,
@@ -108,7 +116,7 @@ describe('SelectionMessageService integration', () => {
       currentQuestion: { value: null },
       scoringService: { questionCorrectness: new Map() },
       questionResolved: new Map(),
-      getCurrentQuestionIndex: () => currentIdxSig(),
+      getCurrentQuestionIndex: () => currentIdxSig()
     };
 
     TestBed.configureTestingModule({
@@ -121,14 +129,19 @@ describe('SelectionMessageService integration', () => {
           provide: QuestionVerdictService,
           useValue: {
             verdictFor: (_quizId: string, text: string) => {
-              verdictTick();   // signal read — mirrors the real service
+              verdictTick(); // signal read — mirrors the real service
               return verdictByText.get(text) ?? IDLE_VERDICT_STATE;
             },
-            terminalVerdicts$: { pipe: () => ({ subscribe: () => ({ closed: true, unsubscribe() {} }) }) }
+            terminalVerdicts$: {
+              pipe: () => ({ subscribe: () => ({ closed: true, unsubscribe() {} }) })
+            }
           }
         },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
-      ],
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
+      ]
     });
     service = TestBed.inject(SelectionMessageService);
   });
@@ -191,8 +204,8 @@ describe('SelectionMessageService integration', () => {
     // we explicitly DISPLACE the override by pushing a non-completion
     // message at the intermediate idx — this is what the click pipeline
     // would do in production after the user clicks on the new question.
-    singleCorrect(0);                              // the VERDICT establishes completion
-    service.pushMessage(NEXT_BTN_MSG, 0);          // display only
+    singleCorrect(0); // the VERDICT establishes completion
+    service.pushMessage(NEXT_BTN_MSG, 0); // display only
     currentIdxSig.set(1);
     service.pushMessage('Select 1 more correct answer to continue...', 1);
     currentIdxSig.set(0);
@@ -203,8 +216,8 @@ describe('SelectionMessageService integration', () => {
 
   it('revisit-derivation last Q: completed-set drives "Answered ✓ Click Show Results..."', () => {
     currentIdxSig.set(5);
-    singleCorrect(5);                             // the VERDICT establishes completion
-    service.pushMessage(SHOW_RESULTS_MSG, 5);     // display only
+    singleCorrect(5); // the VERDICT establishes completion
+    service.pushMessage(SHOW_RESULTS_MSG, 5); // display only
     currentIdxSig.set(4);
     service.pushMessage('Select 1 more correct answer to continue...', 4);
     currentIdxSig.set(5);
@@ -423,7 +436,7 @@ describe('SelectionMessageService integration', () => {
     });
 
     it('idle, checking and error are UNKNOWN — never completion', () => {
-      expect(service.isCompletedInSession(0)).toBe(false);   // idle
+      expect(service.isCompletedInSession(0)).toBe(false); // idle
       setVerdict(0, { phase: 'checking' });
       expect(service.isCompletedInSession(0)).toBe(false);
       setVerdict(0, { phase: 'error' });

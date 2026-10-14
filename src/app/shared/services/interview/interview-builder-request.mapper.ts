@@ -1,6 +1,4 @@
-import type {
-  CreateInterviewSessionRequest
-} from '@shared/models/api/interview-api.dto';
+import type { CreateInterviewSessionRequest } from '@shared/models/api/interview-api.dto';
 
 /**
  * Builder state → backend create-session request.

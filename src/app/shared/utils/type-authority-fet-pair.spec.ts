@@ -41,28 +41,30 @@ const q = (
   type: QuestionType | undefined,
   correctCount: number,
   questionText = 'Which of these apply?'
-): QuizQuestion => ({
-  questionText,
-  explanation: 'e',
-  type,
-  options: Array.from({ length: 4 }, (_, i) => ({
-    optionId: i + 1,
-    text: `opt${i + 1}`,
-    value: i + 1,
-    correct: i < correctCount
-  }))
-} as unknown as QuizQuestion);
+): QuizQuestion =>
+  ({
+    questionText,
+    explanation: 'e',
+    type,
+    options: Array.from({ length: 4 }, (_, i) => ({
+      optionId: i + 1,
+      text: `opt${i + 1}`,
+      value: i + 1,
+      correct: i < correctCount
+    }))
+  }) as unknown as QuizQuestion;
 
 /** Options carrying no `correct` property at all — the post-cutover shape. */
-const bare = (type: QuestionType | undefined): QuizQuestion => ({
-  questionText: 'No answer key at all',
-  explanation: 'e',
-  type,
-  options: [
-    { optionId: 1, text: 'a', value: 1 },
-    { optionId: 2, text: 'b', value: 2 }
-  ]
-} as unknown as QuizQuestion);
+const bare = (type: QuestionType | undefined): QuizQuestion =>
+  ({
+    questionText: 'No answer key at all',
+    explanation: 'e',
+    type,
+    options: [
+      { optionId: 1, text: 'a', value: 1 },
+      { optionId: 2, text: 'b', value: 2 }
+    ]
+  }) as unknown as QuizQuestion;
 
 // ══════════════════════════════════════════════════════════════════════
 // SITE 1 — qqc-explanation-display.emitExplanationForActiveIndex
@@ -102,7 +104,10 @@ describe('qqc FET gate: classification declared, completion still counted', () =
         { provide: API_BASE_URL, useValue: 'https://api.test/api' },
         { provide: QuizService, useValue: quizService },
         { provide: SelectedOptionService, useValue: selected },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
       ]
     });
     service = TestBed.inject(QqcExplanationDisplayService);
@@ -110,7 +115,9 @@ describe('qqc FET gate: classification declared, completion still counted', () =
     // Capture FET authorization without touching content supply.
     const ets: any = (service as any).explanationTextService;
     ets.setExplanationText = () => {};
-    ets.setShouldDisplayExplanation = (v: boolean) => { if (v) displayed = true; };
+    ets.setShouldDisplayExplanation = (v: boolean) => {
+      if (v) displayed = true;
+    };
   });
 
   // ── TYPE CLASSIFICATION ───────────────────────────────────────────
@@ -131,8 +138,8 @@ describe('qqc FET gate: classification declared, completion still counted', () =
 
   it('UNDECLARED keeps the legacy count fallback', () => {
     // REMOVE WITH THE /questions CONTENT CUTOVER. Unknown is not "single".
-    expect(emit(q(undefined, 1), [])).toBe(true);            // counted single
-    expect(emit(q(undefined, 3), ['opt1'])).toBe(false);     // counted multi, partial
+    expect(emit(q(undefined, 1), [])).toBe(true); // counted single
+    expect(emit(q(undefined, 3), ['opt1'])).toBe(false); // counted multi, partial
   });
 
   it('reads the DISPLAYED question under shuffle', () => {
@@ -228,15 +235,21 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
     selected.getResolutionStatus = () =>
       verdict
         ? {
-          resolved: verdict.resolved,
-          correctTotal: 0,
-          correctSelected: 0,
-          incorrectSelected: verdict.incorrectSelected ?? 0,
-          remainingCorrect: 0,
-          evaluated: true
-        }
-        : { resolved: false, correctTotal: 0, correctSelected: 0,
-          incorrectSelected: 0, remainingCorrect: 0, evaluated: false };
+            resolved: verdict.resolved,
+            correctTotal: 0,
+            correctSelected: 0,
+            incorrectSelected: verdict.incorrectSelected ?? 0,
+            remainingCorrect: 0,
+            evaluated: true
+          }
+        : {
+            resolved: false,
+            correctTotal: 0,
+            correctSelected: 0,
+            incorrectSelected: 0,
+            remainingCorrect: 0,
+            evaluated: false
+          };
 
     return (service as any).checkResolution({
       resolvedIndex: 0,
@@ -259,7 +272,9 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
       quizInitialState: [] as any[],
       multipleAnswer: false,
       isShuffleEnabled: jest.fn(() => false),
-      getQuestionsInDisplayOrder: jest.fn(function (this: any) { return quizService.questions; })
+      getQuestionsInDisplayOrder: jest.fn(function (this: any) {
+        return quizService.questions;
+      })
     };
     selected = {
       getSelectedOptionsForQuestion: () => [],
@@ -273,7 +288,10 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
         { provide: API_BASE_URL, useValue: 'https://api.test/api' },
         { provide: QuizService, useValue: quizService },
         { provide: SelectedOptionService, useValue: selected },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
       ]
     });
     service = TestBed.inject(SharedOptionExplanationService);
@@ -289,24 +307,20 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
     //
     // Now the type is declared and the completion is authorized, and the gate
     // is skipped only where it could do nothing but veto the verdict.
-    expect(
-      resolution(q(QuestionType.SingleAnswer, 3), ['opt1'], { resolved: true })
-    ).toBe(true);
+    expect(resolution(q(QuestionType.SingleAnswer, 3), ['opt1'], { resolved: true })).toBe(true);
   });
 
   it('DEFECT FIXED: declared TRUEFALSE flagged 3-correct resolves on one authorized pick', () => {
     // trueFalse is single-SELECTION; the authority layer maps it accordingly.
-    expect(
-      resolution(q(QuestionType.TrueFalse, 3), ['opt1'], { resolved: true })
-    ).toBe(true);
+    expect(resolution(q(QuestionType.TrueFalse, 3), ['opt1'], { resolved: true })).toBe(true);
   });
 
   it('declared MULTIPLE partial stays unresolved on an incomplete verdict', () => {
     // The verdict reports `incomplete` -> resolved:false. Completion is not
     // granted by the declared type, and one pick is not the whole set.
-    expect(
-      resolution(q(QuestionType.MultipleAnswer, 3), ['opt1'], { resolved: false })
-    ).toBe(false);
+    expect(resolution(q(QuestionType.MultipleAnswer, 3), ['opt1'], { resolved: false })).toBe(
+      false
+    );
   });
 
   it('declared MULTIPLE resolves when the verdict says the set is complete', () => {
@@ -321,9 +335,9 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
     // multi-answer question down the single-answer branch, where one pick
     // resolved it and released FET early. The verdict says otherwise and now
     // wins. (Previously asserted as `true` — recorded, explicitly not endorsed.)
-    expect(
-      resolution(q(QuestionType.MultipleAnswer, 1), ['opt1'], { resolved: false })
-    ).toBe(false);
+    expect(resolution(q(QuestionType.MultipleAnswer, 1), ['opt1'], { resolved: false })).toBe(
+      false
+    );
   });
 
   it('COMPLETE-BUT-IMPERFECT resolves: completion is not perfection', () => {
@@ -331,23 +345,23 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
     // completion question, so this resolves — `incorrectSelected` is reported
     // but must not be read as "not complete".
     expect(
-      resolution(q(QuestionType.MultipleAnswer, 2), ['opt1', 'opt2', 'opt4'],
-        { resolved: true, incorrectSelected: 1 })
+      resolution(q(QuestionType.MultipleAnswer, 2), ['opt1', 'opt2', 'opt4'], {
+        resolved: true,
+        incorrectSelected: 1
+      })
     ).toBe(true);
   });
 
   it('WRONG-before-complete stays unresolved', () => {
-    expect(
-      resolution(q(QuestionType.MultipleAnswer, 3), ['opt4'], { resolved: false })
-    ).toBe(false);
+    expect(resolution(q(QuestionType.MultipleAnswer, 3), ['opt4'], { resolved: false })).toBe(
+      false
+    );
   });
 
   it('a wrong single-answer pick does not authorize resolution', () => {
     // The verdict phase resolves on a wrong click too, which is why the status
     // is built from isResolvedCorrect rather than the phase.
-    expect(
-      resolution(q(QuestionType.SingleAnswer, 1), ['opt4'], { resolved: false })
-    ).toBe(false);
+    expect(resolution(q(QuestionType.SingleAnswer, 1), ['opt4'], { resolved: false })).toBe(false);
   });
 
   it('completion works with NO `correct` fields when the verdict has evaluated', () => {
@@ -356,7 +370,10 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
       questionText: 'No answer key at all',
       explanation: 'e',
       type: QuestionType.MultipleAnswer,
-      options: [{ optionId: 1, text: 'a', value: 1 }, { optionId: 2, text: 'b', value: 2 }]
+      options: [
+        { optionId: 1, text: 'a', value: 1 },
+        { optionId: 2, text: 'b', value: 2 }
+      ]
     } as unknown as QuizQuestion;
 
     expect(resolution(noKey, ['a', 'b'], { resolved: true })).toBe(true);
@@ -366,10 +383,10 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
     // Options revealed by the UI are not submitted answers. The authorized
     // counts come from selectedVerdicts, which covers only what the user sent,
     // so an unevaluated verdict must not resolve no matter what the UI shows.
-    expect(resolution(q(QuestionType.MultipleAnswer, 3), ['opt1', 'opt2', 'opt3'], null))
-      .toBe(true);   // legacy fallback path, all three genuinely selected
-    expect(resolution(q(QuestionType.MultipleAnswer, 3), [], { resolved: false }))
-      .toBe(false);  // nothing submitted -> no completion
+    expect(resolution(q(QuestionType.MultipleAnswer, 3), ['opt1', 'opt2', 'opt3'], null)).toBe(
+      true
+    ); // legacy fallback path, all three genuinely selected
+    expect(resolution(q(QuestionType.MultipleAnswer, 3), [], { resolved: false })).toBe(false); // nothing submitted -> no completion
   });
 
   it('an UNEVALUATED verdict falls back to the legacy local rule, unchanged', () => {
@@ -392,9 +409,7 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
     // and only one was picked. The gate used to overrule the verdict; now it is
     // skipped whenever anything is authorized, so it can only ever help while
     // nothing is.
-    expect(
-      resolution(q(QuestionType.MultipleAnswer, 3), ['opt1'], { resolved: true })
-    ).toBe(true);
+    expect(resolution(q(QuestionType.MultipleAnswer, 3), ['opt1'], { resolved: true })).toBe(true);
   });
 
   it('declared SINGLE still resolves on one pick while the verdict is UNEVALUATED', () => {
@@ -420,14 +435,20 @@ describe('shared-option checkResolution: completion comes from the verdict', () 
     // The post-cutover shape. Nothing local to count, so the old rule could
     // only ever answer "not complete" — the limitation the qqc suite above
     // still documents for its own site.
-    const noKey = (type: QuestionType): QuizQuestion => ({
-      questionText: 'No answer key at all',
-      explanation: 'e',
-      type,
-      options: [{ optionId: 1, text: 'a', value: 1 }, { optionId: 2, text: 'b', value: 2 }]
-    } as unknown as QuizQuestion);
+    const noKey = (type: QuestionType): QuizQuestion =>
+      ({
+        questionText: 'No answer key at all',
+        explanation: 'e',
+        type,
+        options: [
+          { optionId: 1, text: 'a', value: 1 },
+          { optionId: 2, text: 'b', value: 2 }
+        ]
+      }) as unknown as QuizQuestion;
 
-    expect(resolution(noKey(QuestionType.MultipleAnswer), ['a', 'b'], { resolved: true })).toBe(true);
+    expect(resolution(noKey(QuestionType.MultipleAnswer), ['a', 'b'], { resolved: true })).toBe(
+      true
+    );
     expect(resolution(noKey(QuestionType.MultipleAnswer), ['a'], { resolved: false })).toBe(false);
     expect(resolution(noKey(QuestionType.SingleAnswer), ['a'], { resolved: true })).toBe(true);
     expect(resolution(noKey(QuestionType.SingleAnswer), ['b'], { resolved: false })).toBe(false);

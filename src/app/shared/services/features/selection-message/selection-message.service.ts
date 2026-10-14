@@ -7,10 +7,12 @@ import { ExplanationTextService } from '@shared/services/features/explanation/ex
 
 import { Option, QuestionType, QuizQuestion } from '@shared/models';
 
-
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 import { declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
-import { allCorrectSelectedFromVerdict, selectedVerdictFor } from '@shared/services/features/verdict/authorized-correctness';
+import {
+  allCorrectSelectedFromVerdict,
+  selectedVerdictFor
+} from '@shared/services/features/verdict/authorized-correctness';
 import { norm } from '@shared/utils/text-norm';
 
 import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
@@ -45,9 +47,9 @@ const NEXT_BTN_MSG = 'Please click the Next button to continue.';
 export const SHOW_RESULTS_MSG = 'Please click the Show Results button.';
 
 interface OptionSnapshot {
-  id: number | string,
-  selected: boolean,
-  correct?: boolean
+  id: number | string;
+  selected: boolean;
+  correct?: boolean;
 }
 
 @Service()
@@ -55,12 +57,16 @@ export class SelectionMessageService {
   // Click-driven override consumed by the computed selectionMessageSig.
   // Cleared on nav transitions (see ctor effect) so a prior question's
   // override never bleeds into the next visit.
-  private readonly _clickOverride = signal<{ idx: number, msg: string } | null>(null);
+  private readonly _clickOverride = signal<{ idx: number; msg: string } | null>(null);
 
   // Signal-first options snapshot
   readonly optionsSnapshotSig = signal<Option[]>([]);
-  public get optionsSnapshot(): Option[] { return this.optionsSnapshotSig(); }
-  public set optionsSnapshot(v: Option[]) { this.optionsSnapshotSig.set(v); }
+  public get optionsSnapshot(): Option[] {
+    return this.optionsSnapshotSig();
+  }
+  public set optionsSnapshot(v: Option[]) {
+    this.optionsSnapshotSig.set(v);
+  }
 
   private _idMapByIndex = new Map<number, Map<string, string | number>>();
 
@@ -74,7 +80,6 @@ export class SelectionMessageService {
   public _lastMessageByIndex = new Map<number, string>();
   public _baselineReleased = new Set<number>();
   public _wrongClickCounts = new Map<number, number>();
-
 
   private _pendingMsgTokens = new Map<number, number>();
 
@@ -95,8 +100,9 @@ export class SelectionMessageService {
     return this.deriveNavMessageForIdx(idx);
   });
 
-  public readonly selectionMessage$: Observable<string> =
-    toObservable(this.selectionMessageSig).pipe(distinctUntilChanged());
+  public readonly selectionMessage$: Observable<string> = toObservable(
+    this.selectionMessageSig
+  ).pipe(distinctUntilChanged());
 
   constructor() {
     // Invalidate the click override the moment the user nav'd to a different
@@ -147,19 +153,27 @@ export class SelectionMessageService {
       if (isShuf) {
         let eqId = qs?.quizId || '';
         if (!eqId) {
-          try { eqId = localStorage.getItem('lastQuizId') || ''; } catch (err: unknown) { swallow('selection-message.service.ts', err); /* ignore */ }
+          try {
+            eqId = localStorage.getItem('lastQuizId') || '';
+          } catch (err: unknown) {
+            swallow('selection-message.service.ts', err); /* ignore */
+          }
         }
         if (eqId) {
           const mapped = qs?.scoringService?.quizShuffleService?.toOriginalIndex?.(eqId, idx);
           if (typeof mapped === 'number' && mapped >= 0) origIdx = mapped;
         }
       }
-    } catch (err: unknown) { swallow('selection-message.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('selection-message.service.ts', err); /* ignore */
+    }
 
     // Single authoritative probe: only marked when this session's pushMessage
     // already recorded a real completion message for this idx. No reliance on
     // external maps that leak across sessions or collide in shuffled mode.
-    void isShuf; void origIdx; void qs;
+    void isShuf;
+    void origIdx;
+    void qs;
     // A question that only TIMED OUT (no genuine selection) was force-marked
     // completed so its Next/Show-Results button stays enabled — but it is not
     // truly answered, so on revisit prompt the user to select rather than
@@ -168,7 +182,9 @@ export class SelectionMessageService {
 
     const isLast = total > 0 && idx === total - 1;
     return answered
-      ? (isLast ? 'Answered ✓ Click Show Results...' : 'Answered ✓ Click Next to continue...')
+      ? isLast
+        ? 'Answered ✓ Click Show Results...'
+        : 'Answered ✓ Click Next to continue...'
       : 'Please select an option to continue...';
   }
 
@@ -190,19 +206,27 @@ export class SelectionMessageService {
       if (isShuf) {
         let eqId = qs?.quizId || '';
         if (!eqId) {
-          try { eqId = localStorage.getItem('lastQuizId') || ''; } catch (err: unknown) { swallow('selection-message.service.ts', err); /* ignore */ }
+          try {
+            eqId = localStorage.getItem('lastQuizId') || '';
+          } catch (err: unknown) {
+            swallow('selection-message.service.ts', err); /* ignore */
+          }
         }
         if (eqId) {
           const mapped = qs?.scoringService?.quizShuffleService?.toOriginalIndex?.(eqId, idx);
           if (typeof mapped === 'number' && mapped >= 0) origIdx = mapped;
         }
       }
-    } catch (err: unknown) { swallow('selection-message.service.ts', err); /* ignore */ }
-    return this.quizStateService.isQuestionAnswered?.(idx) === true
-      || qs?.questionCorrectness?.get?.(idx) === true
-      || (origIdx >= 0 && qs?.questionCorrectness?.get?.(origIdx) === true)
-      || qs?.isQuestionResolved?.(idx) === true
-      || this.explanationTextService?.fetBypassForQuestion?.get?.(idx) === true;
+    } catch (err: unknown) {
+      swallow('selection-message.service.ts', err); /* ignore */
+    }
+    return (
+      this.quizStateService.isQuestionAnswered?.(idx) === true ||
+      qs?.questionCorrectness?.get?.(idx) === true ||
+      (origIdx >= 0 && qs?.questionCorrectness?.get?.(origIdx) === true) ||
+      qs?.isQuestionResolved?.(idx) === true ||
+      this.explanationTextService?.fetBypassForQuestion?.get?.(idx) === true
+    );
   }
 
   public getCurrentMessage(): string {
@@ -231,11 +255,14 @@ export class SelectionMessageService {
 
   private getQuestion(index: number): QuizQuestion | null {
     const svc = this.quizService as any;
-    const questions = (svc.isShuffleEnabled() && svc.shuffledQuestions?.length > 0)
-      ? svc.shuffledQuestions : svc.questions;
+    const questions =
+      svc.isShuffleEnabled() && svc.shuffledQuestions?.length > 0
+        ? svc.shuffledQuestions
+        : svc.questions;
 
-    return (Array.isArray(questions) && index >= 0 && index < questions.length)
-      ? questions[index] : (svc.currentQuestion?.value ?? null);
+    return Array.isArray(questions) && index >= 0 && index < questions.length
+      ? questions[index]
+      : (svc.currentQuestion?.value ?? null);
   }
 
   /**
@@ -253,10 +280,7 @@ export class SelectionMessageService {
    * A declared type is returned VERBATIM so trueFalse survives as trueFalse
    * instead of collapsing into SingleAnswer.
    */
-  private resolveQType(
-    declared: QuestionType | undefined,
-    correctCount: number
-  ): QuestionType {
+  private resolveQType(declared: QuestionType | undefined, correctCount: number): QuestionType {
     if (declaredIsMultiAnswer({ type: declared } as QuizQuestion) !== null) {
       return declared as QuestionType;
     }
@@ -297,12 +321,12 @@ export class SelectionMessageService {
     const canonical = Array.isArray(q?.options) ? (q!.options as Option[]) : [];
     this.ensureStableIds(questionIndex, canonical, uiSnapshot);
 
-    const overlaid: Option[] = 
-      (canonical.length ? canonical : this.normalizeOptionArray(uiSnapshot)).map((o, idx) => {
-        const id = this.toStableId(o, idx);
-        return this.toOption(o, idx, selectedKeys.has(id) || !!o.selected);
-      }
-    );
+    const overlaid: Option[] = (
+      canonical.length ? canonical : this.normalizeOptionArray(uiSnapshot)
+    ).map((o, idx) => {
+      const id = this.toStableId(o, idx);
+      return this.toOption(o, idx, selectedKeys.has(id) || !!o.selected);
+    });
 
     const correctCount = overlaid.filter((o) => !!o?.correct).length;
     const qType: QuestionType = this.resolveQType(declaredType, correctCount);
@@ -337,8 +361,8 @@ export class SelectionMessageService {
       const service = this.quizService as any;
       const quizId = service?.quizId;
       const questionText =
-        service?.getQuestionsInDisplayOrder?.()?.[index]?.questionText
-        ?? service?.questions?.[index]?.questionText;
+        service?.getQuestionsInDisplayOrder?.()?.[index]?.questionText ??
+        service?.questions?.[index]?.questionText;
       if (!quizId || !questionText) return null;
       return this.verdicts.verdictFor(quizId, questionText);
     } catch {
@@ -419,9 +443,10 @@ export class SelectionMessageService {
       const question = this.getQuestion(index);
       const declaredMulti = declaredIsMultiAnswer(question ?? undefined);
 
-      const completed = declaredMulti === true
-        ? allCorrectSelectedFromVerdict(state) === true
-        : state.phase === 'resolved' && state.isResolvedCorrect === true;
+      const completed =
+        declaredMulti === true
+          ? allCorrectSelectedFromVerdict(state) === true
+          : state.phase === 'resolved' && state.isResolvedCorrect === true;
 
       // Latch it. A later re-check may downgrade the verdict, but the user did
       // complete the question, and that fact does not un-happen.
@@ -429,7 +454,7 @@ export class SelectionMessageService {
 
       return completed;
     } catch {
-      return false;   // never let a message computation throw
+      return false; // never let a message computation throw
     }
   }
 
@@ -443,8 +468,8 @@ export class SelectionMessageService {
     try {
       const service = this.quizService as any;
       const text =
-        service?.getQuestionsInDisplayOrder?.()?.[index]?.questionText
-        ?? service?.questions?.[index]?.questionText;
+        service?.getQuestionsInDisplayOrder?.()?.[index]?.questionText ??
+        service?.questions?.[index]?.questionText;
       const key = norm(text);
       return key ? key : null;
     } catch {
@@ -457,14 +482,14 @@ export class SelectionMessageService {
       const service = this.quizService as any;
       const quizId = service?.quizId;
       const questionText =
-        service?.getQuestionsInDisplayOrder?.()?.[index]?.questionText
-        ?? service?.questions?.[index]?.questionText;
+        service?.getQuestionsInDisplayOrder?.()?.[index]?.questionText ??
+        service?.questions?.[index]?.questionText;
       if (!quizId || !questionText) return null;
 
       const state = this.verdicts.verdictFor(quizId, questionText);
-      return state.remainingCorrectCount;   // null unless a verdict exists
+      return state.remainingCorrectCount; // null unless a verdict exists
     } catch {
-      return null;   // never let a message computation throw
+      return null; // never let a message computation throw
     }
   }
 
@@ -478,9 +503,9 @@ export class SelectionMessageService {
     if (!opts || opts.length === 0) return index === 0 ? START_MSG : CONTINUE_MSG;
     const isLastQuestion = total > 0 && index === total - 1;
 
-    const totalCorrect = opts.filter(o => isOptionCorrect(o)).length;
-    const selectedCorrect = opts.filter(o => o.selected && isOptionCorrect(o)).length;
-    const selectedWrong = opts.filter(o => o.selected && !isOptionCorrect(o)).length;
+    const totalCorrect = opts.filter((o) => isOptionCorrect(o)).length;
+    const selectedCorrect = opts.filter((o) => o.selected && isOptionCorrect(o)).length;
+    const selectedWrong = opts.filter((o) => o.selected && !isOptionCorrect(o)).length;
 
     if (qType === QuestionType.SingleAnswer) {
       // CORRECTNESS COMES FROM THE VERDICT, AND ONLY ONCE IT EXISTS.
@@ -497,8 +522,8 @@ export class SelectionMessageService {
       // a different source alone would not have fixed it — at click time there
       // is nothing to read. So this waits, and the arrival recomputes.
       const state = this.verdictStateFor(index);
-      const phase = state?.phase ?? "idle";
-      const selectedTexts = opts.filter((o) => o.selected).map((o) => o.text ?? "");
+      const phase = state?.phase ?? 'idle';
+      const selectedTexts = opts.filter((o) => o.selected).map((o) => o.text ?? '');
 
       if (selectedTexts.length === 0) {
         return index === 0 ? START_MSG : CONTINUE_MSG;
@@ -517,7 +542,7 @@ export class SelectionMessageService {
       // falling back to it (or the fresh-question prompt, if none exists yet)
       // keeps the screen exactly as the user already saw it while /check is
       // in flight, with nothing invented about a request in progress.
-      if (phase !== "resolved" && phase !== "expired") {
+      if (phase !== 'resolved' && phase !== 'expired') {
         this.recomputeWhenVerdictArrives({ index, total, qType, opts });
         return this._lastMessageByIndex.get(index) ?? (index === 0 ? START_MSG : CONTINUE_MSG);
       }
@@ -608,7 +633,7 @@ export class SelectionMessageService {
         this.recomputeWhenVerdictArrives({ index, total, qType, opts });
         return this._lastMessageByIndex.get(index) ?? SELECT_ALL_THAT_APPLY_MSG;
       }
-      const remaining = remainingFromVerdict ?? (totalCorrect - selectedCorrect);
+      const remaining = remainingFromVerdict ?? totalCorrect - selectedCorrect;
 
       // All correct answers selected → Next button or Show Results
       if (remaining === 0) {
@@ -651,13 +676,16 @@ export class SelectionMessageService {
    * delays: the verdict announces itself.
    */
   private recomputeWhenVerdictArrives(args: {
-    index: number; total: number; qType: QuestionType; opts: Option[];
+    index: number;
+    total: number;
+    qType: QuestionType;
+    opts: Option[];
   }): void {
     const service = this.quizService as any;
     const quizId = service?.quizId;
     const questionText =
-      service?.getQuestionsInDisplayOrder?.()?.[args.index]?.questionText
-      ?? service?.questions?.[args.index]?.questionText;
+      service?.getQuestionsInDisplayOrder?.()?.[args.index]?.questionText ??
+      service?.questions?.[args.index]?.questionText;
     if (!quizId || !questionText) return;
 
     // ANY verdict change, not only terminal ones.
@@ -675,8 +703,10 @@ export class SelectionMessageService {
 
     const sub = arrivals
       .pipe(
-        filter((arrival) =>
-          arrival.quizId === quizId && norm(arrival.questionText) === norm(questionText)),
+        filter(
+          (arrival) =>
+            arrival.quizId === quizId && norm(arrival.questionText) === norm(questionText)
+        ),
         take(1)
       )
       .subscribe(() => {
@@ -685,8 +715,7 @@ export class SelectionMessageService {
         // STALE GUARD: the verdict is current for ITS question, but the user
         // may have moved on — pushing now would put one question's message on
         // another's screen.
-        const showing =
-          service?.getQuestionsInDisplayOrder?.()?.[args.index]?.questionText;
+        const showing = service?.getQuestionsInDisplayOrder?.()?.[args.index]?.questionText;
         if (showing && norm(showing) !== norm(questionText)) return;
 
         // Re-entry is bounded: the phase is terminal now, so the branch
@@ -748,9 +777,12 @@ export class SelectionMessageService {
     }
     // Count-free for the same reason as the in-flow prompt above: this baseline
     // is pushed when the question first renders, before any answer exists.
-    const msg = qType === QuestionType.MultipleAnswer
-      ? SELECT_ALL_THAT_APPLY_MSG
-      : (i0 === 0 ? START_MSG : CONTINUE_MSG);
+    const msg =
+      qType === QuestionType.MultipleAnswer
+        ? SELECT_ALL_THAT_APPLY_MSG
+        : i0 === 0
+          ? START_MSG
+          : CONTINUE_MSG;
     this._lastMessageByIndex.set(i0, msg);
     this.pushMessage(msg, i0);
   }
@@ -770,7 +802,7 @@ export class SelectionMessageService {
   public async setSelectionMessage(isAnswered: boolean): Promise<void> {
     const i0 = this.quizService.currentQuestionIndex;
     const total = this.quizService.totalQuestions();
-    if (i0 < 0 || !this._baselineReleased.has(i0) && !isAnswered) return;
+    if (i0 < 0 || (!this._baselineReleased.has(i0) && !isAnswered)) return;
 
     queueMicrotask(() => {
       if (this._pendingMsgTokens.get(i0) === -1) return;
@@ -793,9 +825,7 @@ export class SelectionMessageService {
 
   public emitFromClick(params: any): void {
     const opts = params.canonicalOptions as Option[];
-    const correctCount = (opts ?? []).filter(
-      (o: any) => isOptionCorrect(o)
-    ).length;
+    const correctCount = (opts ?? []).filter((o: any) => isOptionCorrect(o)).length;
     const declaredType = params.questionType;
     const qType: QuestionType = this.resolveQType(declaredType, correctCount);
 
@@ -856,11 +886,13 @@ export class SelectionMessageService {
 
   public getLatestOptionsSnapshot(): OptionSnapshot[] {
     const snap = this.optionsSnapshotSig();
-    return Array.isArray(snap) ? snap.map((o, i) => ({
-      id: this.toStableId(o, i),
-      selected: !!o.selected,
-      correct: typeof o.correct === 'boolean' ? o.correct : undefined
-    })) : [];
+    return Array.isArray(snap)
+      ? snap.map((o, i) => ({
+          id: this.toStableId(o, i),
+          selected: !!o.selected,
+          correct: typeof o.correct === 'boolean' ? o.correct : undefined
+        }))
+      : [];
   }
 
   public getLatestOptionsSnapshotAsOptions(): Option[] {
@@ -876,7 +908,10 @@ export class SelectionMessageService {
     });
   }
 
-  private collectSelectedKeys(rawSel: any, keyFn: (o: any) => string | number): Set<string | number> {
+  private collectSelectedKeys(
+    rawSel: any,
+    keyFn: (o: any) => string | number
+  ): Set<string | number> {
     const keys = new Set<string | number>();
     if (!rawSel) return keys;
     if (rawSel instanceof Set) {
@@ -888,7 +923,7 @@ export class SelectionMessageService {
   }
 
   public reconcileObservedWithCurrentSelection(index: number, optionsNow: Option[]): void {
-    const totalCorrect = optionsNow.filter(o => !!o?.correct).length;
+    const totalCorrect = optionsNow.filter((o) => !!o?.correct).length;
     const q = this.getQuestion(index);
     const qType = this.resolveQType(q?.type, totalCorrect);
 

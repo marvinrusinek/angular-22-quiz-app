@@ -32,11 +32,7 @@ describe('FET display integration', () => {
     let quizServiceMock: any;
     let shuffleServiceMock: any;
 
-    const makeOption = (
-      text: string,
-      correct: boolean,
-      optionId = 0
-    ): Option => ({
+    const makeOption = (text: string, correct: boolean, optionId = 0): Option => ({
       optionId,
       text,
       correct,
@@ -46,11 +42,7 @@ describe('FET display integration', () => {
     const singleAnswerQ: QuizQuestion = {
       questionText: 'What is 2 + 2?',
       type: QuestionType.SingleAnswer,
-      options: [
-        makeOption('3', false, 1),
-        makeOption('4', true, 2),
-        makeOption('5', false, 3)
-      ],
+      options: [makeOption('3', false, 1), makeOption('4', true, 2), makeOption('5', false, 3)],
       explanation: '2 + 2 equals 4.'
     };
 
@@ -77,7 +69,9 @@ describe('FET display integration', () => {
         isShuffleEnabled: jest.fn().mockReturnValue(false),
         getCurrentQuestionIndex: jest.fn().mockReturnValue(0),
         getPristineQuestion: jest.fn((i: number) => [singleAnswerQ, multiAnswerQ][i] ?? null),
-        quizDataLoader: { getCanonicalQuestions: jest.fn().mockReturnValue([singleAnswerQ, multiAnswerQ]) }
+        quizDataLoader: {
+          getCanonicalQuestions: jest.fn().mockReturnValue([singleAnswerQ, multiAnswerQ])
+        }
       };
       shuffleServiceMock = {
         toOriginalIndex: jest.fn((_id: string, idx: number) => idx)
@@ -88,7 +82,10 @@ describe('FET display integration', () => {
           ExplanationFormatterService,
           { provide: QuizService, useValue: quizServiceMock },
           { provide: QuizShuffleService, useValue: shuffleServiceMock },
-          { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => 'integration-quiz' } }, params: of({}) } }
+          {
+            provide: ActivatedRoute,
+            useValue: { snapshot: { paramMap: { get: () => 'integration-quiz' } }, params: of({}) }
+          }
         ]
       });
       service = TestBed.inject(ExplanationFormatterService);
@@ -108,10 +105,7 @@ describe('FET display integration', () => {
       });
 
       it('returns sorted, deduplicated indices', () => {
-        const dupOpts: Option[] = [
-          makeOption('A', true, 1),
-          makeOption('B', true, 2)
-        ];
+        const dupOpts: Option[] = [makeOption('A', true, 1), makeOption('B', true, 2)];
         const q: QuizQuestion = {
           questionText: 'unique-dedup-test',
           type: QuestionType.MultipleAnswer,
@@ -126,10 +120,7 @@ describe('FET display integration', () => {
       });
 
       it('returns [] when no options are correct', () => {
-        const opts: Option[] = [
-          makeOption('a', false, 1),
-          makeOption('b', false, 2)
-        ];
+        const opts: Option[] = [makeOption('a', false, 1), makeOption('b', false, 2)];
         const q: QuizQuestion = {
           questionText: 'unique-no-correct',
           type: QuestionType.SingleAnswer,
@@ -151,7 +142,12 @@ describe('FET display integration', () => {
       });
 
       it('formats a 2-answer multi explanation with "Options A and B are correct because ..."', () => {
-        const result = service.formatExplanation(multiAnswerQ, [2, 4], multiAnswerQ.explanation!, 1);
+        const result = service.formatExplanation(
+          multiAnswerQ,
+          [2, 4],
+          multiAnswerQ.explanation!,
+          1
+        );
         // The explanation body's leading letter is lowercased so it reads as one
         // sentence after "… correct because" ("Both" -> "both").
         expect(result).toBe('Options 2 and 4 are correct because both 2 and 4 are even.');
@@ -170,7 +166,9 @@ describe('FET display integration', () => {
           explanation: 'Primes have exactly two divisors.'
         };
         const result = service.formatExplanation(q, [1, 2, 4], q.explanation!, 0);
-        expect(result).toBe('Options 1, 2, and 4 are correct because primes have exactly two divisors.');
+        expect(result).toBe(
+          'Options 1, 2, and 4 are correct because primes have exactly two divisors.'
+        );
       });
 
       it('returns the raw explanation when correctIndices is empty', () => {
@@ -192,7 +190,12 @@ describe('FET display integration', () => {
 
       it('infers MultipleAnswer when data shows >1 correct, regardless of input indices count', () => {
         // Caller passes a single index but the question data has 2 correct opts → multi phrasing
-        const result = service.formatExplanation(multiAnswerQ, [2, 4], multiAnswerQ.explanation!, 1);
+        const result = service.formatExplanation(
+          multiAnswerQ,
+          [2, 4],
+          multiAnswerQ.explanation!,
+          1
+        );
         expect(result.startsWith('Options ')).toBe(true);
       });
     });
@@ -213,8 +216,12 @@ describe('FET display integration', () => {
         questionText: 'In modern Angular, how can a class obtain one of its dependencies?',
         type: QuestionType.SingleAnswer,
         options: [
-          makeOption('Through constructor injection, or by calling the inject() function.', true, 1),
-          makeOption('Only by importing the dependency\'s file.', false, 2)
+          makeOption(
+            'Through constructor injection, or by calling the inject() function.',
+            true,
+            1
+          ),
+          makeOption("Only by importing the dependency's file.", false, 2)
         ],
         explanation:
           'Angular supplies a dependency either as a constructor parameter or through the inject() function.'
@@ -230,7 +237,12 @@ describe('FET display integration', () => {
       it('still lowercases an ordinary leading word exactly as before (no regression to existing behavior)', () => {
         // Unchanged from the pre-existing "Both" -> "both" coverage above —
         // repeated here so the Angular fix and this guard live side by side.
-        const result = service.formatExplanation(multiAnswerQ, [2, 4], multiAnswerQ.explanation!, 1);
+        const result = service.formatExplanation(
+          multiAnswerQ,
+          [2, 4],
+          multiAnswerQ.explanation!,
+          1
+        );
         expect(result).toBe('Options 2 and 4 are correct because both 2 and 4 are even.');
       });
 
@@ -240,14 +252,23 @@ describe('FET display integration', () => {
           explanation: 'DI is a technique for supplying dependencies from outside a class.'
         };
         const diResult = service.formatExplanation(diLeadQ, [1], diLeadQ.explanation!, 0);
-        expect(diResult).toBe('Option 1 is correct because DI is a technique for supplying dependencies from outside a class.');
+        expect(diResult).toBe(
+          'Option 1 is correct because DI is a technique for supplying dependencies from outside a class.'
+        );
 
         const httpClientLeadQ: QuizQuestion = {
           ...angularLeadQ,
           explanation: 'HttpClient resolves to the same injector-provided instance every time.'
         };
-        const httpResult = service.formatExplanation(httpClientLeadQ, [1], httpClientLeadQ.explanation!, 0);
-        expect(httpResult).toBe('Option 1 is correct because HttpClient resolves to the same injector-provided instance every time.');
+        const httpResult = service.formatExplanation(
+          httpClientLeadQ,
+          [1],
+          httpClientLeadQ.explanation!,
+          0
+        );
+        expect(httpResult).toBe(
+          'Option 1 is correct because HttpClient resolves to the same injector-provided instance every time.'
+        );
       });
 
       it('only affects the leading word — "Angular" appearing later in the explanation is untouched either way', () => {
@@ -302,16 +323,28 @@ describe('FET display integration', () => {
     describe('end-to-end FET round-trip', () => {
       it('single-answer Q1 → produces the expected cached text', () => {
         const indices = service.getCorrectOptionIndices(singleAnswerQ, singleAnswerQ.options, 0);
-        const formatted = service.formatExplanation(singleAnswerQ, indices, singleAnswerQ.explanation!, 0);
+        const formatted = service.formatExplanation(
+          singleAnswerQ,
+          indices,
+          singleAnswerQ.explanation!,
+          0
+        );
         service.storeFormattedExplanation(0, formatted, singleAnswerQ, singleAnswerQ.options);
         expect(service.getFormattedSync(0)).toBe('Option 2 is correct because 2 + 2 equals 4.');
       });
 
       it('multi-answer Q2 → produces the expected cached text with multi phrasing', () => {
         const indices = service.getCorrectOptionIndices(multiAnswerQ, multiAnswerQ.options, 1);
-        const formatted = service.formatExplanation(multiAnswerQ, indices, multiAnswerQ.explanation!, 1);
+        const formatted = service.formatExplanation(
+          multiAnswerQ,
+          indices,
+          multiAnswerQ.explanation!,
+          1
+        );
         service.storeFormattedExplanation(1, formatted, multiAnswerQ, multiAnswerQ.options);
-        expect(service.getFormattedSync(1)).toBe('Options 2 and 4 are correct because both 2 and 4 are even.');
+        expect(service.getFormattedSync(1)).toBe(
+          'Options 2 and 4 are correct because both 2 and 4 are even.'
+        );
       });
     });
   });

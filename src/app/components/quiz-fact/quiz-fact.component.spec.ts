@@ -55,9 +55,9 @@ describe('QuizFactComponent', () => {
       f.detectChanges();
       return f.componentInstance.fact();
     };
-    expect(pickWith(0)).toBe('first');     // floor(0 * 3) = 0
-    expect(pickWith(0.5)).toBe('second');  // floor(0.5 * 3) = 1
-    expect(pickWith(0.99)).toBe('third');  // floor(0.99 * 3) = 2
+    expect(pickWith(0)).toBe('first'); // floor(0 * 3) = 0
+    expect(pickWith(0.5)).toBe('second'); // floor(0.5 * 3) = 1
+    expect(pickWith(0.99)).toBe('third'); // floor(0.99 * 3) = 2
     rnd.mockRestore();
   });
 

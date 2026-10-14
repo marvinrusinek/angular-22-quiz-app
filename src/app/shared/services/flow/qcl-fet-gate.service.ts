@@ -16,7 +16,6 @@ import { swallow } from '@shared/utils/error-logging';
  */
 @Service()
 export class QclFetGateService {
-
   // ── injects ─────────────────────────────────────────────────────
   private explanationTextService = inject(ExplanationTextService);
   private quizService = inject(QuizService);
@@ -28,7 +27,9 @@ export class QclFetGateService {
     try {
       ets._fetLocked = true;
       ets.purgeAndDefer(adjustedIndex);
-    } catch (err: unknown) { swallow('qcl-fet-gate.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('qcl-fet-gate.service.ts', err);
+    }
   }
 
   resetDisplayExplanationText(currentQuestionIndex: number): void {
@@ -59,8 +60,7 @@ export class QclFetGateService {
       requestAnimationFrame(() => {
         setTimeout(() => {
           const stillCurrent =
-            ets._gateToken === ets._currentGateToken &&
-            adjustedIndex === getCurrentIndex();
+            ets._gateToken === ets._currentGateToken && adjustedIndex === getCurrentIndex();
           if (!stillCurrent) return;
           ets._fetLocked = false;
         }, 100);
@@ -155,7 +155,8 @@ export class QclFetGateService {
       let explanationText = '';
 
       if (Number.isFinite(questionIndex) && this.explanationTextService.explanationsInitialized) {
-        const explanation$ = this.explanationTextService.getFormattedExplanationTextForQuestion(questionIndex);
+        const explanation$ =
+          this.explanationTextService.getFormattedExplanationTextForQuestion(questionIndex);
         explanationText = (await firstValueFrom(explanation$)) ?? '';
 
         if (!explanationText?.trim()) {
@@ -206,7 +207,9 @@ export class QclFetGateService {
       ets.setIsExplanationTextDisplayed(false);
       ets.formattedExplanationSig.set('');
       requestAnimationFrame(() => ets.emitFormatted(-1, null));
-    } catch (err: unknown) { swallow('qcl-fet-gate.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('qcl-fet-gate.service.ts', err);
+    }
   }
 
   seedFirstQuestionText(): void {
@@ -222,7 +225,9 @@ export class QclFetGateService {
       }
       this.explanationTextService.setShouldDisplayExplanation(false);
       this.explanationTextService.setIsExplanationTextDisplayed(false);
-    } catch (err: unknown) { swallow('qcl-fet-gate.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('qcl-fet-gate.service.ts', err);
+    }
   }
 
   resolveExplanationChange(
@@ -235,7 +240,7 @@ export class QclFetGateService {
 
     if (explanation && typeof explanation === 'object' && 'payload' in explanation) {
       finalExplanation = explanation.payload;
-      finalIndex = ('index' in explanation) ? explanation.index : index;
+      finalIndex = 'index' in explanation ? explanation.index : index;
     } else {
       finalExplanation = explanation;
     }

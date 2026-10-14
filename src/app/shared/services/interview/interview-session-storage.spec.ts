@@ -17,7 +17,10 @@ beforeEach(() => {
   TestBed.configureTestingModule({ providers: [InterviewSessionReferenceStorage] });
   storage = TestBed.inject(InterviewSessionReferenceStorage);
 });
-afterEach(() => { sessionStorage.clear(); localStorage.clear(); });
+afterEach(() => {
+  sessionStorage.clear();
+  localStorage.clear();
+});
 
 const stored = () => JSON.parse(sessionStorage.getItem(SK_INTERVIEW_SESSION_REF) ?? 'null');
 
@@ -25,23 +28,41 @@ describe('round trip', () => {
   it('writes and reads the minimal reference', () => {
     storage.write('is_1', TOKEN, 3);
     expect(storage.read()).toEqual({
-      version: 2, sessionId: 'is_1', sessionToken: TOKEN, currentIndex: 3
+      version: 2,
+      sessionId: 'is_1',
+      sessionToken: TOKEN,
+      currentIndex: 3
     });
   });
 
   it('persists EXACTLY three fields plus the version', () => {
     storage.write('is_1', TOKEN, 0);
-    expect(Object.keys(stored()).sort())
-      .toEqual(['currentIndex', 'sessionId', 'sessionToken', 'version']);
+    expect(Object.keys(stored()).sort()).toEqual([
+      'currentIndex',
+      'sessionId',
+      'sessionToken',
+      'version'
+    ]);
   });
 
   it('never stores questions, answers, correctness or explanations', () => {
     storage.write('is_1', TOKEN, 0);
     const raw = sessionStorage.getItem(SK_INTERVIEW_SESSION_REF)!;
     for (const banned of [
-      'questions', 'options', 'answers', 'selectedOptionIds', 'correct',
-      'isCorrect', 'correctOptionIds', 'explanation', 'assessment', 'result',
-      'score', 'percentage', 'expiresAt', 'remainingSeconds'
+      'questions',
+      'options',
+      'answers',
+      'selectedOptionIds',
+      'correct',
+      'isCorrect',
+      'correctOptionIds',
+      'explanation',
+      'assessment',
+      'result',
+      'score',
+      'percentage',
+      'expiresAt',
+      'remainingSeconds'
     ]) {
       expect(raw).not.toContain(banned);
     }
@@ -57,7 +78,10 @@ describe('round trip', () => {
     storage.write('is_1', TOKEN, 0);
     storage.updateCurrentIndex(7);
     expect(storage.read()).toEqual({
-      version: 2, sessionId: 'is_1', sessionToken: TOKEN, currentIndex: 7
+      version: 2,
+      sessionId: 'is_1',
+      sessionToken: TOKEN,
+      currentIndex: 7
     });
   });
 
@@ -80,12 +104,24 @@ describe('untrusted storage is validated', () => {
     ['malformed JSON', '{ not json'],
     ['an array', '[]'],
     ['null', 'null'],
-    ['wrong version', JSON.stringify({ version: 1, sessionId: 'x', sessionToken: TOKEN, currentIndex: 0 })],
+    [
+      'wrong version',
+      JSON.stringify({ version: 1, sessionId: 'x', sessionToken: TOKEN, currentIndex: 0 })
+    ],
     ['missing sessionId', JSON.stringify({ version: 2, sessionToken: TOKEN, currentIndex: 0 })],
-    ['blank sessionId', JSON.stringify({ version: 2, sessionId: '  ', sessionToken: TOKEN, currentIndex: 0 })],
+    [
+      'blank sessionId',
+      JSON.stringify({ version: 2, sessionId: '  ', sessionToken: TOKEN, currentIndex: 0 })
+    ],
     ['missing token', JSON.stringify({ version: 2, sessionId: 'x', currentIndex: 0 })],
-    ['negative index', JSON.stringify({ version: 2, sessionId: 'x', sessionToken: TOKEN, currentIndex: -1 })],
-    ['float index', JSON.stringify({ version: 2, sessionId: 'x', sessionToken: TOKEN, currentIndex: 1.5 })]
+    [
+      'negative index',
+      JSON.stringify({ version: 2, sessionId: 'x', sessionToken: TOKEN, currentIndex: -1 })
+    ],
+    [
+      'float index',
+      JSON.stringify({ version: 2, sessionId: 'x', sessionToken: TOKEN, currentIndex: 1.5 })
+    ]
   ])('rejects and removes %s', (_label, value) => {
     put(value);
     expect(storage.read()).toBeNull();
@@ -93,34 +129,57 @@ describe('untrusted storage is validated', () => {
   });
 
   it.each([
-    'questions', 'answers', 'correct', 'correctOptionIds', 'explanation', 'assessment', 'result'
+    'questions',
+    'answers',
+    'correct',
+    'correctOptionIds',
+    'explanation',
+    'assessment',
+    'result'
   ])('REJECTS a reference carrying an answer-bearing field: %s', (field) => {
-    put(JSON.stringify({
-      version: 2, sessionId: 'x', sessionToken: TOKEN, currentIndex: 0, [field]: 'anything'
-    }));
+    put(
+      JSON.stringify({
+        version: 2,
+        sessionId: 'x',
+        sessionToken: TOKEN,
+        currentIndex: 0,
+        [field]: 'anything'
+      })
+    );
     expect(storage.read()).toBeNull();
   });
 
   it('parseSessionReference is pure and accepts a valid object', () => {
-    expect(parseSessionReference({
-      version: 2, sessionId: 'x', sessionToken: TOKEN, currentIndex: 2
-    })).not.toBeNull();
+    expect(
+      parseSessionReference({
+        version: 2,
+        sessionId: 'x',
+        sessionToken: TOKEN,
+        currentIndex: 2
+      })
+    ).not.toBeNull();
   });
 });
 
 describe('legacy cleanup', () => {
   it('removes the answer-bearing v1 active session key', () => {
     // The real v1 payload: a full generated assessment WITH correctness.
-    sessionStorage.setItem('interviewSession', JSON.stringify({
-      assessment: {
-        questions: [{
-          questionText: 'Q?', explanation: 'because',
-          options: [{ optionId: 101, text: 'a', correct: true }]
-        }]
-      },
-      answersByIndex: { 0: [101] },
-      expiresAt: 123
-    }));
+    sessionStorage.setItem(
+      'interviewSession',
+      JSON.stringify({
+        assessment: {
+          questions: [
+            {
+              questionText: 'Q?',
+              explanation: 'because',
+              options: [{ optionId: 101, text: 'a', correct: true }]
+            }
+          ]
+        },
+        answersByIndex: { 0: [101] },
+        expiresAt: 123
+      })
+    );
 
     expect(storage.purgeLegacyKeys()).toEqual(['interviewSession']);
     expect(sessionStorage.getItem('interviewSession')).toBeNull();
@@ -172,7 +231,8 @@ describe('legacy cleanup', () => {
   it('does NOT sanitize interviewAttemptHistory:v1 — that is Stage 9E', () => {
     localStorage.setItem('interviewAttemptHistory:v1', '{"version":1,"attempts":[{"correct":3}]}');
     storage.purgeLegacyKeys();
-    expect(localStorage.getItem('interviewAttemptHistory:v1'))
-      .toBe('{"version":1,"attempts":[{"correct":3}]}');
+    expect(localStorage.getItem('interviewAttemptHistory:v1')).toBe(
+      '{"version":1,"attempts":[{"correct":3}]}'
+    );
   });
 });

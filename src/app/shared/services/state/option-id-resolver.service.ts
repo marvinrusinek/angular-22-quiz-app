@@ -32,7 +32,7 @@ export class OptionIdResolverService {
         return value !== -1 ? value : null;
       }
       const parsed = Number(String(value));
-      return (Number.isFinite(parsed) && parsed !== -1) ? parsed : null;
+      return Number.isFinite(parsed) && parsed !== -1 ? parsed : null;
     };
 
     const parseFallbackNumber = (): number | null => {
@@ -60,15 +60,13 @@ export class OptionIdResolverService {
     const inBounds = (index: number | undefined) =>
       typeof index === 'number' && index >= 0 && index < options.length;
 
-    const fallbackIndex =
-      typeof fallbackIndexOrText === 'number' ? fallbackIndexOrText : undefined;
-    const hintText =
-      typeof fallbackIndexOrText === 'string' ? fallbackIndexOrText : undefined;
+    const fallbackIndex = typeof fallbackIndexOrText === 'number' ? fallbackIndexOrText : undefined;
+    const hintText = typeof fallbackIndexOrText === 'string' ? fallbackIndexOrText : undefined;
     const normalizedHint = hintText ? normalize(hintText) : null;
 
     const resolveFromIndex = (index: number): number => {
       const numericId = toFiniteNumber((options[index] as any)?.optionId);
-      return (numericId !== null && numericId !== -1) ? numericId : index;
+      return numericId !== null && numericId !== -1 ? numericId : index;
     };
 
     const aliasFields = this.getAliasFields();
@@ -78,14 +76,17 @@ export class OptionIdResolverService {
 
     const buildStableKey = (option: any): string => {
       const idPart = option?.optionId != null ? String(option.optionId) : '';
-      const alias =
-        aliasFields.map((field) => normalize(option?.[field])).find(Boolean) || '';
+      const alias = aliasFields.map((field) => normalize(option?.[field])).find(Boolean) || '';
       return `${questionIndex}|${idPart}|${alias}`;
     };
 
     let index = 0;
     for (const option of options) {
-      if (option?.optionId !== null && option?.optionId !== undefined && String(option.optionId) !== '-1') {
+      if (
+        option?.optionId !== null &&
+        option?.optionId !== undefined &&
+        String(option.optionId) !== '-1'
+      ) {
         lookupById.set(option.optionId, index);
         const numericId = toFiniteNumber(option.optionId);
         if (numericId !== null) lookupById.set(numericId, index);
@@ -139,7 +140,7 @@ export class OptionIdResolverService {
       fallbackIndex
     );
     if (canonicalId === null || canonicalId === option.optionId) return option;
-    
+
     return {
       ...option,
       optionId: canonicalId
@@ -161,11 +162,9 @@ export class OptionIdResolverService {
         selection,
         selection.text || (selection as any).index || selection.displayIndex
       );
-      if (
-        canonicalSelection?.optionId === undefined ||
-        canonicalSelection.optionId === null
-      ) continue;
-      
+      if (canonicalSelection?.optionId === undefined || canonicalSelection.optionId === null)
+        continue;
+
       const key = `${canonicalSelection.optionId}|${canonicalSelection.displayIndex ?? (selection as any).index ?? -1}`;
       if (seenKeys.has(key)) continue;
 
@@ -195,16 +194,14 @@ export class OptionIdResolverService {
       const candidate: any = options[i];
 
       if (targetId !== null) {
-        const candidateId =
-          candidate?.optionId != null ? String(candidate.optionId) : null;
+        const candidateId = candidate?.optionId != null ? String(candidate.optionId) : null;
         if (candidateId !== null && candidateId === targetId) {
           return { option: candidate, index: i };
         }
       }
 
       if (targetNumeric !== null && Number.isFinite(targetNumeric)) {
-        const candidateNumeric =
-          candidate?.optionId != null ? Number(candidate.optionId) : null;
+        const candidateNumeric = candidate?.optionId != null ? Number(candidate.optionId) : null;
         if (
           candidateNumeric !== null &&
           Number.isFinite(candidateNumeric) &&
@@ -227,10 +224,7 @@ export class OptionIdResolverService {
     return null;
   }
 
-  resolveOptionIndexFromSelection(
-    options: Option[],
-    selection: any
-  ): number | null {
+  resolveOptionIndexFromSelection(options: Option[], selection: any): number | null {
     const byId = new Map<number | string, number>();
     const byText = new Map<string, number>();
     const byValue = new Map<string, number>();
@@ -304,7 +298,10 @@ export class OptionIdResolverService {
   }
 
   setOptionSnapshot(questionIndex: number, options: Option[]): void {
-    this.optionSnapshotByQuestion.set(questionIndex, options.map(o => ({ ...o })));
+    this.optionSnapshotByQuestion.set(
+      questionIndex,
+      options.map((o) => ({ ...o }))
+    );
   }
 
   getOptionSnapshot(questionIndex: number): Option[] | undefined {
@@ -326,7 +323,7 @@ export class OptionIdResolverService {
       const trimmed = id.trim();
       return trimmed.length > 0 ? trimmed : null;
     }
-    
+
     return null;
   }
 
@@ -337,13 +334,12 @@ export class OptionIdResolverService {
       const parsed = Number(id);
       return Number.isFinite(parsed) ? parsed : null;
     }
-    
+
     return null;
   }
 
   normalizeStr(x: unknown): string {
-    return typeof x === 'string'
-      ? x.trim().toLowerCase().replace(/\s+/g, ' ') : '';
+    return typeof x === 'string' ? x.trim().toLowerCase().replace(/\s+/g, ' ') : '';
   }
 
   normalizeQuestionIndex(index: number | null | undefined): number {
@@ -359,8 +355,9 @@ export class OptionIdResolverService {
       potentialOneBased >= 0 &&
       potentialOneBased < questions.length &&
       questions[potentialOneBased] != null
-    ) return potentialOneBased;
-    
+    )
+      return potentialOneBased;
+
     return Math.min(Math.max(normalized, 0), questions.length - 1);
   }
 
@@ -389,30 +386,21 @@ export class OptionIdResolverService {
       if (normalized === 'false' || normalized.length === 0) return false;
     }
     if (typeof value === 'number') return value !== 0;
-    
+
     return false;
   }
 
   // ── Helpers ─────────────────────────────────────────────────
 
   getAliasFields(): string[] {
-    return [
-      'text',
-      'value',
-      'label',
-      'name',
-      'title',
-      'displayText',
-      'description',
-      'html'
-    ];
+    return ['text', 'value', 'label', 'name', 'title', 'displayText', 'description', 'html'];
   }
 
   // ── Identity matching helpers ────────────────────────────────
 
   normKey(x: unknown): string {
     if (x == null) return '';
-    
+
     return String(x).trim().toLowerCase().replace(/\s+/g, ' ');
   }
 
@@ -439,10 +427,7 @@ export class OptionIdResolverService {
     }
   }
 
-  overlaySelectedByIdentity(
-    canonical: Option[],
-    ui: Option[]
-  ): Option[] {
+  overlaySelectedByIdentity(canonical: Option[], ui: Option[]): Option[] {
     if (!Array.isArray(canonical) || canonical.length === 0) return [];
     const out = canonical.map((o) => ({ ...o, selected: false }));
 
@@ -470,10 +455,7 @@ export class OptionIdResolverService {
     const recordSelection = (option: Option, fallbackIdx?: number): void => {
       if (!option) return;
 
-      const resolvedIdx = this.resolveOptionIndexFromSelection(
-        canonicalOptions,
-        option
-      );
+      const resolvedIdx = this.resolveOptionIndexFromSelection(canonicalOptions, option);
 
       if (resolvedIdx != null && resolvedIdx >= 0) {
         overlaySelections.set(resolvedIdx, option);
@@ -485,14 +467,13 @@ export class OptionIdResolverService {
     for (const opt of mapSelections) recordSelection(opt);
 
     const dataOptions = Array.isArray(quizService?.data?.currentOptions)
-      ? quizService.data.currentOptions : [];
+      ? quizService.data.currentOptions
+      : [];
 
     const baseOptions =
-      [
-        canonicalOptions,
-        dataOptions,
-        mapSelections
-      ].find((options) => Array.isArray(options) && options.length > 0) || [];
+      [canonicalOptions, dataOptions, mapSelections].find(
+        (options) => Array.isArray(options) && options.length > 0
+      ) || [];
 
     return baseOptions.map((option: any, idx: number) => {
       const overlay = overlaySelections.get(idx);
@@ -504,12 +485,8 @@ export class OptionIdResolverService {
       return {
         ...mergedOption,
         optionId: overlay?.optionId ?? option?.optionId ?? idx,
-        correct: this.coerceToBoolean(
-          (overlay as Option)?.correct ?? option?.correct
-        ),
-        selected: this.coerceToBoolean(
-          (overlay as Option)?.selected ?? option?.selected
-        )
+        correct: this.coerceToBoolean((overlay as Option)?.correct ?? option?.correct),
+        selected: this.coerceToBoolean((overlay as Option)?.selected ?? option?.selected)
       };
     });
   }
@@ -534,12 +511,7 @@ export class OptionIdResolverService {
     const key = normalize(text);
     const aliasFields = this.getAliasFields();
 
-    const directMatch = this.matchOptionFromSource(
-      source,
-      optionId,
-      text,
-      aliasFields
-    );
+    const directMatch = this.matchOptionFromSource(source, optionId, text, aliasFields);
 
     let fallbackIndexFromText = -1;
     for (let i = 0; i < source.length && fallbackIndexFromText < 0; i++) {
@@ -555,11 +527,8 @@ export class OptionIdResolverService {
     let indexFromId = -1;
     for (let i = 0; i < source.length && indexFromId < 0; i++) {
       const oid = (source[i] as any)?.optionId;
-      if (
-        oid === optionId ||
-        String(oid) === String(optionId) ||
-        toNum(oid) === toNum(optionId)
-      ) indexFromId = i;
+      if (oid === optionId || String(oid) === String(optionId) || toNum(oid) === toNum(optionId))
+        indexFromId = i;
     }
 
     const resolverHint: number | string | undefined =
@@ -569,11 +538,7 @@ export class OptionIdResolverService {
           ? fallbackIndexFromText
           : (directMatch?.index ?? text);
 
-    let canonicalOptionId = this.resolveCanonicalOptionId(
-      questionIndex,
-      optionId,
-      resolverHint
-    );
+    let canonicalOptionId = this.resolveCanonicalOptionId(questionIndex, optionId, resolverHint);
 
     if (canonicalOptionId == null) {
       if (indexFromId >= 0) {
@@ -598,7 +563,8 @@ export class OptionIdResolverService {
       typeof canonicalOptionId === 'number' &&
       canonicalOptionId >= 0 &&
       canonicalOptionId < source.length &&
-      (source[canonicalOptionId]?.optionId === canonicalOptionId || source[canonicalOptionId]?.optionId === undefined)
+      (source[canonicalOptionId]?.optionId === canonicalOptionId ||
+        source[canonicalOptionId]?.optionId === undefined)
     ) {
       foundSourceOption = source[canonicalOptionId];
     }
@@ -614,7 +580,7 @@ export class OptionIdResolverService {
     }
 
     if (!foundSourceOption) {
-      foundSourceOption = source.find(o => String(o.optionId) === String(canonicalOptionId));
+      foundSourceOption = source.find((o) => String(o.optionId) === String(canonicalOptionId));
     }
 
     return { canonicalOptionId, foundSourceOption };

@@ -9,7 +9,10 @@ import { QuestionVerdictService } from '@shared/services/features/verdict/questi
 import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import {
+  IDLE_VERDICT_STATE,
+  type QuestionVerdictState
+} from '@shared/services/features/verdict/question-verdict.types';
 import { answerStateStub } from '@shared/testing/answer-state-stub';
 
 /**
@@ -38,8 +41,10 @@ let service: QuestionResolutionService;
 let verdictState: QuestionVerdictState;
 let selections: any[];
 
-const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState =>
-  ({ ...IDLE_VERDICT_STATE, ...over });
+const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState => ({
+  ...IDLE_VERDICT_STATE,
+  ...over
+});
 
 /** The bank claims map+filter are correct — used only by the fallback path. */
 const PRISTINE = {
@@ -60,7 +65,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       QuestionResolutionService,
       {
@@ -101,7 +109,10 @@ describe('the verdict decides whether a question was answered perfectly', () => 
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     expect(resolve().computedPerfect).toBe(true);
@@ -115,7 +126,11 @@ describe('the verdict decides whether a question was answered perfectly', () => 
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true], ['Observable', false]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true],
+        ['Observable', false]
+      ])
     });
 
     const res = resolve();
@@ -163,7 +178,10 @@ describe('the local answer key cannot override the verdict', () => {
     verdictState = state({
       phase: 'incomplete',
       remainingCorrectCount: 1,
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     expect(resolve().computedPerfect).toBe(false);
@@ -175,7 +193,10 @@ describe('the local answer key cannot override the verdict', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['Observable', 'Subject'],
-      selectedVerdicts: new Map([['Observable', true], ['Subject', true]])
+      selectedVerdicts: new Map([
+        ['Observable', true],
+        ['Subject', true]
+      ])
     });
 
     expect(resolve().computedPerfect).toBe(true);
@@ -219,12 +240,15 @@ describe('with no verdict, nothing is claimed either way', () => {
 
 describe('identity is textual', () => {
   it('does not depend on the order the options were selected in', () => {
-    selections = picked('filter', 'map');   // reversed
+    selections = picked('filter', 'map'); // reversed
     verdictState = state({
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     expect(resolve().computedPerfect).toBe(true);

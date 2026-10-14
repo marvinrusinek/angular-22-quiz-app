@@ -11,7 +11,10 @@ import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import {
+  IDLE_VERDICT_STATE,
+  type QuestionVerdictState
+} from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * "Was the option the user just clicked correct?" — the gate that decides
@@ -33,8 +36,10 @@ const QUESTION = 'Which operator maps values?';
 let service: SocAnswerProcessingService;
 let verdictState: QuestionVerdictState;
 
-const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState =>
-  ({ ...IDLE_VERDICT_STATE, ...over });
+const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState => ({
+  ...IDLE_VERDICT_STATE,
+  ...over
+});
 
 /**
  * 'map' is truly the answer. `mode` decides what the local bank CLAIMS:
@@ -69,7 +74,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       {
         provide: QuizService,
@@ -77,7 +85,9 @@ beforeEach(() => {
           quizId: 'rxjs',
           // The bank the FALLBACK would consult: it claims 'Observable'.
           questions: [{ questionText: QUESTION, options: optionsFor('lying') }],
-          getQuestionsInDisplayOrder: () => [{ questionText: QUESTION, options: optionsFor('lying') }],
+          getQuestionsInDisplayOrder: () => [
+            { questionText: QUESTION, options: optionsFor('lying') }
+          ],
           isShuffleEnabled: () => false,
           shuffledQuestions: [],
           getPristineCorrectTextsForQuestion: () => new Set(['Observable']),
@@ -93,7 +103,10 @@ beforeEach(() => {
           clickConfirmedDotStatus: new Map()
         }
       },
-      { provide: TimerService, useValue: { stopTimer: () => undefined, resetTimer: () => undefined } },
+      {
+        provide: TimerService,
+        useValue: { stopTimer: () => undefined, resetTimer: () => undefined }
+      },
       { provide: FeedbackService, useValue: { setCorrectMessage: () => '' } },
       { provide: QuestionVerdictService, useValue: { verdictFor: () => verdictState } }
     ]
@@ -161,13 +174,16 @@ describe('the verdict for the clicked option decides', () => {
     verdictState = state({
       phase: 'resolved',
       isResolvedCorrect: true,
-      selectedVerdicts: new Map([['map', true], ['Observable', false]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['Observable', false]
+      ])
     });
 
     // reversed => Observable, Subject, map
     const c = makeComp('bare', 'reversed');
-    expect(clickIsCorrect(c, 2, true)).toBe(true);    // map, now last
-    expect(clickIsCorrect(c, 0, true)).toBe(false);   // Observable, now first
+    expect(clickIsCorrect(c, 2, true)).toBe(true); // map, now last
+    expect(clickIsCorrect(c, 0, true)).toBe(false); // Observable, now first
   });
 });
 
@@ -187,7 +203,7 @@ describe('an unchecked pick is not a wrong pick', () => {
     verdictState = state({
       phase: 'incomplete',
       remainingCorrectCount: 1,
-      selectedVerdicts: new Map([['Subject', false]])   // nothing for 'map'
+      selectedVerdicts: new Map([['Subject', false]]) // nothing for 'map'
     });
 
     // No verdict for index 0 → bank path, which calls 'Observable' correct.

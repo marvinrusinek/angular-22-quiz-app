@@ -1,4 +1,4 @@
-﻿import { Service, inject } from '@angular/core';
+import { Service, inject } from '@angular/core';
 
 import {
   FeedbackProps,
@@ -77,14 +77,16 @@ export class SharedOptionBindingService {
         disabled: comp.computeDisabledState(option, idx),
         type: comp.resolveInteractionType(),
         appHighlightOption: false,
-        appHighlightInputType: (comp.type === 'multiple' ? 'checkbox' : 'radio') as 'checkbox' | 'radio',
+        appHighlightInputType: (comp.type === 'multiple' ? 'checkbox' : 'radio') as
+          | 'checkbox'
+          | 'radio',
         allOptions: [...comp.optionsToDisplay],
         appHighlightReset: false,
         ariaLabel: `Option ${idx + 1}`,
         appResetBackground: false,
         optionsToDisplay: [...comp.optionsToDisplay],
         checked: false,
-        change: () => { },
+        change: () => {},
         active: true
       };
     });
@@ -105,37 +107,41 @@ export class SharedOptionBindingService {
       comp.renderReady.set(true);
       comp.cdRef.detectChanges();
     });
-
   }
 
   setOptionBindingsIfChanged(comp: any, newOptions: Option[]): void {
     if (!newOptions?.length) return;
 
     const incomingIds = newOptions.map((o: Option) => o.optionId).join(',');
-    const existingIds = comp.optionBindings()?.map((b: OptionBindings) => b.option.optionId).join(',');
+    const existingIds = comp
+      .optionBindings()
+      ?.map((b: OptionBindings) => b.option.optionId)
+      .join(',');
 
     if (incomingIds !== existingIds || !comp.optionBindings()?.length) {
       // On refresh (no user click), force isSelected=false so the checkbox
       // [checked] binding doesn't flash. rehydrateUiFromState will set the
       // authoritative selection state from saved data afterward.
       const trustOptionSelected = !!comp.hasUserClicked();
-      comp.optionBindings.set(newOptions.map((option: Option, idx: number) => ({
-        option: { ...option, highlight: false, showIcon: false },
-        index: idx,
-        isSelected: trustOptionSelected && !!option.selected,
-        isCorrect: null,
-        showFeedback: false,
-        feedback: option.feedback ?? 'No feedback available',
-        showFeedbackForOption: false,
-        highlightCorrectAfterIncorrect: false,
-        highlightIncorrect: false,
-        highlightCorrect: false,
-        disabled: comp.computeDisabledState(option, idx),
-        type: comp.resolveInteractionType(),
-        appHighlightOption: false,
-        appHighlightInputType: '',
-        allOptions: comp.optionsToDisplay ?? []
-      })) as unknown as OptionBindings[]);
+      comp.optionBindings.set(
+        newOptions.map((option: Option, idx: number) => ({
+          option: { ...option, highlight: false, showIcon: false },
+          index: idx,
+          isSelected: trustOptionSelected && !!option.selected,
+          isCorrect: null,
+          showFeedback: false,
+          feedback: option.feedback ?? 'No feedback available',
+          showFeedbackForOption: false,
+          highlightCorrectAfterIncorrect: false,
+          highlightIncorrect: false,
+          highlightCorrect: false,
+          disabled: comp.computeDisabledState(option, idx),
+          type: comp.resolveInteractionType(),
+          appHighlightOption: false,
+          appHighlightInputType: '',
+          allOptions: comp.optionsToDisplay ?? []
+        })) as unknown as OptionBindings[]
+      );
     } else {
       let idx = 0;
       const trustSel = !!comp.hasUserClicked();
@@ -213,8 +219,12 @@ export class SharedOptionBindingService {
       const correctQ = this.quizService.shuffledQuestions[currentIndex];
       if (correctQ?.options?.length > 0) {
         const correctTexts = new Set(correctQ.options.map((o: Option) => norm(o?.text)));
-        const currentTexts = new Set((comp.optionsToDisplay ?? []).map((o: Option) => norm(o?.text)));
-        const match = correctTexts.size === currentTexts.size && [...correctTexts].every((t: string) => currentTexts.has(t));
+        const currentTexts = new Set(
+          (comp.optionsToDisplay ?? []).map((o: Option) => norm(o?.text))
+        );
+        const match =
+          correctTexts.size === currentTexts.size &&
+          [...correctTexts].every((t: string) => currentTexts.has(t));
         if (!match && comp.optionsToDisplay?.length > 0) {
           comp.optionsToDisplay = correctQ.options.map((o: Option) => ({ ...o }));
         }
@@ -224,7 +234,8 @@ export class SharedOptionBindingService {
 
   private buildOptionsToDisplay(comp: any, currentIndex: number): void {
     const localOpts = Array.isArray(comp.optionsToDisplay)
-      ? comp.optionsToDisplay.map((o: Option) => structuredClone(o)) : [];
+      ? comp.optionsToDisplay.map((o: Option) => structuredClone(o))
+      : [];
 
     const correctTexts = new Set<string>();
     const correctIds = new Set<number>();
@@ -243,7 +254,8 @@ export class SharedOptionBindingService {
       const oId = !isNaN(oIdNum) ? oIdNum : (currentIndex + 1) * 100 + (i + 1);
       const oText = norm(opt.text);
 
-      const isCorrect = isOptionCorrect(opt) ||
+      const isCorrect =
+        isOptionCorrect(opt) ||
         (!isNaN(oIdNum) && correctIds.has(oIdNum)) ||
         !!(oText && correctTexts.has(oText));
 
@@ -260,18 +272,20 @@ export class SharedOptionBindingService {
   }
 
   private createAndSetBindings(comp: any): void {
-    comp.optionBindings.set(this.optionBindingFactory.createBindings({
-      optionsToDisplay: comp.optionsToDisplay,
-      type: comp.resolveInteractionType(),
-      showFeedback: comp.showFeedback(),
-      showFeedbackForOption: {},
-      highlightCorrectAfterIncorrect: comp.highlightCorrectAfterIncorrect(),
-      shouldResetBackground: comp.shouldResetBackground(),
-      ariaLabelPrefix: 'Option',
-      onChange: (opt: Option, idx: number) => comp.handleOptionClick(opt, idx),
-      isSelected: () => false,
-      isDisabled: (opt: Option, idx: number) => comp.computeDisabledState(opt, idx)
-    }));
+    comp.optionBindings.set(
+      this.optionBindingFactory.createBindings({
+        optionsToDisplay: comp.optionsToDisplay,
+        type: comp.resolveInteractionType(),
+        showFeedback: comp.showFeedback(),
+        showFeedbackForOption: {},
+        highlightCorrectAfterIncorrect: comp.highlightCorrectAfterIncorrect(),
+        shouldResetBackground: comp.shouldResetBackground(),
+        ariaLabelPrefix: 'Option',
+        onChange: (opt: Option, idx: number) => comp.handleOptionClick(opt, idx),
+        isSelected: () => false,
+        isDisabled: (opt: Option, idx: number) => comp.computeDisabledState(opt, idx)
+      })
+    );
   }
 
   // Previous-revisit visual override. After all the standard binding paths
@@ -283,10 +297,11 @@ export class SharedOptionBindingService {
   // standard rehydrate path's early-returns.
   private applyRevisitOverride(comp: any): void {
     try {
-      const qIdx = comp.resolveCurrentQuestionIndex?.()
-        ?? comp.questionIndex?.()
-        ?? comp.currentQuestionIndex
-        ?? 0;
+      const qIdx =
+        comp.resolveCurrentQuestionIndex?.() ??
+        comp.questionIndex?.() ??
+        comp.currentQuestionIndex ??
+        0;
       const isCorrectOpt = (o: any): boolean => isOptionCorrect(o);
       const current = comp.optionBindings?.();
 
@@ -303,8 +318,7 @@ export class SharedOptionBindingService {
       // entries (dot/multiPerfect) from a previous shuffle order pre-paint
       // a fresh-visit question - the option appears already highlighted, so
       // clicking it is a visual no-op and the click never reaches interaction.
-      const _hasClickedThis =
-        !!comp.quizStateService?.hasClickedInSession?.(qIdx);
+      const _hasClickedThis = !!comp.quizStateService?.hasClickedInSession?.(qIdx);
       if (_hasClickedThis) {
         if (_res.fullyResolvedCorrect) overrideMode = 'correct';
         else if (dotStatus === 'wrong') overrideMode = 'wrong';
@@ -349,9 +363,15 @@ export class SharedOptionBindingService {
           };
         });
         comp.optionBindings.set(refreshed);
-        try { comp.cdRef?.markForCheck?.(); } catch { /* ignore */ }
+        try {
+          comp.cdRef?.markForCheck?.();
+        } catch {
+          /* ignore */
+        }
       }
-    } catch (err: unknown) { console.error('generateOptionBindings revisit-override failed:', err); }
+    } catch (err: unknown) {
+      console.error('generateOptionBindings revisit-override failed:', err);
+    }
   }
 
   private finalizeBindings(comp: any): void {
@@ -393,8 +413,10 @@ export class SharedOptionBindingService {
       const correctQ = this.quizService.shuffledQuestions[pIdx];
       if (correctQ?.options?.length > 0 && comp.optionsToDisplay?.length > 0) {
         const correctTexts = new Set(correctQ.options.map((o: Option) => norm(o?.text)));
-        const currentTexts = new Set((comp.optionsToDisplay).map((o: Option) => norm(o?.text)));
-        const match = correctTexts.size === currentTexts.size && [...correctTexts].every((t: string) => currentTexts.has(t));
+        const currentTexts = new Set(comp.optionsToDisplay.map((o: Option) => norm(o?.text)));
+        const match =
+          correctTexts.size === currentTexts.size &&
+          [...correctTexts].every((t: string) => currentTexts.has(t));
         if (!match) {
           comp.optionsToDisplay = correctQ.options.map((o: Option) => ({ ...o }));
         }
@@ -404,13 +426,18 @@ export class SharedOptionBindingService {
 
   // Resolve the saved-selection context (filtered to this question) and the
   // feedback sentence used to stamp every binding.
-  private buildSelectionContext(comp: any, currentIdx: number, cqForFeedback: any): {
+  private buildSelectionContext(
+    comp: any,
+    currentIdx: number,
+    cqForFeedback: any
+  ): {
     savedSelections: any[];
     savedIds: Set<number | string>;
     savedByDisplayIdx: Set<number>;
     feedbackSentence: string;
   } {
-    const rawSavedSelections = this.selectedOptionService.getSelectedOptionsForQuestion(currentIdx) || [];
+    const rawSavedSelections =
+      this.selectedOptionService.getSelectedOptionsForQuestion(currentIdx) || [];
     // Strict question-context filter: drop any selection whose stored
     // questionIndex doesn't match currentIdx, so a previous question's
     // selections can never stamp highlights onto a new question's options.
@@ -420,14 +447,15 @@ export class SharedOptionBindingService {
     });
     const savedIds = this.toIdSet(savedSelections);
 
-    const feedbackSentence = this.feedbackService.buildFeedbackMessage(
-      cqForFeedback,
-      savedSelections,
-      false,
-      false,
-      currentIdx,
-      comp.optionsToDisplay
-    ) || '';
+    const feedbackSentence =
+      this.feedbackService.buildFeedbackMessage(
+        cqForFeedback,
+        savedSelections,
+        false,
+        false,
+        currentIdx,
+        comp.optionsToDisplay
+      ) || '';
 
     // Build a position-based set from saved selections so the id-based
     // savedIds fallback (effectiveId = idx) cannot false-positive when a
@@ -446,51 +474,57 @@ export class SharedOptionBindingService {
   private buildProcessedBindings(
     comp: any,
     options: Option[],
-    ctx: { savedIds: Set<number | string>; savedByDisplayIdx: Set<number>; feedbackSentence: string }
+    ctx: {
+      savedIds: Set<number | string>;
+      savedByDisplayIdx: Set<number>;
+      feedbackSentence: string;
+    }
   ): void {
     const getBindings = comp.getOptionBindings.bind(comp);
     const highlightSet = comp.highlightedOptionIds;
     const { savedIds, savedByDisplayIdx, feedbackSentence } = ctx;
 
-    comp.optionBindings.set(options.map((opt: Option, idx: number) => {
-      const oIdNum = Number(opt.optionId);
-      const effectiveId = (!isNaN(oIdNum) && oIdNum > -1) ? oIdNum : idx;
+    comp.optionBindings.set(
+      options.map((opt: Option, idx: number) => {
+        const oIdNum = Number(opt.optionId);
+        const effectiveId = !isNaN(oIdNum) && oIdNum > -1 ? oIdNum : idx;
 
-      if (opt.optionId == null) opt.optionId = effectiveId;
+        if (opt.optionId == null) opt.optionId = effectiveId;
 
-      opt.feedback = feedbackSentence;
+        opt.feedback = feedbackSentence;
 
-      // Match saved selections: for options with a real optionId, the ID
-      // alone is sufficient (real IDs are unique). For options whose
-      // effectiveId is a fallback (= their array index), also require a
-      // display-index match to prevent false positives when the fallback
-      // index collides with another option's real optionId.
-      const idMatch = savedIds.has(effectiveId) || savedIds.has(String(effectiveId));
-      const hasRealId = !isNaN(oIdNum) && oIdNum > -1;
-      const posMatch = savedByDisplayIdx.has(idx);
-      const isSelected = hasRealId ? idMatch : (idMatch && posMatch);
+        // Match saved selections: for options with a real optionId, the ID
+        // alone is sufficient (real IDs are unique). For options whose
+        // effectiveId is a fallback (= their array index), also require a
+        // display-index match to prevent false positives when the fallback
+        // index collides with another option's real optionId.
+        const idMatch = savedIds.has(effectiveId) || savedIds.has(String(effectiveId));
+        const hasRealId = !isNaN(oIdNum) && oIdNum > -1;
+        const posMatch = savedByDisplayIdx.has(idx);
+        const isSelected = hasRealId ? idMatch : idMatch && posMatch;
 
-      // Only trust highlightSet and savedIds during LIVE interaction
-      // (hasUserClicked). On refresh, savedIds may contain stale entries
-      // from accumulated selection history, and highlightSet may have
-      // IDs from a previous CD cycle - both cause ghost highlights for
-      // options the user never selected. rehydrateUiFromState (called
-      // immediately after this loop) handles refresh highlighting
-      // authoritatively with its own clean-slate + match logic.
-      const useHighlightSet = comp.hasUserClicked() && highlightSet.has(effectiveId);
-      const useSelected = comp.hasUserClicked() ? isSelected : false;
-      opt.highlight = useSelected || useHighlightSet;
+        // Only trust highlightSet and savedIds during LIVE interaction
+        // (hasUserClicked). On refresh, savedIds may contain stale entries
+        // from accumulated selection history, and highlightSet may have
+        // IDs from a previous CD cycle - both cause ghost highlights for
+        // options the user never selected. rehydrateUiFromState (called
+        // immediately after this loop) handles refresh highlighting
+        // authoritatively with its own clean-slate + match logic.
+        const useHighlightSet = comp.hasUserClicked() && highlightSet.has(effectiveId);
+        const useSelected = comp.hasUserClicked() ? isSelected : false;
+        opt.highlight = useSelected || useHighlightSet;
 
-      // Pass the GUARDED selection state to getBindings so that on refresh
-      // (hasUserClicked=false) no binding gets isSelected=true from stale
-      // savedIds. This prevents _wasSelected from latching in
-      // shouldHighlightOption() before rehydrateUiFromState can run its
-      // clean-slate reset.
-      // IMPORTANT: only use useSelected, NOT useHighlightSet - highlightSet
-      // can contain IDs for options never clicked (e.g. both correct answers
-      // in multi-answer), causing ghost isSelected=true on bindings.
-      return getBindings(opt, idx, useSelected);
-    }));
+        // Pass the GUARDED selection state to getBindings so that on refresh
+        // (hasUserClicked=false) no binding gets isSelected=true from stale
+        // savedIds. This prevents _wasSelected from latching in
+        // shouldHighlightOption() before rehydrateUiFromState can run its
+        // clean-slate reset.
+        // IMPORTANT: only use useSelected, NOT useHighlightSet - highlightSet
+        // can contain IDs for options never clicked (e.g. both correct answers
+        // in multi-answer), causing ghost isSelected=true on bindings.
+        return getBindings(opt, idx, useSelected);
+      })
+    );
   }
 
   private finalizeProcessedBindings(comp: any): void {
@@ -518,10 +552,7 @@ export class SharedOptionBindingService {
     }
 
     const currentIndex =
-      comp.getActiveQuestionIndex() ??
-      comp.currentQuestionIndex ??
-      comp.questionIndex() ??
-      0;
+      comp.getActiveQuestionIndex() ?? comp.currentQuestionIndex ?? comp.questionIndex() ?? 0;
 
     const storedSelections =
       this.selectedOptionService.getSelectedOptionsForQuestion(currentIndex) ?? [];
@@ -564,7 +595,9 @@ export class SharedOptionBindingService {
       const savedByIndex = this.buildSavedByIndex(comp, saved, qIndex);
       if (savedByIndex.size === 0) return;
 
-      const _res = this.questionResolution.resolveQuestionState(qIndex, { includeSelections: false });
+      const _res = this.questionResolution.resolveQuestionState(qIndex, {
+        includeSelections: false
+      });
       const wasPerfect = _res.fullyResolvedCorrect;
 
       // A perfect revisit is a TERMINAL state, so the correct set is
@@ -581,7 +614,9 @@ export class SharedOptionBindingService {
       this.applyFeedbackDisplay(comp, saved, savedByIndex, qIndex);
 
       if (comp.optionBindings()?.length) {
-        comp.optionBindings.set(comp.optionBindings().map((b: OptionBindings) => ({ ...b, option: { ...b.option } })));
+        comp.optionBindings.set(
+          comp.optionBindings().map((b: OptionBindings) => ({ ...b, option: { ...b.option } }))
+        );
       }
       if (comp.rebuildShowFeedbackMapFromBindings) comp.rebuildShowFeedbackMapFromBindings();
       comp.cdRef?.markForCheck?.();
@@ -628,7 +663,9 @@ export class SharedOptionBindingService {
           saved = parsed;
         }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     if (saved.length === 0) {
       saved = this.selectedOptionService.getSelectedOptionsForQuestion(qIndex) ?? [];
     }
@@ -645,7 +682,8 @@ export class SharedOptionBindingService {
     for (const s of saved) {
       const sQIdx = (s as any).questionIndex ?? (s as any).qIdx ?? (s as any).questionIdx;
       if (sQIdx != null && Number(sQIdx) !== qIndex) continue;
-      if ((s as any)?.selected === false && !(s as any)?.showIcon && !(s as any)?.highlight) continue;
+      if ((s as any)?.selected === false && !(s as any)?.showIcon && !(s as any)?.highlight)
+        continue;
 
       const sText = norm((s as any).text);
       const pos = this.resolveSavedBindingPosition(comp, s, sText);
@@ -744,7 +782,9 @@ export class SharedOptionBindingService {
     try {
       this.selectedOptionService.unlockAllOptionsForQuestion?.(qIndex);
       this.selectedOptionService.unlockQuestion?.(qIndex);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   /**
@@ -855,16 +895,26 @@ export class SharedOptionBindingService {
    * Set the feedback anchor for the restored selection (the LAST clicked option)
    * and build the feedback-display config when absent. Extracted verbatim.
    */
-  private applyFeedbackDisplay(comp: any, saved: any[], savedByIndex: Map<number, any>, qIndex: number): void {
+  private applyFeedbackDisplay(
+    comp: any,
+    saved: any[],
+    savedByIndex: Map<number, any>,
+    qIndex: number
+  ): void {
     if (saved.length === 0) return;
     // reverse() finds the LAST selected option - where feedback should appear
     // (find() would return the lowest-index match, not the last clicked).
-    const activeSelection = [...saved].reverse().find((s: any) => s?.selected === true)
-      ?? [...saved].reverse().find((s: any) => s?.showIcon === true)
-      ?? saved[saved.length - 1];
+    const activeSelection =
+      [...saved].reverse().find((s: any) => s?.selected === true) ??
+      [...saved].reverse().find((s: any) => s?.showIcon === true) ??
+      saved[saved.length - 1];
 
-    const activeIdxRaw = (activeSelection as any).displayIndex ?? (activeSelection as any).index ?? (activeSelection as any).idx;
-    const activeIdx = (activeIdxRaw != null && Number.isFinite(Number(activeIdxRaw))) ? Number(activeIdxRaw) : -1;
+    const activeIdxRaw =
+      (activeSelection as any).displayIndex ??
+      (activeSelection as any).index ??
+      (activeSelection as any).idx;
+    const activeIdx =
+      activeIdxRaw != null && Number.isFinite(Number(activeIdxRaw)) ? Number(activeIdxRaw) : -1;
 
     if (activeIdx >= 0) {
       comp.lastFeedbackOptionId = activeIdx;
@@ -881,7 +931,13 @@ export class SharedOptionBindingService {
    * binding, compute the feedback + correct messages, and assemble the config.
    * Extracted verbatim.
    */
-  private buildFeedbackDisplay(comp: any, activeSelection: any, activeIdx: number, savedByIndex: Map<number, any>, qIndex: number): void {
+  private buildFeedbackDisplay(
+    comp: any,
+    activeSelection: any,
+    activeIdx: number,
+    savedByIndex: Map<number, any>,
+    qIndex: number
+  ): void {
     let targetIdx = activeIdx;
     if (targetIdx < 0) {
       for (const k of savedByIndex.keys()) {
@@ -893,9 +949,15 @@ export class SharedOptionBindingService {
     if (targetBinding && cqForTarget) {
       try {
         const lastSelectionOnly = [activeSelection] as any[];
-        const feedbackText = this.feedbackService.buildFeedbackMessage(
-          cqForTarget, lastSelectionOnly, false, false, qIndex, comp.optionsToDisplay
-        ) || '';
+        const feedbackText =
+          this.feedbackService.buildFeedbackMessage(
+            cqForTarget,
+            lastSelectionOnly,
+            false,
+            false,
+            qIndex,
+            comp.optionsToDisplay
+          ) || '';
         let correctMessage = '';
         try {
           correctMessage = this.feedbackService.setCorrectMessage(
@@ -903,7 +965,10 @@ export class SharedOptionBindingService {
             cqForTarget
           );
         } catch (err: unknown) {
-          console.error('SharedOptionBindingService.rehydrateUiFromState correctMessage resolution failed:', err);
+          console.error(
+            'SharedOptionBindingService.rehydrateUiFromState correctMessage resolution failed:',
+            err
+          );
         }
         comp._feedbackDisplay = {
           idx: targetIdx,
@@ -918,7 +983,9 @@ export class SharedOptionBindingService {
             idx: targetIdx
           } as FeedbackProps
         };
-      } catch (err: unknown) { console.error('rehydrateUiFromState feedback-display failed:', err); }
+      } catch (err: unknown) {
+        console.error('rehydrateUiFromState feedback-display failed:', err);
+      }
     }
   }
 
@@ -935,11 +1002,17 @@ export class SharedOptionBindingService {
     // browser. The keys are populated from the expired verdict's
     // correctOptionTexts, so an empty set means "the reveal has not arrived" —
     // and painting nothing is the correct render for that moment.
-    const showCorrectOnTimeout = comp.timerExpiredForQuestion()
-      && comp.timeoutCorrectOptionKeys?.has(optionKey) === true;
+    const showCorrectOnTimeout =
+      comp.timerExpiredForQuestion() && comp.timeoutCorrectOptionKeys?.has(optionKey) === true;
 
     const shouldHighlight = this.resolveShouldHighlight(
-      comp, b, i, qIndex, isMulti, isActuallySelected, showCorrectOnTimeout
+      comp,
+      b,
+      i,
+      qIndex,
+      isMulti,
+      isActuallySelected,
+      showCorrectOnTimeout
     );
 
     return this.buildConfigObject(comp, b, i, qIndex, isActuallySelected, shouldHighlight);
@@ -959,12 +1032,12 @@ export class SharedOptionBindingService {
   // checked first, same as before.
   private resolveBuildIsMulti(comp: any, qIndex: number): boolean {
     const authQ = this.quizService.questions?.[qIndex];
-    const authCorrectCount = (authQ?.options ?? []).filter(
-      (o: any) => isOptionCorrect(o)
-    ).length;
-    return comp.isMultiMode
-      || this.quizService.multipleAnswer
-      || resolveIsMultiAnswer(authQ, authCorrectCount > 1);
+    const authCorrectCount = (authQ?.options ?? []).filter((o: any) => isOptionCorrect(o)).length;
+    return (
+      comp.isMultiMode ||
+      this.quizService.multipleAnswer ||
+      resolveIsMultiAnswer(authQ, authCorrectCount > 1)
+    );
   }
 
   private resolveShouldHighlight(
@@ -997,10 +1070,12 @@ export class SharedOptionBindingService {
         if (isMulti) {
           return !!(matchEntry as any).selected || showCorrectOnTimeout;
         }
-        return !!(matchEntry as any).selected
-          || !!(matchEntry as any).showIcon
-          || !!(matchEntry as any).highlight
-          || showCorrectOnTimeout;
+        return (
+          !!(matchEntry as any).selected ||
+          !!(matchEntry as any).showIcon ||
+          !!(matchEntry as any).highlight ||
+          showCorrectOnTimeout
+        );
       }
       return showCorrectOnTimeout;
     }
@@ -1021,7 +1096,9 @@ export class SharedOptionBindingService {
           saved = parsed;
         }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     if (saved.length === 0) {
       saved = this.selectedOptionService.getSelectedOptionsForQuestion(qIndex) ?? [];
     }
@@ -1050,7 +1127,8 @@ export class SharedOptionBindingService {
     shouldHighlight: boolean
   ): SharedOptionConfig {
     const isOnCorrectQuestion = comp.lastProcessedQuestionIndex === qIndex;
-    const currentSelections = this.selectedOptionService.getSelectedOptionsForQuestion(qIndex) ?? [];
+    const currentSelections =
+      this.selectedOptionService.getSelectedOptionsForQuestion(qIndex) ?? [];
 
     const verifiedOption = {
       ...b.option,
@@ -1071,8 +1149,9 @@ export class SharedOptionBindingService {
       isAnswerCorrect: b.isCorrect === true,
       highlightCorrectAfterIncorrect: comp.highlightCorrectAfterIncorrect(),
       shouldResetBackground:
-        (comp.shouldResetBackground() || (!isOnCorrectQuestion && currentSelections.length === 0))
-        && !shouldHighlight,
+        (comp.shouldResetBackground() ||
+          (!isOnCorrectQuestion && currentSelections.length === 0)) &&
+        !shouldHighlight,
       feedback: b.feedback ?? '',
       showFeedbackForOption: comp.showFeedbackForOption,
       optionsToDisplay: comp.optionsToDisplay,
@@ -1088,13 +1167,18 @@ export class SharedOptionBindingService {
     };
   }
 
-  getOptionBindings(comp: any, option: Option, idx: number, isSelected: boolean = false): OptionBindings {
+  getOptionBindings(
+    comp: any,
+    option: Option,
+    idx: number,
+    isSelected: boolean = false
+  ): OptionBindings {
     const selected = isSelected;
 
     return {
       option: {
         ...structuredClone(option),
-        feedback: option.feedback ?? 'No feedback available',
+        feedback: option.feedback ?? 'No feedback available'
       },
       index: idx,
       feedback: option.feedback ?? 'No feedback available',
@@ -1134,10 +1218,15 @@ export class SharedOptionBindingService {
   getInlineFeedbackConfig(comp: any, b: OptionBindings, i: number): FeedbackProps | null {
     let config: FeedbackProps | null = null;
 
-    if (feedbackAnchorMatches(comp._feedbackDisplay, b.option?.optionId, i) && comp._feedbackDisplay.config?.showFeedback) {
+    if (
+      feedbackAnchorMatches(comp._feedbackDisplay, b.option?.optionId, i) &&
+      comp._feedbackDisplay.config?.showFeedback
+    ) {
       config = comp._feedbackDisplay.config;
     } else if (comp.timerExpiredForQuestion()) {
-      const cfg = comp.feedbackConfigs?.[b.option?.optionId ?? -1] ?? comp.feedbackConfigs?.[comp.keyOf(b.option, i)];
+      const cfg =
+        comp.feedbackConfigs?.[b.option?.optionId ?? -1] ??
+        comp.feedbackConfigs?.[comp.keyOf(b.option, i)];
       if (cfg?.showFeedback) config = cfg;
     }
 
@@ -1150,7 +1239,10 @@ export class SharedOptionBindingService {
     let correctIndicesArr: number[] = comp._correctIndicesByQuestion?.get(qIdx) ?? [];
     if (correctIndicesArr.length === 0) {
       const result = this.clickHandler.resolveCorrectIndices(
-        feedbackQ, qIdx, comp.isMultiMode, comp.type
+        feedbackQ,
+        qIdx,
+        comp.isMultiMode,
+        comp.type
       );
       correctIndicesArr = result.correctIndices;
     }
@@ -1158,13 +1250,21 @@ export class SharedOptionBindingService {
     // Type from the declared type; correctIndicesArr stays as correctness.
     // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
     const effectiveMultiMode = resolveIsMultiAnswer(
-      feedbackQ, comp.isMultiMode || comp.type === 'multiple' || correctIndicesArr.length > 1
+      feedbackQ,
+      comp.isMultiMode || comp.type === 'multiple' || correctIndicesArr.length > 1
     );
     const durableSelected = comp._multiSelectByQuestion?.get(qIdx);
 
-    if (effectiveMultiMode && durableSelected && durableSelected.size > 0 && correctIndicesArr.length > 0) {
+    if (
+      effectiveMultiMode &&
+      durableSelected &&
+      durableSelected.size > 0 &&
+      correctIndicesArr.length > 0
+    ) {
       const clickState = this.clickHandler.computeMultiAnswerClickState(
-        i, durableSelected, correctIndicesArr
+        i,
+        durableSelected,
+        correctIndicesArr
       );
       const newFeedback = this.clickHandler.generateMultiAnswerFeedbackText(clickState);
 
@@ -1189,9 +1289,10 @@ export class SharedOptionBindingService {
     for (let i = 0; i < (comp.optionBindings()?.length ?? 0); i++) {
       const b = comp.optionBindings()[i];
       const id = b.option.optionId;
-      const numericId = (id != null && id !== -1) ? Number(id) : i;
+      const numericId = id != null && id !== -1 ? Number(id) : i;
       const hasRealId = id != null && id !== -1;
-      const isCollision = !hasRealId && realIdOwner.has(numericId) && realIdOwner.get(numericId) !== i;
+      const isCollision =
+        !hasRealId && realIdOwner.has(numericId) && realIdOwner.get(numericId) !== i;
 
       let chosen = false;
       if (!isCollision) {
@@ -1234,18 +1335,19 @@ export class SharedOptionBindingService {
       const qIndex = comp.currentQuestionIndex;
       this.selectedOptionService.unlockQuestion(qIndex);
     } catch (err: unknown) {
-      console.error('SharedOptionBindingService.clearForceDisableAllOptions unlockQuestion failed:', err);
+      console.error(
+        'SharedOptionBindingService.clearForceDisableAllOptions unlockQuestion failed:',
+        err
+      );
     }
 
     comp.clickService?.updateBindingSnapshots(comp);
   }
 
   markRenderReady(comp: any, _reason: string = ''): void {
-    const bindingsReady =
-      Array.isArray(comp.optionBindings()) && comp.optionBindings().length > 0;
+    const bindingsReady = Array.isArray(comp.optionBindings()) && comp.optionBindings().length > 0;
 
-    const optionsReady =
-      Array.isArray(comp.optionsToDisplay) && comp.optionsToDisplay.length > 0;
+    const optionsReady = Array.isArray(comp.optionsToDisplay) && comp.optionsToDisplay.length > 0;
 
     if (bindingsReady && optionsReady) {
       comp.renderReady.set(true);

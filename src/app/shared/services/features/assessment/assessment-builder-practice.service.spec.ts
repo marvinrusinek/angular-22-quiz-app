@@ -146,10 +146,16 @@ describe('AssessmentBuilderService.buildPractice — weak areas generation', () 
 
   it('produces a differently shuffled session on a later run', () => {
     const svc = service();
-    const a = svc.buildPractice(['rxjs', 'signals'])!.questions.map((q) => q.questionText).join('|');
+    const a = svc
+      .buildPractice(['rxjs', 'signals'])!
+      .questions.map((q) => q.questionText)
+      .join('|');
     let differed = false;
     for (let i = 0; i < 10 && !differed; i++) {
-      const b = svc.buildPractice(['rxjs', 'signals'])!.questions.map((q) => q.questionText).join('|');
+      const b = svc
+        .buildPractice(['rxjs', 'signals'])!
+        .questions.map((q) => q.questionText)
+        .join('|');
       if (a !== b) differed = true;
     }
     expect(differed).toBe(true);

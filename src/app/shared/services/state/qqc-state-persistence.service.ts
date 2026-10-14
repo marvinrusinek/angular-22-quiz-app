@@ -41,23 +41,15 @@ export class QqcStatePersistenceService {
       const { questionIndex } = params;
 
       if (params.explanationText) {
-        sessionStorage.setItem(
-          `explanationText_${questionIndex}`,
-          params.explanationText
-        );
+        sessionStorage.setItem(`explanationText_${questionIndex}`, params.explanationText);
       }
 
       if (params.displayMode) {
-        sessionStorage.setItem(
-          `displayMode_${questionIndex}`,
-          params.displayMode
-        );      }
+        sessionStorage.setItem(`displayMode_${questionIndex}`, params.displayMode);
+      }
 
       if (params.optionsToDisplay?.length > 0) {
-        sessionStorage.setItem(
-          `options_${questionIndex}`,
-          JSON.stringify(params.optionsToDisplay)
-        );
+        sessionStorage.setItem(`options_${questionIndex}`, JSON.stringify(params.optionsToDisplay));
       }
 
       if (params.selectedOptions?.length > 0) {

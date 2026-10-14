@@ -31,17 +31,24 @@ describe('QuizDifficultyFilterComponent', () => {
   }
 
   const host = (): HTMLElement => fixture.nativeElement.querySelector('mat-select')!;
-  const trigger = (): HTMLElement => fixture.nativeElement.querySelector('.mat-mdc-select-trigger')!;
-  const options = (): HTMLElement[] => Array.from(document.querySelectorAll<HTMLElement>('mat-option'));
+  const trigger = (): HTMLElement =>
+    fixture.nativeElement.querySelector('.mat-mdc-select-trigger')!;
+  const options = (): HTMLElement[] =>
+    Array.from(document.querySelectorAll<HTMLElement>('mat-option'));
   const text = (e: Element): string => (e.textContent ?? '').replace(/\s+/g, ' ').trim();
   const shown = (): string => text(fixture.nativeElement.querySelector('.mat-mdc-select-value')!);
 
   /** MatSelect reads keyCode, so send both. */
   function press(key: string, keyCode: number): void {
-    host().dispatchEvent(new KeyboardEvent('keydown', { key, code: key, keyCode, bubbles: true, cancelable: true }));
+    host().dispatchEvent(
+      new KeyboardEvent('keydown', { key, code: key, keyCode, bubbles: true, cancelable: true })
+    );
     fixture.detectChanges();
   }
-  const ARROW_DOWN = 40, ARROW_UP = 38, ENTER = 13, ESCAPE = 27;
+  const ARROW_DOWN = 40,
+    ARROW_UP = 38,
+    ENTER = 13,
+    ESCAPE = 27;
 
   function open(): void {
     trigger().click();
@@ -56,20 +63,28 @@ describe('QuizDifficultyFilterComponent', () => {
       ['beginner', 'Beginner'],
       ['intermediate', 'Intermediate'],
       ['advanced', 'Advanced']
-    ] as const)('shows "%s" as the text "%s" — the selection is conveyed in words, not by colour', async (value, label) => {
-      render(value);
-      // MatSelect applies its initial selection in a microtask after content init.
-      await fixture.whenStable();
-      fixture.detectChanges();
+    ] as const)(
+      'shows "%s" as the text "%s" — the selection is conveyed in words, not by colour',
+      async (value, label) => {
+        render(value);
+        // MatSelect applies its initial selection in a microtask after content init.
+        await fixture.whenStable();
+        fixture.detectChanges();
 
-      expect(shown()).toBe(label);
-    });
+        expect(shown()).toBe(label);
+      }
+    );
 
     it('offers exactly the four options, in order', () => {
       render();
       open();
 
-      expect(options().map(text)).toEqual(['All Difficulties', 'Beginner', 'Intermediate', 'Advanced']);
+      expect(options().map(text)).toEqual([
+        'All Difficulties',
+        'Beginner',
+        'Intermediate',
+        'Advanced'
+      ]);
     });
 
     it('marks the current option as selected for assistive technology', () => {
@@ -113,7 +128,8 @@ describe('QuizDifficultyFilterComponent', () => {
 
   describe('tooltip and visible value', () => {
     const TIP = 'Filter quizzes by difficulty';
-    const tooltipMessage = (): string => fixture.debugElement.query(By.directive(MatTooltip)).injector.get(MatTooltip).message;
+    const tooltipMessage = (): string =>
+      fixture.debugElement.query(By.directive(MatTooltip)).injector.get(MatTooltip).message;
 
     it.each(['all', 'beginner', 'intermediate', 'advanced'] as const)(
       'the tooltip is "Filter quizzes by difficulty" when "%s" is selected — it never varies with the selection',
@@ -142,7 +158,8 @@ describe('QuizDifficultyFilterComponent', () => {
 
     it('the tooltip steps aside while the option list is open (it must not linger behind the list), and returns afterwards', () => {
       render('all');
-      const tooltip = (): MatTooltip => fixture.debugElement.query(By.directive(MatTooltip)).injector.get(MatTooltip);
+      const tooltip = (): MatTooltip =>
+        fixture.debugElement.query(By.directive(MatTooltip)).injector.get(MatTooltip);
       expect(tooltip().disabled).toBe(false);
 
       open();
@@ -179,10 +196,12 @@ describe('QuizDifficultyFilterComponent', () => {
       ['Advanced', 'advanced'],
       ['All Difficulties', 'all']
     ] as const)('picking "%s" emits "%s" — and only that', (label, value) => {
-      render(value === 'all' ? 'advanced' : 'all');   // start somewhere that makes the pick a change
+      render(value === 'all' ? 'advanced' : 'all'); // start somewhere that makes the pick a change
       open();
 
-      options().find((o) => text(o) === label)!.click();
+      options()
+        .find((o) => text(o) === label)!
+        .click();
       fixture.detectChanges();
 
       expect(emitted).toEqual([value]);
@@ -211,11 +230,11 @@ describe('QuizDifficultyFilterComponent', () => {
       render('all');
       host().focus();
 
-      press('Enter', ENTER);                 // opens the list
+      press('Enter', ENTER); // opens the list
       expect(host().getAttribute('aria-expanded')).toBe('true');
-      press('ArrowDown', ARROW_DOWN);        // → Beginner
-      press('ArrowDown', ARROW_DOWN);        // → Intermediate
-      press('Enter', ENTER);                 // chooses it
+      press('ArrowDown', ARROW_DOWN); // → Beginner
+      press('ArrowDown', ARROW_DOWN); // → Intermediate
+      press('Enter', ENTER); // chooses it
 
       expect(emitted).toEqual(['intermediate']);
       expect(host().getAttribute('aria-expanded')).toBe('false');

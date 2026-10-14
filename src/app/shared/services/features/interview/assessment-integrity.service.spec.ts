@@ -106,11 +106,11 @@ describe('AssessmentIntegrityService', () => {
 
     setVisibility('hidden');
     document.dispatchEvent(new Event('visibilitychange'));
-    expect(spy).not.toHaveBeenCalled();   // no dialog while away
+    expect(spy).not.toHaveBeenCalled(); // no dialog while away
 
     setVisibility('visible');
     document.dispatchEvent(new Event('visibilitychange'));
-    expect(spy).toHaveBeenCalledTimes(1);  // shown on return
+    expect(spy).toHaveBeenCalledTimes(1); // shown on return
   });
 
   it('acknowledgeWarning clears the pending flag', () => {
@@ -129,7 +129,7 @@ describe('AssessmentIntegrityService', () => {
     // Enter fullscreen first so the service knows we were in it.
     setFullscreenElement(document.documentElement);
     svc.activate(destroyRef);
-    document.dispatchEvent(new Event('fullscreenchange'));   // now in fullscreen
+    document.dispatchEvent(new Event('fullscreenchange')); // now in fullscreen
     expect(svc.focusLossCount()).toBe(0);
 
     // Exit fullscreen.
@@ -169,7 +169,7 @@ describe('AssessmentIntegrityService', () => {
     const svc = new AssessmentIntegrityService();
     svc.activate(destroyRef);
 
-    triggerDestroy();   // component destroyed → listeners torn down, counting off
+    triggerDestroy(); // component destroyed → listeners torn down, counting off
 
     setVisibility('hidden');
     document.dispatchEvent(new Event('visibilitychange'));

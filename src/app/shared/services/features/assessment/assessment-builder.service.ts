@@ -88,7 +88,10 @@ export class AssessmentBuilderService {
       const source = sourceByTopic
         ? [...(sourceByTopic.get(id) ?? [])]
         : (this.findQuiz(id)?.questions ?? []);
-      pools.set(id, source.map((q, i) => this.cloneQuestion(q, id, i)));
+      pools.set(
+        id,
+        source.map((q, i) => this.cloneQuestion(q, id, i))
+      );
     }
 
     const available = [...pools.values()].reduce((sum, qs) => sum + qs.length, 0);
@@ -183,7 +186,12 @@ export class AssessmentBuilderService {
     );
 
     // Practice is UNTIMED: no countdown is derived or displayed.
-    return { ...built, id: `practice-${built.id}`, title: 'Weak Areas Practice', durationSeconds: 0 };
+    return {
+      ...built,
+      id: `practice-${built.id}`,
+      title: 'Weak Areas Practice',
+      durationSeconds: 0
+    };
   }
 
   // ── balancing ───────────────────────────────────────────────────
@@ -209,7 +217,7 @@ export class AssessmentBuilderService {
     let assigned = [...alloc.values()].reduce((a, b) => a + b, 0);
     while (assigned < count) {
       const spare = topicIds.filter((id) => (capacity.get(id) ?? 0) - (alloc.get(id) ?? 0) > 0);
-      if (spare.length === 0) break;   // unreachable when available >= count
+      if (spare.length === 0) break; // unreachable when available >= count
       for (const id of spare) {
         if (assigned >= count) break;
         alloc.set(id, (alloc.get(id) ?? 0) + 1);
@@ -237,9 +245,10 @@ export class AssessmentBuilderService {
 
   private resetOptions(options: Option[], questionIndex: number): Option[] {
     return options.map((option, i) => {
-      const existingId = typeof option.optionId === 'number' && option.optionId > 0
-        ? option.optionId
-        : (questionIndex + 1) * 100 + (i + 1);
+      const existingId =
+        typeof option.optionId === 'number' && option.optionId > 0
+          ? option.optionId
+          : (questionIndex + 1) * 100 + (i + 1);
       return {
         ...option,
         optionId: existingId,

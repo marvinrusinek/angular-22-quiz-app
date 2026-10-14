@@ -104,8 +104,8 @@ describe('AssessmentBuilderService', () => {
       perTopic.set(q.sourceQuizId!, (perTopic.get(q.sourceQuizId!) ?? 0) + 1);
     }
     expect(result.questions).toHaveLength(20);
-    expect(perTopic.get('forms')).toBe(3);                 // all it has, no more
-    expect(perTopic.get('ts')! + perTopic.get('templates')!).toBe(17);  // remainder spread
+    expect(perTopic.get('forms')).toBe(3); // all it has, no more
+    expect(perTopic.get('ts')! + perTopic.get('templates')!).toBe(17); // remainder spread
   });
 
   // 11: rejects an insufficient pool
@@ -115,7 +115,9 @@ describe('AssessmentBuilderService', () => {
 
   // 12: never duplicates questions
   it('never includes a duplicate question', () => {
-    const result = service.build(config('mixed', ['ts', 'templates', 'router', 'forms', 'rxjs'], 30));
+    const result = service.build(
+      config('mixed', ['ts', 'templates', 'router', 'forms', 'rxjs'], 30)
+    );
     const keys = result.questions.map(qKey);
     expect(new Set(keys).size).toBe(keys.length);
   });
@@ -135,7 +137,10 @@ describe('AssessmentBuilderService', () => {
     const result = service.build(config('mixed', ['ts', 'templates'], 10));
     // mutate the generated assessment aggressively
     for (const q of result.questions) {
-      for (const o of q.options) { o.selected = true; o.highlight = true; }
+      for (const o of q.options) {
+        o.selected = true;
+        o.highlight = true;
+      }
     }
     result.questions[0].options[0].text = 'MUTATED';
     expect(JSON.stringify(getQuizData())).toBe(before);
@@ -168,7 +173,16 @@ describe('AssessmentBuilderService', () => {
       ])
     );
     setQuizDataCache(
-      [{ quizId: 'aota', milestone: 'aota', summary: '', image: '', difficulty: 'beginner', questions }],
+      [
+        {
+          quizId: 'aota',
+          milestone: 'aota',
+          summary: '',
+          image: '',
+          difficulty: 'beginner',
+          questions
+        }
+      ],
       []
     );
 

@@ -7,7 +7,10 @@ import { distinctUntilChanged, map } from 'rxjs/operators';
 
 import { Quiz, QuizQuestion, QuizResource, Resource } from '@shared/models';
 
-import { SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID } from '@shared/constants/session-keys';
+import {
+  SK_SHUFFLED_QUESTIONS,
+  SK_SHUFFLED_QUESTIONS_QUIZ_ID
+} from '@shared/constants/session-keys';
 
 import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
 
@@ -66,8 +69,11 @@ export class QuizDataLoaderService {
   })();
 
   questionsQuizId: string | null = (() => {
-    try { return localStorage.getItem(SK_SHUFFLED_QUESTIONS_QUIZ_ID); }
-    catch { return null; }
+    try {
+      return localStorage.getItem(SK_SHUFFLED_QUESTIONS_QUIZ_ID);
+    } catch {
+      return null;
+    }
   })();
 
   // S6p: no client-bank read. Questions come exclusively from the
@@ -76,9 +82,11 @@ export class QuizDataLoaderService {
   // this already returned empty questions/totalQuestions and
   // resolvedQuizId === quizId unconditionally, regardless of what a bank
   // lookup found, so removing that lookup changes no observable behavior.
-  initializeData(
-    quizId: string
-  ): { questions: QuizQuestion[]; totalQuestions: number; resolvedQuizId: string } {
+  initializeData(quizId: string): {
+    questions: QuizQuestion[];
+    totalQuestions: number;
+    resolvedQuizId: string;
+  } {
     return { questions: [], totalQuestions: 0, resolvedQuizId: quizId };
   }
 
@@ -130,7 +138,6 @@ export class QuizDataLoaderService {
     questionsSig: WritableSignal<QuizQuestion[]>,
     setInternalQuestions: (qs: QuizQuestion[]) => void
   ): Promise<QuizQuestion[]> {
-
     this.restorePersistedShuffle(quizId);
 
     const cached = this.tryReturnCachedShuffled(quizId, questionsSig, setInternalQuestions);
@@ -170,10 +177,11 @@ export class QuizDataLoaderService {
     setInternalQuestions: (qs: QuizQuestion[]) => void
   ): QuizQuestion[] | null {
     if (this.shuffledQuestions && this.shuffledQuestions.length > 0) {
-      const hasBadData = this.shuffledQuestions.some(q =>
-        Array.isArray(q.options) &&
-        q.options.length > 1 &&
-        !q.options.some(o => isOptionCorrect(o))
+      const hasBadData = this.shuffledQuestions.some(
+        (q) =>
+          Array.isArray(q.options) &&
+          q.options.length > 1 &&
+          !q.options.some((o) => isOptionCorrect(o))
       );
 
       if (hasBadData) {
@@ -201,7 +209,9 @@ export class QuizDataLoaderService {
           try {
             localStorage.removeItem(SK_SHUFFLED_QUESTIONS);
             localStorage.removeItem(SK_SHUFFLED_QUESTIONS_QUIZ_ID);
-          } catch (err: unknown) { swallow('quiz-data-loader.service.ts', err); }
+          } catch (err: unknown) {
+            swallow('quiz-data-loader.service.ts', err);
+          }
         }
       }
     }
@@ -274,16 +284,16 @@ export class QuizDataLoaderService {
       const optsWithIds = this.quizShuffleService.assignOptionIds(q.options ?? [], qIdx);
       const alignedAnswers = this.quizShuffleService.alignAnswersWithOptions(q.answer, optsWithIds);
 
-      const correctIds = new Set(alignedAnswers.map(a => Number(a.optionId)));
-      const finalOpts = optsWithIds.map(o => ({
+      const correctIds = new Set(alignedAnswers.map((a) => Number(a.optionId)));
+      const finalOpts = optsWithIds.map((o) => ({
         ...o,
         correct: correctIds.has(Number(o.optionId))
       }));
 
       return {
         ...q,
-        options: finalOpts.map(o => ({ ...o })),
-        answer: alignedAnswers.map(a => ({ ...a }))
+        options: finalOpts.map((o) => ({ ...o })),
+        answer: alignedAnswers.map((a) => ({ ...a }))
       } as QuizQuestion;
     });
   }
@@ -301,7 +311,9 @@ export class QuizDataLoaderService {
     try {
       localStorage.setItem(SK_SHUFFLED_QUESTIONS, JSON.stringify(shuffled));
       localStorage.setItem(SK_SHUFFLED_QUESTIONS_QUIZ_ID, quizId);
-    } catch (err: unknown) { swallow('quiz-data-loader.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-data-loader.service.ts', err);
+    }
 
     questionsSig.set(shuffled);
     return shuffled;
@@ -325,7 +337,9 @@ export class QuizDataLoaderService {
       localStorage.setItem('checkedShuffle', String(isChecked));
       localStorage.removeItem(SK_SHUFFLED_QUESTIONS);
       localStorage.removeItem(SK_SHUFFLED_QUESTIONS_QUIZ_ID);
-    } catch (err: unknown) { swallow('quiz-data-loader.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-data-loader.service.ts', err);
+    }
 
     this.quizShuffleService.clearAll();
     this.shuffledQuestions = [];
@@ -350,7 +364,7 @@ export class QuizDataLoaderService {
     if (!quizId) return of([]);
 
     return from(fetchQuizQuestionsFn(quizId)).pipe(
-      map(questions => this.shuffleQuestions(questions))
+      map((questions) => this.shuffleQuestions(questions))
     );
   }
 
@@ -385,7 +399,8 @@ export class QuizDataLoaderService {
       .map((question) => ({
         ...question,
         options: Array.isArray(question.options)
-          ? question.options.map((option) => ({ ...option })) : []
+          ? question.options.map((option) => ({ ...option }))
+          : []
       }));
 
     if (sanitized.length === 0) {
@@ -398,7 +413,10 @@ export class QuizDataLoaderService {
     let idx = 0;
     for (const question of sanitized) {
       const key = normalizeQuestionText(question?.questionText);
-      if (!key) { idx++; continue; }
+      if (!key) {
+        idx++;
+        continue;
+      }
       if (!textIndex.has(key)) {
         textIndex.set(key, idx);
       }
@@ -472,5 +490,4 @@ export class QuizDataLoaderService {
       question.options.every((opt: any) => opt && typeof opt.text === 'string')
     );
   }
-
 }

@@ -8,8 +8,8 @@ import { ArrayUtils } from '@shared/utils/array-utils';
 import { swallow } from '@shared/utils/error-logging';
 
 export interface PrepareShuffleOpts {
-  shuffleQuestions?: boolean,
-  shuffleOptions?: boolean
+  shuffleQuestions?: boolean;
+  shuffleOptions?: boolean;
 }
 
 @Service()
@@ -58,10 +58,7 @@ export class QuizShuffleService {
     for (const origIdx of questionOrder) {
       const len = questions[origIdx]?.options?.length ?? 0;
       const base = Array.from({ length: len }, (_, i) => i);
-      optionOrder.set(
-        origIdx,
-        shuffleOptions ? ArrayUtils.shuffleArray(base) : base
-      );
+      optionOrder.set(origIdx, shuffleOptions ? ArrayUtils.shuffleArray(base) : base);
     }
 
     this.shuffleByQuizId.set(quizId, { questionOrder, optionOrder });
@@ -69,8 +66,7 @@ export class QuizShuffleService {
   }
 
   public hasShuffleState(quizId: string): boolean {
-    return this.shuffleByQuizId.has(quizId) ||
-      !!localStorage.getItem(`shuffleState:${quizId}`);
+    return this.shuffleByQuizId.has(quizId) || !!localStorage.getItem(`shuffleState:${quizId}`);
   }
 
   public getShuffleState(quizId: string): ShuffleState | undefined {
@@ -134,10 +130,7 @@ export class QuizShuffleService {
     if (!src) return null;
 
     // Ensure numeric, stable optionId before reordering
-    const normalizedOpts = this.cloneAndNormalizeOptions(
-      src.options ?? [],
-      origIdx
-    );
+    const normalizedOpts = this.cloneAndNormalizeOptions(src.options ?? [], origIdx);
     const order = state.optionOrder.get(origIdx);
     const safeOptions = this.reorderOptions(normalizedOpts, order);
 
@@ -150,10 +143,7 @@ export class QuizShuffleService {
     };
   }
 
-  public buildShuffledQuestions(
-    quizId: string,
-    questions: QuizQuestion[]
-  ): QuizQuestion[] {
+  public buildShuffledQuestions(quizId: string, questions: QuizQuestion[]): QuizQuestion[] {
     if (!Array.isArray(questions) || questions.length === 0) return [];
 
     const state = this.shuffleByQuizId.get(quizId);
@@ -161,7 +151,7 @@ export class QuizShuffleService {
       return questions.map((question, index) => {
         const normalizedOptions = this.cloneAndNormalizeOptions(
           question.options ?? [],
-          index  // use loop index as question index
+          index // use loop index as question index
         );
         const hasAnswerKey = Array.isArray(question.answer) && question.answer.length > 0;
         return {
@@ -191,8 +181,8 @@ export class QuizShuffleService {
         );
 
         const alignedAnswers = this.alignAnswersWithOptions(source.answer, orderedOptions);
-        const correctIds = new Set(alignedAnswers.map(a => Number(a.optionId)));
-        const correctTexts = new Set(alignedAnswers.map(a => norm(a.text)));
+        const correctIds = new Set(alignedAnswers.map((a) => Number(a.optionId)));
+        const correctTexts = new Set(alignedAnswers.map((a) => norm(a.text)));
 
         // NO ANSWER KEY, NO CLAIM — the same rule `normalizeQuestion` applies.
         // Aligning against an answer key is right when there IS one; with API
@@ -207,7 +197,8 @@ export class QuizShuffleService {
             if (!hasAnswerKey && option.correct === undefined) return { ...option };
             return {
               ...option,
-              correct: isOptionCorrect(option) ||
+              correct:
+                isOptionCorrect(option) ||
                 (option.optionId !== undefined && correctIds.has(Number(option.optionId))) ||
                 (option.text !== undefined && correctTexts.has(norm(option.text)))
             };
@@ -219,16 +210,10 @@ export class QuizShuffleService {
 
     if (displaySet.length === 0) {
       return questions.map((question, index) => {
-        const normalizedOptions = this.cloneAndNormalizeOptions(
-          question.options ?? [],
-          index
-        );
-        const alignedAnswers = this.alignAnswersWithOptions(
-          question.answer,
-          normalizedOptions
-        );
-        const correctIds = new Set(alignedAnswers.map(a => Number(a.optionId)));
-        const correctTexts = new Set(alignedAnswers.map(a => norm(a.text)));
+        const normalizedOptions = this.cloneAndNormalizeOptions(question.options ?? [], index);
+        const alignedAnswers = this.alignAnswersWithOptions(question.answer, normalizedOptions);
+        const correctIds = new Set(alignedAnswers.map((a) => Number(a.optionId)));
+        const correctTexts = new Set(alignedAnswers.map((a) => norm(a.text)));
         const hasAnswerKey = Array.isArray(question.answer) && question.answer.length > 0;
 
         return {
@@ -237,7 +222,8 @@ export class QuizShuffleService {
             if (!hasAnswerKey && option.correct === undefined) return { ...option };
             return {
               ...option,
-              correct: isOptionCorrect(option) ||
+              correct:
+                isOptionCorrect(option) ||
                 (option.optionId !== undefined && correctIds.has(Number(option.optionId))) ||
                 (option.text !== undefined && correctTexts.has(norm(option.text)))
             };
@@ -282,9 +268,8 @@ export class QuizShuffleService {
       // scoring/feedback/FET — which resolve by optionId — would break. Only
       // assign a fresh id (by original position) when one is missing.
       const existing = this.toNum((o as any).optionId);
-      const uniqueId = existing != null && existing > 0
-        ? existing
-        : (questionIndex + 1) * 100 + (i + 1);
+      const uniqueId =
+        existing != null && existing > 0 ? existing : (questionIndex + 1) * 100 + (i + 1);
 
       return {
         ...o,
@@ -344,15 +329,14 @@ export class QuizShuffleService {
 
         // value must remain a number per your model
         const numericValue =
-          typeof option.value === 'number'
-            ? option.value : (this.toNum(option.value) ?? id);
+          typeof option.value === 'number' ? option.value : (this.toNum(option.value) ?? id);
 
         return {
           ...option,
           optionId: id,
-          displayOrder: index,  // if this isn't in Option, you can keep it as an extension or drop it
-          value: numericValue   // always number
-        } as Option;  // if displayOrder isn't in Option, use a local type if you need it
+          displayOrder: index, // if this isn't in Option, you can keep it as an extension or drop it
+          value: numericValue // always number
+        } as Option; // if displayOrder isn't in Option, use a local type if you need it
       });
 
     if (!Array.isArray(order) || order.length !== options.length) {
@@ -392,25 +376,19 @@ export class QuizShuffleService {
 
     const byId = this.toNum(answer.optionId);
     if (byId != null) {
-      const matchById = options.find(
-        (option) => this.toNum(option.optionId) === byId
-      );
+      const matchById = options.find((option) => this.toNum(option.optionId) === byId);
       if (matchById) return matchById;
     }
 
     const byValue = this.toNum(answer.value);
     if (byValue != null) {
-      const matchByValue = options.find(
-        (option) => this.toNum(option.value) === byValue
-      );
+      const matchByValue = options.find((option) => this.toNum(option.value) === byValue);
       if (matchByValue) return matchByValue;
     }
 
     const normAnsText = this.normalize(answer.text);
     if (normAnsText) {
-      const matchByText = options.find(
-        (option) => this.normalize(option.text) === normAnsText
-      );
+      const matchByText = options.find((option) => this.normalize(option.text) === normAnsText);
       if (matchByText) return matchByText;
     }
 
@@ -423,10 +401,7 @@ export class QuizShuffleService {
     return Number.isFinite(n) ? n : null;
   }
 
-  private cloneAndNormalizeOptions(
-    options: Option[] = [],
-    questionIndex: number
-  ): Option[] {
+  private cloneAndNormalizeOptions(options: Option[] = [], questionIndex: number): Option[] {
     const withIds = this.assignOptionIds(options, questionIndex);
     return withIds.map((option, index) => ({
       ...option,

@@ -1,4 +1,4 @@
-﻿import { Service } from '@angular/core';
+import { Service } from '@angular/core';
 
 import { OptionBindings } from '@shared/models';
 
@@ -21,7 +21,7 @@ export class OptionSelectionPolicyService {
 
       if (!isTarget && binding.isSelected) {
         if (binding.option) binding.option.selected = false;
-        binding.isSelected = false;  // sync both flags
+        binding.isSelected = false; // sync both flags
       }
     }
   }

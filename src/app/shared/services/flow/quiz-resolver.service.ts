@@ -1,6 +1,10 @@
 import { Service, inject } from '@angular/core';
 import {
-  ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot, UrlTree
+  ActivatedRouteSnapshot,
+  Resolve,
+  Router,
+  RouterStateSnapshot,
+  UrlTree
 } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -30,7 +34,7 @@ export class QuizResolverService implements Resolve<Quiz | UrlTree | null> {
   // ── public methods ──────────────────────────────────────────────
   resolve(
     route: ActivatedRouteSnapshot,
-    _state: RouterStateSnapshot,
+    _state: RouterStateSnapshot
   ): Observable<Quiz | UrlTree | null> {
     const quizId = route.params['quizId'];
 

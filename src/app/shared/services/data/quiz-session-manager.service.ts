@@ -3,8 +3,17 @@ import { BehaviorSubject, Subject } from 'rxjs';
 
 import { Option, Quiz, QuizQuestion, QuizStatus, SelectedOption } from '@shared/models';
 
-
-import { SK_DOT_CONFIRMED, SK_DISPLAY_MODE, SK_MULTI_PERFECT, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID, SK_USER_ANSWERS } from '@shared/constants/session-keys';
+import {
+  SK_DOT_CONFIRMED,
+  SK_DISPLAY_MODE,
+  SK_MULTI_PERFECT,
+  SK_SAVED_QUESTION_INDEX,
+  SK_SEL_Q,
+  SK_SELECTED_OPTIONS_MAP,
+  SK_SHUFFLED_QUESTIONS,
+  SK_SHUFFLED_QUESTIONS_QUIZ_ID,
+  SK_USER_ANSWERS
+} from '@shared/constants/session-keys';
 
 import { QuizDataLoaderService } from './quiz-data-loader.service';
 import { QuizOptionsService } from './quiz-options.service';
@@ -77,14 +86,21 @@ export class QuizSessionManagerService {
       const keysToRemove: string[] = [];
       for (let i = 0; i < sessionStorage.length; i++) {
         const key = sessionStorage.key(i);
-        if (key?.startsWith(SK_SEL_Q) || key?.startsWith(SK_DISPLAY_MODE) || key?.startsWith(SK_MULTI_PERFECT) || key?.startsWith(SK_DOT_CONFIRMED)) {
+        if (
+          key?.startsWith(SK_SEL_Q) ||
+          key?.startsWith(SK_DISPLAY_MODE) ||
+          key?.startsWith(SK_MULTI_PERFECT) ||
+          key?.startsWith(SK_DOT_CONFIRMED)
+        ) {
           keysToRemove.push(key);
         }
       }
       for (const key of keysToRemove) {
         sessionStorage.removeItem(key);
       }
-    } catch (err: unknown) { swallow('quiz-session-manager.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('quiz-session-manager.service.ts', err); /* ignore */
+    }
   }
 
   /**
@@ -101,11 +117,8 @@ export class QuizSessionManagerService {
     if (!quizId) return null;
 
     // Guard: Skip if questions already applied for this quiz
-    if (
-      state.shuffledQuestions &&
-      state.shuffledQuestions.length > 0 &&
-      state.quizId === quizId
-    ) return null;
+    if (state.shuffledQuestions && state.shuffledQuestions.length > 0 && state.quizId === quizId)
+      return null;
 
     // Set quizId first to enable guard for subsequent calls
     state.quizId = quizId;
@@ -113,7 +126,10 @@ export class QuizSessionManagerService {
     try {
       quizResetSource.next();
     } catch (err: unknown) {
-      console.error('QuizSessionManagerService.applySessionQuestions quizReset emission failed:', err);
+      console.error(
+        'QuizSessionManagerService.applySessionQuestions quizReset emission failed:',
+        err
+      );
     }
 
     if (!Array.isArray(questions) || questions.length === 0) return null;
@@ -142,7 +158,10 @@ export class QuizSessionManagerService {
       localStorage.setItem(SK_SHUFFLED_QUESTIONS, JSON.stringify(state.shuffledQuestions));
       localStorage.setItem(SK_SHUFFLED_QUESTIONS_QUIZ_ID, String(state.quizId ?? ''));
     } catch (err: unknown) {
-      console.error('QuizSessionManagerService.applySessionQuestions shuffled questions persist failed:', err);
+      console.error(
+        'QuizSessionManagerService.applySessionQuestions shuffled questions persist failed:',
+        err
+      );
     }
   }
 
@@ -158,27 +177,22 @@ export class QuizSessionManagerService {
       Math.max(state.currentQuestionIndex ?? 0, 0),
       sanitizedQuestions.length - 1
     );
-    state.currentQuestionIndex = Number.isFinite(boundedIndex)
-      ? boundedIndex : 0;
+    state.currentQuestionIndex = Number.isFinite(boundedIndex) ? boundedIndex : 0;
 
     state.currentQuestionIndexSig.set(state.currentQuestionIndex);
     state.currentQuestionIndexSubject.next(state.currentQuestionIndex);
 
-    const currentQuestion =
-      sanitizedQuestions[state.currentQuestionIndex] ?? null;
+    const currentQuestion = sanitizedQuestions[state.currentQuestionIndex] ?? null;
     state.currentQuestionSig.set(currentQuestion);
 
     const normalizedOptions = Array.isArray(currentQuestion?.options)
-      ? [...currentQuestion.options] : [];
+      ? [...currentQuestion.options]
+      : [];
 
     if (currentQuestion) currentQuestion.options = normalizedOptions;
 
     if (currentQuestion && normalizedOptions.length > 0) {
-      state.emitQuestionAndOptions(
-        currentQuestion,
-        normalizedOptions,
-        state.currentQuestionIndex
-      );
+      state.emitQuestionAndOptions(currentQuestion, normalizedOptions, state.currentQuestionIndex);
     } else {
       state.nextQuestionSig.set(currentQuestion);
       state.nextOptionsSig.set(normalizedOptions);
@@ -252,7 +266,9 @@ export class QuizSessionManagerService {
       // If you store per-quiz keys, also remove those patterns:
       localStorage.removeItem(`quizState_${quizId}`);
       localStorage.removeItem(`quizResumeIndex_${quizId}`);
-    } catch (err: unknown) { swallow('quiz-session-manager.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-session-manager.service.ts', err);
+    }
 
     this.clearPerQuestionSessionKeys();
   }
@@ -270,7 +286,9 @@ export class QuizSessionManagerService {
       localStorage.removeItem(SK_SHUFFLED_QUESTIONS);
       localStorage.removeItem(SK_SHUFFLED_QUESTIONS_QUIZ_ID);
       localStorage.removeItem('selectedOptions');
-    } catch (err: unknown) { swallow('quiz-session-manager.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-session-manager.service.ts', err);
+    }
 
     this.clearPerQuestionSessionKeys();
 
@@ -287,7 +305,11 @@ export class QuizSessionManagerService {
     state.questionPayloadSig.set(null);
     this.scoringService.correctAnswersCountSig.set(0);
     state.userAnswers = [];
-    try { localStorage.removeItem(SK_USER_ANSWERS); } catch (err: unknown) { swallow('quiz-session-manager.service.ts', err); }
+    try {
+      localStorage.removeItem(SK_USER_ANSWERS);
+    } catch (err: unknown) {
+      swallow('quiz-session-manager.service.ts', err);
+    }
     state.badgeTextSig.set('');
     state.resetScore();
     quizResetSource.next();
@@ -316,7 +338,9 @@ export class QuizSessionManagerService {
       localStorage.removeItem(SK_SHUFFLED_QUESTIONS);
       localStorage.removeItem(SK_SELECTED_OPTIONS_MAP);
       localStorage.removeItem('highScore');
-    } catch (err: unknown) { swallow('quiz-session-manager.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('quiz-session-manager.service.ts', err); /* ignore */
+    }
 
     this.clearPerQuestionSessionKeys();
 

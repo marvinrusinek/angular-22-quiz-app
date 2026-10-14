@@ -1,4 +1,4 @@
-﻿import { Service, inject } from '@angular/core';
+import { Service, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { EMPTY, firstValueFrom, of } from 'rxjs';
@@ -61,8 +61,8 @@ export class QuizSetupDataService {
 
   private pushInitialQuestionPayload(host: Host): void {
     const initialIdx = host.currentQuestionIndex() || 0;
-    const initialQuestion = this.quizService.questions?.[initialIdx]
-      ?? host.questionsArray()?.[initialIdx];
+    const initialQuestion =
+      this.quizService.questions?.[initialIdx] ?? host.questionsArray()?.[initialIdx];
     if (!initialQuestion?.options?.length) return;
 
     host.currentQuestion.set(initialQuestion);
@@ -95,7 +95,10 @@ export class QuizSetupDataService {
       host.quiz.set(result.quiz);
       this.applyQuestionsFromSession(host, result.questions);
 
-      const safeIndex = Math.min(Math.max(host.currentQuestionIndex() ?? 0, 0), host.questions().length - 1);
+      const safeIndex = Math.min(
+        Math.max(host.currentQuestionIndex() ?? 0, 0),
+        host.questions().length - 1
+      );
       host.currentQuestionIndex.set(safeIndex);
       host.currentQuestion.set(host.questions()[safeIndex] ?? null);
 
@@ -110,7 +113,8 @@ export class QuizSetupDataService {
   }
 
   loadCurrentQuestion(host: Host): void {
-    this.quizService.getQuestionByIndex(host.currentQuestionIndex())
+    this.quizService
+      .getQuestionByIndex(host.currentQuestionIndex())
       .pipe(
         tap((question: QuizQuestion | null) => {
           if (!question) return;
@@ -147,7 +151,8 @@ export class QuizSetupDataService {
   async getQuestion(host: Host): Promise<void | null> {
     const quizId = host.activatedRoute.snapshot.params['quizId'];
     const question = await this.quizContentLoaderService.fetchQuestionFromAPI(
-      quizId, host.currentQuestionIndex()
+      quizId,
+      host.currentQuestionIndex()
     );
     host.question.set(question ?? null);
   }
@@ -156,7 +161,9 @@ export class QuizSetupDataService {
 
   applyQuestionsFromSession(host: Host, questions: QuizQuestion[]): void {
     const result = this.quizContentLoaderService.hydrateQuestionsFromSession({
-      questions, quiz: host.quiz(), selectedQuiz: host.selectedQuiz(),
+      questions,
+      quiz: host.quiz(),
+      selectedQuiz: host.selectedQuiz()
     });
 
     host.questions.set(result.hydratedQuestions);
@@ -175,8 +182,10 @@ export class QuizSetupDataService {
 
   private syncQuestionSnapshotFromSession(host: Host, hydratedQuestions: QuizQuestion[]): void {
     const result = this.quizContentLoaderService.syncQuestionSnapshot({
-      hydratedQuestions, currentQuestionIndex: host.currentQuestionIndex(),
-      previousIndex: host.previousIndex(), serviceCurrentIndex: this.quizService?.currentQuestionIndex,
+      hydratedQuestions,
+      currentQuestionIndex: host.currentQuestionIndex(),
+      previousIndex: host.previousIndex(),
+      serviceCurrentIndex: this.quizService?.currentQuestionIndex
     });
     if (result.isEmpty) {
       host.questionToDisplaySig.set('');
@@ -185,7 +194,9 @@ export class QuizSetupDataService {
       host.hasOptionsLoaded.set(false);
       host.shouldRenderOptions.set(false);
       host.explanationToDisplay.set('');
-      this.explanationTextService.setExplanationText('', { index: host.currentQuestionIndex() ?? 0 });
+      this.explanationTextService.setExplanationText('', {
+        index: host.currentQuestionIndex() ?? 0
+      });
       return;
     }
     host.currentQuestionIndex.set(result.normalizedIndex);
@@ -233,9 +244,12 @@ export class QuizSetupDataService {
     // overwrote it and made the entire init use Q1 â€” visible to the user
     // as Q1's text + options on Q5.
     const currentIdx = host.currentQuestionIndex();
-    const targetIdx = Number.isFinite(currentIdx) && currentIdx >= 0
-      ? currentIdx
-      : (Number.isFinite(host.questionIndex()) && host.questionIndex() >= 0 ? host.questionIndex() : 0);
+    const targetIdx =
+      Number.isFinite(currentIdx) && currentIdx >= 0
+        ? currentIdx
+        : Number.isFinite(host.questionIndex()) && host.questionIndex() >= 0
+          ? host.questionIndex()
+          : 0;
 
     if (targetIdx >= 0) {
       this.quizContentLoaderService.fetchAndSubscribeQuestionAndOptions(host.quizId(), targetIdx);
@@ -260,7 +274,8 @@ export class QuizSetupDataService {
     host.quizId.set(host.activatedRoute.snapshot.paramMap.get('quizId') ?? '');
     await this.quizContentLoaderService.prepareQuizSession({
       quizId: host.quizId(),
-      applyQuestionsFromSession: (questions: QuizQuestion[]) => this.applyQuestionsFromSession(host, questions)
+      applyQuestionsFromSession: (questions: QuizQuestion[]) =>
+        this.applyQuestionsFromSession(host, questions)
     });
   }
 
@@ -295,12 +310,13 @@ export class QuizSetupDataService {
       // overwrote it on direct URL navigation to /question/.../3,
       // making Q3's view start with Q1's question and options.
       const currentIdx = host.currentQuestionIndex();
-      const idx = Number.isFinite(currentIdx) && currentIdx >= 0
-        ? currentIdx : 0;
+      const idx = Number.isFinite(currentIdx) && currentIdx >= 0 ? currentIdx : 0;
       const safeIdx = idx < questions.length ? idx : 0;
       for (const [index] of questions.entries()) {
         this.quizStateService.setQuestionState(
-          host.quizId(), index, this.quizStateService.createDefaultQuestionState()
+          host.quizId(),
+          index,
+          this.quizStateService.createDefaultQuestionState()
         );
       }
       host.currentQuestionIndex.set(safeIdx);
@@ -315,15 +331,20 @@ export class QuizSetupDataService {
         this.applyQuestionsFromSession(host, questions);
         host.isQuizDataLoaded.set(true);
       },
-      error: () => { host.isQuizDataLoaded.set(true); }
+      error: () => {
+        host.isQuizDataLoaded.set(true);
+      }
     });
   }
 
   createQuestionData(host: Host): void {
-    const sub = this.quizContentLoaderService.createNormalizedQuestionPayload$()
+    const sub = this.quizContentLoaderService
+      .createNormalizedQuestionPayload$()
       .subscribe((payload: QuestionPayload) => {
         host.combinedQuestionData.set(payload);
-        host.questionToDisplaySig.set(payload.question?.questionText?.trim() ?? 'No question available');
+        host.questionToDisplaySig.set(
+          payload.question?.questionText?.trim() ?? 'No question available'
+        );
         host.explanationToDisplay.set(payload.explanation ?? '');
         host.question.set(payload.question);
         host.currentQuestion.set(payload.question);
@@ -346,13 +367,14 @@ export class QuizSetupDataService {
           this.quizStateService.isNavigatingSig()
         );
       },
-      error: () => { }
+      error: () => {}
     });
   }
 
   async updateQuestionStateAndExplanation(host: Host, questionIndex: number): Promise<void> {
     const result = await this.quizContentLoaderService.evaluateQuestionStateAndExplanation({
-      quizId: host.quizId(), questionIndex,
+      quizId: host.quizId(),
+      questionIndex
     });
     if (!result.handled) return;
     host.explanationToDisplay.set(result.explanationText);

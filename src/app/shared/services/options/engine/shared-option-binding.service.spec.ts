@@ -68,11 +68,25 @@ describe('SharedOptionBindingService', () => {
       providers: [
         SharedOptionBindingService,
         { provide: OptionClickHandlerService, useValue: {} },
-        { provide: ExplanationTextService, useValue: { latestExplanation: '', latestExplanationIndex: -1 } },
-        { provide: FeedbackService, useValue: { buildFeedbackMessage: jest.fn(() => ''), setCorrectMessage: jest.fn(() => '') } },
+        {
+          provide: ExplanationTextService,
+          useValue: { latestExplanation: '', latestExplanationIndex: -1 }
+        },
+        {
+          provide: FeedbackService,
+          useValue: {
+            buildFeedbackMessage: jest.fn(() => ''),
+            setCorrectMessage: jest.fn(() => '')
+          }
+        },
         { provide: OptionBindingFactoryService, useValue: { createBindings: jest.fn(() => []) } },
         { provide: OptionService, useValue: { keyOf: jest.fn() } },
-        { provide: QuestionResolutionService, useValue: { resolveQuestionState: jest.fn(() => ({ dot: '', fullyResolvedCorrect: false })) } },
+        {
+          provide: QuestionResolutionService,
+          useValue: {
+            resolveQuestionState: jest.fn(() => ({ dot: '', fullyResolvedCorrect: false }))
+          }
+        },
         {
           provide: QuizService,
           useValue: {
@@ -163,7 +177,7 @@ describe('SharedOptionBindingService', () => {
       const comp = makeComp({ optionsToDisplay: [opt] });
       const b = service.getOptionBindings(comp, opt, 0);
       expect(b.feedback).toBe('No feedback available');
-      expect(b.option).not.toBe(opt);          // structuredClone -> new ref
+      expect(b.option).not.toBe(opt); // structuredClone -> new ref
       expect(b.option.text).toBe('NoFeedback');
       expect(b.ariaLabel).toBe('Option 1');
       expect(b.index).toBe(0);
@@ -281,8 +295,8 @@ describe('SharedOptionBindingService', () => {
       });
       service.forceDisableAllOptions(comp);
       expect(forceDisableAll.set).toHaveBeenCalledWith(true);
-      expect(bindings.every(b => b.option.active === false)).toBe(true);
-      expect(optionsToDisplay.every(o => o.active === false)).toBe(true);
+      expect(bindings.every((b) => b.option.active === false)).toBe(true);
+      expect(optionsToDisplay.every((o) => o.active === false)).toBe(true);
     });
 
     it('clearForceDisableAllOptions reactivates everything + unlocks the question', () => {
@@ -310,7 +324,9 @@ describe('SharedOptionBindingService', () => {
     beforeEach(() => {
       store = {};
       jest.spyOn(Storage.prototype, 'getItem').mockImplementation((k) => store[k] ?? null);
-      jest.spyOn(Storage.prototype, 'setItem').mockImplementation((k, v) => { store[k] = String(v); });
+      jest.spyOn(Storage.prototype, 'setItem').mockImplementation((k, v) => {
+        store[k] = String(v);
+      });
     });
 
     afterEach(() => jest.restoreAllMocks());

@@ -1,4 +1,4 @@
-﻿import { Service } from '@angular/core';
+import { Service } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { Option, QuizQuestion, SelectedOption } from '@shared/models';
@@ -15,7 +15,6 @@ type Host = QuizQuestionComponent;
  */
 @Service()
 export class QqcOrchSelectionService {
-
   async runHandleOptionSelection(
     host: Host,
     option: SelectedOption,
@@ -67,7 +66,9 @@ export class QqcOrchSelectionService {
 
   async runOnSubmitMultiple(host: Host): Promise<void> {
     const idx = host.currentQuestionIndex() ?? host.quizService.getCurrentQuestionIndex() ?? 0;
-    const computed = host.explanationFlow.computeSubmitMultipleExplanation({ currentQuestionIndex: idx });
+    const computed = host.explanationFlow.computeSubmitMultipleExplanation({
+      currentQuestionIndex: idx
+    });
     if (!computed) return;
     await host.explanationFlow.applySubmitMultipleExplanation({
       currentQuestionIndex: idx,
@@ -107,8 +108,8 @@ export class QqcOrchSelectionService {
   }
 
   async runPerformInitialSelectionFlow(
-    host: Host, 
-    event: any, 
+    host: Host,
+    event: any,
     option: SelectedOption
   ): Promise<void> {
     const prevSelected = !!option.selected;
@@ -179,7 +180,8 @@ export class QqcOrchSelectionService {
       quizId: host.quizId()!,
       lastAllCorrect: host._lastAllCorrect,
       fetchAndProcessCurrentQuestion: () => host.fetchAndProcessCurrentQuestion(),
-      selectOption: (q: QuizQuestion, opt: SelectedOption, idx: number) => host.selectOption(q, opt, idx),
+      selectOption: (q: QuizQuestion, opt: SelectedOption, idx: number) =>
+        host.selectOption(q, opt, idx),
       processCurrentQuestion: (q: QuizQuestion) =>
         host.explanationFlow.processCurrentQuestion({
           currentQuestion: q,
@@ -212,7 +214,7 @@ export class QqcOrchSelectionService {
           host.currentQuestionIndex(),
           host.totalQuestions(),
           isAnswered
-        ),
+        )
     });
     if (!result) return null;
     host.currentQuestion.set(result.currentQuestion);
@@ -245,7 +247,10 @@ export class QqcOrchSelectionService {
     host.isAnswerSelectedChange.emit(host.isAnswered());
     host.optionSelected.emit(result.selectedOption);
     host.events.emit({ type: 'optionSelected', payload: result.selectedOption });
-    host.selectionChanged.emit({ question: currentQuestion, selectedOptions: host.selectedOptions });
+    host.selectionChanged.emit({
+      question: currentQuestion,
+      selectedOptions: host.selectedOptions
+    });
   }
 
   runUnselectOption(host: Host): void {
@@ -260,12 +265,12 @@ export class QqcOrchSelectionService {
   async runOnSubmit(host: Host): Promise<void> {
     if (!host.initializer.validateFormForSubmission(host.questionForm)) return;
     const selectedOption = host.questionForm.get('selectedOption')?.value;
-    await host.initializer.processAnswer(
-      { selectedOption,
-        currentQuestion: host.currentQuestion()!,
-        currentQuestionIndex: host.currentQuestionIndex(),
-        answers: host.answers
-      });
+    await host.initializer.processAnswer({
+      selectedOption,
+      currentQuestion: host.currentQuestion()!,
+      currentQuestionIndex: host.currentQuestionIndex(),
+      answers: host.answers
+    });
     const cq2 = host.currentQuestion();
     if (cq2) host.questionAnswered.emit(cq2);
   }

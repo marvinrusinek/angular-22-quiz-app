@@ -21,7 +21,7 @@ describe('QuizResultGuard', () => {
 
   function makeRoute(quizId: string | null): ActivatedRouteSnapshot {
     return {
-      paramMap: convertToParamMap(quizId ? { quizId } : {}),
+      paramMap: convertToParamMap(quizId ? { quizId } : {})
     } as unknown as ActivatedRouteSnapshot;
   }
 
@@ -33,8 +33,8 @@ describe('QuizResultGuard', () => {
       providers: [
         QuizResultGuard,
         { provide: Router, useValue: router },
-        { provide: QuizService, useValue: quizService },
-      ],
+        { provide: QuizService, useValue: quizService }
+      ]
     });
     guard = TestBed.inject(QuizResultGuard);
   });
@@ -58,7 +58,7 @@ describe('QuizResultGuard', () => {
     expect(router.createUrlTree).not.toHaveBeenCalled();
   });
 
-  it('Quiz A completed, then direct navigation to Quiz B\'s results URL: redirected to Quiz B\'s intro, never activated', () => {
+  it("Quiz A completed, then direct navigation to Quiz B's results URL: redirected to Quiz B's intro, never activated", () => {
     // hasValidResultFor('quizB') is false because Quiz B was never completed
     // (only Quiz A was) — the guard must never let this route activate.
     quizService.hasValidResultFor.mockImplementation((id: string) => id === 'quizA');
@@ -71,7 +71,7 @@ describe('QuizResultGuard', () => {
     expect(result).not.toBe(true);
   });
 
-  it('direct results navigation with no completed attempt at all: redirected to that quiz\'s intro', () => {
+  it("direct results navigation with no completed attempt at all: redirected to that quiz's intro", () => {
     quizService.hasValidResultFor.mockReturnValue(false);
     const result = guard.canActivate(makeRoute('quizC'));
     expect(router.createUrlTree).toHaveBeenCalledWith(['/quiz/intro', 'quizC']);

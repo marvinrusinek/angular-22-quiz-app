@@ -14,53 +14,75 @@ export type QuizCardProgressState = 'not-started' | 'in-progress' | 'completed';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <span class="quiz-card-progress" [class]="'quiz-card-progress--' + state()">
+    <span
+      class="quiz-card-progress"
+      [class]="'quiz-card-progress--' + state()"
+    >
       @switch (state()) {
         @case ('completed') {
-          <span class="quiz-card-progress__label" i18n>Completed</span>
+          <span
+            class="quiz-card-progress__label"
+            i18n
+          >
+            Completed
+          </span>
           @if (bestScore() !== null) {
             <span class="quiz-card-progress__score">
-              · <ng-container i18n>Best</ng-container> {{ bestScore() }}%
+              ·
+              <ng-container i18n>Best</ng-container>
+              {{ bestScore() }}%
             </span>
           }
         }
         @case ('in-progress') {
-          <span class="quiz-card-progress__label" i18n>In Progress</span>
+          <span
+            class="quiz-card-progress__label"
+            i18n
+          >
+            In Progress
+          </span>
         }
         @default {
-          <span class="quiz-card-progress__label" i18n>Not Started</span>
+          <span
+            class="quiz-card-progress__label"
+            i18n
+          >
+            Not Started
+          </span>
         }
       }
     </span>
   `,
-  styles: [`
-    .quiz-card-progress {
-      display: inline-flex;
-      align-items: baseline;
-      gap: 4px;
-      font-size: 12px;
-      font-weight: 700;
-      line-height: 1.4;
-      letter-spacing: 0.3px;
-    }
+  styles: [
+    `
+      .quiz-card-progress {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.4;
+        letter-spacing: 0.3px;
+      }
 
-    .quiz-card-progress__score {
-      font-weight: 600;
-      color: var(--text-secondary, #555555);
-    }
+      .quiz-card-progress__score {
+        font-weight: 600;
+        color: var(--text-secondary, #555555);
+      }
 
-    .quiz-card-progress--completed .quiz-card-progress__label {
-      color: #2e9e5b;
-    }
+      .quiz-card-progress--completed .quiz-card-progress__label {
+        color: #2e9e5b;
+      }
 
-    .quiz-card-progress--in-progress .quiz-card-progress__label {
-      color: var(--text-link, #3b98fd);
-    }
+      .quiz-card-progress--in-progress .quiz-card-progress__label {
+        color: var(--text-link, #3b98fd);
+      }
 
-    .quiz-card-progress--not-started .quiz-card-progress__label {
-      color: var(--text-secondary, #888888);
-    }
-  `]
+      .quiz-card-progress--not-started .quiz-card-progress__label {
+        color: var(--text-secondary, #888888);
+      }
+    `
+  ]
 })
 export class QuizCardProgressComponent {
   /** Which progress state to render. */

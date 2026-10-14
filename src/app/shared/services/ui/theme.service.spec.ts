@@ -1,7 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 
 import { ThemeService } from './theme.service';
-import { THEME_ICON_DARK_MODE, THEME_ICON_LIGHT_MODE } from '../../../components/theme-toggle/theme-icons';
+import {
+  THEME_ICON_DARK_MODE,
+  THEME_ICON_LIGHT_MODE
+} from '../../../components/theme-toggle/theme-icons';
 
 describe('ThemeService', () => {
   const STORAGE_KEY = 'quiz-app-theme';

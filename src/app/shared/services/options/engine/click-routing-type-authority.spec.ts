@@ -57,9 +57,15 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
-      { provide: TopicQuizTypeRegistry, useValue: { isMultiAnswer: () => declared, load: () => of(null) } },
+      {
+        provide: TopicQuizTypeRegistry,
+        useValue: { isMultiAnswer: () => declared, load: () => of(null) }
+      },
       {
         provide: QuizService,
         useValue: {
@@ -108,7 +114,7 @@ describe('the declared type decides the click path', () => {
 
 describe('a registry MISS falls back to the component type, never to counting', () => {
   it('does not infer multi from a bank showing many correct options', () => {
-    declared = null;                    // registry has not answered
+    declared = null; // registry has not answered
     const c = makeComp('many-correct'); // bank says 2 correct
     c.isMultiMode = false;
     c.type = 'single';
@@ -142,11 +148,20 @@ describe('identity is the question, not its position', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        },
         { provide: API_BASE_URL, useValue: 'https://api.test/api' },
         {
           provide: TopicQuizTypeRegistry,
-          useValue: { isMultiAnswer: (t: string) => { askedWith = t; return true; }, load: () => of(null) }
+          useValue: {
+            isMultiAnswer: (t: string) => {
+              askedWith = t;
+              return true;
+            },
+            load: () => of(null)
+          }
         },
         {
           provide: QuizService,
@@ -154,7 +169,7 @@ describe('identity is the question, not its position', () => {
             quizId: 'rxjs',
             questions: [],
             getQuestionsInDisplayOrder: () => [],
-            isShuffleEnabled: () => true,          // shuffled: index would be wrong
+            isShuffleEnabled: () => true, // shuffled: index would be wrong
             shuffledQuestions: [{ questionText: 'a different question' }],
             quizInitialState: [],
             getPristineCorrectTextsForQuestion: () => new Set<string>(),

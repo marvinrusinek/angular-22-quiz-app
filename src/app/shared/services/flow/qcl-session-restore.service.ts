@@ -17,7 +17,6 @@ import { swallow } from '@shared/utils/error-logging';
  */
 @Service()
 export class QclSessionRestoreService {
-
   // ── injects ─────────────────────────────────────────────────────
   private explanationTextService = inject(ExplanationTextService);
   private quizQuestionDataService = inject(QuizQuestionDataService);
@@ -50,17 +49,14 @@ export class QclSessionRestoreService {
     const candidateIndices: Array<number | null> = [
       Number.isInteger(params.serviceCurrentIndex) ? params.serviceCurrentIndex! : null,
       Number.isInteger(params.currentQuestionIndex) ? params.currentQuestionIndex : null,
-      Number.isInteger(params.previousIndex) ? params.previousIndex : null,
+      Number.isInteger(params.previousIndex) ? params.previousIndex : null
     ];
 
     const resolvedIndex = candidateIndices.find(
       (value): value is number => typeof value === 'number'
     );
 
-    const normalizedIndex = Math.min(
-      Math.max(resolvedIndex ?? 0, 0),
-      hydratedQuestions.length - 1
-    );
+    const normalizedIndex = Math.min(Math.max(resolvedIndex ?? 0, 0), hydratedQuestions.length - 1);
 
     this.quizService.setCurrentQuestionIndex(normalizedIndex);
 
@@ -125,7 +121,8 @@ export class QclSessionRestoreService {
 
   restoreSelectionState(currentQuestionIndex: number): void {
     try {
-      let selectedOptions = this.selectedOptionService.getSelectedOptionIndices(currentQuestionIndex);
+      let selectedOptions =
+        this.selectedOptionService.getSelectedOptionIndices(currentQuestionIndex);
 
       if (!selectedOptions || selectedOptions.length === 0) {
         const stored = sessionStorage.getItem(`quiz_selection_${currentQuestionIndex}`);
@@ -164,9 +161,7 @@ export class QclSessionRestoreService {
       }
 
       for (const option of selectedOptions) {
-        const restoredOption = optionsToDisplay.find(
-          opt => opt.optionId === option.optionId
-        );
+        const restoredOption = optionsToDisplay.find((opt) => opt.optionId === option.optionId);
 
         if (restoredOption) restoredOption.selected = true;
       }
@@ -192,9 +187,7 @@ export class QclSessionRestoreService {
       return { hydratedQuestions, quizQuestions: null, selectedQuizQuestions: null };
     }
 
-    const explanations = hydratedQuestions.map((question) =>
-      (question.explanation ?? '').trim()
-    );
+    const explanations = hydratedQuestions.map((question) => (question.explanation ?? '').trim());
     this.explanationTextService.initializeExplanationTexts(explanations);
 
     this.explanationTextService.fetByIndex.clear();
@@ -210,7 +203,9 @@ export class QclSessionRestoreService {
       }));
 
     const quizQuestions = params.quiz ? deepCloneQuestions(hydratedQuestions) : null;
-    const selectedQuizQuestions = params.selectedQuiz ? deepCloneQuestions(hydratedQuestions) : null;
+    const selectedQuizQuestions = params.selectedQuiz
+      ? deepCloneQuestions(hydratedQuestions)
+      : null;
 
     return { hydratedQuestions, quizQuestions, selectedQuizQuestions };
   }

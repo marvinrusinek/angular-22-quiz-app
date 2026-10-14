@@ -22,14 +22,14 @@ export type BuildableQuestionCount = AssessmentQuestionCount | PresetQuestionCou
 // about how the interview behaves lives here.
 export interface AssessmentConfig {
   difficulty: InterviewDifficulty;
-  topicIds: string[];                     // source quizIds (topics)
+  topicIds: string[]; // source quizIds (topics)
   questionCount: BuildableQuestionCount;
   // ── preset metadata (absent for Custom, which is unchanged) ──
   // Present only when the assessment came from a role preset. Carried through
   // the session snapshot into the result + history so a completed attempt can be
   // labelled reliably later.
   presetId?: string;
-  presetName?: string;                    // snapshot of the name at build time
+  presetName?: string; // snapshot of the name at build time
   // Presets declare their own duration instead of deriving it from the count.
   durationSecondsOverride?: number;
 }

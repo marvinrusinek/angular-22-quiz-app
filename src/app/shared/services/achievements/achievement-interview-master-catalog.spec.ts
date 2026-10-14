@@ -31,7 +31,11 @@ function topic(topicId: string, pct: number): InterviewTopicHistoryEntry {
   return { topicId, topicName: topicId.toUpperCase(), correct: pct, total: 100, percentage: pct };
 }
 
-function attempt(i: number, pct: number, topics: InterviewTopicHistoryEntry[]): InterviewAttemptHistoryEntry {
+function attempt(
+  i: number,
+  pct: number,
+  topics: InterviewTopicHistoryEntry[]
+): InterviewAttemptHistoryEntry {
   return {
     id: `a${i}`,
     attemptNumber: i + 1,
@@ -72,7 +76,10 @@ describe('AchievementService — Interview Master vs the Interview catalogue', (
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
-        { provide: InterviewHistoryService, useValue: { history: signal(HISTORY), trends: signal({ best: 92 }) } },
+        {
+          provide: InterviewHistoryService,
+          useValue: { history: signal(HISTORY), trends: signal({ best: 92 }) }
+        },
         { provide: InterviewCatalogService, useValue: { topics, status, load } }
       ]
     });
@@ -91,21 +98,27 @@ describe('AchievementService — Interview Master vs the Interview catalogue', (
 
   it('user lands on Quiz Selection / Results without visiting the Builder (catalogue idle): NOT awarded, NOT persisted', () => {
     setup();
-    expect(service.evaluateInterviewAchievements().map((d) => d.id)).not.toContain('interview-master');
+    expect(service.evaluateInterviewAchievements().map((d) => d.id)).not.toContain(
+      'interview-master'
+    );
     expect(stored()).not.toContain('interview-master');
   });
 
   it('catalogue still loading: NOT awarded, NOT persisted', () => {
     status.set('loading');
     setup();
-    expect(service.evaluateInterviewAchievements().map((d) => d.id)).not.toContain('interview-master');
+    expect(service.evaluateInterviewAchievements().map((d) => d.id)).not.toContain(
+      'interview-master'
+    );
     expect(stored()).not.toContain('interview-master');
   });
 
   it('catalogue failed to load (unavailable): fail closed — NOT awarded, NOT persisted', async () => {
     status.set('unavailable');
     setup();
-    expect(service.evaluateInterviewAchievements().map((d) => d.id)).not.toContain('interview-master');
+    expect(service.evaluateInterviewAchievements().map((d) => d.id)).not.toContain(
+      'interview-master'
+    );
     await flush();
     expect(service.earnedIds().has('interview-master')).toBe(false);
     expect(stored()).not.toContain('interview-master');
@@ -115,7 +128,9 @@ describe('AchievementService — Interview Master vs the Interview catalogue', (
     topics.set(catalogue(10));
     status.set('ready');
     setup();
-    expect(service.evaluateInterviewAchievements().map((d) => d.id)).not.toContain('interview-master');
+    expect(service.evaluateInterviewAchievements().map((d) => d.id)).not.toContain(
+      'interview-master'
+    );
     expect(stored()).not.toContain('interview-master');
   });
 
@@ -125,7 +140,7 @@ describe('AchievementService — Interview Master vs the Interview catalogue', (
     setup();
     expect(service.evaluateInterviewAchievements().map((d) => d.id)).toContain('interview-master');
     expect(stored()).toContain('interview-master');
-    expect(load).not.toHaveBeenCalled();              // already loaded: no extra request
+    expect(load).not.toHaveBeenCalled(); // already loaded: no extra request
   });
 
   it('idle catalogue, qualifying user: loads the catalogue and awards ONCE it proves coverage (deferred, not lost)', async () => {
@@ -133,8 +148,10 @@ describe('AchievementService — Interview Master vs the Interview catalogue', (
       topics.set(catalogue(2));
       status.set('ready');
     });
-    expect(service.evaluateInterviewAchievements().map((d) => d.id)).not.toContain('interview-master');
-    expect(stored()).not.toContain('interview-master');   // nothing persisted while unverified
+    expect(service.evaluateInterviewAchievements().map((d) => d.id)).not.toContain(
+      'interview-master'
+    );
+    expect(stored()).not.toContain('interview-master'); // nothing persisted while unverified
 
     await flush();
     expect(load).toHaveBeenCalledTimes(1);
@@ -159,7 +176,10 @@ describe('AchievementService — Interview Master vs the Interview catalogue', (
     load = jest.fn(async () => undefined);
     TestBed.configureTestingModule({
       providers: [
-        { provide: InterviewHistoryService, useValue: { history: signal([]), trends: signal({ best: null }) } },
+        {
+          provide: InterviewHistoryService,
+          useValue: { history: signal([]), trends: signal({ best: null }) }
+        },
         { provide: InterviewCatalogService, useValue: { topics, status, load } }
       ]
     });

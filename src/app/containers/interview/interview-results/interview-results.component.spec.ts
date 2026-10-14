@@ -19,10 +19,26 @@ const RESULT: InterviewResultViewModel = {
   sessionId: 'is_test',
   submittedAtMs: Date.UTC(2026, 8, 1, 10),
   submittedByExpiry: false,
-  total: 10, answered: 10, unanswered: 0, correct: 7, incorrect: 3, percentage: 70,
-  durationSeconds: 900, timeUsedSeconds: 540,
+  total: 10,
+  answered: 10,
+  unanswered: 0,
+  correct: 7,
+  incorrect: 3,
+  percentage: 70,
+  durationSeconds: 900,
+  timeUsedSeconds: 540,
   config: { mode: 'custom', difficulty: 'beginner', topicIds: ['router'], questionCount: 10 },
-  byTopic: [{ topicId: 'router', title: 'Angular Router', correct: 7, incorrect: 3, unanswered: 0, total: 10, percentage: 70 }],
+  byTopic: [
+    {
+      topicId: 'router',
+      title: 'Angular Router',
+      correct: 7,
+      incorrect: 3,
+      unanswered: 0,
+      total: 10,
+      percentage: 70
+    }
+  ],
   review: []
 };
 
@@ -45,7 +61,13 @@ describe('InterviewResultsComponent — navigation actions', () => {
         provideNoopAnimations(),
         {
           provide: BackendInterviewResultService,
-          useValue: { result: signal(RESULT), error: signal(null), loading: signal(false), clear: clearResult, reload: jest.fn() }
+          useValue: {
+            result: signal(RESULT),
+            error: signal(null),
+            loading: signal(false),
+            clear: clearResult,
+            reload: jest.fn()
+          }
         },
         { provide: BackendInterviewSessionService, useValue: { clearSession } }
       ]
@@ -62,11 +84,15 @@ describe('InterviewResultsComponent — navigation actions', () => {
 
   const gateway = (): HTMLAnchorElement[] =>
     Array.from(el.querySelectorAll<HTMLAnchorElement>('.interview-results__history-link a'));
-  const text = (n: Element | null | undefined): string => (n?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const text = (n: Element | null | undefined): string =>
+    (n?.textContent ?? '').replace(/\s+/g, ' ').trim();
 
   it('offers "View Your Progress" beside "View Interview History", routed to /progress', () => {
     expect(gateway().map(text)).toEqual(['View Interview History', 'View Your Progress']);
-    expect(gateway().map((a) => a.getAttribute('href'))).toEqual(['/interview/history', '/progress']);
+    expect(gateway().map((a) => a.getAttribute('href'))).toEqual([
+      '/interview/history',
+      '/progress'
+    ]);
   });
 
   it('the Interview History link still routes where it did', () => {
@@ -76,7 +102,9 @@ describe('InterviewResultsComponent — navigation actions', () => {
   // ── Export Report ──────────────────────────────────────────────────
 
   const exportLink = (): HTMLAnchorElement | undefined =>
-    Array.from(el.querySelectorAll<HTMLAnchorElement>('.interview-results__actions a')).find((a) => text(a) === 'Export Report');
+    Array.from(el.querySelectorAll<HTMLAnchorElement>('.interview-results__actions a')).find(
+      (a) => text(a) === 'Export Report'
+    );
 
   it('offers "Export Report" for a finalized result, as a real link to that attempt report', () => {
     const link = exportLink()!;
@@ -86,7 +114,9 @@ describe('InterviewResultsComponent — navigation actions', () => {
   });
 
   it('labels the Results action "Export Report" — the print wording belongs to the report page', () => {
-    const actions = Array.from(el.querySelectorAll('.interview-results__actions a, .interview-results__actions button')).map(text);
+    const actions = Array.from(
+      el.querySelectorAll('.interview-results__actions a, .interview-results__actions button')
+    ).map(text);
     expect(actions).toContain('Export Report');
     expect(actions.some((t) => /print|pdf/i.test(t))).toBe(false);
   });
@@ -100,12 +130,21 @@ describe('InterviewResultsComponent — navigation actions', () => {
   });
 
   it('leaves the existing Results actions untouched', () => {
-    const actions = Array.from(el.querySelectorAll('.interview-results__actions a, .interview-results__actions button')).map(text);
-    expect(actions).toEqual(['Review Answers', 'Export Report', 'Build Another Assessment', 'Return to Quiz Selection']);
+    const actions = Array.from(
+      el.querySelectorAll('.interview-results__actions a, .interview-results__actions button')
+    ).map(text);
+    expect(actions).toEqual([
+      'Review Answers',
+      'Export Report',
+      'Build Another Assessment',
+      'Return to Quiz Selection'
+    ]);
   });
 
   it('navigates to /progress WITHOUT ending the session or dropping the result — like the history link', () => {
-    const navigateByUrl = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const navigateByUrl = jest
+      .spyOn(TestBed.inject(Router), 'navigateByUrl')
+      .mockResolvedValue(true);
 
     gateway()[1].click();
 

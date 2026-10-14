@@ -56,7 +56,10 @@ function activeDto(overrides: Partial<ActiveInterviewSessionDto> = {}): ActiveIn
         sourceQuizId: 'rxjs',
         questionText: 'Which answer is correct?',
         type: 'single',
-        options: [{ optionId: 101, text: 'A' }, { optionId: 102, text: 'B' }],
+        options: [
+          { optionId: 101, text: 'A' },
+          { optionId: 102, text: 'B' }
+        ],
         flagged: false
       },
       {
@@ -64,7 +67,11 @@ function activeDto(overrides: Partial<ActiveInterviewSessionDto> = {}): ActiveIn
         sourceQuizId: 'rxjs',
         questionText: 'Pick two',
         type: 'multiple',
-        options: [{ optionId: 201, text: 'C' }, { optionId: 202, text: 'D' }, { optionId: 203, text: 'E' }],
+        options: [
+          { optionId: 201, text: 'C' },
+          { optionId: 202, text: 'D' },
+          { optionId: 203, text: 'E' }
+        ],
         flagged: false
       }
     ],
@@ -75,18 +82,38 @@ function activeDto(overrides: Partial<ActiveInterviewSessionDto> = {}): ActiveIn
 
 describe('getQuizMetadata delegates to TopicQuizMetadataService', () => {
   it('returns the adapted entries, and issues NO request against the Spring base', () => {
-    topicQuizMetadataLoad.mockReturnValue(of([
-      { quizId: 'rxjs', milestone: 'RxJS', difficulty: 'intermediate', questionCount: 12 },
-      { quizId: 'signals' } // only quizId — every other field is optional upstream
-    ]));
+    topicQuizMetadataLoad.mockReturnValue(
+      of([
+        { quizId: 'rxjs', milestone: 'RxJS', difficulty: 'intermediate', questionCount: 12 },
+        { quizId: 'signals' } // only quizId — every other field is optional upstream
+      ])
+    );
 
     let result: readonly { quizId: string }[] = [];
-    api.getQuizMetadata().subscribe((quizzes) => { result = quizzes; });
+    api.getQuizMetadata().subscribe((quizzes) => {
+      result = quizzes;
+    });
 
     expect(topicQuizMetadataLoad).toHaveBeenCalledTimes(1);
     expect(result).toEqual([
-      { quizId: 'rxjs', milestone: 'RxJS', summary: '', image: '', difficulty: 'intermediate', facts: undefined, questionCount: 12 },
-      { quizId: 'signals', milestone: '', summary: '', image: '', difficulty: '', facts: undefined, questionCount: 0 }
+      {
+        quizId: 'rxjs',
+        milestone: 'RxJS',
+        summary: '',
+        image: '',
+        difficulty: 'intermediate',
+        facts: undefined,
+        questionCount: 12
+      },
+      {
+        quizId: 'signals',
+        milestone: '',
+        summary: '',
+        image: '',
+        difficulty: '',
+        facts: undefined,
+        questionCount: 0
+      }
     ]);
     // The one HttpTestingController instance is shared by the whole module —
     // no /quizzes (or any other) request was ever issued against BASE.
@@ -113,13 +140,22 @@ describe('createSession', () => {
   });
 
   it('POSTs a CUSTOM request with only the permitted fields', () => {
-    api.createSession({
-      mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs', 'signals'], questionCount: 10
-    }).subscribe();
+    api
+      .createSession({
+        mode: 'custom',
+        difficulty: 'mixed',
+        topicIds: ['rxjs', 'signals'],
+        questionCount: 10
+      })
+      .subscribe();
 
     const req = http.expectOne(`${BASE}/interview-sessions`);
-    expect(Object.keys(req.request.body as object).sort())
-      .toEqual(['difficulty', 'mode', 'questionCount', 'topicIds']);
+    expect(Object.keys(req.request.body as object).sort()).toEqual([
+      'difficulty',
+      'mode',
+      'questionCount',
+      'topicIds'
+    ]);
     // Duration is derived server-side and must never be sent.
     expect(JSON.stringify(req.request.body)).not.toContain('duration');
     req.flush(activeDto());
@@ -188,7 +224,9 @@ describe('warmUp', () => {
       },
       error: () => done(new Error('warmUp() must never error'))
     });
-    http.expectOne(`${BASE}/health`).flush('down', { status: 503, statusText: 'Service Unavailable' });
+    http
+      .expectOne(`${BASE}/health`)
+      .flush('down', { status: 503, statusText: 'Service Unavailable' });
   });
 
   it('resolves silently to undefined when Interview API is not configured — no request at all', (done) => {
@@ -228,7 +266,13 @@ describe('session-scoped calls attach the bearer token', () => {
     expect(req.request.method).toBe('PUT');
     expect(req.request.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`);
     expect(req.request.body).toEqual({ selectedOptionIds: [203, 201] });
-    req.flush({ saved: true, questionId: 'rxjs:q:1', selectedOptionIds: [201, 203], answeredCount: 1, questionCount: 2 });
+    req.flush({
+      saved: true,
+      questionId: 'rxjs:q:1',
+      selectedOptionIds: [201, 203],
+      answeredCount: 1,
+      questionCount: 2
+    });
   });
 
   it('submit sends an EMPTY body', () => {
@@ -258,12 +302,21 @@ describe('the token never appears in a URL', () => {
     for (const req of http.match(() => true)) {
       expect(req.request.urlWithParams).not.toContain(TOKEN);
       expect(req.request.url).not.toContain(TOKEN);
-      req.flush(req.request.method === 'GET' && req.request.url.endsWith('/result')
-        ? resultDto()
-        : req.request.url.endsWith('/submit') ? resultDto()
-        : req.request.method === 'PUT'
-          ? { saved: true, questionId: 'q1', selectedOptionIds: [1], answeredCount: 1, questionCount: 2 }
-          : activeDto({ sessionToken: undefined }));
+      req.flush(
+        req.request.method === 'GET' && req.request.url.endsWith('/result')
+          ? resultDto()
+          : req.request.url.endsWith('/submit')
+            ? resultDto()
+            : req.request.method === 'PUT'
+              ? {
+                  saved: true,
+                  questionId: 'q1',
+                  selectedOptionIds: [1],
+                  answeredCount: 1,
+                  questionCount: 2
+                }
+              : activeDto({ sessionToken: undefined })
+      );
     }
   });
 
@@ -279,7 +332,8 @@ describe('active responses carry no correctness', () => {
   it('the mapped session exposes no correctness field anywhere', (done) => {
     api.resumeSession(SESSION, TOKEN).subscribe((session) => {
       const serialized = JSON.stringify(session, (_key, value: unknown) =>
-        value instanceof Map ? [...value] : value);
+        value instanceof Map ? [...value] : value
+      );
       for (const banned of ['isCorrect', 'correctOptionIds', 'explanation']) {
         expect(serialized).not.toContain(banned);
       }
@@ -290,7 +344,9 @@ describe('active responses carry no correctness', () => {
       }
       done();
     });
-    http.expectOne(`${BASE}/interview-sessions/${SESSION}`).flush(activeDto({ sessionToken: undefined }));
+    http
+      .expectOne(`${BASE}/interview-sessions/${SESSION}`)
+      .flush(activeDto({ sessionToken: undefined }));
   });
 });
 
@@ -309,7 +365,8 @@ describe('error mapping', () => {
     const failure = new Promise<InterviewApiError>((resolve) => {
       api.resumeSession(SESSION, TOKEN).subscribe({ error: resolve });
     });
-    http.expectOne(`${BASE}/interview-sessions/${SESSION}`)
+    http
+      .expectOne(`${BASE}/interview-sessions/${SESSION}`)
       .flush(body, { status, statusText: 'err' });
 
     const err = await failure;
@@ -325,7 +382,8 @@ describe('error mapping', () => {
         done();
       }
     });
-    http.expectOne(`${BASE}/interview-sessions/${SESSION}`)
+    http
+      .expectOne(`${BASE}/interview-sessions/${SESSION}`)
       .error(new ProgressEvent('network error'));
   });
 
@@ -337,9 +395,12 @@ describe('error mapping', () => {
         done();
       }
     });
-    http.expectOne(`${BASE}/interview-sessions/${SESSION}/submit`)
-      .flush({ error: { code: 'INTERNAL', message: 'SQLITE_CONSTRAINT failed' } },
-        { status: 500, statusText: 'err' });
+    http
+      .expectOne(`${BASE}/interview-sessions/${SESSION}/submit`)
+      .flush(
+        { error: { code: 'INTERNAL', message: 'SQLITE_CONSTRAINT failed' } },
+        { status: 500, statusText: 'err' }
+      );
   });
 });
 
@@ -349,22 +410,57 @@ function resultDto(): InterviewResultDto {
     status: 'submitted',
     submittedAt: '2026-08-02T10:05:00.000Z',
     submittedByExpiry: false,
-    total: 2, answered: 1, unanswered: 1, correct: 1, incorrect: 0, percentage: 50,
-    durationSeconds: 900, timeUsedSeconds: 300, timeRemainingSeconds: 600,
+    total: 2,
+    answered: 1,
+    unanswered: 1,
+    correct: 1,
+    incorrect: 0,
+    percentage: 50,
+    durationSeconds: 900,
+    timeUsedSeconds: 300,
+    timeRemainingSeconds: 600,
     config: { mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs'], questionCount: 2 },
     performance: {
-      byTopic: [{ topicId: 'rxjs', title: 'RxJS', correct: 1, incorrect: 0, unanswered: 1, total: 2, percentage: 50 }]
+      byTopic: [
+        {
+          topicId: 'rxjs',
+          title: 'RxJS',
+          correct: 1,
+          incorrect: 0,
+          unanswered: 1,
+          total: 2,
+          percentage: 50
+        }
+      ]
     },
     review: [
       {
-        questionId: 'rxjs:q:0', sourceQuizId: 'rxjs', questionText: 'Which answer is correct?',
-        type: 'single', options: [{ optionId: 101, text: 'A' }, { optionId: 102, text: 'B' }],
-        selectedOptionIds: [101], correctOptionIds: [101], explanation: 'Because A.', flagged: false
+        questionId: 'rxjs:q:0',
+        sourceQuizId: 'rxjs',
+        questionText: 'Which answer is correct?',
+        type: 'single',
+        options: [
+          { optionId: 101, text: 'A' },
+          { optionId: 102, text: 'B' }
+        ],
+        selectedOptionIds: [101],
+        correctOptionIds: [101],
+        explanation: 'Because A.',
+        flagged: false
       },
       {
-        questionId: 'rxjs:q:1', sourceQuizId: 'rxjs', questionText: 'Pick two',
-        type: 'multiple', options: [{ optionId: 201, text: 'C' }, { optionId: 202, text: 'D' }],
-        selectedOptionIds: [], correctOptionIds: [201, 202], explanation: 'Because C and D.', flagged: false
+        questionId: 'rxjs:q:1',
+        sourceQuizId: 'rxjs',
+        questionText: 'Pick two',
+        type: 'multiple',
+        options: [
+          { optionId: 201, text: 'C' },
+          { optionId: 202, text: 'D' }
+        ],
+        selectedOptionIds: [],
+        correctOptionIds: [201, 202],
+        explanation: 'Because C and D.',
+        flagged: false
       }
     ]
   };

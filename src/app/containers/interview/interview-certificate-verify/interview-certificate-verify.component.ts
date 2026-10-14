@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal, ViewEncapsulation } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+  signal,
+  ViewEncapsulation
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { CertificateClaimService } from '@shared/services/features/interview/certificate-claim.service';
@@ -58,7 +65,9 @@ export class InterviewCertificateVerifyComponent implements OnInit {
       this.view.set('preview');
     } catch (err: unknown) {
       this.view.set('error');
-      this.errorMessage.set(err instanceof CertificateClaimApiError ? err.userMessage : 'This link is not valid.');
+      this.errorMessage.set(
+        err instanceof CertificateClaimApiError ? err.userMessage : 'This link is not valid.'
+      );
     }
   }
 
@@ -69,7 +78,11 @@ export class InterviewCertificateVerifyComponent implements OnInit {
       this.view.set('confirmed');
     } catch (err: unknown) {
       this.view.set('error');
-      this.errorMessage.set(err instanceof CertificateClaimApiError ? err.userMessage : 'Something went wrong. Please try again.');
+      this.errorMessage.set(
+        err instanceof CertificateClaimApiError
+          ? err.userMessage
+          : 'Something went wrong. Please try again.'
+      );
     }
   }
 

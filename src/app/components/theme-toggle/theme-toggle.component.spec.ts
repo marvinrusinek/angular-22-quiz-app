@@ -15,7 +15,8 @@ describe('ThemeToggleComponent', () => {
   let fixture: ComponentFixture<ThemeToggleComponent>;
   let themeService: ThemeService;
 
-  const button = () => fixture.nativeElement.querySelector('button.theme-toggle-btn') as HTMLButtonElement;
+  const button = () =>
+    fixture.nativeElement.querySelector('button.theme-toggle-btn') as HTMLButtonElement;
   const icon = () => fixture.nativeElement.querySelector('mat-icon') as HTMLElement;
 
   async function create(storedTheme?: 'light' | 'dark'): Promise<void> {
@@ -159,8 +160,12 @@ describe('ThemeToggleComponent', () => {
       // jsdom does not apply Angular's encapsulated component styles, so assert
       // against the component's own stylesheet text.
       const source = readFileSync(join(__dirname, 'theme-toggle.component.ts'), 'utf8');
-      expect(source).toMatch(/\.theme-toggle-btn\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*border-radius:\s*50%/);
-      expect(source).toMatch(/\.theme-toggle-btn mat-icon\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px/);
+      expect(source).toMatch(
+        /\.theme-toggle-btn\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*border-radius:\s*50%/
+      );
+      expect(source).toMatch(
+        /\.theme-toggle-btn mat-icon\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px/
+      );
     });
 
     it('a second instance re-registering the same icon ids does not throw', async () => {

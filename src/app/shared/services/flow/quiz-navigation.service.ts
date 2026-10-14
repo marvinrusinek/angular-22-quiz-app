@@ -6,7 +6,6 @@ import { catchError, take } from 'rxjs/operators';
 
 import { Option, QuestionType, QuizQuestion } from '@shared/models';
 
-
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { OptionLockStateService } from '@shared/services/state/option-lock-state.service';
@@ -19,7 +18,12 @@ import { QuizService } from '@shared/services/data/quiz.service';
 import { QuizStateService } from '@shared/services/state/quizstate.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
-import { SK_CORRECT_ANSWERS_COUNT, SK_SAVED_QUESTION_INDEX, SK_SELECTED_OPTIONS_MAP, SK_USER_ANSWERS } from '@shared/constants/session-keys';
+import {
+  SK_CORRECT_ANSWERS_COUNT,
+  SK_SAVED_QUESTION_INDEX,
+  SK_SELECTED_OPTIONS_MAP,
+  SK_USER_ANSWERS
+} from '@shared/constants/session-keys';
 
 import { bannerCorrectCount } from '@shared/utils/question-type-authority';
 import { swallow } from '@shared/utils/error-logging';
@@ -60,11 +64,10 @@ export class QuizNavigationService {
   navigatingBack$ = this.navigatingBackSubject.asObservable();
 
   private navigationToQuestionSubject = new Subject<{
-    question: QuizQuestion,
-    options: Option[]
+    question: QuizQuestion;
+    options: Option[];
   }>();
-  public navigationToQuestion$ =
-    this.navigationToQuestionSubject.asObservable();
+  public navigationToQuestion$ = this.navigationToQuestionSubject.asObservable();
 
   private explanationResetSubject = new Subject<void>();
   explanationReset$ = this.explanationResetSubject.asObservable();
@@ -90,11 +93,13 @@ export class QuizNavigationService {
       }
     }
 
-    try { this.resetExplanationAndState(); } catch (err: unknown) {
+    try {
+      this.resetExplanationAndState();
+    } catch (err: unknown) {
       console.error('QuizNavigationService.advanceToNextQuestion explanation reset failed:', err);
     }
 
-    return await this.navigateWithOffset(1);  // defer navigation until state is clean
+    return await this.navigateWithOffset(1); // defer navigation until state is clean
   }
 
   public async advanceToPreviousQuestion(): Promise<boolean> {
@@ -109,7 +114,9 @@ export class QuizNavigationService {
       (this as any).displayExplanation = false;
       (this as any).explanationToDisplay = '';
       this.explanationTextService.setShouldDisplayExplanation(false);
-    } catch (err: unknown) { swallow('quiz-navigation.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-navigation.service.ts', err);
+    }
 
     const result = await this.navigateWithOffset(-1);
 
@@ -124,7 +131,7 @@ export class QuizNavigationService {
 
   private async navigateWithOffset(offset: number): Promise<boolean> {
     const currentRouteIndex = this.readQuestionIndexFromRouterSnapshot();
-    
+
     const targetRouteIndex = currentRouteIndex + offset;
 
     // Simple Bounds Safety (only check min)
@@ -154,7 +161,9 @@ export class QuizNavigationService {
       // mark for it so a previously-answered question shows its question text on
       // return (re-set only when the user clicks again this visit).
       this.quizStateService.clearInteractedThisVisit(index);
-    } catch (err: unknown) { swallow('quiz-navigation.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-navigation.service.ts', err);
+    }
 
     // HARD reset render state before route change
     this.resetRenderStateBeforeNavigation(index);
@@ -253,17 +262,25 @@ export class QuizNavigationService {
       const texts = new Set<string>();
       const uiTexts = this.selectedOptionService.uiSelectedTextsForQuestion(srcIdx);
       if (uiTexts) for (const t of uiTexts) texts.add(t);
-      for (const t of this.selectedOptionService.getSelectionHistoryTextsForQuestion(srcIdx)) texts.add(t);
+      for (const t of this.selectedOptionService.getSelectionHistoryTextsForQuestion(srcIdx))
+        texts.add(t);
       if (texts.size === 0) {
         const sel = this.selectedOptionService.getSelectedOptionsForQuestion(srcIdx) ?? [];
         for (const s of sel) {
-          if (s && (s.selected || s.highlight || s.showIcon) && typeof s.text === 'string' && s.text.length > 0) {
+          if (
+            s &&
+            (s.selected || s.highlight || s.showIcon) &&
+            typeof s.text === 'string' &&
+            s.text.length > 0
+          ) {
             texts.add(s.text);
           }
         }
       }
       this.selectedOptionService.captureRevisitDisplay(srcIdx, [...texts]);
-    } catch (err: unknown) { swallow('performNavigation revisit-display capture', err); }
+    } catch (err: unknown) {
+      swallow('performNavigation revisit-display capture', err);
+    }
   }
 
   private clearStaleNavigationState(index: number): void {
@@ -280,7 +297,13 @@ export class QuizNavigationService {
         const isShuf = qs?.isShuffleEnabled?.() && qs?.shuffledQuestions?.length > 0;
         if (isShuf) {
           let eqId = qs?.quizId || '';
-          if (!eqId) { try { eqId = localStorage.getItem('lastQuizId') || ''; } catch (err: unknown) { swallow('quiz-navigation.service.ts', err); } }
+          if (!eqId) {
+            try {
+              eqId = localStorage.getItem('lastQuizId') || '';
+            } catch (err: unknown) {
+              swallow('quiz-navigation.service.ts', err);
+            }
+          }
           if (eqId) {
             const origIdx = qs?.scoringService?.quizShuffleService?.toOriginalIndex?.(eqId, idx);
             if (typeof origIdx === 'number' && origIdx >= 0) {
@@ -288,7 +311,9 @@ export class QuizNavigationService {
             }
           }
         }
-      } catch (err: unknown) { swallow('quiz-navigation.service.ts', err); /* ignore */ }
+      } catch (err: unknown) {
+        swallow('quiz-navigation.service.ts', err); /* ignore */
+      }
       return false;
     };
 
@@ -390,9 +415,7 @@ export class QuizNavigationService {
   }
 
   private async fetchAndEmitQuestion(index: number): Promise<any> {
-    const fresh = await firstValueFrom(
-      this.quizService.getQuestionByIndex(index)
-    );
+    const fresh = await firstValueFrom(this.quizService.getQuestionByIndex(index));
     if (!fresh) return null;
 
     this.quizService.setCurrentQuestionIndex(index);
@@ -419,8 +442,7 @@ export class QuizNavigationService {
     // Prepare text
     const isMulti =
       (fresh.type as any) === QuestionType.MultipleAnswer ||
-      (Array.isArray(fresh.options) &&
-        fresh.options.filter((o) => o.correct).length > 1);
+      (Array.isArray(fresh.options) && fresh.options.filter((o) => o.correct).length > 1);
 
     const trimmedQ = (fresh.questionText ?? '').trim();
     const explanationRaw = (fresh.explanation ?? '').trim();
@@ -429,12 +451,10 @@ export class QuizNavigationService {
     const bannerCount = bannerCorrectCount(isMulti, this.topicQuizTypeRegistry, fresh.questionText);
     const totalOpts = (fresh.options ?? []).length;
 
-    const banner = bannerCount !== null
-      ? this.quizQuestionManagerService.getNumberOfCorrectAnswersText(
-        bannerCount,
-        totalOpts
-      )
-      : '';
+    const banner =
+      bannerCount !== null
+        ? this.quizQuestionManagerService.getNumberOfCorrectAnswersText(bannerCount, totalOpts)
+        : '';
 
     // WAIT for DOM to stabilize before final emission
     const qqls = this.quizQuestionLoaderService;
@@ -471,10 +491,7 @@ export class QuizNavigationService {
     return { fresh, explanationRaw };
   }
 
-  public async resetUIAndNavigate(
-    index: number,
-    quizIdOverride?: string
-  ): Promise<boolean> {
+  public async resetUIAndNavigate(index: number, quizIdOverride?: string): Promise<boolean> {
     try {
       const effectiveQuizId = this.resolveEffectiveQuizId(quizIdOverride);
       if (!effectiveQuizId) return false;
@@ -552,7 +569,9 @@ export class QuizNavigationService {
           localStorage.removeItem(SK_SELECTED_OPTIONS_MAP);
           localStorage.removeItem(SK_USER_ANSWERS);
           sessionStorage.removeItem(SK_SELECTED_OPTIONS_MAP);
-        } catch (err: unknown) { swallow('quiz-navigation.service.ts', err); }
+        } catch (err: unknown) {
+          swallow('quiz-navigation.service.ts', err);
+        }
       }
 
       // Always ensure the quiz session is hydrated before attempting to access questions.
@@ -667,8 +686,7 @@ export class QuizNavigationService {
     const direct = this.activatedRoute.snapshot.paramMap.get('quizId');
     if (direct) return direct;
 
-    let snapshot: ActivatedRouteSnapshot | null =
-      this.router.routerState.snapshot.root;
+    let snapshot: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
     while (snapshot) {
       const value = snapshot.paramMap?.get('quizId');
       if (value) return value;
@@ -685,8 +703,7 @@ export class QuizNavigationService {
       return parsedFromActiveRoute;
     }
 
-    let snapshot: ActivatedRouteSnapshot | null =
-      this.router.routerState.snapshot.root;
+    let snapshot: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
     while (snapshot) {
       const value = snapshot.paramMap?.get('questionIndex');
       const parsed = Number.parseInt(value ?? '', 10);
@@ -716,7 +733,9 @@ export class QuizNavigationService {
     // Drop any lingering question text
     try {
       this.quizQuestionLoaderService?.questionToDisplaySig?.set('');
-    } catch (err: unknown) { swallow('quiz-navigation.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-navigation.service.ts', err);
+    }
 
     // Reset to question mode so next frame starts clean
     this.quizStateService.setDisplayState({
@@ -725,7 +744,6 @@ export class QuizNavigationService {
     });
     this.quizStateService.setExplanationReady(false);
   }
-
 
   /**
    * Records elapsed time for the leaving question, stops the timer,
@@ -747,9 +765,7 @@ export class QuizNavigationService {
     if (this.quizCompleted) return;
 
     // Ensure we have a robust quizId
-    const targetQuizId = this.quizId 
-      || this.resolveEffectiveQuizId() 
-      || this.quizService.quizId;
+    const targetQuizId = this.quizId || this.resolveEffectiveQuizId() || this.quizService.quizId;
     if (!targetQuizId) return;
 
     this.quizCompleted = true;
@@ -757,7 +773,8 @@ export class QuizNavigationService {
     // Use correct route path: /quiz/results/:quizId (not just results/)
     const routePath = `/quiz/results/${targetQuizId}`;
 
-    this.router.navigateByUrl(routePath)
+    this.router
+      .navigateByUrl(routePath)
       .then((success) => {
         if (!success) {
           console.warn('Quiz navigation was cancelled:', {

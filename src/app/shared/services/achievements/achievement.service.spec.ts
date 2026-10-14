@@ -30,13 +30,28 @@ const ALL: AchievementCatalogEntry[] = [...BEGINNER, ...INTERMEDIATE, ...ADVANCE
 const readinessSig = signal<InterviewReadiness | null>(null);
 const trendsSig = signal<{ best: number | null }>({ best: null });
 
-function makeReadiness(band: InterviewReadinessBand, status: 'ready' | 'insufficient' = 'ready'): InterviewReadiness {
+function makeReadiness(
+  band: InterviewReadinessBand,
+  status: 'ready' | 'insufficient' = 'ready'
+): InterviewReadiness {
   return {
-    status, score: band === 'interview-ready' ? 92 : 80, band,
-    recentPerformance: 90, consistency: 85, rawConsistency: 85, topicCoverage: 80, topicStrength: 80,
-    coverageAvailable: true, practicedTopicCount: 5, eligibleTopicCount: 5,
-    strongestFactor: 'recent-performance', limitingFactor: 'topic-strength',
-    explanation: '', recommendations: [], attemptsUsed: 5, totalAttempts: 5
+    status,
+    score: band === 'interview-ready' ? 92 : 80,
+    band,
+    recentPerformance: 90,
+    consistency: 85,
+    rawConsistency: 85,
+    topicCoverage: 80,
+    topicStrength: 80,
+    coverageAvailable: true,
+    practicedTopicCount: 5,
+    eligibleTopicCount: 5,
+    strongestFactor: 'recent-performance',
+    limitingFactor: 'topic-strength',
+    explanation: '',
+    recommendations: [],
+    attemptsUsed: 5,
+    totalAttempts: 5
   };
 }
 
@@ -57,7 +72,14 @@ describe('AchievementService', () => {
       providers: [
         // coverageVerified: the catalogue-backed coverage proof Interview Master now
         // requires; its own behaviour is pinned in achievement-interview-master-catalog.spec.ts.
-        { provide: InterviewReadinessService, useValue: { readiness: readinessSig, coverageVerified: signal(true), ensureCatalog: jest.fn(async () => undefined) } },
+        {
+          provide: InterviewReadinessService,
+          useValue: {
+            readiness: readinessSig,
+            coverageVerified: signal(true),
+            ensureCatalog: jest.fn(async () => undefined)
+          }
+        },
         { provide: InterviewHistoryService, useValue: { trends: trendsSig } }
       ]
     });
@@ -102,15 +124,15 @@ describe('AchievementService', () => {
 
   // 6
   it('does NOT award Interview Master below the bar (tier / score / insufficient)', () => {
-    readinessSig.set(makeReadiness('strong'));   // not the highest tier
+    readinessSig.set(makeReadiness('strong')); // not the highest tier
     trendsSig.set({ best: 95 });
     expect(ids(service.evaluate(ALL))).not.toContain('interview-master');
 
     readinessSig.set(makeReadiness('interview-ready'));
-    trendsSig.set({ best: 89 });                 // score below 90
+    trendsSig.set({ best: 89 }); // score below 90
     expect(ids(service.evaluate(ALL))).not.toContain('interview-master');
 
-    readinessSig.set(makeReadiness('interview-ready', 'insufficient'));  // one attempt only
+    readinessSig.set(makeReadiness('interview-ready', 'insufficient')); // one attempt only
     trendsSig.set({ best: 95 });
     expect(ids(service.evaluate(ALL))).not.toContain('interview-master');
   });
@@ -118,16 +140,16 @@ describe('AchievementService', () => {
   // ── Angular Explorer (meta: unlock every OTHER achievement) ────────────
   // 7
   it('does NOT award Angular Explorer just for completing every quiz', () => {
-    for (const q of ALL) service.recordQuizResult(q.quizId, 20);   // completes, no 100%, no interview
+    for (const q of ALL) service.recordQuizResult(q.quizId, 20); // completes, no 100%, no interview
     const earned = ids(service.evaluate(ALL));
     expect(earned).toContain('beginner-complete');
-    expect(earned).not.toContain('angular-explorer');   // perfect-score + interview-master still missing
+    expect(earned).not.toContain('angular-explorer'); // perfect-score + interview-master still missing
   });
 
   // 8
   it('awards Angular Explorer once (and together with) the final missing achievement', () => {
-    for (const q of ALL) service.recordQuizResult(q.quizId, 100);   // perfect-score + all difficulty completes
-    expect(ids(service.evaluate(ALL))).not.toContain('angular-explorer');   // interview-master still missing
+    for (const q of ALL) service.recordQuizResult(q.quizId, 100); // perfect-score + all difficulty completes
+    expect(ids(service.evaluate(ALL))).not.toContain('angular-explorer'); // interview-master still missing
     // Earning the last one (Interview Master) unlocks Explorer in the SAME pass.
     setInterviewMastery(true);
     const finalPass = ids(service.evaluate(ALL));
@@ -135,8 +157,12 @@ describe('AchievementService', () => {
     expect(finalPass).toContain('angular-explorer');
     expect(earnedIds()).toEqual(
       expect.arrayContaining([
-        'perfect-score', 'beginner-complete', 'intermediate-complete',
-        'advanced-complete', 'interview-master', 'angular-explorer'
+        'perfect-score',
+        'beginner-complete',
+        'intermediate-complete',
+        'advanced-complete',
+        'interview-master',
+        'angular-explorer'
       ])
     );
   });
@@ -183,12 +209,15 @@ describe('AchievementService', () => {
 
   // 14
   it('ignores unknown/duplicate ids when reading', () => {
-    localStorage.setItem(SK_QUIZ_ACHIEVEMENTS, JSON.stringify([
-      { id: 'perfect-score', earnedAt: '2020-01-01T00:00:00.000Z' },
-      { id: 'perfect-score', earnedAt: '2020-01-02T00:00:00.000Z' },
-      { id: 'angular-master', earnedAt: 'x' },   // retired id → dropped
-      { id: 'not-a-real-achievement', earnedAt: 'x' }
-    ]));
+    localStorage.setItem(
+      SK_QUIZ_ACHIEVEMENTS,
+      JSON.stringify([
+        { id: 'perfect-score', earnedAt: '2020-01-01T00:00:00.000Z' },
+        { id: 'perfect-score', earnedAt: '2020-01-02T00:00:00.000Z' },
+        { id: 'angular-master', earnedAt: 'x' }, // retired id → dropped
+        { id: 'not-a-real-achievement', earnedAt: 'x' }
+      ])
+    );
     expect(earnedIds()).toEqual(['perfect-score']);
   });
 
@@ -221,10 +250,7 @@ describe('AchievementService', () => {
     expect(explorerEarned()).toBe(false);
 
     // Earn everything (including the meta Explorer) via a normal evaluation.
-    localStorage.setItem(
-      SK_QUIZ_BEST_SCORES,
-      JSON.stringify({ b1: 100, b2: 90, i1: 90, a1: 90 })
-    );
+    localStorage.setItem(SK_QUIZ_BEST_SCORES, JSON.stringify({ b1: 100, b2: 90, i1: 90, a1: 90 }));
     setInterviewMastery(true);
     expect(ids(service.evaluate(ALL))).toContain('angular-explorer');
 

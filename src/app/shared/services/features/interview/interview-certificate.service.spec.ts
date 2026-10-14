@@ -30,7 +30,11 @@ function setEarned(ids: string[]): void {
   earnedSig.set(new Set(ids));
 }
 function setHistory(completedAts: string[]): void {
-  historySig.set(completedAts.map((completedAt, i) => ({ id: 'att-' + i, completedAt } as { completedAt: string })));
+  historySig.set(
+    completedAts.map(
+      (completedAt, i) => ({ id: 'att-' + i, completedAt }) as { completedAt: string }
+    )
+  );
 }
 /** ISO offset from a base ISO by ms. */
 function offset(baseIso: string, ms: number): string {
@@ -49,16 +53,20 @@ function freshService(): InterviewCertificateService {
 }
 
 describe('InterviewCertificateService — qualification period', () => {
-  beforeEach(() => { localStorage.clear(); setEarned([]); setHistory([]); });
+  beforeEach(() => {
+    localStorage.clear();
+    setEarned([]);
+    setHistory([]);
+  });
   afterEach(() => localStorage.clear());
 
   it('qualification begins only after the final topic-completion achievement', () => {
-    setEarned(['beginner-complete', 'intermediate-complete']);   // advanced missing
+    setEarned(['beginner-complete', 'intermediate-complete']); // advanced missing
     const svc = freshService();
     svc.ensureQualificationStarted();
     expect(svc.progress().qualificationStartedAt).toBeUndefined();
 
-    setEarned(CURRICULUM);   // now the curriculum is complete
+    setEarned(CURRICULUM); // now the curriculum is complete
     svc.ensureQualificationStarted();
     expect(svc.progress().qualificationStartedAt).toBeTruthy();
   });
@@ -68,9 +76,9 @@ describe('InterviewCertificateService — qualification period', () => {
     const svc = freshService();
     svc.ensureQualificationStarted();
     const first = svc.progress().qualificationStartedAt;
-    svc.ensureQualificationStarted();   // again
+    svc.ensureQualificationStarted(); // again
     setEarned(ALL_SIX);
-    svc.ensureQualificationStarted();    // and again with more achievements
+    svc.ensureQualificationStarted(); // and again with more achievements
     expect(svc.progress().qualificationStartedAt).toBe(first);
   });
 
@@ -86,15 +94,20 @@ describe('InterviewCertificateService — qualification period', () => {
     // No qualification key persisted yet (pre-feature), but curriculum is done.
     setEarned(ALL_SIX);
     const svc = freshService();
-    expect(svc.progress().qualificationStartedAt).toBeUndefined();   // nothing inferred
-    svc.ensureQualificationStarted();                                 // first evaluation
+    expect(svc.progress().qualificationStartedAt).toBeUndefined(); // nothing inferred
+    svc.ensureQualificationStarted(); // first evaluation
     expect(svc.progress().qualificationStartedAt).toBeTruthy();
   });
 
   it('ignores interviews completed BEFORE qualification (18 historical → 0 / 5)', () => {
     setEarned(ALL_SIX);
     // 18 old interviews predate the (about-to-be-set) qualification date.
-    setHistory(Array.from({ length: 18 }, (_, i) => `2020-01-${String(i + 1).padStart(2, '0')}T00:00:00.000Z`));
+    setHistory(
+      Array.from(
+        { length: 18 },
+        (_, i) => `2020-01-${String(i + 1).padStart(2, '0')}T00:00:00.000Z`
+      )
+    );
     const svc = freshService();
     svc.ensureQualificationStarted();
     const p = svc.progress();
@@ -109,11 +122,11 @@ describe('InterviewCertificateService — qualification period', () => {
     svc.ensureQualificationStarted();
     const qual = svc.progress().qualificationStartedAt!;
     setHistory([
-      offset(qual, -60_000),   // before → ignored
-      offset(qual, -1),        // before → ignored
-      qual,                    // exactly at → counts (>=)
-      offset(qual, 60_000),    // after → counts
-      offset(qual, 120_000)    // after → counts
+      offset(qual, -60_000), // before → ignored
+      offset(qual, -1), // before → ignored
+      qual, // exactly at → counts (>=)
+      offset(qual, 60_000), // after → counts
+      offset(qual, 120_000) // after → counts
     ]);
     expect(svc.progress().qualifyingInterviewsCompleted).toBe(3);
   });
@@ -122,14 +135,14 @@ describe('InterviewCertificateService — qualification period', () => {
     setEarned(ALL_SIX);
     const svc = freshService();
     svc.ensureQualificationStarted();
-    const qual = svc.progress().qualificationStartedAt!;   // "2026-…" ISO
+    const qual = svc.progress().qualificationStartedAt!; // "2026-…" ISO
 
     // validateEntry() accepts any Date.parse-able string. This one predates
     // qualification but wins a LEXICOGRAPHIC ">=" because 'J' > '2'.
-    const legacyBefore = new Date(Date.parse(qual) - 86_400_000).toDateString();  // "Mon Jul 27 2026"
-    expect(legacyBefore >= qual).toBe(true);              // proves the old bug's premise
+    const legacyBefore = new Date(Date.parse(qual) - 86_400_000).toDateString(); // "Mon Jul 27 2026"
+    expect(legacyBefore >= qual).toBe(true); // proves the old bug's premise
     setHistory([legacyBefore]);
-    expect(svc.progress().qualifyingInterviewsCompleted).toBe(0);   // correctly excluded
+    expect(svc.progress().qualifyingInterviewsCompleted).toBe(0); // correctly excluded
   });
 
   it('ignores history entries whose completedAt is unparseable', () => {
@@ -147,7 +160,7 @@ describe('InterviewCertificateService — qualification period', () => {
     svc.ensureQualificationStarted();
     const qual = svc.progress().qualificationStartedAt!;
     setHistory([
-      offset(qual, -1),                      // pre-qualification → ignored
+      offset(qual, -1), // pre-qualification → ignored
       ...Array.from({ length: 5 }, (_, i) => offset(qual, (i + 1) * 60_000))
     ]);
     expect(svc.progress().qualifyingInterviewsCompleted).toBe(5);
@@ -169,7 +182,11 @@ describe('InterviewCertificateService — qualification period', () => {
 });
 
 describe('InterviewCertificateService — progress model', () => {
-  beforeEach(() => { localStorage.clear(); setEarned([]); setHistory([]); });
+  beforeEach(() => {
+    localStorage.clear();
+    setEarned([]);
+    setHistory([]);
+  });
   afterEach(() => localStorage.clear());
 
   it('required interview count is five', () => {
@@ -184,7 +201,7 @@ describe('InterviewCertificateService — progress model', () => {
   });
 
   it('Interview Master status reflects the achievement service', () => {
-    setEarned([...CURRICULUM, 'interview-master']);   // Interview Master but not Explorer
+    setEarned([...CURRICULUM, 'interview-master']); // Interview Master but not Explorer
     const p = freshService().progress();
     expect(p.interviewMasterEarned).toBe(true);
     expect(p.angularExplorerEarned).toBe(false);
@@ -202,19 +219,23 @@ describe('InterviewCertificateService — progress model', () => {
   });
 
   it('isEligible needs BOTH Explorer and five qualifying interviews', () => {
-    setEarned(CURRICULUM);   // explorer NOT earned
+    setEarned(CURRICULUM); // explorer NOT earned
     const svc = freshService();
     svc.ensureQualificationStarted();
     const qual = svc.progress().qualificationStartedAt!;
     setHistory(Array.from({ length: 6 }, (_, i) => offset(qual, (i + 1) * 1000)));
-    expect(svc.progress().isEligible).toBe(false);   // 6 interviews but no Explorer
+    expect(svc.progress().isEligible).toBe(false); // 6 interviews but no Explorer
   });
 
   it('isUnlocked reflects persisted certificate state', () => {
     setEarned(ALL_SIX);
     const svc = freshService();
     svc.ensureQualificationStarted();
-    setHistory(Array.from({ length: 5 }, (_, i) => offset(svc.progress().qualificationStartedAt!, (i + 1) * 1000)));
+    setHistory(
+      Array.from({ length: 5 }, (_, i) =>
+        offset(svc.progress().qualificationStartedAt!, (i + 1) * 1000)
+      )
+    );
     expect(svc.progress().isUnlocked).toBe(false);
     svc.unlock();
     expect(svc.progress().isUnlocked).toBe(true);
@@ -223,14 +244,22 @@ describe('InterviewCertificateService — progress model', () => {
 });
 
 describe('InterviewCertificateService — unlock persistence', () => {
-  beforeEach(() => { localStorage.clear(); setEarned([]); setHistory([]); });
+  beforeEach(() => {
+    localStorage.clear();
+    setEarned([]);
+    setHistory([]);
+  });
   afterEach(() => localStorage.clear());
 
   function makeEligible(): InterviewCertificateService {
     setEarned(ALL_SIX);
     const svc = freshService();
     svc.ensureQualificationStarted();
-    setHistory(Array.from({ length: 5 }, (_, i) => offset(svc.progress().qualificationStartedAt!, (i + 1) * 1000)));
+    setHistory(
+      Array.from({ length: 5 }, (_, i) =>
+        offset(svc.progress().qualificationStartedAt!, (i + 1) * 1000)
+      )
+    );
     return svc;
   }
 
@@ -248,7 +277,7 @@ describe('InterviewCertificateService — unlock persistence', () => {
   it('stays unlocked if history later shrinks below five', () => {
     const svc = makeEligible();
     svc.unlock();
-    setHistory([]);   // history cleared later
+    setHistory([]); // history cleared later
     expect(svc.unlocked()).toBe(true);
   });
 
@@ -267,8 +296,8 @@ describe('InterviewCertificateService — unlock persistence', () => {
     });
     try {
       const issued = svc.unlock();
-      expect(issued).not.toBeNull();          // the user is not blocked …
-      expect(svc.persistenceFailed()).toBe(true);   // … but we know it didn't stick
+      expect(issued).not.toBeNull(); // the user is not blocked …
+      expect(svc.persistenceFailed()).toBe(true); // … but we know it didn't stick
     } finally {
       setItem.mockRestore();
     }
@@ -292,7 +321,7 @@ describe('generateCertificateId / validateCertificateRecord', () => {
 
   it('the checksum rejects a mistyped or transposed id', () => {
     const id = generateCertificateId('2026-07-24T12:00:00.000Z', () => 0.000128);
-    const body = id.slice(0, -2);                       // "AQ-2026-000128"
+    const body = id.slice(0, -2); // "AQ-2026-000128"
     const check = id.slice(-1);
     // A transposition inside the body no longer matches the check character.
     expect(isWellFormedCertificateId(`AQ-2026-000182-${check}`)).toBe(false);
@@ -305,16 +334,28 @@ describe('generateCertificateId / validateCertificateRecord', () => {
     // isWellFormedCertificateId is a FORMAT check, so a legacy id fails it …
     expect(isWellFormedCertificateId('AQ-2026-000001')).toBe(false);
     // … but the record must still be honoured — never invalidate an issued cert.
-    expect(validateCertificateRecord({
-      version: 1, unlocked: true, unlockedAt: '2026-07-24T00:00:00.000Z', certificateId: 'AQ-2026-000001'
-    })).toMatchObject({ unlocked: true, certificateId: 'AQ-2026-000001' });
+    expect(
+      validateCertificateRecord({
+        version: 1,
+        unlocked: true,
+        unlockedAt: '2026-07-24T00:00:00.000Z',
+        certificateId: 'AQ-2026-000001'
+      })
+    ).toMatchObject({ unlocked: true, certificateId: 'AQ-2026-000001' });
   });
   it('validates records', () => {
-    expect(validateCertificateRecord({
-      version: 1, unlocked: true, unlockedAt: '2026-07-24T00:00:00.000Z', certificateId: 'AQ-2026-000001'
-    })).toMatchObject({ unlocked: true, certificateId: 'AQ-2026-000001' });
+    expect(
+      validateCertificateRecord({
+        version: 1,
+        unlocked: true,
+        unlockedAt: '2026-07-24T00:00:00.000Z',
+        certificateId: 'AQ-2026-000001'
+      })
+    ).toMatchObject({ unlocked: true, certificateId: 'AQ-2026-000001' });
     expect(validateCertificateRecord(null)).toBeNull();
-    expect(validateCertificateRecord({ unlocked: false, certificateId: 'x', unlockedAt: '2026-07-24' })).toBeNull();
+    expect(
+      validateCertificateRecord({ unlocked: false, certificateId: 'x', unlockedAt: '2026-07-24' })
+    ).toBeNull();
   });
 });
 
@@ -325,7 +366,11 @@ describe('generateCertificateId / validateCertificateRecord', () => {
  * qualification outcome.
  */
 describe('certificate qualification over SANITIZED v2 history', () => {
-  beforeEach(() => { localStorage.clear(); setEarned([]); setHistory([]); });
+  beforeEach(() => {
+    localStorage.clear();
+    setEarned([]);
+    setHistory([]);
+  });
 
   /** A v2 record as InterviewResultHistoryAdapter + the store now produce it. */
   function sanitizedAttempt(index: number, completedAt: string) {
@@ -386,9 +431,9 @@ describe('certificate qualification over SANITIZED v2 history', () => {
     const start = service.progress().qualificationStartedAt!;
 
     setSanitizedHistory([
-      offset(start, -60_000),            // before → ignored
-      offset(start, -30_000),            // before → ignored
-      offset(start, 60_000)              // after  → counts
+      offset(start, -60_000), // before → ignored
+      offset(start, -30_000), // before → ignored
+      offset(start, 60_000) // after  → counts
     ]);
 
     expect(service.progress().qualifyingInterviewsCompleted).toBe(1);
@@ -408,8 +453,9 @@ describe('certificate qualification over SANITIZED v2 history', () => {
     // The same dates carried on bare records produce the same outcome, proving
     // no other history field participates.
     setHistory(withoutReview);
-    expect(service.progress().qualifyingInterviewsCompleted)
-      .toBe(sanitizedProgress.qualifyingInterviewsCompleted);
+    expect(service.progress().qualifyingInterviewsCompleted).toBe(
+      sanitizedProgress.qualifyingInterviewsCompleted
+    );
     expect(service.progress().isEligible).toBe(sanitizedProgress.isEligible);
   });
 });

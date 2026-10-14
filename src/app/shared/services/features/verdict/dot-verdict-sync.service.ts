@@ -37,7 +37,10 @@ export class TopicQuizDotVerdictSyncService {
   private readonly selectedOptionService = inject(SelectedOptionService);
 
   /** Display index → the click whose verdict has not arrived yet. */
-  private readonly pending = new Map<number, { quizId: string; questionText: string; optionText: string }>();
+  private readonly pending = new Map<
+    number,
+    { quizId: string; questionText: string; optionText: string }
+  >();
 
   constructor() {
     // Reacts to the verdict map; writes are untracked so mutating the dot maps
@@ -76,12 +79,17 @@ export class TopicQuizDotVerdictSyncService {
 
     for (const [qIdx, wait] of [...this.pending]) {
       const clickedIsCorrect = this.verdicts.verdictForOption(
-        wait.quizId, wait.questionText, wait.optionText
+        wait.quizId,
+        wait.questionText,
+        wait.optionText
       );
-      if (clickedIsCorrect === null) continue;   // still checking
+      if (clickedIsCorrect === null) continue; // still checking
 
       this.pending.delete(qIdx);
-      this.selectedOptionService.clickConfirmedDotStatus.set(qIdx, clickedIsCorrect ? 'correct' : 'wrong');
+      this.selectedOptionService.clickConfirmedDotStatus.set(
+        qIdx,
+        clickedIsCorrect ? 'correct' : 'wrong'
+      );
       this.selectedOptionService.lastClickedCorrectByQuestion.set(qIdx, clickedIsCorrect);
     }
   }

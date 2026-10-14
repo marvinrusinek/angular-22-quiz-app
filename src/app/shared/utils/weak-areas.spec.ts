@@ -36,7 +36,9 @@ describe('calculateWeakTopics — eligibility', () => {
 
   it('requires at least the minimum answered questions', () => {
     // 2 answered → not enough to judge, even at 0%.
-    expect(calculateWeakTopics([attempt('2026-07-01T10:00:00.000Z', [['rxjs', 0, 2]])])).toEqual([]);
+    expect(calculateWeakTopics([attempt('2026-07-01T10:00:00.000Z', [['rxjs', 0, 2]])])).toEqual(
+      []
+    );
     // 3 answered → now eligible.
     const weak = calculateWeakTopics([attempt('2026-07-01T10:00:00.000Z', [['rxjs', 0, 3]])]);
     expect(ids(weak)).toEqual(['rxjs']);
@@ -56,9 +58,9 @@ describe('calculateWeakTopics — eligibility', () => {
   it('includes a topic below the threshold and EXCLUDES one at exactly 80%', () => {
     const weak = calculateWeakTopics([
       attempt('2026-07-01T10:00:00.000Z', [
-        ['below', 7, 10],    // 70% → weak
-        ['exactly', 8, 10],  // 80% → NOT weak (boundary is exclusive)
-        ['above', 9, 10]     // 90% → not weak
+        ['below', 7, 10], // 70% → weak
+        ['exactly', 8, 10], // 80% → NOT weak (boundary is exclusive)
+        ['above', 9, 10] // 90% → not weak
       ])
     ]);
     expect(ids(weak)).toEqual(['below']);
@@ -84,9 +86,9 @@ describe('calculateWeakTopics — ranking', () => {
   it('ranks by LOWEST accuracy first', () => {
     const weak = calculateWeakTopics([
       attempt('2026-07-01T10:00:00.000Z', [
-        ['mid', 5, 10],    // 50%
-        ['worst', 1, 10],  // 10%
-        ['near', 7, 10]    // 70%
+        ['mid', 5, 10], // 50%
+        ['worst', 1, 10], // 10%
+        ['near', 7, 10] // 70%
       ])
     ]);
     expect(ids(weak)).toEqual(['worst', 'mid', 'near']);
@@ -113,20 +115,29 @@ describe('calculateWeakTopics — ranking', () => {
   });
 
   it('is fully deterministic when every ranking key ties', () => {
-    const input = [attempt('2026-07-01T10:00:00.000Z', [['bbb', 2, 4], ['aaa', 2, 4]])];
+    const input = [
+      attempt('2026-07-01T10:00:00.000Z', [
+        ['bbb', 2, 4],
+        ['aaa', 2, 4]
+      ])
+    ];
     const a = ids(calculateWeakTopics(input));
-    expect(a).toEqual(['aaa', 'bbb']);      // final tie-break: topicId
+    expect(a).toEqual(['aaa', 'bbb']); // final tie-break: topicId
     expect(ids(calculateWeakTopics(input))).toEqual(a);
   });
 
   it('returns AT MOST three weak topics', () => {
     const weak = calculateWeakTopics([
       attempt('2026-07-01T10:00:00.000Z', [
-        ['t1', 1, 10], ['t2', 2, 10], ['t3', 3, 10], ['t4', 4, 10], ['t5', 5, 10]
+        ['t1', 1, 10],
+        ['t2', 2, 10],
+        ['t3', 3, 10],
+        ['t4', 4, 10],
+        ['t5', 5, 10]
       ])
     ]);
     expect(weak).toHaveLength(WEAK_AREA_MAX_TOPICS);
-    expect(ids(weak)).toEqual(['t1', 't2', 't3']);   // the three weakest
+    expect(ids(weak)).toEqual(['t1', 't2', 't3']); // the three weakest
   });
 });
 
@@ -137,12 +148,15 @@ describe('calculateWeakTopics — resilience', () => {
       undefined,
       'not an attempt',
       42,
-      {},                                              // no fields
-      { completedAt: '2026-07-01T10:00:00.000Z' },     // no topicPerformance
-      { topicPerformance: [] },                        // no completedAt
-      { completedAt: 5, topicPerformance: [] },        // wrong type
+      {}, // no fields
+      { completedAt: '2026-07-01T10:00:00.000Z' }, // no topicPerformance
+      { topicPerformance: [] }, // no completedAt
+      { completedAt: 5, topicPerformance: [] }, // wrong type
       { completedAt: '2026-07-01T10:00:00.000Z', topicPerformance: [{ topicId: '' }] },
-      { completedAt: '2026-07-01T10:00:00.000Z', topicPerformance: [{ topicId: 'x', correct: 'a', total: 3 }] }
+      {
+        completedAt: '2026-07-01T10:00:00.000Z',
+        topicPerformance: [{ topicId: 'x', correct: 'a', total: 3 }]
+      }
     ] as unknown as TopicAttemptLike[];
 
     expect(() => calculateWeakTopics(junk)).not.toThrow();
@@ -160,7 +174,10 @@ describe('calculateWeakTopics — resilience', () => {
 
   it('skips zero-total topic samples rather than treating them as 0%', () => {
     const weak = calculateWeakTopics([
-      attempt('2026-07-01T10:00:00.000Z', [['empty', 0, 0], ['real', 1, 10]])
+      attempt('2026-07-01T10:00:00.000Z', [
+        ['empty', 0, 0],
+        ['real', 1, 10]
+      ])
     ]);
     expect(ids(weak)).toEqual(['real']);
   });
@@ -176,7 +193,7 @@ describe('calculateWeakTopics — counted once', () => {
     const first = calculateWeakTopics(input);
     const second = calculateWeakTopics(input);
     expect(first[0]).toMatchObject({ correct: 1, total: 10 });
-    expect(second).toEqual(first);   // pure — no accumulation across calls
+    expect(second).toEqual(first); // pure — no accumulation across calls
   });
 
   it('does not mutate the attempts it is given', () => {

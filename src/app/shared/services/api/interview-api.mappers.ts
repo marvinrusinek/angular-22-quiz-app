@@ -62,11 +62,15 @@ export function toSessionViewModel(dto: ActiveInterviewSessionDto): InterviewSes
     remainingSeconds: dto.remainingSeconds,
     config: toConfig(dto.config),
     questions: dto.questions.map(toQuestionViewModel),
-    answers: new Map(dto.answers.map((answer) => [answer.questionId, [...answer.selectedOptionIds]])),
+    answers: new Map(
+      dto.answers.map((answer) => [answer.questionId, [...answer.selectedOptionIds]])
+    ),
     // Only TRUE entries — an absent key reads as "not flagged", matching how
     // `answers` omits unanswered questions rather than storing an empty array.
     flags: new Map(
-      dto.questions.filter((question) => question.flagged).map((question) => [question.questionId, true])
+      dto.questions
+        .filter((question) => question.flagged)
+        .map((question) => [question.questionId, true])
     )
   };
 }

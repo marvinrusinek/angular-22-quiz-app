@@ -110,7 +110,9 @@ export class PracticeVerdictService {
    * about returns false, which is what keeps an unanswered question neutral.
    */
   isKnownIncorrect(quizId: string, questionText: string, optionText: string): boolean {
-    return this.verdictFor(quizId, questionText).selectedVerdicts.get(canonical(optionText)) === false;
+    return (
+      this.verdictFor(quizId, questionText).selectedVerdicts.get(canonical(optionText)) === false
+    );
   }
 
   /** Is this option revealed CORRECT? Only ever true once resolved. */
@@ -161,7 +163,9 @@ export class PracticeVerdictService {
         catchError((err: unknown) => {
           this.markErrored(quizId, questionText);
           return throwError(() =>
-            err instanceof QuestionVerdictError ? err : new QuestionVerdictError('Invalid submission')
+            err instanceof QuestionVerdictError
+              ? err
+              : new QuestionVerdictError('Invalid submission')
           );
         })
       );
@@ -187,7 +191,9 @@ export class PracticeVerdictService {
 
     const correctTexts = (outcome.correctOptions ?? [])
       .map((option) =>
-        typeof option === 'string' ? option : ((option as { text?: unknown })?.text as string) ?? ''
+        typeof option === 'string'
+          ? option
+          : (((option as { text?: unknown })?.text as string) ?? '')
       )
       .filter((text): text is string => typeof text === 'string' && text.length > 0);
 

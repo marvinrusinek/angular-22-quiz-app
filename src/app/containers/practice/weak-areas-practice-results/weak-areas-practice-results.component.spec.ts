@@ -150,7 +150,7 @@ describe('WeakAreasPracticeResultsComponent — Answer Review', () => {
     expect(body).toContain('Your answer');
     expect(body).toContain('map');
     expect(body).toContain('Correct answer');
-    expect(body).toContain('filter');      // the missing half of a partial answer
+    expect(body).toContain('filter'); // the missing half of a partial answer
   });
 
   it('states "No answer selected" for a skipped question', () => {
@@ -216,7 +216,9 @@ describe('WeakAreasPracticeResultsComponent — Practice Again', () => {
     await fixture.componentInstance.practiceAgain();
     fixture.detectChanges();
 
-    const buttons = [...fixture.nativeElement.querySelectorAll('.wapr__actions button')] as HTMLButtonElement[];
+    const buttons = [
+      ...fixture.nativeElement.querySelectorAll('.wapr__actions button')
+    ] as HTMLButtonElement[];
     const labels = buttons.map((b) => b.textContent!.trim());
     expect(labels).toContain('Back to Quizzes');
     expect(labels).not.toContain('Practice Again');
@@ -227,7 +229,10 @@ describe('WeakAreasPracticeResultsComponent — Practice Again (asynchronous ses
   function deferred<T>() {
     let resolve!: (value: T) => void;
     let reject!: (reason: unknown) => void;
-    const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
     return { promise, resolve, reject };
   }
 
@@ -240,7 +245,7 @@ describe('WeakAreasPracticeResultsComponent — Practice Again (asynchronous ses
 
     const run = fixture.componentInstance.practiceAgain();
     await Promise.resolve();
-    expect(navigate).not.toHaveBeenCalled();          // session not created yet
+    expect(navigate).not.toHaveBeenCalled(); // session not created yet
 
     pending.resolve(true);
     await run;
@@ -270,8 +275,10 @@ describe('WeakAreasPracticeResultsComponent — Practice Again (asynchronous ses
     const second = fixture.componentInstance.practiceAgain();
     const third = fixture.componentInstance.practiceAgain();
     fixture.detectChanges();
-    const button = fixture.nativeElement.querySelector('.wapr__actions button') as HTMLButtonElement;
-    expect(button.disabled).toBe(true);               // the UI also refuses while pending
+    const button = fixture.nativeElement.querySelector(
+      '.wapr__actions button'
+    ) as HTMLButtonElement;
+    expect(button.disabled).toBe(true); // the UI also refuses while pending
 
     pending.resolve(true);
     await Promise.all([first, second, third]);
@@ -293,7 +300,9 @@ describe('WeakAreasPracticeResultsComponent — Practice Again (asynchronous ses
     expect(navigate).not.toHaveBeenCalled();
     expect(fixture.componentInstance.noWeakAreasRemaining()).toBe(false);
     expect(fixture.componentInstance.practiceAgainPending()).toBe(false);
-    const button = fixture.nativeElement.querySelector('.wapr__actions button') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector(
+      '.wapr__actions button'
+    ) as HTMLButtonElement;
     expect(button.disabled).toBe(false);
   });
 });

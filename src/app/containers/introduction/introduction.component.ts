@@ -1,6 +1,16 @@
 import {
-  afterNextRender, ChangeDetectionStrategy, Component, computed, DestroyRef, effect,
-  ElementRef, inject, Injector, OnInit, signal, viewChild
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  OnInit,
+  signal,
+  viewChild
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgClass, NgOptimizedImage, TitleCasePipe } from '@angular/common';
@@ -10,8 +20,7 @@ import { form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSlideToggleChange, MatSlideToggleModule }
-  from '@angular/material/slide-toggle';
+import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { EMPTY, firstValueFrom, TimeoutError } from 'rxjs';
 import { catchError, map, switchMap, tap, timeout } from 'rxjs/operators';
 
@@ -26,7 +35,10 @@ import { QuizService } from '@shared/services/data/quiz.service';
 import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
-import { QuizStartSpinnerHandle, QuizStartSpinnerService } from '@shared/services/ui/quiz-start-spinner.service';
+import {
+  QuizStartSpinnerHandle,
+  QuizStartSpinnerService
+} from '@shared/services/ui/quiz-start-spinner.service';
 import { swallow } from '@shared/utils/error-logging';
 import { topicQuizDocumentTitle } from '@shared/utils/topic-quiz-document-title';
 
@@ -155,8 +167,9 @@ export class IntroductionComponent implements OnInit {
    * (even one marked role="presentation") still gave Narrator multiple
    * separate stops for one paragraph, confirmed wrong by a real retest.
    */
-  readonly introDetailsTextSig = computed(() =>
-    `Test your wits with ${this.questionCountSig()} timed multiple-choice ${this.questionLabelSig()}! Have fun and share!`
+  readonly introDetailsTextSig = computed(
+    () =>
+      `Test your wits with ${this.questionCountSig()} timed multiple-choice ${this.questionLabelSig()}! Have fun and share!`
   );
 
   // Rough completion-time estimate: question count × per-question seconds
@@ -177,7 +190,6 @@ export class IntroductionComponent implements OnInit {
   private currentSpinnerAttempt: QuizStartSpinnerHandle | null = null;
 
   constructor() {
-
     // Mirror the toggle into QuizService whenever it changes. The write path is
     // now onSlideToggleChange() alone; this effect only propagates.
     effect(() => this.quizService.setCheckedShuffle(this.isChecked()));
@@ -268,10 +280,7 @@ export class IntroductionComponent implements OnInit {
     effect(() => {
       if (this.hasFocusedIntroTitle || !this.selectedQuiz()) return;
       this.hasFocusedIntroTitle = true;
-      afterNextRender(
-        () => this.introTitle()?.nativeElement.focus(),
-        { injector: this.injector }
-      );
+      afterNextRender(() => this.introTitle()?.nativeElement.focus(), { injector: this.injector });
     });
 
     // Defensive safety net: if this component is destroyed while a start
@@ -427,7 +436,7 @@ export class IntroductionComponent implements OnInit {
   private fetchQuiz(params: Params) {
     const quizId = params['quizId'];
     if (!quizId) {
-      return EMPTY;  // return EMPTY if no quizId is available
+      return EMPTY; // return EMPTY if no quizId is available
     }
 
     // Hard refresh on /quiz/intro/:quizId skips QuizSelection, so the
@@ -572,9 +581,9 @@ export class IntroductionComponent implements OnInit {
   ): Promise<'success' | 'timeout' | 'error'> {
     try {
       const preparedQuestions = (await firstValueFrom(
-        this.quizDataService.prepareQuizSession(targetQuizId).pipe(
-          timeout(IntroductionComponent.QUESTION_LOAD_TIMEOUT_MS)
-        ),
+        this.quizDataService
+          .prepareQuizSession(targetQuizId)
+          .pipe(timeout(IntroductionComponent.QUESTION_LOAD_TIMEOUT_MS))
       )) as QuizQuestion[];
 
       if (!Array.isArray(preparedQuestions) || preparedQuestions.length === 0) {
@@ -604,11 +613,8 @@ export class IntroductionComponent implements OnInit {
 
     try {
       // Preferred path: let the service reset UI and navigate to Q1 (index 0)
-      const viaService = await this.quizNavigationService.resetUIAndNavigate(
-        0,
-        quizId
-      );
-      if (viaService) return true;  // if the service explicitly succeeded, we’re done
+      const viaService = await this.quizNavigationService.resetUIAndNavigate(0, quizId);
+      if (viaService) return true; // if the service explicitly succeeded, we’re done
 
       // Service returned false/undefined/non-boolean – fall back to direct navigation
     } catch (err) {
@@ -618,25 +624,15 @@ export class IntroductionComponent implements OnInit {
     // Fallback to direct router navigation
     try {
       // Router expects 1-based question in URL; index 0 ⇒ "/.../1"
-      const fallbackSucceeded = await this.router.navigate([
-        '/quiz/question',
-        quizId,
-        1,
-      ]);
+      const fallbackSucceeded = await this.router.navigate(['/quiz/question', quizId, 1]);
 
       if (!fallbackSucceeded) {
-        console.warn(
-          '[QuizSelection] Fallback navigation returned false.',
-          { quizId }
-        );
+        console.warn('[QuizSelection] Fallback navigation returned false.', { quizId });
       }
 
       return fallbackSucceeded;
     } catch (err: unknown) {
-      console.error(
-        '[QuizSelection] Fallback navigation failed.',
-        { quizId, error: err }
-      );
+      console.error('[QuizSelection] Fallback navigation failed.', { quizId, error: err });
 
       return false;
     }

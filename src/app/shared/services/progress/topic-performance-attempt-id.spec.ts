@@ -32,12 +32,12 @@ describe('topic-quiz attempt id — stability and collisions', () => {
 
   it('revisiting the SAME completed result records exactly one attempt', () => {
     const svc = service();
-    const completedAt = 1_722_000_000_000;             // stamped once at completion
+    const completedAt = 1_722_000_000_000; // stamped once at completion
     const id = attemptIdFor('rxjs', completedAt);
 
-    svc.record(id, 'topic-quiz', topics(3, 10));       // first arrival on Results
-    svc.record(id, 'topic-quiz', topics(3, 10));       // navigate away and back
-    svc.record(id, 'topic-quiz', topics(3, 10));       // and again
+    svc.record(id, 'topic-quiz', topics(3, 10)); // first arrival on Results
+    svc.record(id, 'topic-quiz', topics(3, 10)); // navigate away and back
+    svc.record(id, 'topic-quiz', topics(3, 10)); // and again
 
     expect(svc.records()).toHaveLength(1);
     expect(svc.records()[0]).toMatchObject({ correct: 3, total: 10 });
@@ -64,14 +64,16 @@ describe('topic-quiz attempt id — stability and collisions', () => {
   it('two GENUINELY separate completions of the same quiz record two attempts', () => {
     const svc = service();
     svc.record(attemptIdFor('rxjs', 1_722_000_000_000), 'topic-quiz', topics(3, 10));
-    svc.record(attemptIdFor('rxjs', 1_722_000_600_000), 'topic-quiz', topics(8, 10));   // 10 min later
+    svc.record(attemptIdFor('rxjs', 1_722_000_600_000), 'topic-quiz', topics(8, 10)); // 10 min later
 
     expect(svc.records()).toHaveLength(2);
     // Both count toward the aggregate: 11/20 overall.
-    const totals = svc.records().reduce(
-      (acc, r) => ({ correct: acc.correct + r.correct, total: acc.total + r.total }),
-      { correct: 0, total: 0 }
-    );
+    const totals = svc
+      .records()
+      .reduce((acc, r) => ({ correct: acc.correct + r.correct, total: acc.total + r.total }), {
+        correct: 0,
+        total: 0
+      });
     expect(totals).toEqual({ correct: 11, total: 20 });
   });
 

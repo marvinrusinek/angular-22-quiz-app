@@ -48,7 +48,9 @@ function publish(bindings: Binding[], revisitSnapshot?: ReadonlySet<string>): st
     optionBindingsQuestionIndex: () => 2,
     selectedOptionService: {
       getRevisitDisplayTexts: () => revisitSnapshot,
-      setUiSelectedTextsForQuestion: (_i: number, texts: string[]) => { captured = [...texts]; }
+      setUiSelectedTextsForQuestion: (_i: number, texts: string[]) => {
+        captured = [...texts];
+      }
     }
   };
   (SharedOptionComponent.prototype as any).syncUiSelectedTexts.call(host);
@@ -59,20 +61,47 @@ function publish(bindings: Binding[], revisitSnapshot?: ReadonlySet<string>): st
 function afterAutoReveal(): Binding[] {
   return [
     {
-      isSelected: false, _autoRevealedCorrect: true,
-      option: { text: 'DI is a technique', selected: false, highlight: true, showIcon: true, _autoRevealedCorrect: true }
+      isSelected: false,
+      _autoRevealedCorrect: true,
+      option: {
+        text: 'DI is a technique',
+        selected: false,
+        highlight: true,
+        showIcon: true,
+        _autoRevealedCorrect: true
+      }
     },
     {
-      isSelected: true, _autoRevealedCorrect: false,
-      option: { text: 'DI always leads to perf gains', selected: true, highlight: true, showIcon: true }
+      isSelected: true,
+      _autoRevealedCorrect: false,
+      option: {
+        text: 'DI always leads to perf gains',
+        selected: true,
+        highlight: true,
+        showIcon: true
+      }
     },
     {
-      isSelected: false, _autoRevealedCorrect: true,
-      option: { text: 'DI helps reduce coupling', selected: false, highlight: true, showIcon: true, _autoRevealedCorrect: true }
+      isSelected: false,
+      _autoRevealedCorrect: true,
+      option: {
+        text: 'DI helps reduce coupling',
+        selected: false,
+        highlight: true,
+        showIcon: true,
+        _autoRevealedCorrect: true
+      }
     },
     {
-      isSelected: false, _autoRevealedCorrect: true,
-      option: { text: 'DI makes mocking easy', selected: false, highlight: true, showIcon: true, _autoRevealedCorrect: true }
+      isSelected: false,
+      _autoRevealedCorrect: true,
+      option: {
+        text: 'DI makes mocking easy',
+        selected: false,
+        highlight: true,
+        showIcon: true,
+        _autoRevealedCorrect: true
+      }
     }
   ];
 }
@@ -85,7 +114,11 @@ describe('auto-revealed options are not part of the user answer', () => {
   it('excludes every revealed correct option', () => {
     const submitted = publish(afterAutoReveal());
 
-    for (const revealed of ['DI is a technique', 'DI helps reduce coupling', 'DI makes mocking easy']) {
+    for (const revealed of [
+      'DI is a technique',
+      'DI helps reduce coupling',
+      'DI makes mocking easy'
+    ]) {
       expect(submitted).not.toContain(revealed);
     }
   });
@@ -123,7 +156,10 @@ describe('genuine user selections still submit', () => {
     // A previously-clicked WRONG option keeps highlight but is not revealed;
     // dropping it would under-report the user's answer.
     const submitted = publish([
-      { isSelected: false, option: { text: 'Subject', selected: false, highlight: true, showIcon: true } },
+      {
+        isSelected: false,
+        option: { text: 'Subject', selected: false, highlight: true, showIcon: true }
+      },
       { isSelected: true, option: { text: 'map', selected: true, highlight: true } }
     ]);
 
@@ -134,7 +170,8 @@ describe('genuine user selections still submit', () => {
     // Clicked AND revealed: `selected` is true, so it is a real answer.
     const submitted = publish([
       {
-        isSelected: true, _autoRevealedCorrect: true,
+        isSelected: true,
+        _autoRevealedCorrect: true,
         option: { text: 'map', selected: true, highlight: true, _autoRevealedCorrect: true }
       }
     ]);

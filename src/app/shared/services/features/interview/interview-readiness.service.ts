@@ -102,9 +102,7 @@ export function calculateRecentPerformance(
 
 /** Factor 2 — stability of the latest ≤ 5 scores, safeguarded by performance so
  *  consistently low scores are not rewarded (0–100). */
-export function calculateConsistency(
-  attempts: readonly InterviewAttemptHistoryEntry[]
-): number {
+export function calculateConsistency(attempts: readonly InterviewAttemptHistoryEntry[]): number {
   const recent = attempts.slice(-RECENT_WINDOW);
   if (recent.length < 2) return 0;
   const pcts = recent.map((a) => a.percentage);
@@ -116,9 +114,7 @@ export function calculateConsistency(
 
 /** Raw score stability of the latest ≤ 5 attempts (range only, NOT performance
  *  adjusted). Distinguishes "scores actually vary" from "stable but low". */
-export function calculateRawConsistency(
-  attempts: readonly InterviewAttemptHistoryEntry[]
-): number {
+export function calculateRawConsistency(attempts: readonly InterviewAttemptHistoryEntry[]): number {
   const recent = attempts.slice(-RECENT_WINDOW);
   if (recent.length < 2) return 0;
   const pcts = recent.map((a) => a.percentage);
@@ -149,18 +145,14 @@ export function calculateTopicCoverage(
 /** Factor 4 — strength across practiced topics, aggregating raw correct/total
  *  across attempts (never averaging pre-rounded percentages), then averaging the
  *  per-topic percentages (0–100). */
-export function calculateTopicStrength(
-  attempts: readonly InterviewAttemptHistoryEntry[]
-): number {
+export function calculateTopicStrength(attempts: readonly InterviewAttemptHistoryEntry[]): number {
   const perTopic = aggregateTopicPercentages(attempts);
   if (perTopic.length === 0) return 0;
   return round(clamp100(avg(perTopic.map((t) => t.percentage))));
 }
 
 /** Unique practiced topic ids across all retained attempts (deduped). */
-export function uniquePracticedTopics(
-  attempts: readonly InterviewAttemptHistoryEntry[]
-): string[] {
+export function uniquePracticedTopics(attempts: readonly InterviewAttemptHistoryEntry[]): string[] {
   const set = new Set<string>();
   for (const a of attempts) {
     if (a.topicPerformance.length > 0) {
@@ -298,8 +290,7 @@ const LIMITING_PHRASE: Record<InterviewReadinessFactor, string> = {
     'Your scores vary between interviews. More consistent results will improve your readiness.',
   'topic-coverage':
     'Topic coverage is currently limiting your readiness. Practice a broader range of Angular topics to improve it.',
-  'topic-strength':
-    'Some practiced topics are weak. Reviewing them will improve your readiness.'
+  'topic-strength': 'Some practiced topics are weak. Reviewing them will improve your readiness.'
 };
 
 const READY_CAVEAT =
@@ -339,7 +330,9 @@ export function buildExplanation(
   if (strongest.value >= STRONG_MIN) {
     parts.push(STRONG_PHRASE[strongest.key]);
   } else {
-    parts.push(`${FACTOR_NAME[strongest.key]} is currently your highest readiness factor, with room to improve.`);
+    parts.push(
+      `${FACTOR_NAME[strongest.key]} is currently your highest readiness factor, with room to improve.`
+    );
   }
 
   // Limiting — describe only if it is distinct and genuinely holding the score
@@ -350,12 +343,16 @@ export function buildExplanation(
       if (rawConsistency <= VARIES_MAX) {
         parts.push(LIMITING_PHRASE.consistency);
       } else {
-        parts.push('Your recent scores are steady but on the lower side. Higher scores will improve your readiness.');
+        parts.push(
+          'Your recent scores are steady but on the lower side. Higher scores will improve your readiness.'
+        );
       }
     } else if (limiting.value < MODERATE_MIN) {
       parts.push(LIMITING_PHRASE[limiting.key]);
     } else if (limiting.value < STRONG_MIN) {
-      parts.push(`${FACTOR_NAME[limiting.key]} is your lowest readiness factor — improving it will raise your score.`);
+      parts.push(
+        `${FACTOR_NAME[limiting.key]} is your lowest readiness factor — improving it will raise your score.`
+      );
     }
   }
 

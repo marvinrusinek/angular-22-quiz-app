@@ -17,18 +17,13 @@ export class QuizStateService {
 
   // ── Signal-first state (current question / index / options) ────
   readonly currentQuestionSig = signal<QuizQuestion | null>(null);
-  currentQuestion$: Observable<QuizQuestion | null> =
-    toObservable(this.currentQuestionSig);
+  currentQuestion$: Observable<QuizQuestion | null> = toObservable(this.currentQuestionSig);
 
   readonly currentQuestionIndexSig = signal<number>(0);
-  currentQuestionIndex$: Observable<number> =
-    toObservable(this.currentQuestionIndexSig);
+  currentQuestionIndex$: Observable<number> = toObservable(this.currentQuestionIndexSig);
 
-  readonly currentOptionsSig = computed<Option[]>(
-    () => this.currentQuestionSig()?.options ?? []
-  );
-  currentOptions$: Observable<Option[]> =
-    toObservable(this.currentOptionsSig);
+  readonly currentOptionsSig = computed<Option[]>(() => this.currentQuestionSig()?.options ?? []);
+  currentOptions$: Observable<Option[]> = toObservable(this.currentOptionsSig);
 
   questionStates: Map<number, QuestionState> = new Map();
   private quizStates: { [quizId: string]: Map<number, QuestionState> } = {};
@@ -94,7 +89,9 @@ export class QuizStateService {
 
   private restoreInteractionState(): void {
     try {
-      const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+      const navEntries = performance.getEntriesByType(
+        'navigation'
+      ) as PerformanceNavigationTiming[];
       const isPageRefresh = navEntries.length > 0 && navEntries[0].type === 'reload';
       if (!isPageRefresh) {
         sessionStorage.removeItem(this.INTERACTED_STORAGE_KEY);
@@ -117,7 +114,9 @@ export class QuizStateService {
             currentUrlIdx = oneBased - 1;
           }
         }
-      } catch (err: unknown) { swallow('quizstate.service.ts', err); /* ignore */ }
+      } catch (err: unknown) {
+        swallow('quizstate.service.ts', err); /* ignore */
+      }
 
       const restore = (key: string, target: Set<number>) => {
         const raw = sessionStorage.getItem(key);
@@ -152,8 +151,12 @@ export class QuizStateService {
           this.ANSWERED_STORAGE_KEY,
           JSON.stringify(Array.from(this._answeredQuestionIndices))
         );
-      } catch (err: unknown) { swallow('quizstate.service.ts', err); /* ignore */ }
-    } catch (err: unknown) { swallow('quizstate.service.ts', err); /* ignore */ }
+      } catch (err: unknown) {
+        swallow('quizstate.service.ts', err); /* ignore */
+      }
+    } catch (err: unknown) {
+      swallow('quizstate.service.ts', err); /* ignore */
+    }
   }
 
   public persistInteractionState(): void {
@@ -166,13 +169,18 @@ export class QuizStateService {
         this.ANSWERED_STORAGE_KEY,
         JSON.stringify(Array.from(this._answeredQuestionIndices))
       );
-    } catch (err: unknown) { swallow('quizstate.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('quizstate.service.ts', err); /* ignore */
+    }
   }
 
-  setDisplayState(state: {
-    mode: 'question' | 'explanation';
-    answered: boolean;
-  }, options?: { force?: boolean }): void {
+  setDisplayState(
+    state: {
+      mode: 'question' | 'explanation';
+      answered: boolean;
+    },
+    options?: { force?: boolean }
+  ): void {
     // If visibility restore lock is active, block state changes unless forced
     if (this._visibilityRestoreLock && !options?.force) return;
     this.displayStateSig.set(state);
@@ -211,24 +219,20 @@ export class QuizStateService {
         // Additional check to ensure the parsed object matches the expected structure
         if (typeof stateObject === 'object' && !Array.isArray(stateObject)) {
           return new Map<number, QuestionState>(
-            Object.entries(stateObject).map(
-              ([key, value]): [number, QuestionState] => {
-                // Further validation to ensure each key-value pair matches the expected types
-                const parsedKey = Number(key);
-                if (
-                  !isNaN(parsedKey) &&
-                  typeof value === 'object' &&
-                  value !== null &&
-                  'isAnswered' in value
-                ) {
-                  return [parsedKey, value as QuestionState];
-                } else {
-                  throw new Error(
-                    `Invalid question state format for questionId ${key}`
-                  );
-                }
+            Object.entries(stateObject).map(([key, value]): [number, QuestionState] => {
+              // Further validation to ensure each key-value pair matches the expected types
+              const parsedKey = Number(key);
+              if (
+                !isNaN(parsedKey) &&
+                typeof value === 'object' &&
+                value !== null &&
+                'isAnswered' in value
+              ) {
+                return [parsedKey, value as QuestionState];
+              } else {
+                throw new Error(`Invalid question state format for questionId ${key}`);
               }
-            )
+            })
           );
         } else {
           // Stored state is not in object format
@@ -242,11 +246,7 @@ export class QuizStateService {
   }
 
   // Method to set or update the state for a question
-  setQuestionState(
-    quizId: string,
-    questionId: number,
-    state: QuestionState
-  ): void {
+  setQuestionState(quizId: string, questionId: number, state: QuestionState): void {
     // Check if the quizId already exists in the quizStates map, if not, create a new Map for it
     if (!this.quizStates[quizId]) {
       this.quizStates[quizId] = new Map<number, QuestionState>();
@@ -257,19 +257,14 @@ export class QuizStateService {
   }
 
   // Method to get the state of a question by its ID
-  getQuestionState(
-    quizId: string,
-    questionId: number,
-  ): QuestionState | undefined {
+  getQuestionState(quizId: string, questionId: number): QuestionState | undefined {
     // Initialize the state map for this quiz if it doesn't exist
     if (!this.quizStates[quizId]) {
       this.quizStates[quizId] = new Map<number, QuestionState>();
     }
 
-    let state =
-      this.quizStates[quizId].get(questionId) ??
-      this.createDefaultQuestionState();
-    this.quizStates[quizId].set(questionId, state);  // store default state in quiz's state map
+    let state = this.quizStates[quizId].get(questionId) ?? this.createDefaultQuestionState();
+    this.quizStates[quizId].set(questionId, state); // store default state in quiz's state map
 
     return state;
   }
@@ -284,7 +279,7 @@ export class QuizStateService {
     let currentState = this.getQuestionState(quizId, questionIndex) || {
       isAnswered: false,
       selectedOptions: [],
-      numberOfCorrectAnswers: 0  // ensure this property is properly initialized
+      numberOfCorrectAnswers: 0 // ensure this property is properly initialized
     };
 
     // If updating selected options and the question has correct answers to track
@@ -310,8 +305,7 @@ export class QuizStateService {
       }
 
       // Mark as answered if the number of correct answers is reached
-      currentState.isAnswered =
-        (currentState.numberOfCorrectAnswers ?? 0) >= totalCorrectAnswers;
+      currentState.isAnswered = (currentState.numberOfCorrectAnswers ?? 0) >= totalCorrectAnswers;
     }
 
     // Merge the current state with other updates not related to selected options
@@ -367,9 +361,9 @@ export class QuizStateService {
     question$
       .pipe(
         filter((q): q is QuizQuestion => q !== null),
-        distinctUntilChanged((a, b) => a === b),  // object reference check
+        distinctUntilChanged((a, b) => a === b), // object reference check
         catchError(() => {
-          return EMPTY;  // safest fallback
+          return EMPTY; // safest fallback
         })
       )
       .subscribe((question: QuizQuestion) => {
@@ -523,7 +517,9 @@ export class QuizStateService {
 
   seedClickedInSessionFromRefresh(): void {
     try {
-      const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+      const navEntries = performance.getEntriesByType(
+        'navigation'
+      ) as PerformanceNavigationTiming[];
       const isPageRefresh = navEntries.length > 0 && navEntries[0].type === 'reload';
       if (!isPageRefresh) return;
       let currentUrlIdx: number | null = null;
@@ -535,7 +531,9 @@ export class QuizStateService {
             currentUrlIdx = oneBased - 1;
           }
         }
-      } catch (err: unknown) { swallow('quizstate.service.ts', err); /* ignore */ }
+      } catch (err: unknown) {
+        swallow('quizstate.service.ts', err); /* ignore */
+      }
       if (currentUrlIdx === null) return;
       // Only seed if sessionStorage says this exact idx was answered.
       // Check multiple evidence sources because QuizStateService.reset()
@@ -543,7 +541,8 @@ export class QuizStateService {
       // wipes _answeredQuestionIndices and _hasUserInteracted from
       // sessionStorage. The durable sel_Q* and dot_confirmed_* keys
       // survive reset and serve as fallback evidence.
-      let hasEvidence = this._answeredQuestionIndices.has(currentUrlIdx) || 
+      let hasEvidence =
+        this._answeredQuestionIndices.has(currentUrlIdx) ||
         this._hasUserInteracted.has(currentUrlIdx);
       if (!hasEvidence) {
         try {
@@ -552,18 +551,24 @@ export class QuizStateService {
             const parsed = JSON.parse(selRaw);
             if (Array.isArray(parsed) && parsed.length > 0) hasEvidence = true;
           }
-        } catch (err: unknown) { swallow('quizstate.service.ts', err); /* ignore */ }
+        } catch (err: unknown) {
+          swallow('quizstate.service.ts', err); /* ignore */
+        }
       }
       if (!hasEvidence) {
         try {
           const dot = sessionStorage.getItem(SK_DOT_CONFIRMED + currentUrlIdx);
           if (dot === 'correct' || dot === 'wrong') hasEvidence = true;
-        } catch (err: unknown) { swallow('quizstate.service.ts', err); /* ignore */ }
+        } catch (err: unknown) {
+          swallow('quizstate.service.ts', err); /* ignore */
+        }
       }
       if (hasEvidence) {
         this._clickedInSession.add(currentUrlIdx);
       }
-    } catch (err: unknown) { swallow('quizstate.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('quizstate.service.ts', err); /* ignore */
+    }
   }
 
   clearClickedInSession(): void {
@@ -586,8 +591,10 @@ export class QuizStateService {
     try {
       sessionStorage.removeItem(this.INTERACTED_STORAGE_KEY);
       sessionStorage.removeItem(this.ANSWERED_STORAGE_KEY);
-    } catch (err: unknown) { swallow('quizstate.service.ts', err); /* ignore */ }
-    this.userHasInteractedSig.set(-1);  // Reset so stale index doesn't falsely pass hasInteracted checks
+    } catch (err: unknown) {
+      swallow('quizstate.service.ts', err); /* ignore */
+    }
+    this.userHasInteractedSig.set(-1); // Reset so stale index doesn't falsely pass hasInteracted checks
     this.currentQuestionSig.set(null);
     this.explanationReadySig.set(false);
     this.isAnsweredSig.set(false);

@@ -28,12 +28,12 @@ export class QqcQlFetchService {
   async loadQuizData(quizId: string | null | undefined): Promise<QuizQuestion[] | null> {
     try {
       const quizIdExists = await this.quizService.ensureQuizIdExists();
-      if (!quizIdExists) return null;  // quiz ID is missing
+      if (!quizIdExists) return null; // quiz ID is missing
 
       const questions = await this.quizService.fetchQuizQuestions(quizId!);
       if (questions && questions.length > 0) {
         const activeQuiz = this.quizService.getActiveQuiz();
-        if (!activeQuiz) return null;  // failed to get the active quiz
+        if (!activeQuiz) return null; // failed to get the active quiz
 
         this.isQuizLoaded = true;
         this.quizService.setQuestionsLoaded(true);
@@ -89,9 +89,7 @@ export class QqcQlFetchService {
    * Fetches questions if not already available.
    * Returns the questions array or throws on failure.
    */
-  async fetchQuestionsIfNeeded(
-    questionsArray: QuizQuestion[] | null
-  ): Promise<QuizQuestion[]> {
+  async fetchQuestionsIfNeeded(questionsArray: QuizQuestion[] | null): Promise<QuizQuestion[]> {
     // When shuffle is active, always prefer shuffledQuestions as the
     // authoritative source — the passed-in questionsArray may be
     // unshuffled, causing Q&A mismatches for Q2+.
@@ -139,10 +137,7 @@ export class QqcQlFetchService {
   /**
    * Checks whether a question can be rendered instantly (has text + options).
    */
-  canRenderQuestionInstantly(
-    questionsArray: QuizQuestion[],
-    index: number
-  ): boolean {
+  canRenderQuestionInstantly(questionsArray: QuizQuestion[], index: number): boolean {
     if (!Array.isArray(questionsArray) || questionsArray.length === 0) {
       return false;
     }
@@ -179,12 +174,12 @@ export class QqcQlFetchService {
       if (!questionsArray || questionsArray.length === 0) {
         const quizId = this.quizService.getCurrentQuizId();
         if (!quizId) {
-          return null;  // no active quiz ID found — aborting initialization
+          return null; // no active quiz ID found — aborting initialization
         }
 
         questionsArray = await this.quizService.fetchQuizQuestions(quizId);
         if (!questionsArray || questionsArray.length === 0) {
-          return null;  // failed to fetch questions — aborting initialization
+          return null; // failed to fetch questions — aborting initialization
         }
       }
 
@@ -215,20 +210,18 @@ export class QqcQlFetchService {
   }): Promise<QuizQuestion[]> {
     const { quizId, prepareQuestion } = params;
 
-    if (!quizId) return [];  // quiz ID is not provided or is empty
+    if (!quizId) return []; // quiz ID is not provided or is empty
 
     try {
       const questions = await this.quizService.fetchQuizQuestions(quizId);
 
       if (!questions || questions.length === 0) {
-        return [];  // no questions were loaded
+        return []; // no questions were loaded
       }
 
       // Run all question preparations in parallel
       await Promise.all(
-        questions.map((question, index) =>
-          prepareQuestion(quizId, question, index)
-        )
+        questions.map((question, index) => prepareQuestion(quizId, question, index))
       );
 
       return questions;
@@ -266,16 +259,19 @@ export class QqcQlFetchService {
       // when getQuestionByIndex emits synchronously (of(...) or seeded
       // BehaviorSubject), the next callback fires DURING .subscribe() before
       // `subscription` is initialized, causing a TDZ ReferenceError.
-      this.quizService.getQuestionByIndex(index).pipe(take(1)).subscribe({
-        next: (question) => {
-          if (question && question.questionText) {
-            resolve();
-          } else {
-            reject(new Error(`No valid question at index ${index}`));
-          }
-        },
-        error: (err: any) => reject(err)
-      });
+      this.quizService
+        .getQuestionByIndex(index)
+        .pipe(take(1))
+        .subscribe({
+          next: (question) => {
+            if (question && question.questionText) {
+              resolve();
+            } else {
+              reject(new Error(`No valid question at index ${index}`));
+            }
+          },
+          error: (err: any) => reject(err)
+        });
     });
   }
 
@@ -296,7 +292,7 @@ export class QqcQlFetchService {
     const result = await this.ensureQuestionsLoaded(params.questionsArray, params.quizId);
     if (!result.loaded) {
       // No questions available
-      return { 
+      return {
         success: false,
         currentQuestion: null,
         optionsToDisplay: [],
@@ -306,12 +302,9 @@ export class QqcQlFetchService {
 
     const questions = result.questions || params.questionsArray;
 
-    if (
-      params.currentQuestionIndex < 0 ||
-      params.currentQuestionIndex >= questions.length
-    ) {
+    if (params.currentQuestionIndex < 0 || params.currentQuestionIndex >= questions.length) {
       // Invalid question index
-      return { 
+      return {
         success: false,
         currentQuestion: null,
         optionsToDisplay: [],
@@ -360,10 +353,7 @@ export class QqcQlFetchService {
    * Waits for question data to be available, clamping to last index if needed.
    * Returns the question and its options.
    */
-  async waitForQuestionData(params: {
-    currentQuestionIndex: number;
-    quizId: string;
-  }): Promise<{
+  async waitForQuestionData(params: { currentQuestionIndex: number; quizId: string }): Promise<{
     currentQuestion: QuizQuestion | null;
     optionsToDisplay: Option[];
     currentQuestionIndex: number;
@@ -373,9 +363,7 @@ export class QqcQlFetchService {
     if (!Number.isInteger(idx) || idx < 0) idx = 0;
 
     try {
-      let question = await firstValueFrom(
-        this.quizService.getQuestionByIndex(idx)
-      );
+      let question = await firstValueFrom(this.quizService.getQuestionByIndex(idx));
 
       if (!question) {
         const total: number = await firstValueFrom(
@@ -385,9 +373,7 @@ export class QqcQlFetchService {
         const lastIndex = Math.max(0, total - 1);
         idx = lastIndex;
 
-        question = await firstValueFrom(
-          this.quizService.getQuestionByIndex(idx)
-        );
+        question = await firstValueFrom(this.quizService.getQuestionByIndex(idx));
 
         if (!question) {
           // Still no question after clamping — aborting
@@ -401,9 +387,9 @@ export class QqcQlFetchService {
 
       if (!question.options?.length) {
         // Invalid question data or options missing
-        return { 
-          currentQuestion: null, 
-          optionsToDisplay: [], 
+        return {
+          currentQuestion: null,
+          optionsToDisplay: [],
           currentQuestionIndex: idx
         };
       }
@@ -415,9 +401,9 @@ export class QqcQlFetchService {
       };
     } catch {
       // Error loading question data
-      return { 
-        currentQuestion: null, 
-        optionsToDisplay: [], 
+      return {
+        currentQuestion: null,
+        optionsToDisplay: [],
         currentQuestionIndex: idx
       };
     }
@@ -426,9 +412,7 @@ export class QqcQlFetchService {
   /**
    * Performs the full quiz data loading and route handler setup.
    */
-  async performQuizDataAndRoutingInit(params: {
-    quizId: string | null | undefined;
-  }): Promise<{
+  async performQuizDataAndRoutingInit(params: { quizId: string | null | undefined }): Promise<{
     questions: QuizQuestion[];
     quiz: any;
   } | null> {

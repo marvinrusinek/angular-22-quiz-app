@@ -8,7 +8,10 @@ import { SocAnswerProcessingService } from './soc-answer-processing.service';
 import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { TOPIC_QUIZ_VERDICT_ADAPTER } from '@shared/services/features/verdict/verdict-adapter';
-import type { QuestionCheckResult, QuestionExpiredResult } from '@shared/services/features/verdict/question-verdict.types';
+import type {
+  QuestionCheckResult,
+  QuestionExpiredResult
+} from '@shared/services/features/verdict/question-verdict.types';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
@@ -50,7 +53,11 @@ class ControllableAdapter {
     return responses.asObservable();
   }
   revealExpired(): Observable<QuestionExpiredResult> {
-    return of({ status: 'expired', correctOptionTexts: [], explanation: '' } as QuestionExpiredResult);
+    return of({
+      status: 'expired',
+      correctOptionTexts: [],
+      explanation: ''
+    } as QuestionExpiredResult);
   }
 }
 
@@ -83,13 +90,22 @@ function makeComp(
 
   return {
     optionBindings: Object.assign(() => bindings, {
-      set: (next: any[]) => { bindings = next; setCount++; }
+      set: (next: any[]) => {
+        bindings = next;
+        setCount++;
+      }
     }),
     currentQuestion: () => ({ questionText: current, options: opts }),
     cdRef: { markForCheck: () => undefined, detectChanges: () => undefined },
-    get bindings() { return bindings; },
-    get repaints() { return setCount; },
-    navigateTo: (q: string) => { current = q; },
+    get bindings() {
+      return bindings;
+    },
+    get repaints() {
+      return setCount;
+    },
+    navigateTo: (q: string) => {
+      current = q;
+    },
     indexOfText: (t: string) => texts.indexOf(t)
   };
 }
@@ -116,7 +132,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       { provide: TOPIC_QUIZ_VERDICT_ADAPTER, useClass: ControllableAdapter },
       {
@@ -141,7 +160,10 @@ beforeEach(() => {
           clickConfirmedDotStatus: new Map()
         }
       },
-      { provide: TimerService, useValue: { stopTimer: () => undefined, resetTimer: () => undefined } },
+      {
+        provide: TimerService,
+        useValue: { stopTimer: () => undefined, resetTimer: () => undefined }
+      },
       { provide: FeedbackService, useValue: { setCorrectMessage: () => '' } }
     ]
   });
@@ -154,12 +176,15 @@ beforeEach(() => {
 const scheduleRespread = (c: any) => (service as any).scheduleTerminalRespread(c);
 
 const disabledTexts = (c: any) =>
-  c.bindings.filter((b: any) => b.disabled).map((b: any) => b.option.text).sort();
+  c.bindings
+    .filter((b: any) => b.disabled)
+    .map((b: any) => b.option.text)
+    .sort();
 
 describe('while the check is in flight, nothing is repainted', () => {
   it('does not grey anything out on the completing click', async () => {
     const c = makeComp();
-    beginCheck(['map', 'filter']);       // phase is now `checking`
+    beginCheck(['map', 'filter']); // phase is now `checking`
     scheduleRespread(c);
     await flush();
 
@@ -169,7 +194,7 @@ describe('while the check is in flight, nothing is repainted', () => {
   });
 
   it('leaves every option neutral — the bank cannot fill the gap', async () => {
-    const c = makeComp();                 // bank claims Subject+Observable correct
+    const c = makeComp(); // bank claims Subject+Observable correct
     beginCheck(['map', 'filter']);
     scheduleRespread(c);
     await flush();
@@ -228,7 +253,7 @@ describe('the repaint happens when the verdict arrives', () => {
     beginCheck(['map', 'filter']);
     scheduleRespread(c);
     await flush();
-    expect(c.repaints).toBe(0);           // nothing local to paint from, and none used
+    expect(c.repaints).toBe(0); // nothing local to paint from, and none used
 
     responses.next(resolvedAllCorrect());
     await flush();
@@ -237,7 +262,7 @@ describe('the repaint happens when the verdict arrives', () => {
   });
 
   it('matches by TEXT, so a reversed display order still repaints correctly', async () => {
-    const c = makeComp('bare', 'reversed');   // Observable, filter, Subject, map
+    const c = makeComp('bare', 'reversed'); // Observable, filter, Subject, map
     beginCheck(['map', 'filter']);
     scheduleRespread(c);
     responses.next(resolvedAllCorrect());
@@ -277,7 +302,7 @@ describe('stale and duplicate responses', () => {
     beginCheck(['map', 'filter']);
     scheduleRespread(c);
 
-    c.navigateTo(OTHER_QUESTION);         // moved on before the answer came back
+    c.navigateTo(OTHER_QUESTION); // moved on before the answer came back
     responses.next(resolvedAllCorrect());
     await flush();
 
@@ -320,7 +345,7 @@ describe('an already-terminal question repaints immediately', () => {
     beginCheck(['map', 'filter']);
     responses.next(resolvedAllCorrect());
 
-    const c = makeComp();                 // e.g. a revisit of a finished question
+    const c = makeComp(); // e.g. a revisit of a finished question
     expect(verdicts.verdictFor(QUIZ, QUESTION).phase).toBe('resolved');
 
     scheduleRespread(c);
@@ -336,7 +361,7 @@ describe('the terminal arrival stream', () => {
     const seen: string[] = [];
     verdicts.terminalVerdicts$.subscribe((e) => seen.push(e.state.phase));
 
-    beginCheck(['map']);                  // writes `checking` — must not announce
+    beginCheck(['map']); // writes `checking` — must not announce
     expect(seen).toEqual([]);
 
     responses.next(resolvedAllCorrect());

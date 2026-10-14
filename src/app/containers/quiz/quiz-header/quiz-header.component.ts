@@ -21,11 +21,11 @@ import { QuizService } from '@shared/services/data/quiz.service';
     MatCardModule,
     MatIconModule,
     MatTooltipModule,
-    ThemeToggleComponent,
+    ThemeToggleComponent
   ],
   templateUrl: './quiz-header.component.html',
   styleUrls: ['./quiz-header.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CodelabQuizHeaderComponent {
   // ── injects ─────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ export class CodelabQuizHeaderComponent {
       autoFocus: 'dialog',
       restoreFocus: true,
       ariaLabelledBy: 'ksd-title',
-      ariaDescribedBy: 'ksd-desc',
+      ariaDescribedBy: 'ksd-desc'
     });
   }
 }

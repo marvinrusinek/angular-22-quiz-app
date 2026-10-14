@@ -44,7 +44,8 @@ export function validateCertificateClaimState(raw: unknown): CertificateClaimSta
   if (!raw || typeof raw !== 'object') return EMPTY_CERTIFICATE_CLAIM_STATE;
   const r = raw as Record<string, unknown>;
   const status = r['status'];
-  if (status !== 'none' && status !== 'pending' && status !== 'verified') return EMPTY_CERTIFICATE_CLAIM_STATE;
+  if (status !== 'none' && status !== 'pending' && status !== 'verified')
+    return EMPTY_CERTIFICATE_CLAIM_STATE;
 
   if (status !== 'verified') {
     return { version: CERTIFICATE_CLAIM_STATE_VERSION, status };

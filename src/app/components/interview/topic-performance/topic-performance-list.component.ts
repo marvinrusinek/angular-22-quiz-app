@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, input, ViewEncapsulation } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  ViewEncapsulation
+} from '@angular/core';
 
 import { InterviewAnalytics } from '@shared/models';
 

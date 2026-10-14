@@ -12,8 +12,8 @@ export type InterviewSessionStatus = 'active' | 'submitting' | 'submitted';
 // duration). Cleared on submit or abandon.
 export interface InterviewSession {
   assessment: GeneratedAssessment;
-  answersByIndex: Record<number, number[]>;   // display index → selected optionIds
+  answersByIndex: Record<number, number[]>; // display index → selected optionIds
   currentIndex: number;
-  expiresAt: number;                           // epoch ms — drift-proof remaining time
+  expiresAt: number; // epoch ms — drift-proof remaining time
   status: InterviewSessionStatus;
 }

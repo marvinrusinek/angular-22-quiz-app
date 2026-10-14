@@ -120,8 +120,7 @@ export class QqcResetManagerService {
   // confirmed (revisit on Previous: in-memory selections may be pruned but
   // questionCorrectness / SK_DOT_CONFIRMED persist across nav).
   private resolveHasSelections(i0: number): boolean {
-    const existingSelections =
-      this.selectedOptionService.getSelectedOptionsForQuestion(i0) ?? [];
+    const existingSelections = this.selectedOptionService.getSelectedOptionsForQuestion(i0) ?? [];
     const questionCorrectnessMap: Map<number, boolean> | undefined =
       this.quizService?.questionCorrectness;
     const scoredCorrect = !!questionCorrectnessMap?.get?.(i0);
@@ -129,7 +128,9 @@ export class QqcResetManagerService {
     try {
       const dotStored = sessionStorage.getItem(SK_DOT_CONFIRMED + i0);
       dotConfirmed = dotStored === 'correct' || dotStored === 'wrong';
-    } catch (err: unknown) { swallow('qqc-reset-manager.service.ts dot-confirmed read', err); }
+    } catch (err: unknown) {
+      swallow('qqc-reset-manager.service.ts dot-confirmed read', err);
+    }
     return existingSelections.length > 0 || scoredCorrect || dotConfirmed;
   }
 
@@ -146,13 +147,29 @@ export class QqcResetManagerService {
     // selectedOptionService.isAnswered$, so flip that here; the
     // forceEnable buys 1500ms of held-enable to outlast any
     // navigation-end resets that fire after this point.
-    try { this.selectedOptionService.setAnswered?.(true, true); } catch (err: unknown) { swallow('qqc-reset-manager.service.ts setAnswered', err); }
-    try { this.nextButtonStateService.forceEnable?.(1500); } catch (err: unknown) { swallow('qqc-reset-manager.service.ts forceEnable', err); }
+    try {
+      this.selectedOptionService.setAnswered?.(true, true);
+    } catch (err: unknown) {
+      swallow('qqc-reset-manager.service.ts setAnswered', err);
+    }
+    try {
+      this.nextButtonStateService.forceEnable?.(1500);
+    } catch (err: unknown) {
+      swallow('qqc-reset-manager.service.ts forceEnable', err);
+    }
     // Re-apply after the next macrotask in case a downstream reset path
     // disables the button between now and the end of navigation.
     setTimeout(() => {
-      try { this.selectedOptionService.setAnswered?.(true, true); } catch (err: unknown) { swallow('qqc-reset-manager.service.ts setAnswered (deferred)', err); }
-      try { this.nextButtonStateService.forceEnable?.(1500); } catch (err: unknown) { swallow('qqc-reset-manager.service.ts forceEnable (deferred)', err); }
+      try {
+        this.selectedOptionService.setAnswered?.(true, true);
+      } catch (err: unknown) {
+        swallow('qqc-reset-manager.service.ts setAnswered (deferred)', err);
+      }
+      try {
+        this.nextButtonStateService.forceEnable?.(1500);
+      } catch (err: unknown) {
+        swallow('qqc-reset-manager.service.ts forceEnable (deferred)', err);
+      }
     }, 0);
   }
 
@@ -176,9 +193,10 @@ export class QqcResetManagerService {
     if (this.dotStatusService.timedOutFetForced.has(i0)) return;
     // Reset the selection message so the stale "Next button" / "Show Results"
     // message from a prior answered question doesn't persist on an unanswered one.
-    const msg = i0 === 0
-      ? 'Please start the quiz by selecting an option.'
-      : 'Please click an option to continue.';
+    const msg =
+      i0 === 0
+        ? 'Please start the quiz by selecting an option.'
+        : 'Please click an option to continue.';
     this.selectionMessageService.pushMessage(msg, i0);
   }
 
@@ -201,7 +219,7 @@ export class QqcResetManagerService {
       lastLoggedQuestionIndex: -1,
       displayMode: hasSelections ? 'explanation' : 'question',
       displayExplanation: hasSelections,
-      explanationToDisplay: hasSelections ? '' : '',  // component keeps or clears
+      explanationToDisplay: hasSelections ? '' : '', // component keeps or clears
       explanationOwnerIdx: hasSelections ? -1 : -1
     };
   }
@@ -243,10 +261,7 @@ export class QqcResetManagerService {
   /**
    * Clears selection state for all options in a question.
    */
-  clearSelection(
-    correctAnswers: number[] | undefined,
-    currentQuestion: QuizQuestion | null
-  ): void {
+  clearSelection(correctAnswers: number[] | undefined, currentQuestion: QuizQuestion | null): void {
     if (correctAnswers && correctAnswers.length === 1) {
       if (currentQuestion && currentQuestion.options) {
         for (const option of currentQuestion.options) {
@@ -267,38 +282,35 @@ export class QqcResetManagerService {
    *   - Otherwise (incorrect, partial, or timer-expired with no selection):
    *     clear all option marks so nothing is highlighted/selected on revisit.
    */
-  restoreSelectionsAndIcons(
-    index: number,
-    optionsToDisplay: Option[]
-  ): Option[] {
-    const selectedOptions =
-      this.selectedOptionService.getSelectedOptionsForQuestion(index) ?? [];
+  restoreSelectionsAndIcons(index: number, optionsToDisplay: Option[]): Option[] {
+    const selectedOptions = this.selectedOptionService.getSelectedOptionsForQuestion(index) ?? [];
 
     const wasPerfect = this.wasAnsweredPerfectly(optionsToDisplay, selectedOptions);
 
     if (!wasPerfect) {
       // No persisted marks for imperfect/none.
-      return optionsToDisplay?.map(opt => ({
-        ...opt,
-        selected: false,
-        showIcon: false,
-        highlight: false
-      })) ?? [];
+      return (
+        optionsToDisplay?.map((opt) => ({
+          ...opt,
+          selected: false,
+          showIcon: false,
+          highlight: false
+        })) ?? []
+      );
     }
 
-    return optionsToDisplay?.map(opt => {
-      const match = selectedOptions.find(
-        (sel) => sel.optionId === opt.optionId
-      );
-      const isSelectedAndCorrect =
-        !!match && isOptionCorrect(opt);
-      return {
-        ...opt,
-        selected: isSelectedAndCorrect,
-        showIcon: isSelectedAndCorrect,
-        highlight: isSelectedAndCorrect
-      };
-    }) ?? [];
+    return (
+      optionsToDisplay?.map((opt) => {
+        const match = selectedOptions.find((sel) => sel.optionId === opt.optionId);
+        const isSelectedAndCorrect = !!match && isOptionCorrect(opt);
+        return {
+          ...opt,
+          selected: isSelectedAndCorrect,
+          showIcon: isSelectedAndCorrect,
+          highlight: isSelectedAndCorrect
+        };
+      }) ?? []
+    );
   }
 
   /**
@@ -313,13 +325,11 @@ export class QqcResetManagerService {
     if (!Array.isArray(selectedOptions) || selectedOptions.length === 0) return false;
 
     const correctIds = new Set<string>(
-      optionsToDisplay.filter(isOptionCorrect).map(o => String(o.optionId))
+      optionsToDisplay.filter(isOptionCorrect).map((o) => String(o.optionId))
     );
     if (correctIds.size === 0) return false;
 
-    const selectedIds = new Set<string>(
-      selectedOptions.map(s => String(s?.optionId))
-    );
+    const selectedIds = new Set<string>(selectedOptions.map((s) => String(s?.optionId)));
 
     // Every correct id must be selected
     for (const id of correctIds) {

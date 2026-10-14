@@ -8,11 +8,20 @@ import {
   reportKindSlug
 } from './interview-report.helpers';
 
-const custom = (over: Partial<InterviewSessionConfigViewModel> = {}): InterviewSessionConfigViewModel => ({
-  mode: 'custom', difficulty: 'intermediate', topicIds: ['router'], questionCount: 10, ...over
+const custom = (
+  over: Partial<InterviewSessionConfigViewModel> = {}
+): InterviewSessionConfigViewModel => ({
+  mode: 'custom',
+  difficulty: 'intermediate',
+  topicIds: ['router'],
+  questionCount: 10,
+  ...over
 });
 const preset = (presetId: string): InterviewSessionConfigViewModel => ({
-  mode: 'preset', presetId, topicIds: ['router'], questionCount: 20
+  mode: 'preset',
+  presetId,
+  topicIds: ['router'],
+  questionCount: 20
 });
 // A local-noon timestamp: immune to UTC/local day boundaries in any CI timezone.
 const LOCAL_NOON = new Date(2026, 8, 26, 12, 0, 0).getTime();
@@ -39,13 +48,21 @@ describe('interview report helpers', () => {
 
   describe('print title / suggested file name', () => {
     it('uses the first word of the preset name', () => {
-      expect(interviewReportTitle(preset('mid-level'), LOCAL_NOON)).toBe('Angular-Interview-Report-Mid-2026-09-26');
-      expect(interviewReportTitle(preset('junior'), LOCAL_NOON)).toBe('Angular-Interview-Report-Junior-2026-09-26');
-      expect(interviewReportTitle(preset('senior'), LOCAL_NOON)).toBe('Angular-Interview-Report-Senior-2026-09-26');
+      expect(interviewReportTitle(preset('mid-level'), LOCAL_NOON)).toBe(
+        'Angular-Interview-Report-Mid-2026-09-26'
+      );
+      expect(interviewReportTitle(preset('junior'), LOCAL_NOON)).toBe(
+        'Angular-Interview-Report-Junior-2026-09-26'
+      );
+      expect(interviewReportTitle(preset('senior'), LOCAL_NOON)).toBe(
+        'Angular-Interview-Report-Senior-2026-09-26'
+      );
     });
 
     it('uses "Custom" for a custom interview', () => {
-      expect(interviewReportTitle(custom(), LOCAL_NOON)).toBe('Angular-Interview-Report-Custom-2026-09-26');
+      expect(interviewReportTitle(custom(), LOCAL_NOON)).toBe(
+        'Angular-Interview-Report-Custom-2026-09-26'
+      );
     });
 
     it('falls back to "Preset" for a preset this build does not know — never echoing its id', () => {

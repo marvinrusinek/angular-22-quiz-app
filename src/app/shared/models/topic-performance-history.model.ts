@@ -33,11 +33,11 @@ export const TOPIC_PERFORMANCE_HISTORY_MAX = 200;
 export interface TopicPerformanceRecord {
   attemptId: string;
   source: TopicPerformanceSource;
-  completedAt: string;      // ISO 8601
-  topicId: string;          // stable quizId — never display text
+  completedAt: string; // ISO 8601
+  topicId: string; // stable quizId — never display text
   topicName: string;
-  correct: number;          // raw
-  total: number;            // raw answered/total
+  correct: number; // raw
+  total: number; // raw answered/total
 }
 
 export interface TopicPerformanceHistoryState {

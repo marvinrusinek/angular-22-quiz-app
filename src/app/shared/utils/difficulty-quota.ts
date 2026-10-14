@@ -68,10 +68,14 @@ export function calculateDifficultyQuota(
   distribution: DifficultyDistribution
 ): DifficultyQuota {
   if (!Number.isInteger(questionCount) || questionCount < 0) {
-    throw new Error(`calculateDifficultyQuota: questionCount must be a non-negative integer, got ${questionCount}`);
+    throw new Error(
+      `calculateDifficultyQuota: questionCount must be a non-negative integer, got ${questionCount}`
+    );
   }
   if (!isValidDistribution(distribution)) {
-    throw new Error('calculateDifficultyQuota: distribution values must be nonnegative and total 100');
+    throw new Error(
+      'calculateDifficultyQuota: distribution values must be nonnegative and total 100'
+    );
   }
 
   const exact = DIFFICULTY_ORDER.map((difficulty) => ({
@@ -94,7 +98,7 @@ export function calculateDifficultyQuota(
       rank: DIFFICULTY_ORDER.indexOf(difficulty)
     }))
     .filter((entry) => entry.remainder > 0)
-    .sort((a, b) => (b.remainder - a.remainder) || (b.rank - a.rank));
+    .sort((a, b) => b.remainder - a.remainder || b.rank - a.rank);
 
   for (const entry of byRemainder) {
     if (leftover === 0) break;

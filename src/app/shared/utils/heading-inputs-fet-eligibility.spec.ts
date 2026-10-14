@@ -99,7 +99,9 @@ function deps(over: DepsOverrides) {
       hasUserInteracted: () => over.hasInteracted === true,
       wasInteractedThisVisit: () => over.interactedThisVisit === true
     },
-    quizNavigationService: { isNavigatingToPreviousSig: () => over.isNavigatingToPrevious === true },
+    quizNavigationService: {
+      isNavigatingToPreviousSig: () => over.isNavigatingToPrevious === true
+    },
     quizQuestionManagerService: { getNumberOfCorrectAnswersText: () => '' },
     feedbackPolicyService: { feedbackMode: () => 'immediate' },
     questionVerdictService: over.verdictPhase
@@ -268,7 +270,7 @@ describe('FET eligibility: incorrect/incomplete attempts must not earn the revea
       explanation: AUTHORIZED_EXPLANATION,
       hasInteracted: false,
       interactedThisVisit: false,
-      isTimedOut: false,   // live timer signal does NOT survive a reload
+      isTimedOut: false, // live timer signal does NOT survive a reload
       isNavigatingToPrevious: false
     };
     expect(showsFetFor(over)).toBe(true);

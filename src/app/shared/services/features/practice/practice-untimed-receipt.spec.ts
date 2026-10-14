@@ -69,7 +69,9 @@ describe('Weak Areas Practice — untimed receipts', () => {
       expect(Date.now() - activatedAt).toBeGreaterThan(30_000);
 
       let status = '';
-      verdicts.check(QUIZ, QUESTION, ['mergeMap']).subscribe((r) => { status = r.status; });
+      verdicts.check(QUIZ, QUESTION, ['mergeMap']).subscribe((r) => {
+        status = r.status;
+      });
 
       // The receipt is requested NOW, not when the question was activated, so
       // its deadline starts here and cannot already have passed.
@@ -98,7 +100,9 @@ describe('Weak Areas Practice — untimed receipts', () => {
     verdicts.check(QUIZ, QUESTION, ['a']).subscribe({ error: () => undefined });
     settleReceipts('RECEIPT-1');
     http.expectOne(`${BASE}/quizzes/${QUIZ}/check`).flush({
-      status: 'incomplete', selectedVerdicts: [{ text: 'a', correct: false }], remainingCorrectCount: 2
+      status: 'incomplete',
+      selectedVerdicts: [{ text: 'a', correct: false }],
+      remainingCorrectCount: 2
     });
 
     // Second pick on the SAME question — a cached receipt would be reused here,
@@ -107,7 +111,11 @@ describe('Weak Areas Practice — untimed receipts', () => {
     settleReceipts('RECEIPT-2');
     const second = http.expectOne(`${BASE}/quizzes/${QUIZ}/check`);
     expect(second.request.headers.get('X-Question-Receipt')).toBe('RECEIPT-2');
-    second.flush({ status: 'resolved', correct: true, correctOptions: [{ text: 'a' }, { text: 'b' }] });
+    second.flush({
+      status: 'resolved',
+      correct: true,
+      correctOptions: [{ text: 'a' }, { text: 'b' }]
+    });
   });
 
   it('does NOT disturb the Topic Quiz receipt cache', () => {
@@ -115,16 +123,23 @@ describe('Weak Areas Practice — untimed receipts', () => {
 
     // A Topic Quiz question is activated and keeps its receipt.
     let topicHeaders: Record<string, string> | null = null;
-    attempts.withQuestionReceipt('signals', 'Topic Q', (headers) => {
-      topicHeaders = headers;
-      return new (require('rxjs').Observable)((s: { next: (v: unknown) => void; complete: () => void }) => {
-        s.next({}); s.complete();
-      });
-    }).subscribe();
+    attempts
+      .withQuestionReceipt('signals', 'Topic Q', (headers) => {
+        topicHeaders = headers;
+        return new (require('rxjs').Observable)(
+          (s: { next: (v: unknown) => void; complete: () => void }) => {
+            s.next({});
+            s.complete();
+          }
+        );
+      })
+      .subscribe();
 
     http.expectOne(`${BASE}/quizzes/signals/attempts`).flush({ attemptReceipt: 'TOPIC-ATTEMPT' });
     http.expectOne(`${BASE}/quizzes/signals/questions/start`).flush({
-      questionReceipt: 'TOPIC-RECEIPT', startedAt: 0, expiresAt: 30_000
+      questionReceipt: 'TOPIC-RECEIPT',
+      startedAt: 0,
+      expiresAt: 30_000
     });
     expect(topicHeaders!['X-Question-Receipt']).toBe('TOPIC-RECEIPT');
 
@@ -133,17 +148,24 @@ describe('Weak Areas Practice — untimed receipts', () => {
     verdicts.check(QUIZ, QUESTION, ['x']).subscribe({ error: () => undefined });
     settleReceipts('PRACTICE-RECEIPT');
     http.expectOne(`${BASE}/quizzes/${QUIZ}/check`).flush({
-      status: 'resolved', correct: false, correctOptions: [{ text: 'y' }]
+      status: 'resolved',
+      correct: false,
+      correctOptions: [{ text: 'y' }]
     });
 
     // The Topic Quiz receipt survived: re-activating issues NO new start call.
     let again: Record<string, string> | null = null;
-    attempts.withQuestionReceipt('signals', 'Topic Q', (headers) => {
-      again = headers;
-      return new (require('rxjs').Observable)((s: { next: (v: unknown) => void; complete: () => void }) => {
-        s.next({}); s.complete();
-      });
-    }).subscribe();
+    attempts
+      .withQuestionReceipt('signals', 'Topic Q', (headers) => {
+        again = headers;
+        return new (require('rxjs').Observable)(
+          (s: { next: (v: unknown) => void; complete: () => void }) => {
+            s.next({});
+            s.complete();
+          }
+        );
+      })
+      .subscribe();
     expect(again!['X-Question-Receipt']).toBe('TOPIC-RECEIPT');
   });
 });

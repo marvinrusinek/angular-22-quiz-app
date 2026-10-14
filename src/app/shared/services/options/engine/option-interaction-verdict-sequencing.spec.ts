@@ -27,7 +27,7 @@ import type { Quiz } from '@shared/models';
  * publishes the same set.
  */
 
-const MULTI = 'Select every operator';   // correct: map, filter
+const MULTI = 'Select every operator'; // correct: map, filter
 
 const BANK = [
   {
@@ -63,7 +63,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
   const quizService = TestBed.inject(QuizService);
@@ -86,8 +89,7 @@ afterEach(() => {
 });
 
 /** What the click path and the later ngDoCheck sync both call. */
-const publish = (texts: string[]) =>
-  selectedOptionService.setUiSelectedTextsForQuestion(0, texts);
+const publish = (texts: string[]) => selectedOptionService.setUiSelectedTextsForQuestion(0, texts);
 
 describe('one submission per real selection change', () => {
   it('a selection submits exactly once', () => {

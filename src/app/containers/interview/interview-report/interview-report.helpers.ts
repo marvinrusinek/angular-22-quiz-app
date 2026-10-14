@@ -12,7 +12,11 @@ export const INTERVIEW_REPORT_TITLE_PREFIX = 'Angular-Interview-Report';
 
 /** "Mid-Level Angular Developer" or "Custom Interview" — the same label Results shows. */
 export function reportAssessmentLabel(config: InterviewSessionConfigViewModel): string {
-  return interviewConfigLabel(config.mode === 'preset' ? 'preset' : 'custom', config.presetId, undefined);
+  return interviewConfigLabel(
+    config.mode === 'preset' ? 'preset' : 'custom',
+    config.presetId,
+    undefined
+  );
 }
 
 /**
@@ -57,7 +61,9 @@ export function interviewReportTitle(
 
 /** Long, human date for the report header, e.g. "September 26, 2026". */
 export function formatReportDate(submittedAtMs: number): string {
-  return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(
-    new Date(submittedAtMs)
-  );
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }).format(new Date(submittedAtMs));
 }

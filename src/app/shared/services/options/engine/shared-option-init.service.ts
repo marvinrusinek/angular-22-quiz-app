@@ -1,9 +1,7 @@
-﻿import { ChangeDetectorRef, Service, WritableSignal, inject } from '@angular/core';
+import { ChangeDetectorRef, Service, WritableSignal, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormGroup } from '@angular/forms';
-import {
-  animationFrameScheduler, BehaviorSubject, combineLatest, Observable, of
-} from 'rxjs';
+import { animationFrameScheduler, BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
 import { distinctUntilChanged, filter, observeOn } from 'rxjs/operators';
 
 import {
@@ -158,7 +156,7 @@ export class SharedOptionInitService {
     comp.timerExpiredForQuestion.set(false);
     comp._timerExpiryHandled = false;
     comp.timeoutCorrectOptionKeys.clear();
-    comp.forceDisableAll.set(false);  // reset forceDisableAll for new question
+    comp.forceDisableAll.set(false); // reset forceDisableAll for new question
 
     // Clear per-binding timer-expiry stamps applied by the timer-expiry
     // handler in shared-option.component.ts. Without this, Q2's options
@@ -166,9 +164,8 @@ export class SharedOptionInitService {
     // true for every option on the new question via isTimerStamped().
     // RESOLVE: comp.optionBindings is a signal in -clean / plain array in -main.
     const _rawBindings = (comp as any).optionBindings;
-    const _bindings: any[] = typeof _rawBindings === 'function'
-      ? (_rawBindings() ?? [])
-      : (_rawBindings ?? []);
+    const _bindings: any[] =
+      typeof _rawBindings === 'function' ? (_rawBindings() ?? []) : (_rawBindings ?? []);
     for (const b of _bindings) {
       if (!b) continue;
       delete b._timerExpiredStamped;
@@ -191,7 +188,9 @@ export class SharedOptionInitService {
         html.style.pointerEvents = '';
         el.classList.remove('correct-option');
       }
-    } catch (err: unknown) { swallow('shared-option-init.service.ts option-row DOM strip (non-browser env)', err); }
+    } catch (err: unknown) {
+      swallow('shared-option-init.service.ts option-row DOM strip (non-browser env)', err);
+    }
     comp.selectedOptions.clear();
     comp.selectedOptionMap.clear();
     comp._multiSelectByQuestion.clear();
@@ -222,7 +221,10 @@ export class SharedOptionInitService {
       this.explanationTextService._activeIndex = newIdx;
       this.explanationTextService.latestExplanationIndex = newIdx;
     } catch (err: unknown) {
-      console.error('SharedOptionInitService.resetStateForNewQuestion FET state reset failed:', err);
+      console.error(
+        'SharedOptionInitService.resetStateForNewQuestion FET state reset failed:',
+        err
+      );
     }
   }
 
@@ -258,42 +260,44 @@ export class SharedOptionInitService {
     // Stackblitz can be slower, so we retry at multiple intervals before
     // showing the fallback message
     const checkAndRetry = (attempt: number) => {
-      const maxAttempts = 5;  // increased for Stackblitz
-      const delays = [100, 200, 400, 800, 1500];  // progressive delays for retries
+      const maxAttempts = 5; // increased for Stackblitz
+      const delays = [100, 200, 400, 800, 1500]; // progressive delays for retries
 
-      setTimeout(() => {
-        // If options are now ready, try to initialize them
-        if (comp.optionsToDisplay?.length && !comp.optionBindings()?.length) {
-          comp.generateOptionBindings();
-          comp.cdRef.markForCheck();  // force immediate update for OnPush
-          return;
-        }
-
-        // If we have options and bindings but display flags aren't set, fix them
-        if (comp.optionsToDisplay?.length && comp.optionBindings()?.length) {
-          if (!comp.showOptions() || !comp.renderReady()) {
-
-            comp.showOptions.set(true);
-            comp.renderReady.set(true);
-            comp.optionsReady = true;
-            comp.showNoOptionsFallback = false;
-            comp.cdRef.markForCheck();  // force immediate update for OnPush
+      setTimeout(
+        () => {
+          // If options are now ready, try to initialize them
+          if (comp.optionsToDisplay?.length && !comp.optionBindings()?.length) {
+            comp.generateOptionBindings();
+            comp.cdRef.markForCheck(); // force immediate update for OnPush
+            return;
           }
-          return;
-        }
 
-        // If we've exhausted retries, show fallback
-        if (attempt >= maxAttempts) {
-          if (!comp.renderReady() || !comp.optionsToDisplay?.length) {
-            comp.showNoOptionsFallback = true;
-            comp.cdRef.markForCheck();  // force immediate update for OnPush
+          // If we have options and bindings but display flags aren't set, fix them
+          if (comp.optionsToDisplay?.length && comp.optionBindings()?.length) {
+            if (!comp.showOptions() || !comp.renderReady()) {
+              comp.showOptions.set(true);
+              comp.renderReady.set(true);
+              comp.optionsReady = true;
+              comp.showNoOptionsFallback = false;
+              comp.cdRef.markForCheck(); // force immediate update for OnPush
+            }
+            return;
           }
-          return;
-        }
 
-        // Try again
-        checkAndRetry(attempt + 1);
-      }, delays[attempt - 1] || 1500);
+          // If we've exhausted retries, show fallback
+          if (attempt >= maxAttempts) {
+            if (!comp.renderReady() || !comp.optionsToDisplay?.length) {
+              comp.showNoOptionsFallback = true;
+              comp.cdRef.markForCheck(); // force immediate update for OnPush
+            }
+            return;
+          }
+
+          // Try again
+          checkAndRetry(attempt + 1);
+        },
+        delays[attempt - 1] || 1500
+      );
     };
 
     checkAndRetry(1);
@@ -305,14 +309,14 @@ export class SharedOptionInitService {
    */
   initializeConfiguration(comp: SharedOptionComponentLike): void {
     this.initializeFromConfig(comp);
-  
+
     const cfg = comp.config();
     const configOptions = cfg?.optionsToDisplay;
-  
+
     if (configOptions?.length) {
       comp.optionsToDisplay = configOptions;
     }
-  
+
     comp.renderReady.set(!!comp.optionsToDisplay?.length);
   }
 
@@ -346,11 +350,7 @@ export class SharedOptionInitService {
     comp.synchronizeOptionBindings();
 
     // Initialize display flags if form and bindings are ready
-    if (
-      comp.form &&
-      comp.optionBindings()?.length > 0 &&
-      comp.optionsToDisplay?.length > 0
-    ) {
+    if (comp.form && comp.optionBindings()?.length > 0 && comp.optionsToDisplay?.length > 0) {
       comp.renderReady.set(true);
       comp.viewReady.set(true);
     }
@@ -392,11 +392,9 @@ export class SharedOptionInitService {
   private wireFinalRenderReady(comp: SharedOptionComponentLike): void {
     const finalReady$ = comp.finalRenderReady$();
     if (!finalReady$) return;
-    finalReady$
-      .pipe(takeUntilDestroyed(comp.destroyRef))
-      .subscribe((ready: boolean) => {
-        comp.finalRenderReady = ready;
-      });
+    finalReady$.pipe(takeUntilDestroyed(comp.destroyRef)).subscribe((ready: boolean) => {
+      comp.finalRenderReady = ready;
+    });
   }
 
   /** Regenerate feedback when the question index or latest options change (combined to avoid races). */
@@ -407,10 +405,16 @@ export class SharedOptionInitService {
       optionsToDisplay$
     ])
       .pipe(takeUntilDestroyed(comp.destroyRef))
-      .subscribe(([idx, opts]: [number, Option[]]) => this.handleIndexOptionsChange(comp, idx, opts));
+      .subscribe(([idx, opts]: [number, Option[]]) =>
+        this.handleIndexOptionsChange(comp, idx, opts)
+      );
   }
 
-  private handleIndexOptionsChange(comp: SharedOptionComponentLike, idx: number, opts: Option[]): void {
+  private handleIndexOptionsChange(
+    comp: SharedOptionComponentLike,
+    idx: number,
+    opts: Option[]
+  ): void {
     // lastProcessedQuestionIndex is the internal tracker; the @Input may lag this emission.
     if (comp.lastProcessedQuestionIndex !== idx) {
       this.applyQuestionChangeReset(comp, idx, opts);
@@ -424,7 +428,11 @@ export class SharedOptionInitService {
    * interaction flags + (when bindings don't already align and nothing persisted)
    * clear visual state, then advance the trackers. Extracted verbatim.
    */
-  private applyQuestionChangeReset(comp: SharedOptionComponentLike, idx: number, opts: Option[]): void {
+  private applyQuestionChangeReset(
+    comp: SharedOptionComponentLike,
+    idx: number,
+    opts: Option[]
+  ): void {
     if (this.isStaleBehaviorSubjectIdx(idx)) return;
 
     const bindingsAlignWithOpts = this.bindingsAlignWithOptions(comp, opts);
@@ -432,7 +440,9 @@ export class SharedOptionInitService {
     try {
       const persisted = this.selectedOptionService.getSelectedOptionsForQuestion(idx) ?? [];
       hasPersistedForIdx = persisted.length > 0;
-    } catch (err: unknown) { swallow('shared-option-init.service.ts applyQuestionChangeReset', err); }
+    } catch (err: unknown) {
+      swallow('shared-option-init.service.ts applyQuestionChangeReset', err);
+    }
 
     // Always reset interaction flags so generateOptionBindings doesn't early-return.
     comp.hasUserClicked.set(false);
@@ -456,7 +466,9 @@ export class SharedOptionInitService {
     try {
       const m = window.location.pathname.match(QUESTION_ROUTE_REGEX);
       if (m) urlQuestionIdx = Number(m[1]) - 1;
-    } catch (err: unknown) { swallow('shared-option-init.service.ts isStaleBehaviorSubjectIdx', err); }
+    } catch (err: unknown) {
+      swallow('shared-option-init.service.ts isStaleBehaviorSubjectIdx', err);
+    }
     return urlQuestionIdx >= 0 && idx !== urlQuestionIdx;
   }
 
@@ -468,10 +480,12 @@ export class SharedOptionInitService {
     const optsIds = (opts ?? [])
       .map((o: Option) => o?.optionId)
       .filter((id: any) => id != null && id !== -1);
-    return bindingIds.length > 0 &&
+    return (
+      bindingIds.length > 0 &&
       optsIds.length > 0 &&
       bindingIds.length === optsIds.length &&
-      bindingIds.every((id: any) => optsIds.includes(id));
+      bindingIds.every((id: any) => optsIds.includes(id))
+    );
   }
 
   /** Clear highlight/feedback state and reset every binding's visual flags. Extracted verbatim. */
@@ -496,27 +510,40 @@ export class SharedOptionInitService {
   }
 
   /** Rebuild feedback configs for the question at idx and keep feedback on the last-selected option. */
-  private regenerateFeedbackForIndex(comp: SharedOptionComponentLike, idx: number, opts: Option[]): void {
+  private regenerateFeedbackForIndex(
+    comp: SharedOptionComponentLike,
+    idx: number,
+    opts: Option[]
+  ): void {
     if (!(idx >= 0 && Array.isArray(opts) && opts.length > 0)) return;
     const question = comp.getQuestionAtDisplayIndex(idx);
     if (!question?.options) return;
 
     const selections = this.selectedOptionService.getSelectedOptionsForQuestion(idx) || [];
     const freshFeedback = this.feedbackService.buildFeedbackMessage(
-      question, selections, false, false, idx, comp.optionsToDisplay
+      question,
+      selections,
+      false,
+      false,
+      idx,
+      comp.optionsToDisplay
     );
 
     comp.feedbackConfigs = {};
     comp.activeFeedbackConfig.set(null);
 
-    const { lastSelectedId, hasSelection } = this.applyFeedbackConfigsToBindings(comp, opts, question, freshFeedback);
+    const { lastSelectedId, hasSelection } = this.applyFeedbackConfigsToBindings(
+      comp,
+      opts,
+      question,
+      freshFeedback
+    );
 
     if (hasSelection) {
       comp.showFeedback.set(true);
       // Keep feedback on the most recently clicked option unless it's still valid.
       const isCurrentFeedbackSelected =
-        comp.lastFeedbackOptionId !== -1 &&
-        comp.selectedOptions.has(comp.lastFeedbackOptionId);
+        comp.lastFeedbackOptionId !== -1 && comp.selectedOptions.has(comp.lastFeedbackOptionId);
       if (!isCurrentFeedbackSelected) {
         comp.lastFeedbackOptionId = lastSelectedId;
       }
@@ -524,7 +551,12 @@ export class SharedOptionInitService {
   }
 
   /** Write fresh feedback into every binding + its feedback config; return the last-selected id. Extracted verbatim. */
-  private applyFeedbackConfigsToBindings(comp: SharedOptionComponentLike, opts: Option[], question: any, freshFeedback: string): { lastSelectedId: number; hasSelection: boolean } {
+  private applyFeedbackConfigsToBindings(
+    comp: SharedOptionComponentLike,
+    opts: Option[],
+    question: any,
+    freshFeedback: string
+  ): { lastSelectedId: number; hasSelection: boolean } {
     let lastSelectedId = -1;
     let hasSelection = false;
     for (const [i, b] of (comp.optionBindings() ?? []).entries()) {
@@ -534,7 +566,7 @@ export class SharedOptionInitService {
       b.feedback = freshFeedback;
 
       const key = comp.keyOf(b.option, i);
-      const optId = (b.option.optionId != null && b.option.optionId > -1) ? b.option.optionId : i;
+      const optId = b.option.optionId != null && b.option.optionId > -1 ? b.option.optionId : i;
 
       if (b.isSelected) {
         lastSelectedId = optId;
@@ -565,9 +597,7 @@ export class SharedOptionInitService {
   subscribeToSelectionChanges(comp: SharedOptionComponentLike): void {
     this.selectedOptionService.selectedOption$
       .pipe(
-        distinctUntilChanged(
-          (prev, curr) => JSON.stringify(prev) === JSON.stringify(curr)
-        ),
+        distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr)),
         observeOn(animationFrameScheduler),
         takeUntilDestroyed(comp.destroyRef)
       )
@@ -677,7 +707,7 @@ export class SharedOptionInitService {
       // Ensure we have a unique and valid numeric optionId
       // Fallback to index if source is missing ID or has placeholder -1
       const rawId = opt.optionId;
-      const finalId = (rawId !== undefined && rawId !== null && String(rawId) !== '-1') ? rawId : idx;
+      const finalId = rawId !== undefined && rawId !== null && String(rawId) !== '-1' ? rawId : idx;
 
       return {
         ...opt,
@@ -737,7 +767,7 @@ export class SharedOptionInitService {
       const optIdReal = optId != null && optId !== -1 && String(optId) !== '-1';
 
       let matchedSaved: any = null;
-      const isSaved = saved.some(s => {
+      const isSaved = saved.some((s) => {
         // Skip unselect traces that lack visual flags
         if ((s as any)?.selected === false && !(s as any)?.showIcon && !(s as any)?.highlight) {
           return false;
@@ -778,7 +808,7 @@ export class SharedOptionInitService {
         opt.showIcon = true;
         (opt as any).highlight = true;
         if (opt.selected) {
-          const effectiveId = (opt.optionId != null && opt.optionId !== -1) ? opt.optionId : idx;
+          const effectiveId = opt.optionId != null && opt.optionId !== -1 ? opt.optionId : idx;
           comp.selectedOptions.add(Number(effectiveId));
         }
       }

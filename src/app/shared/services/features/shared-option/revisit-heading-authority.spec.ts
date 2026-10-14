@@ -88,12 +88,12 @@ describe('re-emitting a stored explanation is a render, not an interaction', () 
       questionHtml: '<p>When is a custom attribute directive a good choice?</p>',
       fetHtml: 'Custom attribute directives shine for…',
       isMultiAnswer: true,
-      isMultiAnswerComplete: true,   // answered on the first visit
+      isMultiAnswerComplete: true, // answered on the first visit
       isSingleAnswered: false,
       isTimedOut: false,
-      hasInteracted: true,           // durable: yes, they answered it
+      hasInteracted: true, // durable: yes, they answered it
       optionsReady: true,
-      isNavigatingToPrevious: true,  // …but this is a return trip
+      isNavigatingToPrevious: true, // …but this is a return trip
       interactedThisVisit: quizState.wasInteractedThisVisit(IDX)
     };
 
@@ -104,7 +104,7 @@ describe('re-emitting a stored explanation is a render, not an interaction', () 
 describe('a genuine click still shows the FET on the live view', () => {
   it('marks the visit, so the heading is not suppressed', () => {
     quizState.clearInteractedThisVisit(IDX);
-    quizState.markUserInteracted(IDX);   // the click path — no options
+    quizState.markUserInteracted(IDX); // the click path — no options
 
     expect(quizState.wasInteractedThisVisit(IDX)).toBe(true);
 

@@ -7,7 +7,7 @@ import {
   model,
   OnInit,
   output,
-  signal,
+  signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -42,7 +42,7 @@ import { norm } from '@shared/utils/text-norm';
   standalone: true,
   imports: [ReactiveFormsModule, SharedOptionComponent],
   templateUrl: './answer.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AnswerComponent extends BaseQuestion<OptionClickedPayload> implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
@@ -118,7 +118,7 @@ export class AnswerComponent extends BaseQuestion<OptionClickedPayload> implemen
             selected: false,
             highlight: false,
             showIcon: false,
-            feedback: undefined,
+            feedback: undefined
           }))
         );
         this.optionBindings.set(this.rebuildOptionBindings(this.optionBindingsSource()));
@@ -193,7 +193,7 @@ export class AnswerComponent extends BaseQuestion<OptionClickedPayload> implemen
 
         // Apply options synchronously (removed Promise.resolve to fix StackBlitz timing)
         this.applyIncomingOptions(this.incomingOptions(), {
-          resetSelection: false,
+          resetSelection: false
         });
       });
   }
@@ -327,7 +327,7 @@ export class AnswerComponent extends BaseQuestion<OptionClickedPayload> implemen
       selected: false,
       highlight: false,
       showIcon: false,
-      feedback: undefined,
+      feedback: undefined
     }));
 
     if (config.resetSelection ?? true) this.resetSelectionState();
@@ -356,7 +356,7 @@ export class AnswerComponent extends BaseQuestion<OptionClickedPayload> implemen
       this.sharedOptionConfig = {
         ...this.sharedOptionConfig,
         type: this.type(),
-        optionsToDisplay: nextOptions.map((option: Option) => ({ ...option })),
+        optionsToDisplay: nextOptions.map((option: Option) => ({ ...option }))
       };
     }
 
@@ -476,7 +476,7 @@ export class AnswerComponent extends BaseQuestion<OptionClickedPayload> implemen
       option: enrichedOption,
       index: originalPayload.index,
       checked: enrichedOption.selected === true,
-      wasReselected: originalPayload.wasReselected ?? false,
+      wasReselected: originalPayload.wasReselected ?? false
     };
 
     this.optionClicked.emit(cleanPayload);

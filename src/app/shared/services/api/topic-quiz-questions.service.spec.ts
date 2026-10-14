@@ -129,8 +129,13 @@ describe('the mapped questions', () => {
   it('exposes only the five public fields on a question', () => {
     // `correctCount` joined them deliberately (S2): the cardinality behind the
     // "(N answers are correct)" banner. Identity is still absent — see below.
-    expect(Object.keys(load()[0]!).sort())
-      .toEqual(['correctCount', 'difficulty', 'options', 'questionText', 'type']);
+    expect(Object.keys(load()[0]!).sort()).toEqual([
+      'correctCount',
+      'difficulty',
+      'options',
+      'questionText',
+      'type'
+    ]);
   });
 });
 
@@ -140,12 +145,17 @@ describe('the response cannot smuggle correctness through', () => {
     // reach a consumer even if the endpoint regressed.
     const views = load({
       quizId: QUIZ,
-      questions: [{
-        questionText: 'Q?',
-        type: 'single',
-        difficulty: null,
-        options: [{ text: 'A', correct: true }, { text: 'B', correct: false }]
-      }]
+      questions: [
+        {
+          questionText: 'Q?',
+          type: 'single',
+          difficulty: null,
+          options: [
+            { text: 'A', correct: true },
+            { text: 'B', correct: false }
+          ]
+        }
+      ]
     });
 
     expect(views[0]!.options[0]).toEqual({ text: 'A' });
@@ -170,14 +180,16 @@ describe('the response cannot smuggle correctness through', () => {
   it('drops explanation and identifier fields', () => {
     const views = load({
       quizId: QUIZ,
-      questions: [{
-        questionText: 'Q?',
-        type: 'single',
-        difficulty: null,
-        explanation: 'LEAKED',
-        questionId: 'q-1',
-        options: [{ text: 'A', optionId: 7 }]
-      }]
+      questions: [
+        {
+          questionText: 'Q?',
+          type: 'single',
+          difficulty: null,
+          explanation: 'LEAKED',
+          questionId: 'q-1',
+          options: [{ text: 'A', optionId: 7 }]
+        }
+      ]
     });
 
     const raw = JSON.stringify(views);
@@ -267,7 +279,9 @@ describe('failure is closed', () => {
     // would need the answer key, so an unknown type is a hard failure.
     expectError({
       quizId: QUIZ,
-      questions: [{ questionText: 'Q?', type: 'mystery', difficulty: null, options: [{ text: 'A' }] }]
+      questions: [
+        { questionText: 'Q?', type: 'mystery', difficulty: null, options: [{ text: 'A' }] }
+      ]
     });
   });
 
@@ -288,7 +302,8 @@ describe('failure is closed', () => {
   it('does not leak server error detail to the caller', () => {
     let error: unknown;
     service.loadQuestions(QUIZ).subscribe({ error: (e) => (error = e) });
-    http.expectOne({ method: 'GET', url: URL })
+    http
+      .expectOne({ method: 'GET', url: URL })
       .flush({ message: 'stack trace from server' }, { status: 400, statusText: 'Bad Request' });
 
     expect((error as Error).message).toBe('Could not load questions');

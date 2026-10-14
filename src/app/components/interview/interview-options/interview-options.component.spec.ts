@@ -24,7 +24,11 @@ describe('InterviewOptionsComponent', () => {
     { optionId: 3, text: 'C' }
   ];
 
-  function setup(questionType: InterviewQuestionType, selectedIds: number[] = [], disabled = false) {
+  function setup(
+    questionType: InterviewQuestionType,
+    selectedIds: number[] = [],
+    disabled = false
+  ) {
     fixture = TestBed.createComponent(InterviewOptionsComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('options', options);
@@ -35,7 +39,9 @@ describe('InterviewOptionsComponent', () => {
   }
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [InterviewOptionsComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [InterviewOptionsComponent]
+    }).compileComponents();
   });
 
   it('the active option model contains NO correctness', () => {

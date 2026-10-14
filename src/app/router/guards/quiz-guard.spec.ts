@@ -42,13 +42,13 @@ describe('QuizGuard', () => {
 
     metadataApi = {
       load: jest.fn().mockReturnValue(of([])),
-      questionCountByQuiz: jest.fn().mockReturnValue(new Map()),
+      questionCountByQuiz: jest.fn().mockReturnValue(new Map())
     };
 
     quizService = { questions: [] };
 
     progressionService = {
-      getFurthestUnlocked: jest.fn().mockReturnValue(Number.MAX_SAFE_INTEGER),
+      getFurthestUnlocked: jest.fn().mockReturnValue(Number.MAX_SAFE_INTEGER)
     };
 
     TestBed.configureTestingModule({
@@ -57,8 +57,8 @@ describe('QuizGuard', () => {
         { provide: Router, useValue: router },
         { provide: TopicQuizMetadataService, useValue: metadataApi },
         { provide: QuizService, useValue: quizService },
-        { provide: QuizProgressionService, useValue: progressionService },
-      ],
+        { provide: QuizProgressionService, useValue: progressionService }
+      ]
     });
     guard = TestBed.inject(QuizGuard);
   });
@@ -85,20 +85,24 @@ describe('QuizGuard', () => {
   });
 
   it('redirects to intro when questionIndex is non-numeric (malformed)', (done) => {
-    (guard.canActivate(
-      makeRoute({ quizId: 'angular', questionIndex: 'abc' }),
-      mockRouterState
-    ) as any).subscribe(() => {
+    (
+      guard.canActivate(
+        makeRoute({ quizId: 'angular', questionIndex: 'abc' }),
+        mockRouterState
+      ) as any
+    ).subscribe(() => {
       expect(router.createUrlTree).toHaveBeenCalledWith(['/quiz/intro', 'angular']);
       done();
     });
   });
 
   it('redirects to question 1 when questionIndex < 1 (invalid low)', (done) => {
-    (guard.canActivate(
-      makeRoute({ quizId: 'angular', questionIndex: '0' }),
-      mockRouterState
-    ) as any).subscribe(() => {
+    (
+      guard.canActivate(
+        makeRoute({ quizId: 'angular', questionIndex: '0' }),
+        mockRouterState
+      ) as any
+    ).subscribe(() => {
       expect(router.createUrlTree).toHaveBeenCalledWith(['/quiz/question', 'angular', 1]);
       done();
     });
@@ -106,10 +110,12 @@ describe('QuizGuard', () => {
 
   it('allows navigation when the quiz is unknown to metadata (let resolver load/redirect)', (done) => {
     setCounts({});
-    (guard.canActivate(
-      makeRoute({ quizId: 'angular', questionIndex: '1' }),
-      mockRouterState
-    ) as any).subscribe((result: unknown) => {
+    (
+      guard.canActivate(
+        makeRoute({ quizId: 'angular', questionIndex: '1' }),
+        mockRouterState
+      ) as any
+    ).subscribe((result: unknown) => {
       expect(result).toBe(true);
       done();
     });
@@ -117,10 +123,12 @@ describe('QuizGuard', () => {
 
   it('allows navigation for the first question', (done) => {
     setCounts({ angular: 3 });
-    (guard.canActivate(
-      makeRoute({ quizId: 'angular', questionIndex: '1' }),
-      mockRouterState
-    ) as any).subscribe((result: unknown) => {
+    (
+      guard.canActivate(
+        makeRoute({ quizId: 'angular', questionIndex: '1' }),
+        mockRouterState
+      ) as any
+    ).subscribe((result: unknown) => {
       expect(result).toBe(true);
       done();
     });
@@ -128,10 +136,12 @@ describe('QuizGuard', () => {
 
   it('allows navigation for a middle question', (done) => {
     setCounts({ angular: 3 });
-    (guard.canActivate(
-      makeRoute({ quizId: 'angular', questionIndex: '2' }),
-      mockRouterState
-    ) as any).subscribe((result: unknown) => {
+    (
+      guard.canActivate(
+        makeRoute({ quizId: 'angular', questionIndex: '2' }),
+        mockRouterState
+      ) as any
+    ).subscribe((result: unknown) => {
       expect(result).toBe(true);
       done();
     });
@@ -139,10 +149,12 @@ describe('QuizGuard', () => {
 
   it('allows navigation for the last question', (done) => {
     setCounts({ angular: 3 });
-    (guard.canActivate(
-      makeRoute({ quizId: 'angular', questionIndex: '3' }),
-      mockRouterState
-    ) as any).subscribe((result: unknown) => {
+    (
+      guard.canActivate(
+        makeRoute({ quizId: 'angular', questionIndex: '3' }),
+        mockRouterState
+      ) as any
+    ).subscribe((result: unknown) => {
       expect(result).toBe(true);
       done();
     });
@@ -150,10 +162,12 @@ describe('QuizGuard', () => {
 
   it('clamps an out-of-bounds (too high) question index to the max', (done) => {
     setCounts({ angular: 2 });
-    (guard.canActivate(
-      makeRoute({ quizId: 'angular', questionIndex: '5' }),
-      mockRouterState
-    ) as any).subscribe(() => {
+    (
+      guard.canActivate(
+        makeRoute({ quizId: 'angular', questionIndex: '5' }),
+        mockRouterState
+      ) as any
+    ).subscribe(() => {
       expect(router.createUrlTree).toHaveBeenCalledWith(['/quiz/question', 'angular', 2]);
       done();
     });
@@ -161,10 +175,12 @@ describe('QuizGuard', () => {
 
   it('a quiz known to metadata but with no reported count is treated as unknown (deferred)', (done) => {
     setCounts({ angular: null });
-    (guard.canActivate(
-      makeRoute({ quizId: 'angular', questionIndex: '5' }),
-      mockRouterState
-    ) as any).subscribe((result: unknown) => {
+    (
+      guard.canActivate(
+        makeRoute({ quizId: 'angular', questionIndex: '5' }),
+        mockRouterState
+      ) as any
+    ).subscribe((result: unknown) => {
       expect(result).toBe(true);
       done();
     });
@@ -173,10 +189,12 @@ describe('QuizGuard', () => {
   it('falls back to QuizService.questions.length when it exceeds the metadata count', (done) => {
     setCounts({ angular: 2 });
     quizService.questions = [{}, {}, {}, {}]; // 4 live questions, metadata says 2
-    (guard.canActivate(
-      makeRoute({ quizId: 'angular', questionIndex: '4' }),
-      mockRouterState
-    ) as any).subscribe((result: unknown) => {
+    (
+      guard.canActivate(
+        makeRoute({ quizId: 'angular', questionIndex: '4' }),
+        mockRouterState
+      ) as any
+    ).subscribe((result: unknown) => {
       expect(result).toBe(true); // index 4 is in range once the live count is used
       done();
     });
@@ -185,10 +203,12 @@ describe('QuizGuard', () => {
   it('a metadata/API failure never throws — TopicQuizMetadataService.load() fails soft to []', (done) => {
     metadataApi.load.mockReturnValue(of([])); // load() never rejects (fails soft), mirrors production
     setCounts({});
-    (guard.canActivate(
-      makeRoute({ quizId: 'angular', questionIndex: '1' }),
-      mockRouterState
-    ) as any).subscribe((result: unknown) => {
+    (
+      guard.canActivate(
+        makeRoute({ quizId: 'angular', questionIndex: '1' }),
+        mockRouterState
+      ) as any
+    ).subscribe((result: unknown) => {
       expect(result).toBe(true); // unknown-to-metadata path — resolver handles it
       done();
     });
@@ -196,10 +216,12 @@ describe('QuizGuard', () => {
 
   it('requires no QuizDataService and no bank Quiz object — the guard only calls metadataApi + quizService.questions', (done) => {
     setCounts({ angular: 3 });
-    (guard.canActivate(
-      makeRoute({ quizId: 'angular', questionIndex: '2' }),
-      mockRouterState
-    ) as any).subscribe(() => {
+    (
+      guard.canActivate(
+        makeRoute({ quizId: 'angular', questionIndex: '2' }),
+        mockRouterState
+      ) as any
+    ).subscribe(() => {
       expect(metadataApi.load).toHaveBeenCalled();
       expect(metadataApi.questionCountByQuiz).toHaveBeenCalled();
       done();
@@ -210,10 +232,12 @@ describe('QuizGuard', () => {
     it('a brand-new attempt (furthest=1) allows question 1', (done) => {
       setCounts({ angular: 3 });
       progressionService.getFurthestUnlocked.mockReturnValue(1);
-      (guard.canActivate(
-        makeRoute({ quizId: 'angular', questionIndex: '1' }),
-        mockRouterState
-      ) as any).subscribe((result: unknown) => {
+      (
+        guard.canActivate(
+          makeRoute({ quizId: 'angular', questionIndex: '1' }),
+          mockRouterState
+        ) as any
+      ).subscribe((result: unknown) => {
         expect(result).toBe(true);
         expect(router.createUrlTree).not.toHaveBeenCalled();
         done();
@@ -223,10 +247,12 @@ describe('QuizGuard', () => {
     it('a brand-new attempt (furthest=1) rejects a direct request for question 2 — redirects to the furthest UrlTree, never true', (done) => {
       setCounts({ angular: 3 });
       progressionService.getFurthestUnlocked.mockReturnValue(1);
-      (guard.canActivate(
-        makeRoute({ quizId: 'angular', questionIndex: '2' }),
-        mockRouterState
-      ) as any).subscribe((result: unknown) => {
+      (
+        guard.canActivate(
+          makeRoute({ quizId: 'angular', questionIndex: '2' }),
+          mockRouterState
+        ) as any
+      ).subscribe((result: unknown) => {
         expect(router.createUrlTree).toHaveBeenCalledWith(['/quiz/question', 'angular', 1]);
         expect(result).toBeInstanceOf(UrlTree);
         expect(result).not.toBe(true);
@@ -237,10 +263,12 @@ describe('QuizGuard', () => {
     it('an in-range but not-yet-earned question (e.g. furthest=2, requesting 5 of 6) redirects to the furthest unlocked index, not the requested one', (done) => {
       setCounts({ angular: 6 });
       progressionService.getFurthestUnlocked.mockReturnValue(2);
-      (guard.canActivate(
-        makeRoute({ quizId: 'angular', questionIndex: '5' }),
-        mockRouterState
-      ) as any).subscribe((result: unknown) => {
+      (
+        guard.canActivate(
+          makeRoute({ quizId: 'angular', questionIndex: '5' }),
+          mockRouterState
+        ) as any
+      ).subscribe((result: unknown) => {
         expect(router.createUrlTree).toHaveBeenCalledWith(['/quiz/question', 'angular', 2]);
         expect(result).toBeInstanceOf(UrlTree);
         done();
@@ -250,10 +278,12 @@ describe('QuizGuard', () => {
     it('requesting exactly the furthest-unlocked index is allowed (the boundary is inclusive)', (done) => {
       setCounts({ angular: 6 });
       progressionService.getFurthestUnlocked.mockReturnValue(3);
-      (guard.canActivate(
-        makeRoute({ quizId: 'angular', questionIndex: '3' }),
-        mockRouterState
-      ) as any).subscribe((result: unknown) => {
+      (
+        guard.canActivate(
+          makeRoute({ quizId: 'angular', questionIndex: '3' }),
+          mockRouterState
+        ) as any
+      ).subscribe((result: unknown) => {
         expect(result).toBe(true);
         done();
       });
@@ -262,10 +292,12 @@ describe('QuizGuard', () => {
     it('requesting any already-unlocked question behind the furthest (revisit/backward nav) is allowed', (done) => {
       setCounts({ angular: 6 });
       progressionService.getFurthestUnlocked.mockReturnValue(4);
-      (guard.canActivate(
-        makeRoute({ quizId: 'angular', questionIndex: '2' }),
-        mockRouterState
-      ) as any).subscribe((result: unknown) => {
+      (
+        guard.canActivate(
+          makeRoute({ quizId: 'angular', questionIndex: '2' }),
+          mockRouterState
+        ) as any
+      ).subscribe((result: unknown) => {
         expect(result).toBe(true);
         done();
       });
@@ -274,10 +306,12 @@ describe('QuizGuard', () => {
     it('malformed/out-of-range index handling runs BEFORE the progression check — a non-numeric index still redirects to intro, not through getFurthestUnlocked', (done) => {
       setCounts({ angular: 3 });
       progressionService.getFurthestUnlocked.mockReturnValue(1);
-      (guard.canActivate(
-        makeRoute({ quizId: 'angular', questionIndex: 'nope' }),
-        mockRouterState
-      ) as any).subscribe(() => {
+      (
+        guard.canActivate(
+          makeRoute({ quizId: 'angular', questionIndex: 'nope' }),
+          mockRouterState
+        ) as any
+      ).subscribe(() => {
         expect(router.createUrlTree).toHaveBeenCalledWith(['/quiz/intro', 'angular']);
         expect(progressionService.getFurthestUnlocked).not.toHaveBeenCalled();
         done();
@@ -288,10 +322,12 @@ describe('QuizGuard', () => {
       setCounts({ angular: 3 });
       quizService.questions = [{}, {}, {}, {}]; // live count (4) exceeds metadata (3)
       progressionService.getFurthestUnlocked.mockReturnValue(1);
-      (guard.canActivate(
-        makeRoute({ quizId: 'angular', questionIndex: '4' }),
-        mockRouterState
-      ) as any).subscribe(() => {
+      (
+        guard.canActivate(
+          makeRoute({ quizId: 'angular', questionIndex: '4' }),
+          mockRouterState
+        ) as any
+      ).subscribe(() => {
         expect(progressionService.getFurthestUnlocked).toHaveBeenCalledWith('angular', 4);
         done();
       });
@@ -300,10 +336,12 @@ describe('QuizGuard', () => {
     it('a direct Router.navigate() to a locked URL cannot bypass the guard — canActivate itself resolves a redirect UrlTree, not `true`, so the target route never activates', (done) => {
       setCounts({ angular: 6 });
       progressionService.getFurthestUnlocked.mockReturnValue(1);
-      (guard.canActivate(
-        makeRoute({ quizId: 'angular', questionIndex: '6' }),
-        mockRouterState
-      ) as any).subscribe((result: unknown) => {
+      (
+        guard.canActivate(
+          makeRoute({ quizId: 'angular', questionIndex: '6' }),
+          mockRouterState
+        ) as any
+      ).subscribe((result: unknown) => {
         expect(result).toBeInstanceOf(UrlTree);
         expect(result).not.toBe(true);
         expect(router.createUrlTree).toHaveBeenCalledWith(['/quiz/question', 'angular', 1]);
@@ -314,10 +352,12 @@ describe('QuizGuard', () => {
     it('redirecting to the furthest unlocked index cannot loop — re-evaluating the guard against that same redirect target resolves true', (done) => {
       setCounts({ angular: 6 });
       progressionService.getFurthestUnlocked.mockReturnValue(2);
-      (guard.canActivate(
-        makeRoute({ quizId: 'angular', questionIndex: '2' }),
-        mockRouterState
-      ) as any).subscribe((result: unknown) => {
+      (
+        guard.canActivate(
+          makeRoute({ quizId: 'angular', questionIndex: '2' }),
+          mockRouterState
+        ) as any
+      ).subscribe((result: unknown) => {
         // This is the exact target the prior over-request redirected to —
         // proving re-evaluating the guard against it settles at `true`
         // instead of redirecting again.

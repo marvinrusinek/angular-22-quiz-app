@@ -1,9 +1,19 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpErrorResponse,
+  provideHttpClient,
+  withInterceptors
+} from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
-import { API_BASE_URL, INTERVIEW_API_BASE_URL, PROD_API_BASE_URL, INTERVIEW_PROD_API_BASE_URL } from '@shared/tokens/api-base-url.token';
+import {
+  API_BASE_URL,
+  INTERVIEW_API_BASE_URL,
+  PROD_API_BASE_URL,
+  INTERVIEW_PROD_API_BASE_URL
+} from '@shared/tokens/api-base-url.token';
 import { apiErrorInterceptor } from './api-error.interceptor';
 
 const BASE = 'http://api.test/api';
@@ -52,7 +62,8 @@ describe('apiErrorInterceptor', () => {
     for (const status of [400, 401, 404, 500, 0] as const) {
       const promise = firstValueFrom(http.get(`${BASE}/quizzes/${status}/check`));
       const req = backend.expectOne(`${BASE}/quizzes/${status}/check`);
-      if (status === 0) req.error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+      if (status === 0)
+        req.error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
       else req.flush({}, { status, statusText: 'error' });
       await expect(promise).rejects.toMatchObject({ status });
     }
@@ -87,12 +98,17 @@ describe('apiErrorInterceptor', () => {
       })
     ).catch(() => undefined);
 
-    const req = backend.expectOne(`${BASE}/quizzes/dependency-injection/check?token=shouldNeverBeLogged`);
+    const req = backend.expectOne(
+      `${BASE}/quizzes/dependency-injection/check?token=shouldNeverBeLogged`
+    );
     req.flush({ serverSecretField: 'should not be logged' }, { status: 400, statusText: 'error' });
     await promise;
 
     expect(logSpy).toHaveBeenCalled();
-    const loggedText = logSpy.mock.calls.flat().map((a) => JSON.stringify(a)).join(' ');
+    const loggedText = logSpy.mock.calls
+      .flat()
+      .map((a) => JSON.stringify(a))
+      .join(' ');
     expect(loggedText).not.toContain('secret question text');
     expect(loggedText).not.toContain('secret selection');
     expect(loggedText).not.toContain('should not be logged');
@@ -123,12 +139,19 @@ describe('apiErrorInterceptor', () => {
     const realHttp = TestBed.inject(HttpClient);
     const realBackend = TestBed.inject(HttpTestingController);
 
-    const nodePromise = firstValueFrom(realHttp.get(`${PROD_API_BASE_URL}/quizzes`)).catch(() => undefined);
-    realBackend.expectOne(`${PROD_API_BASE_URL}/quizzes`).flush({}, { status: 500, statusText: 'error' });
+    const nodePromise = firstValueFrom(realHttp.get(`${PROD_API_BASE_URL}/quizzes`)).catch(
+      () => undefined
+    );
+    realBackend
+      .expectOne(`${PROD_API_BASE_URL}/quizzes`)
+      .flush({}, { status: 500, statusText: 'error' });
     await nodePromise;
 
-    const springPromise = firstValueFrom(realHttp.get(`${INTERVIEW_PROD_API_BASE_URL}/interview-sessions/is_1`)).catch(() => undefined);
-    realBackend.expectOne(`${INTERVIEW_PROD_API_BASE_URL}/interview-sessions/is_1`)
+    const springPromise = firstValueFrom(
+      realHttp.get(`${INTERVIEW_PROD_API_BASE_URL}/interview-sessions/is_1`)
+    ).catch(() => undefined);
+    realBackend
+      .expectOne(`${INTERVIEW_PROD_API_BASE_URL}/interview-sessions/is_1`)
       .flush({}, { status: 500, statusText: 'error' });
     await springPromise;
 

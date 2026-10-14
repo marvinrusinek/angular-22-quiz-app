@@ -194,9 +194,7 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
 
   constructor() {
     // Expiry → submit ONCE. Wired before the timer starts so it can never be missed.
-    this.timer.expired$
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => void this.handleExpiry());
+    this.timer.expired$.pipe(takeUntilDestroyed()).subscribe(() => void this.handleExpiry());
 
     this.integrity.warningOnReturn$
       .pipe(takeUntilDestroyed())
@@ -230,7 +228,10 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
   private startDisplayTimer(): void {
     if (this.status() !== 'active') return;
     // Anchored to the server's own remaining time — never a full restart.
-    this.timer.syncFromServer(this.session.serverRemainingSeconds(), this.session.durationSeconds());
+    this.timer.syncFromServer(
+      this.session.serverRemainingSeconds(),
+      this.session.durationSeconds()
+    );
   }
 
   /**
@@ -262,7 +263,7 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
           } else if (verdict.kind === 'builder') {
             await this.router.navigate(['/interview']);
           }
-          break;   // unresolved: the retry card stays, and can be tried again
+          break; // unresolved: the retry card stays, and can be tried again
         }
         case 'unauthorized':
         case 'none':
@@ -315,7 +316,7 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
 
   onNavigate(index: number): void {
     if (this.navigationBlocked()) return;
-    this.session.setCurrentIndex(index);   // also persists v2 currentIndex
+    this.session.setCurrentIndex(index); // also persists v2 currentIndex
     try {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
@@ -338,7 +339,8 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
 
     const target = event.target as HTMLElement | null;
     const tag = target?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable)
+      return;
 
     // Same gate as every other navigation path.
     if (this.navigationBlocked()) return;
@@ -353,7 +355,7 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
     }
 
     if (index >= this.total() - 1) return;
-    if (!this.canNavigateNext()) return;   // left alone rather than swallowed
+    if (!this.canNavigateNext()) return; // left alone rather than swallowed
     event.preventDefault();
     this.onNavigate(index + 1);
   }
@@ -369,7 +371,9 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
 
     const answered = this.answeredCount();
     this.submitDialogRef = this.dialog.open<
-      InterviewSubmitDialogComponent, InterviewSubmitDialogData, boolean
+      InterviewSubmitDialogComponent,
+      InterviewSubmitDialogData,
+      boolean
     >(InterviewSubmitDialogComponent, {
       width: '360px',
       panelClass: 'themed-confirm-dialog',
@@ -402,7 +406,7 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
    * backend decides that from its own clock.
    */
   private async submit(): Promise<void> {
-    if (this.submitStarted) return;   // suppress duplicates in the UI
+    if (this.submitStarted) return; // suppress duplicates in the UI
     this.submitStarted = true;
     this._finalizing.set(true);
     this.submitError.set(null);
@@ -461,9 +465,9 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
 
   enterFullscreen(): void {
     const el = document.documentElement ?? this.host.nativeElement;
-    this.integrity.enterFullscreen(el).catch((err) =>
-      swallow('interview-session#enterFullscreen', err)
-    );
+    this.integrity
+      .enterFullscreen(el)
+      .catch((err) => swallow('interview-session#enterFullscreen', err));
   }
 
   /** Scoped copy deterrents — bound only to the assessment content box. */

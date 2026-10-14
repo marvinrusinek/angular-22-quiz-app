@@ -130,7 +130,7 @@ export class PracticeOptionsComponent {
   }
 
   onToggle(option: Option): void {
-    if (this.resolved()) return;   // locks only once fully correct
+    if (this.resolved()) return; // locks only once fully correct
     const id = option.optionId;
     if (id == null) return;
 

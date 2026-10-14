@@ -23,14 +23,24 @@ const MULTI = 'Select every operator';
 const QUESTIONS = [{ questionText: SINGLE }, { questionText: MULTI }];
 
 const RESOLVED_WRONG: QuestionCheckResult = {
-  status: 'resolved', correct: false, correctOptionTexts: ['b'], explanation: 'e'
+  status: 'resolved',
+  correct: false,
+  correctOptionTexts: ['b'],
+  explanation: 'e'
 } as QuestionCheckResult;
 const RESOLVED_RIGHT: QuestionCheckResult = {
-  status: 'resolved', correct: true, correctOptionTexts: ['a'], explanation: 'e'
+  status: 'resolved',
+  correct: true,
+  correctOptionTexts: ['a'],
+  explanation: 'e'
 } as QuestionCheckResult;
 
 /** Each adapter call is a Subject the test settles by hand. */
-let calls: { texts: readonly string[]; subject: Subject<QuestionCheckResult>; unsubscribed: boolean }[];
+let calls: {
+  texts: readonly string[];
+  subject: Subject<QuestionCheckResult>;
+  unsubscribed: boolean;
+}[];
 let verdicts: QuestionVerdictService;
 let selected: SelectedOptionService;
 let credit: jest.Mock;
@@ -48,7 +58,10 @@ beforeEach(() => {
         const entry = { texts, subject: new Subject<QuestionCheckResult>(), unsubscribed: false };
         calls.push(entry);
         const inner = entry.subject.subscribe(subscriber);
-        return () => { entry.unsubscribed = true; inner.unsubscribe(); };
+        return () => {
+          entry.unsubscribed = true;
+          inner.unsubscribe();
+        };
       }),
     revealExpired: jest.fn()
   };
@@ -98,12 +111,12 @@ describe('a failed check is recoverable and stays fail-closed', () => {
     expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(true);
 
     jest.advanceTimersByTime(VERDICT_CHECK_TIMEOUT_MS - 1);
-    expect(phase(SINGLE)).toBe('checking');             // still within the bound
+    expect(phase(SINGLE)).toBe('checking'); // still within the bound
 
     jest.advanceTimersByTime(1);
     expect(phase(SINGLE)).toBe('error');
     expect(verdicts.hasFailedVerdicts(QUIZ)).toBe(true);
-    expect(calls[0]!.unsubscribed).toBe(true);          // the request was cancelled
+    expect(calls[0]!.unsubscribed).toBe(true); // the request was cancelled
   });
 
   it('3. a late answer from the timed-out request cannot land (it was cancelled)', () => {
@@ -111,18 +124,18 @@ describe('a failed check is recoverable and stays fail-closed', () => {
     jest.advanceTimersByTime(VERDICT_CHECK_TIMEOUT_MS);
     calls[0]!.subject.next(RESOLVED_RIGHT);
 
-    expect(phase(SINGLE)).toBe('error');                // not overwritten by the late "resolved"
+    expect(phase(SINGLE)).toBe('error'); // not overwritten by the late "resolved"
     expect(verdicts.verdictFor(QUIZ, SINGLE).isResolvedCorrect).toBeFalsy();
   });
 
   it('4. a stale response cannot overwrite a newer verdict', () => {
-    send(MULTI, ['a']);                                 // request 0 (older)
-    send(MULTI, ['a', 'b']);                            // request 1 (newer, supersedes)
+    send(MULTI, ['a']); // request 0 (older)
+    send(MULTI, ['a', 'b']); // request 1 (newer, supersedes)
     calls[1]!.subject.next(RESOLVED_RIGHT);
     expect(phase(MULTI)).toBe('resolved');
 
     calls[0]!.subject.error(new Error('late failure')); // the older one fails LAST
-    expect(phase(MULTI)).toBe('resolved');              // still the newer verdict
+    expect(phase(MULTI)).toBe('resolved'); // still the newer verdict
   });
 });
 
@@ -134,7 +147,7 @@ describe('retryVerdict — resend the UNCHANGED selection', () => {
     expect(selected.retryVerdict(0)).toBe(true);
 
     expect(calls).toHaveLength(2);
-    expect(calls[1]!.texts).toEqual(['a']);             // the same selection, resent
+    expect(calls[1]!.texts).toEqual(['a']); // the same selection, resent
     expect(phase(SINGLE)).toBe('checking');
   });
 
@@ -158,7 +171,7 @@ describe('retryVerdict — resend the UNCHANGED selection', () => {
     expect(phase(SINGLE)).toBe('resolved');
     expect(verdicts.hasFailedVerdicts(QUIZ)).toBe(false);
     expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(false);
-    expect(credit).toHaveBeenCalledWith(QUIZ, SINGLE);  // credited on arrival, once
+    expect(credit).toHaveBeenCalledWith(QUIZ, SINGLE); // credited on arrival, once
   });
 
   it('7b. a successful retry that resolves WRONG earns no credit (the SERVICE-level backstop only tracks checking/error)', () => {
@@ -189,32 +202,32 @@ describe('retryVerdict — resend the UNCHANGED selection', () => {
     fail(0);
 
     expect(selected.retryVerdict(0)).toBe(true);
-    expect(selected.retryVerdict(0)).toBe(false);       // already checking
+    expect(selected.retryVerdict(0)).toBe(false); // already checking
     expect(selected.retryVerdict(0)).toBe(false);
 
-    expect(calls).toHaveLength(2);                      // original + ONE retry
+    expect(calls).toHaveLength(2); // original + ONE retry
   });
 
   it('10. retry does nothing unless the check actually failed (no phantom requests)', () => {
-    expect(selected.retryVerdict(0)).toBe(false);       // idle
+    expect(selected.retryVerdict(0)).toBe(false); // idle
     send(SINGLE, ['a']);
-    expect(selected.retryVerdict(0)).toBe(false);       // checking
+    expect(selected.retryVerdict(0)).toBe(false); // checking
     calls[0]!.subject.next(RESOLVED_RIGHT);
-    expect(selected.retryVerdict(0)).toBe(false);       // resolved
+    expect(selected.retryVerdict(0)).toBe(false); // resolved
 
     expect(calls).toHaveLength(1);
   });
 
   it('11. the Results gate stays closed for the whole recovery, on the last question too', () => {
-    send(MULTI, ['a', 'b']);                            // pretend this is the last question
+    send(MULTI, ['a', 'b']); // pretend this is the last question
     fail(0);
     expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(true);
 
     selected.retryVerdict(1);
-    expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(true);   // pending: still closed
+    expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(true); // pending: still closed
 
     calls[1]!.subject.next(RESOLVED_RIGHT);
-    expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(false);  // proven: open
+    expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(false); // proven: open
   });
 });
 

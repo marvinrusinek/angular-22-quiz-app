@@ -106,7 +106,9 @@ export class InterviewApiService {
     idempotencyKey?: string
   ): Observable<CreatedInterviewSession> {
     if (!this.configured) return this.notConfigured();
-    const headers = idempotencyKey ? new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) : undefined;
+    const headers = idempotencyKey
+      ? new HttpHeaders({ 'Idempotency-Key': idempotencyKey })
+      : undefined;
     return this.http
       .post<ActiveInterviewSessionDto>(`${this.baseUrl}/interview-sessions`, request, { headers })
       .pipe(
@@ -196,7 +198,11 @@ export class InterviewApiService {
   submitSession(sessionId: string, token: string): Observable<InterviewResultViewModel> {
     if (!this.configured) return this.notConfigured();
     return this.http
-      .post<InterviewResultDto>(`${this.sessionUrl(sessionId)}/submit`, {}, { headers: this.auth(token) })
+      .post<InterviewResultDto>(
+        `${this.sessionUrl(sessionId)}/submit`,
+        {},
+        { headers: this.auth(token) }
+      )
       .pipe(
         map(toResultViewModel),
         catchError((err: unknown) => throwError(() => toInterviewApiError(err)))
@@ -206,7 +212,9 @@ export class InterviewApiService {
   getResult(sessionId: string, token: string): Observable<InterviewResultViewModel> {
     if (!this.configured) return this.notConfigured();
     return this.http
-      .get<InterviewResultDto>(`${this.sessionUrl(sessionId)}/result`, { headers: this.auth(token) })
+      .get<InterviewResultDto>(`${this.sessionUrl(sessionId)}/result`, {
+        headers: this.auth(token)
+      })
       .pipe(
         map(toResultViewModel),
         catchError((err: unknown) => throwError(() => toInterviewApiError(err)))
@@ -257,6 +265,6 @@ function toQuizMetadataDto(entry: {
     image: entry.image ?? '',
     difficulty: entry.difficulty ?? '',
     facts: entry.facts,
-    questionCount: entry.questionCount ?? 0,
+    questionCount: entry.questionCount ?? 0
   };
 }

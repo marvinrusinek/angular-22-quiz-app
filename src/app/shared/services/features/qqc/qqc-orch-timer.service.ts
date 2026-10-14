@@ -50,15 +50,14 @@ export class QqcOrchTimerService {
     const direct = host.currentQuestion()?.questionText;
     if (typeof direct === 'string' && direct.length > 0) return direct;
 
-    const idx = (typeof targetIndex === 'number' && targetIndex >= 0)
-      ? targetIndex
-      : host.currentQuestionIndex();
-    const inDisplayOrder = (this.quizService as any)
-      ?.getQuestionsInDisplayOrder?.()?.[idx]?.questionText;
+    const idx =
+      typeof targetIndex === 'number' && targetIndex >= 0
+        ? targetIndex
+        : host.currentQuestionIndex();
+    const inDisplayOrder = (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[idx]
+      ?.questionText;
 
-    return typeof inDisplayOrder === 'string' && inDisplayOrder.length > 0
-      ? inDisplayOrder
-      : null;
+    return typeof inDisplayOrder === 'string' && inDisplayOrder.length > 0 ? inDisplayOrder : null;
   }
 
   private revealExpired(host: Host, targetIndex?: number): Observable<ReadonlySet<string>> {
@@ -66,9 +65,9 @@ export class QqcOrchTimerService {
     const questionText = this.expiredQuestionText(host, targetIndex);
     if (!quizId || !questionText) return of(new Set<string>());
 
-    return this.verdicts.revealExpiredQuestion(quizId, questionText).pipe(
-      map((result) => new Set(result.correctOptionTexts.map((text) => norm(text))))
-    );
+    return this.verdicts
+      .revealExpiredQuestion(quizId, questionText)
+      .pipe(map((result) => new Set(result.correctOptionTexts.map((text) => norm(text)))));
   }
 
   runOnQuestionTimedOut(host: Host, targetIndex?: number): void {
@@ -97,11 +96,11 @@ export class QqcOrchTimerService {
     // above, so a second expiry cannot produce a second reveal.
     const displayOpts = soc?.optionsToDisplay?.length
       ? soc.optionsToDisplay
-      : host.optionsToDisplay() ?? [];
+      : (host.optionsToDisplay() ?? []);
 
     this.revealExpired(host, targetIndex).subscribe({
       next: (correctTexts: ReadonlySet<string>) => {
-        if (!soc) return;   // verdict is recorded either way; keys need a SOC
+        if (!soc) return; // verdict is recorded either way; keys need a SOC
         const keys = new Set<string>();
         for (const [i, opt] of displayOpts.entries()) {
           const text = norm(opt?.text ?? '');
@@ -148,10 +147,15 @@ export class QqcOrchTimerService {
     // fetHtml (formattedExplanations[idx] / fetByIndex.get(idx)) is populated. The
     // fast-path (Q2+) resolved the text but never stored it by index, so the heading
     // fell back to the question even once isTimedOut became true.
-    const timedOutIdx = (typeof targetIndex === 'number' && targetIndex >= 0)
-      ? targetIndex
-      : host.currentQuestionIndex();
-    if (timedOutIdx >= 0 && result.explanationToDisplay && host.explanationTextService?.timeoutFetByIndex?.set) {
+    const timedOutIdx =
+      typeof targetIndex === 'number' && targetIndex >= 0
+        ? targetIndex
+        : host.currentQuestionIndex();
+    if (
+      timedOutIdx >= 0 &&
+      result.explanationToDisplay &&
+      host.explanationTextService?.timeoutFetByIndex?.set
+    ) {
       host.explanationTextService.timeoutFetByIndex.set(timedOutIdx, result.explanationToDisplay);
     }
 
@@ -161,7 +165,9 @@ export class QqcOrchTimerService {
     // timeout marker.
     try {
       (window as any).__quizTimerExpired = true;
-    } catch (err: unknown) { swallow('qqc-orch-timer.service.ts set __quizTimerExpired', err); }
+    } catch (err: unknown) {
+      swallow('qqc-orch-timer.service.ts set __quizTimerExpired', err);
+    }
 
     if (soc) {
       soc.cdRef.markForCheck();

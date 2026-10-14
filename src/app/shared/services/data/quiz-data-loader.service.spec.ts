@@ -33,10 +33,15 @@ const SEEDED_QUIZ = {
   milestone: 'Seeded',
   summary: 'Seeded quiz for the S5a cutover test',
   image: '',
-  questions: [{
-    questionText: 'Seeded question',
-    options: [{ text: 'A', correct: true }, { text: 'B', correct: false }]
-  }]
+  questions: [
+    {
+      questionText: 'Seeded question',
+      options: [
+        { text: 'A', correct: true },
+        { text: 'B', correct: false }
+      ]
+    }
+  ]
 };
 
 let service: QuizDataLoaderService;
@@ -48,7 +53,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
   service = TestBed.inject(QuizDataLoaderService);

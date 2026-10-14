@@ -58,16 +58,18 @@ const UNTOUCHABLE: Record<string, string> = {
 const questionsApiStub = {
   loadQuestions: (quizId: string) => {
     const quiz = SYNTHETIC_CATALOG.find((q) => (q.quizId ?? (q as { id?: string }).id) === quizId);
-    return of((quiz?.questions ?? []).map((q) => {
-      const correctCount = (q.options ?? []).filter((o) => o.correct === true).length;
-      return {
-        questionText: q.questionText,
-        type: correctCount > 1 ? 'multiple' : 'single',
-        difficulty: 'beginner',
-        correctCount,
-        options: (q.options ?? []).map((o) => ({ text: o.text }))
-      };
-    }));
+    return of(
+      (quiz?.questions ?? []).map((q) => {
+        const correctCount = (q.options ?? []).filter((o) => o.correct === true).length;
+        return {
+          questionText: q.questionText,
+          type: correctCount > 1 ? 'multiple' : 'single',
+          difficulty: 'beginner',
+          correctCount,
+          options: (q.options ?? []).map((o) => ({ text: o.text }))
+        };
+      })
+    );
   }
 } as unknown as TopicQuizQuestionsService;
 
@@ -85,13 +87,19 @@ class VerdictStub {
   }
   verdictFor(quizId: string, questionText: string) {
     return {
-      resolved: this.isResolved(quizId, questionText), terminal: true,
-      selectedVerdicts: new Map<string, boolean>(), correctTexts: [],
-      remainingCorrectCount: null, explanation: '', errored: false
+      resolved: this.isResolved(quizId, questionText),
+      terminal: true,
+      selectedVerdicts: new Map<string, boolean>(),
+      correctTexts: [],
+      remainingCorrectCount: null,
+      explanation: '',
+      errored: false
     };
   }
   verdicts = signal(new Map());
-  clear(): void { this.resolved.clear(); }
+  clear(): void {
+    this.resolved.clear();
+  }
 }
 
 let verdictStub: VerdictStub;
@@ -151,7 +159,10 @@ describe('Weak Areas Practice — regression boundaries', () => {
     weakIds.set(['rxjs', 'signals']);
     for (const [key, value] of Object.entries(UNTOUCHABLE)) localStorage.setItem(key, value);
   });
-  afterEach(() => { sessionStorage.clear(); localStorage.clear(); });
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
 
   it('completing a practice session leaves EVERY other store byte-identical', async () => {
     const svc = service();

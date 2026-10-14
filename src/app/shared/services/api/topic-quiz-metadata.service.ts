@@ -81,8 +81,7 @@ export class TopicQuizMetadataService {
   /** quizId → tile summary/description, from the same response. */
   private readonly _summaryByQuiz = signal<ReadonlyMap<string, string>>(new Map());
 
-  readonly summaryByQuiz: Signal<ReadonlyMap<string, string>> =
-    this._summaryByQuiz.asReadonly();
+  readonly summaryByQuiz: Signal<ReadonlyMap<string, string>> = this._summaryByQuiz.asReadonly();
 
   /**
    * quizId → difficulty, from the same response. Set for EVERY entry (unlike
@@ -137,14 +136,12 @@ export class TopicQuizMetadataService {
   load(): Observable<readonly QuizMetadataEntryDto[]> {
     if (this.inFlight) return this.inFlight;
 
-    this.inFlight = this.http
-      .get<QuizMetadataListBody>(`${this.apiBaseUrl}/quizzes`)
-      .pipe(
-        map((body) => body?.quizzes ?? []),
-        tap((entries) => this.applyEntries(entries)),
-        catchError(() => of([] as readonly QuizMetadataEntryDto[])),
-        shareReplay({ bufferSize: 1, refCount: false })
-      );
+    this.inFlight = this.http.get<QuizMetadataListBody>(`${this.apiBaseUrl}/quizzes`).pipe(
+      map((body) => body?.quizzes ?? []),
+      tap((entries) => this.applyEntries(entries)),
+      catchError(() => of([] as readonly QuizMetadataEntryDto[])),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
 
     return this.inFlight;
   }

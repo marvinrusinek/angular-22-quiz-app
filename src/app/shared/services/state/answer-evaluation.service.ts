@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 
 import { Option, QuestionType, QuizQuestion, SelectedOption } from '@shared/models';
 
-
 import { OptionIdResolverService } from './option-id-resolver.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { QuizService } from '@shared/services/data/quiz.service';
@@ -68,10 +67,7 @@ export class AnswerEvaluationService {
    * `resolved` alone would be right by luck here, but wrong the moment a caller
    * starts trusting the counts.
    */
-  isQuestionComplete(
-    question: QuizQuestion,
-    selected: SelectedOption[]
-  ): boolean {
+  isQuestionComplete(question: QuizQuestion, selected: SelectedOption[]): boolean {
     if (!question || !Array.isArray(question.options)) return false;
 
     // No selection is not completion, whatever the verdict says. Kept ahead of
@@ -113,19 +109,28 @@ export class AnswerEvaluationService {
     // TEMPORARY: no quiz/question identity to key a verdict by (a caller
     // outside a live attempt). Removed with the public bank.
     const questionOptions = this.resolveAuthoritativeOptions(question);
-    const correctTotal =
-      questionOptions.filter(o => this.idResolver.coerceToBoolean(o.correct)).length;
+    const correctTotal = questionOptions.filter((o) =>
+      this.idResolver.coerceToBoolean(o.correct)
+    ).length;
 
-    const { correctSelected, incorrectSelected } =
-      this.countSelectedCorrectness(questionOptions, selected);
+    const { correctSelected, incorrectSelected } = this.countSelectedCorrectness(
+      questionOptions,
+      selected
+    );
 
     const remainingCorrect = Math.max(correctTotal - correctSelected, 0);
     let resolved = correctTotal > 0 && remainingCorrect === 0;
 
     if (strict) resolved = resolved && incorrectSelected === 0;
 
-    return { resolved, correctTotal, correctSelected, incorrectSelected,
-      remainingCorrect, evaluated: true };
+    return {
+      resolved,
+      correctTotal,
+      correctSelected,
+      incorrectSelected,
+      remainingCorrect,
+      evaluated: true
+    };
   }
 
   /**
@@ -136,10 +141,7 @@ export class AnswerEvaluationService {
    * actually picked — the same restriction the backend applies, so an
    * unselected option's correctness is never inferred here either.
    */
-  private statusFromVerdict(
-    question: QuizQuestion,
-    strict: boolean
-  ): ResolutionStatus | null {
+  private statusFromVerdict(question: QuizQuestion, strict: boolean): ResolutionStatus | null {
     const quizId = this.quizService?.quizId;
     const questionText = question?.questionText;
     if (!quizId || !questionText) return null;
@@ -203,21 +205,19 @@ export class AnswerEvaluationService {
     try {
       const qText = norm(question.questionText);
       const rawQs: any[] = this.quizService?.questions ?? [];
-      const rawQ = qText
-        ? rawQs.find(r => norm(r?.questionText) === qText)
-        : null;
+      const rawQ = qText ? rawQs.find((r) => norm(r?.questionText) === qText) : null;
       if (rawQ && Array.isArray(rawQ.options)) {
-        const rawCorrectCount = rawQ.options.filter((o: any) =>
-          isOptionCorrect(o)
-        ).length;
-        const currentCorrectCount = questionOptions.filter(o =>
+        const rawCorrectCount = rawQ.options.filter((o: any) => isOptionCorrect(o)).length;
+        const currentCorrectCount = questionOptions.filter((o) =>
           this.idResolver.coerceToBoolean(o.correct)
         ).length;
         if (rawCorrectCount > currentCorrectCount) {
           questionOptions = rawQ.options;
         }
       }
-    } catch (err: unknown) { swallow('answer-evaluation.service.ts', err); /* ignore and keep original */ }
+    } catch (err: unknown) {
+      swallow('answer-evaluation.service.ts', err); /* ignore and keep original */
+    }
     return questionOptions;
   }
 
@@ -228,16 +228,14 @@ export class AnswerEvaluationService {
     // STRATEGY 1: TEXT MATCH
     if (sel.text) {
       const selText = norm(sel.text);
-      matchedIdx = questionOptions.findIndex(o =>
-        o.text && norm(o.text) === selText
-      );
+      matchedIdx = questionOptions.findIndex((o) => o.text && norm(o.text) === selText);
     }
 
     // STRATEGY 2: ID MATCH
     if (matchedIdx === -1 && sel.optionId != null && hasRealIds) {
       const selIdStr = String(sel.optionId);
-      matchedIdx = questionOptions.findIndex(o =>
-        o.optionId != null && String(o.optionId) === selIdStr
+      matchedIdx = questionOptions.findIndex(
+        (o) => o.optionId != null && String(o.optionId) === selIdStr
       );
     }
 
@@ -271,7 +269,7 @@ export class AnswerEvaluationService {
     const selectedArr = Array.isArray(selected) ? selected : [];
     const seenIndicesInQuestion = new Set<number>();
 
-    const hasRealIds = questionOptions.some(o => o.optionId != null);
+    const hasRealIds = questionOptions.some((o) => o.optionId != null);
     for (const sel of selectedArr) {
       if (!sel) continue;
       if ((sel as any).selected === false) continue;
@@ -350,10 +348,7 @@ export class AnswerEvaluationService {
    * would turn any missed writer into a silent behaviour change rather than a
    * test failure.
    */
-  areAllCorrectAnswersSelected(
-    question: QuizQuestion,
-    selectedOptionIds: Set<number>
-  ): boolean {
+  areAllCorrectAnswersSelected(question: QuizQuestion, selectedOptionIds: Set<number>): boolean {
     const quizId = this.quizService?.quizId;
     const questionText = question?.questionText;
 
@@ -365,13 +360,13 @@ export class AnswerEvaluationService {
     }
 
     const correctIds = question.options
-      .filter(o => isOptionCorrect(o))
-      .map(o => o.optionId)
+      .filter((o) => isOptionCorrect(o))
+      .map((o) => o.optionId)
       .filter((id): id is number => typeof id === 'number');
 
     if (correctIds.length === 0) return false;
 
-    const selectedStrings = new Set(Array.from(selectedOptionIds).map(id => String(id)));
+    const selectedStrings = new Set(Array.from(selectedOptionIds).map((id) => String(id)));
 
     for (const id of correctIds) {
       if (!selectedStrings.has(String(id))) return false;
@@ -379,5 +374,4 @@ export class AnswerEvaluationService {
 
     return true;
   }
-
 }

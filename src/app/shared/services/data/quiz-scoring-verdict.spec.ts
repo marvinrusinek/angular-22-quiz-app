@@ -7,7 +7,10 @@ import { of, throwError } from 'rxjs';
 import { QuizScoringService } from './quiz-scoring.service';
 import { QuizService } from './quiz.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
-import { TOPIC_QUIZ_VERDICT_ADAPTER, type TopicQuizVerdictAdapter } from '@shared/services/features/verdict/verdict-adapter';
+import {
+  TOPIC_QUIZ_VERDICT_ADAPTER,
+  type TopicQuizVerdictAdapter
+} from '@shared/services/features/verdict/verdict-adapter';
 import { QuestionVerdictError } from '@shared/services/features/verdict/question-verdict.types';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { setQuizDataCache } from '@shared/quiz-data-cache';
@@ -38,15 +41,13 @@ const QUESTIONS = [
     explanation: 'local explanation',
     options: [
       { text: 'map', correct: true },
-      { text: 'filter' },                     // truly correct
-      { text: 'Observable', correct: true }    // NOT correct
+      { text: 'filter' }, // truly correct
+      { text: 'Observable', correct: true } // NOT correct
     ]
   }
 ];
 
-const BANK = [
-  { quizId: QUIZ, milestone: 'RxJS', questions: QUESTIONS }
-] as unknown as Quiz[];
+const BANK = [{ quizId: QUIZ, milestone: 'RxJS', questions: QUESTIONS }] as unknown as Quiz[];
 
 if (typeof (globalThis as any).structuredClone !== 'function') {
   (globalThis as any).structuredClone = (value: unknown) => JSON.parse(JSON.stringify(value));
@@ -78,7 +79,8 @@ function stubAdapter(): TopicQuizVerdictAdapter {
     return {
       status: 'incomplete' as const,
       selectedVerdicts: [...selected].map((text) => ({
-        text, correct: TRUE_CORRECT.some((t) => canon(t) === text)
+        text,
+        correct: TRUE_CORRECT.some((t) => canon(t) === text)
       })),
       remainingCorrectCount: missing.length
     };
@@ -91,11 +93,12 @@ function stubAdapter(): TopicQuizVerdictAdapter {
       }
       return of(evaluate(texts));
     },
-    revealExpired: () => of({
-      status: 'expired' as const,
-      correctOptionTexts: TRUE_CORRECT,
-      explanation: 'authorized explanation'
-    })
+    revealExpired: () =>
+      of({
+        status: 'expired' as const,
+        correctOptionTexts: TRUE_CORRECT,
+        explanation: 'authorized explanation'
+      })
   };
 }
 
@@ -105,12 +108,10 @@ let quizService: QuizService;
 let selectedOptionService: SelectedOptionService;
 
 /** The gate under test, reached through its public entry point. */
-const creditable = (extra?: Set<string>) =>
-  scoring.isLeavingQuestionCreditable(0, QUIZ, 0, extra);
+const creditable = (extra?: Set<string>) => scoring.isLeavingQuestionCreditable(0, QUIZ, 0, extra);
 
 /** Record a verdict the way the live click path does. */
-const submit = (texts: string[]) =>
-  selectedOptionService.setUiSelectedTextsForQuestion(0, texts);
+const submit = (texts: string[]) => selectedOptionService.setUiSelectedTextsForQuestion(0, texts);
 
 beforeEach(() => {
   setQuizDataCache(JSON.parse(JSON.stringify(BANK)) as Quiz[], []);
@@ -125,7 +126,10 @@ beforeEach(() => {
       // vacuously. This one states the TRUE correct set, which the bank's flags
       // deliberately contradict.
       { provide: TOPIC_QUIZ_VERDICT_ADAPTER, useValue: stubAdapter() },
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
 
@@ -205,13 +209,13 @@ describe('no verdict means NO CREDIT', () => {
     expect(creditable(new Set(['map', 'Observable']))).toBe(false);
   });
 
-  it('even a selection matching the BANK\'s correct set is not creditable', () => {
+  it("even a selection matching the BANK's correct set is not creditable", () => {
     // Exactly what a pristine scan would have called complete.
     expect(creditable(new Set(['map', 'Observable']))).toBe(false);
   });
 
   it('an ERROR verdict does not credit from the answer key', () => {
-    submit(['no such option']);   // rejected by the adapter
+    submit(['no such option']); // rejected by the adapter
     expect(verdicts.verdictFor(QUIZ, MULTI).phase).toBe('error');
 
     // Falls through to the temporary gate, which cannot see a complete
@@ -231,9 +235,7 @@ describe('shuffle-aware question resolution', () => {
     // Shuffled: the multi question is displayed at index 0 but is second in
     // the source bank. A source-order lookup would resolve the wrong question.
     (quizService as any).getQuestionsInDisplayOrder = () => [QUESTIONS[0], other];
-    quizService.questionsSig.set(
-      JSON.parse(JSON.stringify([other, QUESTIONS[0]])) as never
-    );
+    quizService.questionsSig.set(JSON.parse(JSON.stringify([other, QUESTIONS[0]])) as never);
 
     // Recorded directly against the question TEXT, which is how the verdict is
     // keyed — the point of the test is that the scoring gate resolves display

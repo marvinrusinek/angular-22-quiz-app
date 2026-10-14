@@ -1,8 +1,4 @@
-import {
-  deriveHeadingHtml,
-  shouldShowFet,
-  HeadingInputs
-} from './heading-model';
+import { deriveHeadingHtml, shouldShowFet, HeadingInputs } from './heading-model';
 
 /**
  * Stage 1 of the heading/FET refactor: lock the heading-derivation rules as an
@@ -20,7 +16,7 @@ const base: HeadingInputs = {
   hasInteracted: false,
   optionsReady: true,
   isNavigatingToPrevious: false,
-  interactedThisVisit: false,
+  interactedThisVisit: false
 };
 
 const inputs = (over: Partial<HeadingInputs>): HeadingInputs => ({ ...base, ...over });
@@ -39,7 +35,11 @@ describe('heading-model: shouldShowFet', () => {
   });
 
   it('multi-answer, complete → FET', () => {
-    expect(shouldShowFet(inputs({ isMultiAnswer: true, hasInteracted: true, isMultiAnswerComplete: true }))).toBe(true);
+    expect(
+      shouldShowFet(
+        inputs({ isMultiAnswer: true, hasInteracted: true, isMultiAnswerComplete: true })
+      )
+    ).toBe(true);
   });
 
   it('timeout reveals the FET even without interaction', () => {
@@ -54,7 +54,9 @@ describe('heading-model: shouldShowFet', () => {
 
   // §5.3 — cold load / options not ready never shows a (stale) FET.
   it('cold load (options not ready) → never FET, even when otherwise resolved', () => {
-    expect(shouldShowFet(inputs({ optionsReady: false, hasInteracted: true, isSingleAnswered: true }))).toBe(false);
+    expect(
+      shouldShowFet(inputs({ optionsReady: false, hasInteracted: true, isSingleAnswered: true }))
+    ).toBe(false);
     expect(shouldShowFet(inputs({ optionsReady: false, isTimedOut: true }))).toBe(false);
   });
 
@@ -63,8 +65,21 @@ describe('heading-model: shouldShowFet', () => {
   // exception (see the live-timeout case below): isTimedOut is reset on nav, so a
   // true isTimedOut always means the current question just timed out this visit.
   it('revisit (navigated here, not re-answered) → never FET when resolved by answering', () => {
-    expect(shouldShowFet(inputs({ isNavigatingToPrevious: true, hasInteracted: true, isSingleAnswered: true }))).toBe(false);
-    expect(shouldShowFet(inputs({ isNavigatingToPrevious: true, isMultiAnswer: true, hasInteracted: true, isMultiAnswerComplete: true }))).toBe(false);
+    expect(
+      shouldShowFet(
+        inputs({ isNavigatingToPrevious: true, hasInteracted: true, isSingleAnswered: true })
+      )
+    ).toBe(false);
+    expect(
+      shouldShowFet(
+        inputs({
+          isNavigatingToPrevious: true,
+          isMultiAnswer: true,
+          hasInteracted: true,
+          isMultiAnswerComplete: true
+        })
+      )
+    ).toBe(false);
   });
 
   // §5.6 — a first-time timeout on the live view (not a revisit) reveals the FET.
@@ -78,23 +93,43 @@ describe('heading-model: shouldShowFet', () => {
   // (set on the genuine click) distinguishes the live completion view from a
   // revisit. Regression guard for the shadow-sweep false negative.
   it('completion view reached by nav (isNavigatingToPrevious stale-true + interactedThisVisit) → FET', () => {
-    expect(shouldShowFet(inputs({
-      isMultiAnswer: true, hasInteracted: true, isMultiAnswerComplete: true,
-      isNavigatingToPrevious: true, interactedThisVisit: true,
-    }))).toBe(true);
-    expect(shouldShowFet(inputs({
-      hasInteracted: true, isSingleAnswered: true,
-      isNavigatingToPrevious: true, interactedThisVisit: true,
-    }))).toBe(true);
+    expect(
+      shouldShowFet(
+        inputs({
+          isMultiAnswer: true,
+          hasInteracted: true,
+          isMultiAnswerComplete: true,
+          isNavigatingToPrevious: true,
+          interactedThisVisit: true
+        })
+      )
+    ).toBe(true);
+    expect(
+      shouldShowFet(
+        inputs({
+          hasInteracted: true,
+          isSingleAnswered: true,
+          isNavigatingToPrevious: true,
+          interactedThisVisit: true
+        })
+      )
+    ).toBe(true);
   });
 
   // The revisit suppression still holds for an ANSWER-resolved question when the
   // user has NOT interacted this visit.
   it('revisit without interaction this visit → no FET for an answer-resolved question', () => {
-    expect(shouldShowFet(inputs({
-      isMultiAnswer: true, hasInteracted: true, isMultiAnswerComplete: true,
-      isNavigatingToPrevious: true, interactedThisVisit: false,
-    }))).toBe(false);
+    expect(
+      shouldShowFet(
+        inputs({
+          isMultiAnswer: true,
+          hasInteracted: true,
+          isMultiAnswerComplete: true,
+          isNavigatingToPrevious: true,
+          interactedThisVisit: false
+        })
+      )
+    ).toBe(false);
   });
 
   // A live timeout on Q2+ reaches the heading via the fast-path, where
@@ -102,7 +137,11 @@ describe('heading-model: shouldShowFet', () => {
   // click). The FET must STILL show — isTimedOut overrides the revisit guard.
   it('live timeout with stale isNavigatingToPrevious + no interaction → FET', () => {
     expect(shouldShowFet(inputs({ isTimedOut: true, isNavigatingToPrevious: true }))).toBe(true);
-    expect(shouldShowFet(inputs({ isTimedOut: true, isNavigatingToPrevious: true, interactedThisVisit: false }))).toBe(true);
+    expect(
+      shouldShowFet(
+        inputs({ isTimedOut: true, isNavigatingToPrevious: true, interactedThisVisit: false })
+      )
+    ).toBe(true);
   });
 });
 
@@ -111,7 +150,9 @@ describe('heading-model: shouldShowFet', () => {
 // absent) is unchanged.
 describe('heading-model: deferred feedback (Interview Mode)', () => {
   it('forces the question text even when single-answered', () => {
-    expect(shouldShowFet(inputs({ deferFeedback: true, hasInteracted: true, isSingleAnswered: true }))).toBe(false);
+    expect(
+      shouldShowFet(inputs({ deferFeedback: true, hasInteracted: true, isSingleAnswered: true }))
+    ).toBe(false);
   });
 
   it('forces the question text even on a timeout', () => {
@@ -119,9 +160,16 @@ describe('heading-model: deferred feedback (Interview Mode)', () => {
   });
 
   it('forces the question text even when a multi-answer is complete', () => {
-    expect(shouldShowFet(inputs({
-      deferFeedback: true, isMultiAnswer: true, hasInteracted: true, isMultiAnswerComplete: true
-    }))).toBe(false);
+    expect(
+      shouldShowFet(
+        inputs({
+          deferFeedback: true,
+          isMultiAnswer: true,
+          hasInteracted: true,
+          isMultiAnswerComplete: true
+        })
+      )
+    ).toBe(false);
   });
 
   it('deriveHeadingHtml returns the question text while deferred', () => {
@@ -131,7 +179,9 @@ describe('heading-model: deferred feedback (Interview Mode)', () => {
 
   it('immediate feedback (deferFeedback absent) is unchanged', () => {
     expect(shouldShowFet(inputs({ hasInteracted: true, isSingleAnswered: true }))).toBe(true);
-    expect(shouldShowFet(inputs({ deferFeedback: false, hasInteracted: true, isSingleAnswered: true }))).toBe(true);
+    expect(
+      shouldShowFet(inputs({ deferFeedback: false, hasInteracted: true, isSingleAnswered: true }))
+    ).toBe(true);
   });
 });
 
@@ -172,7 +222,11 @@ describe('heading-model: deriveHeadingHtml', () => {
   });
 
   it('multi-answer in progress keeps the question + banner', () => {
-    const i = inputs({ isMultiAnswer: true, hasInteracted: true, questionHtml: 'Q <span class="correct-count">2 answers are correct</span>' });
+    const i = inputs({
+      isMultiAnswer: true,
+      hasInteracted: true,
+      questionHtml: 'Q <span class="correct-count">2 answers are correct</span>'
+    });
     expect(deriveHeadingHtml(i)).toBe(i.questionHtml);
   });
 });
@@ -192,7 +246,9 @@ describe('heading-model: genuine timeout uses the ordinary FET presentation, not
 
   it('a timeout with explanation text renders IDENTICALLY to a normal answered reveal', () => {
     const timedOutHtml = deriveHeadingHtml(inputs({ isTimedOut: true, fetHtml: FET }));
-    const answeredHtml = deriveHeadingHtml(inputs({ hasInteracted: true, isSingleAnswered: true, fetHtml: FET }));
+    const answeredHtml = deriveHeadingHtml(
+      inputs({ hasInteracted: true, isSingleAnswered: true, fetHtml: FET })
+    );
     expect(timedOutHtml).toBe(FET);
     expect(timedOutHtml).toBe(answeredHtml);
   });
@@ -249,9 +305,15 @@ describe('heading-model: verdictEarnedReveal restores the FET across a reload', 
     // The revisit guard runs BEFORE the verdictEarnedReveal branch is ever
     // reached — this is the regression this fix must never reintroduce: a
     // rehydrated earned verdict must not leak the FET into a plain revisit.
-    expect(shouldShowFet(inputs({
-      isNavigatingToPrevious: true, interactedThisVisit: false, verdictEarnedReveal: true,
-    }))).toBe(false);
+    expect(
+      shouldShowFet(
+        inputs({
+          isNavigatingToPrevious: true,
+          interactedThisVisit: false,
+          verdictEarnedReveal: true
+        })
+      )
+    ).toBe(false);
   });
 
   it('deriveHeadingHtml renders the restored FET text on a cold reload', () => {
@@ -272,17 +334,36 @@ describe('heading-model: verdictEarnedReveal restores the FET across a reload', 
   // signals false (nothing currently selected) — the earned verdict must
   // still win, or a normal answered question loses its FET on refresh too.
   it('reload with stale hasInteracted=true but an earned verdict → FET still restores', () => {
-    expect(shouldShowFet(inputs({
-      hasInteracted: true, isSingleAnswered: false, verdictEarnedReveal: true,
-    }))).toBe(true);
-    expect(shouldShowFet(inputs({
-      isMultiAnswer: true, hasInteracted: true, isMultiAnswerComplete: false, verdictEarnedReveal: true,
-    }))).toBe(true);
+    expect(
+      shouldShowFet(
+        inputs({
+          hasInteracted: true,
+          isSingleAnswered: false,
+          verdictEarnedReveal: true
+        })
+      )
+    ).toBe(true);
+    expect(
+      shouldShowFet(
+        inputs({
+          isMultiAnswer: true,
+          hasInteracted: true,
+          isMultiAnswerComplete: false,
+          verdictEarnedReveal: true
+        })
+      )
+    ).toBe(true);
   });
 
   it('reload with stale hasInteracted=true and NO earned verdict → still no FET', () => {
-    expect(shouldShowFet(inputs({
-      hasInteracted: true, isSingleAnswered: false, verdictEarnedReveal: false,
-    }))).toBe(false);
+    expect(
+      shouldShowFet(
+        inputs({
+          hasInteracted: true,
+          isSingleAnswered: false,
+          verdictEarnedReveal: false
+        })
+      )
+    ).toBe(false);
   });
 });

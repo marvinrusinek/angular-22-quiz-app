@@ -92,7 +92,10 @@ class VerdictStub {
   }
 
   verdicts = signal(new Map());
-  clear(): void { this.resolved.clear(); this.correct.clear(); }
+  clear(): void {
+    this.resolved.clear();
+    this.correct.clear();
+  }
 }
 
 let verdictStub: VerdictStub;
@@ -192,7 +195,10 @@ function reset(): void {
 
 describe('PracticeSessionService — generation', () => {
   beforeEach(reset);
-  afterEach(() => { sessionStorage.clear(); localStorage.clear(); });
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
 
   it('starts a session from the CURRENT weak topics', async () => {
     const svc = service();
@@ -215,12 +221,24 @@ describe('PracticeSessionService — generation', () => {
   it('creates a NEW session id and reshuffles on each start — never a replay', async () => {
     const svc = service();
     await svc.start();
-    const first = { id: svc.sessionId(), order: svc.questions().map((q) => q.questionText).join('|') };
+    const first = {
+      id: svc.sessionId(),
+      order: svc
+        .questions()
+        .map((q) => q.questionText)
+        .join('|')
+    };
 
     let differed = false;
     for (let i = 0; i < 10 && !differed; i++) {
       await svc.start();
-      if (svc.questions().map((q) => q.questionText).join('|') !== first.order) differed = true;
+      if (
+        svc
+          .questions()
+          .map((q) => q.questionText)
+          .join('|') !== first.order
+      )
+        differed = true;
     }
     expect(svc.sessionId()).not.toBe(first.id);
     expect(differed).toBe(true);
@@ -229,7 +247,10 @@ describe('PracticeSessionService — generation', () => {
 
 describe('PracticeSessionService — the advance gate', () => {
   beforeEach(reset);
-  afterEach(() => { sessionStorage.clear(); localStorage.clear(); });
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
 
   it('blocks Next until the current question is answered', async () => {
     const svc = service();
@@ -238,7 +259,7 @@ describe('PracticeSessionService — the advance gate', () => {
     expect(svc.canGoNext()).toBe(false);
 
     svc.next();
-    expect(svc.currentIndex()).toBe(0);   // did not move
+    expect(svc.currentIndex()).toBe(0); // did not move
   });
 
   it('SINGLE: a WRONG answer still unlocks Next but does NOT resolve', async () => {
@@ -248,7 +269,7 @@ describe('PracticeSessionService — the advance gate', () => {
     svc.goTo(index);
 
     svc.select(index, [wrongIdFromCatalog(svc.questions()[index])]);
-    expect(svc.canAdvance()).toBe(true);        // Next enabled on a wrong single answer
+    expect(svc.canAdvance()).toBe(true); // Next enabled on a wrong single answer
     expect(svc.isCurrentResolved()).toBe(false); // ...but no FET, no lock
   });
 
@@ -259,7 +280,7 @@ describe('PracticeSessionService — the advance gate', () => {
     svc.goTo(index);
 
     svc.select(index, [wrongIdFromCatalog(svc.questions()[index])]);
-    svc.select(index, correctIdsFromCatalog(svc.questions()[index]));   // not locked — change allowed
+    svc.select(index, correctIdsFromCatalog(svc.questions()[index])); // not locked — change allowed
     // The verdict for the corrected pick arrives from the server.
     resolveCurrent(svc, index);
     expect(svc.isCurrentResolved()).toBe(true);
@@ -270,7 +291,7 @@ describe('PracticeSessionService — the advance gate', () => {
     const svc = service();
     await svc.start();
     const index = svc.questions().findIndex((q) => correctIdsFromCatalog(q).length > 1);
-    if (index === -1) return;   // this generated set had no multi-answer question
+    if (index === -1) return; // this generated set had no multi-answer question
 
     svc.goTo(index);
     const correct = correctIdsFromCatalog(svc.questions()[index]);
@@ -278,7 +299,7 @@ describe('PracticeSessionService — the advance gate', () => {
     expect(svc.canAdvance()).toBe(false);
     expect(svc.isCurrentResolved()).toBe(false);
     svc.next();
-    expect(svc.currentIndex()).toBe(index);   // partial cannot skip ahead
+    expect(svc.currentIndex()).toBe(index); // partial cannot skip ahead
 
     svc.select(index, correct);
     resolveCurrent(svc, index);
@@ -293,18 +314,21 @@ describe('PracticeSessionService — the advance gate', () => {
 
     svc.goTo(svc.total() - 1);
     expect(svc.isLastQuestion()).toBe(true);
-    expect(svc.canSubmit()).toBe(false);            // unanswered
+    expect(svc.canSubmit()).toBe(false); // unanswered
 
     svc.select(svc.total() - 1, correctIdsFromCatalog(svc.questions()[svc.total() - 1]));
     resolveCurrent(svc, svc.total() - 1);
     expect(svc.canSubmit()).toBe(true);
-    expect(svc.canGoNext()).toBe(false);            // no question after the last
+    expect(svc.canGoNext()).toBe(false); // no question after the last
   });
 });
 
 describe('PracticeSessionService — navigation and answers', () => {
   beforeEach(reset);
-  afterEach(() => { sessionStorage.clear(); localStorage.clear(); });
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
 
   it('moves Previous/Next within bounds once the gate passes', async () => {
     const svc = service();
@@ -323,7 +347,7 @@ describe('PracticeSessionService — navigation and answers', () => {
     svc.previous();
     expect(svc.currentIndex()).toBe(0);
 
-    svc.previous();                       // already at the start
+    svc.previous(); // already at the start
     expect(svc.currentIndex()).toBe(0);
   });
 
@@ -333,7 +357,7 @@ describe('PracticeSessionService — navigation and answers', () => {
     svc.select(0, correctIdsFromCatalog(svc.questions()[0]));
     resolveCurrent(svc, 0);
     svc.next();
-    svc.select(1, []);                 // nothing selected on question 2
+    svc.select(1, []); // nothing selected on question 2
     expect(svc.canGoPrevious()).toBe(true);
     svc.previous();
     expect(svc.currentIndex()).toBe(0);
@@ -376,13 +400,16 @@ describe('PracticeSessionService — navigation and answers', () => {
     const last = svc.total() - 1;
     const before = svc.answersByIndex()[last];
     svc.select(last, [wrongIdFromCatalog(svc.questions()[last])]);
-    expect(svc.answersByIndex()[last]).toEqual(before);   // unchanged
+    expect(svc.answersByIndex()[last]).toEqual(before); // unchanged
   });
 });
 
 describe('PracticeSessionService — submission and scoring', () => {
   beforeEach(reset);
-  afterEach(() => { sessionStorage.clear(); localStorage.clear(); });
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
 
   it('refuses to submit before the gate passes', async () => {
     const svc = service();
@@ -412,7 +439,7 @@ describe('PracticeSessionService — submission and scoring', () => {
     const index = svc.questions().findIndex((q) => correctIdsFromCatalog(q).length === 1);
     answerAllCorrectly(svc);
     svc.select(index, [wrongIdFromCatalog(svc.questions()[index])]);
-    unresolveCurrent(svc, index);   // the server does not authorize a wrong pick
+    unresolveCurrent(svc, index); // the server does not authorize a wrong pick
     svc.submit();
 
     const result = svc.result()!;
@@ -464,7 +491,10 @@ describe('PracticeSessionService — submission and scoring', () => {
 
 describe('PracticeSessionService — topic-performance recording', () => {
   beforeEach(reset);
-  afterEach(() => { sessionStorage.clear(); localStorage.clear(); });
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
 
   it('records the attempt EXACTLY ONCE under practice:{sessionId}', async () => {
     const svc = service();
@@ -528,7 +558,10 @@ describe('PracticeSessionService — topic-performance recording', () => {
 
 describe('PracticeSessionService — Practice Again', () => {
   beforeEach(reset);
-  afterEach(() => { sessionStorage.clear(); localStorage.clear(); });
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
 
   it('records the finished attempt, then generates a NEW session', async () => {
     const svc = service();
@@ -543,7 +576,7 @@ describe('PracticeSessionService — Practice Again', () => {
     expect(svc.status()).toBe('active');
     expect(svc.result()).toBeNull();
     expect(svc.currentIndex()).toBe(0);
-    expect(svc.answersByIndex()).toEqual({});   // not a replay
+    expect(svc.answersByIndex()).toEqual({}); // not a replay
   });
 
   it('returns FALSE when no weak topics remain, without emptying the session', async () => {
@@ -551,7 +584,7 @@ describe('PracticeSessionService — Practice Again', () => {
     await svc.start();
     completeSession(svc);
 
-    weakIds.set([]);                       // nothing left to practise
+    weakIds.set([]); // nothing left to practise
     expect(await svc.practiceAgain()).toBe(false);
     expect(svc.total()).toBeGreaterThan(0); // previous session untouched, not blanked
     expect(svc.status()).toBe('submitted');
@@ -572,7 +605,10 @@ describe('PracticeSessionService — Practice Again', () => {
 
 describe('PracticeSessionService — refresh and exact resume', () => {
   beforeEach(reset);
-  afterEach(() => { sessionStorage.clear(); localStorage.clear(); });
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
 
   it('resumes the IDENTICAL session after a refresh — questions and option order', async () => {
     const svc = service();
@@ -590,8 +626,9 @@ describe('PracticeSessionService — refresh and exact resume', () => {
     const resumed = service();
     expect(resumed.sessionId()).toBe(before.id);
     expect(resumed.questions().map((q) => q.questionText)).toEqual(before.texts);
-    expect(resumed.questions().map((q) => (q.options ?? []).map((o) => o.optionId).join(',')))
-      .toEqual(before.optionOrder);          // option ORDER preserved, not reshuffled
+    expect(
+      resumed.questions().map((q) => (q.options ?? []).map((o) => o.optionId).join(','))
+    ).toEqual(before.optionOrder); // option ORDER preserved, not reshuffled
     expect(resumed.currentIndex()).toBe(3);
     expect(resumed.answersByIndex()[3]).toEqual([chosen]);
     expect(resumed.status()).toBe('active');
@@ -622,10 +659,16 @@ describe('PracticeSessionService — refresh and exact resume', () => {
     expect(() => service()).not.toThrow();
     expect(service().hasSession()).toBe(false);
 
-    sessionStorage.setItem(SK_PRACTICE_SESSION, JSON.stringify({ version: 99, questions: [{}], sessionId: 'x' }));
+    sessionStorage.setItem(
+      SK_PRACTICE_SESSION,
+      JSON.stringify({ version: 99, questions: [{}], sessionId: 'x' })
+    );
     expect(service().hasSession()).toBe(false);
 
-    sessionStorage.setItem(SK_PRACTICE_SESSION, JSON.stringify({ version: 1, questions: [], sessionId: 'x' }));
+    sessionStorage.setItem(
+      SK_PRACTICE_SESSION,
+      JSON.stringify({ version: 1, questions: [], sessionId: 'x' })
+    );
     expect(service().hasSession()).toBe(false);
   });
 
@@ -682,7 +725,10 @@ describe('PracticeSessionService — refresh and exact resume', () => {
 
 describe('PracticeSessionService — the API is the ONLY question source', () => {
   beforeEach(reset);
-  afterEach(() => { sessionStorage.clear(); localStorage.clear(); });
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
 
   it('refuses to start when the questions API fails — NO local-bank fallback', async () => {
     TestBed.resetTestingModule();
@@ -732,7 +778,9 @@ describe('PracticeSessionService — the API is the ONLY question source', () =>
     await svc.start();
     for (const question of svc.questions()) {
       expect([
-        QuestionType.SingleAnswer, QuestionType.MultipleAnswer, QuestionType.TrueFalse
+        QuestionType.SingleAnswer,
+        QuestionType.MultipleAnswer,
+        QuestionType.TrueFalse
       ]).toContain(question.type);
     }
   });

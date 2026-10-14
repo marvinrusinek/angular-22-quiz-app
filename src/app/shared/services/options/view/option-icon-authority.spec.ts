@@ -83,7 +83,10 @@ describe('showIcon === false suppresses everything', () => {
   it.each([[true], [false], [undefined]] as const)(
     'renders no icon when showIcon is false, whatever the verdict says (%s)',
     (correctness) => {
-      const b = binding({ option: { optionId: 1, text: 'map', showIcon: false }, isSelected: true } as any);
+      const b = binding({
+        option: { optionId: 1, text: 'map', showIcon: false },
+        isSelected: true
+      } as any);
       expect(service.getOptionIcon(b, 0, correctness)).toBe('');
     }
   );
@@ -93,12 +96,18 @@ describe('a local correct flag cannot influence the icon', () => {
   it('ignores option.correct === true when the verdict says unknown', () => {
     // The bank field is the thing this migration removes. Even when present and
     // lying, it must not produce an icon.
-    const b = binding({ option: { optionId: 1, text: 'map', correct: true }, isSelected: true } as any);
+    const b = binding({
+      option: { optionId: 1, text: 'map', correct: true },
+      isSelected: true
+    } as any);
     expect(service.getOptionIcon(b, 0, undefined)).toBe('');
   });
 
   it('ignores option.correct === false when the verdict says correct', () => {
-    const b = binding({ option: { optionId: 1, text: 'map', correct: false }, isSelected: true } as any);
+    const b = binding({
+      option: { optionId: 1, text: 'map', correct: false },
+      isSelected: true
+    } as any);
     expect(service.getOptionIcon(b, 0, true)).toBe('check');
   });
 });

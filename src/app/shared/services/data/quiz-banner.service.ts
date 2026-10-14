@@ -25,13 +25,14 @@ export class QuizBannerService {
 
   // Frame-synchronized observable for banner display — coalesced with
   // question text. Keeps empty-string emissions but skips null/undefined.
-  readonly correctAnswersText$: Observable<string> =
-    toObservable(this.correctAnswersCountTextSig).pipe(
-      filter((v): v is string => v != null),
-      auditTime(0),
-      distinctUntilChanged(),
-      shareReplay({ bufferSize: 1, refCount: true })
-    );
+  readonly correctAnswersText$: Observable<string> = toObservable(
+    this.correctAnswersCountTextSig
+  ).pipe(
+    filter((v): v is string => v != null),
+    auditTime(0),
+    distinctUntilChanged(),
+    shareReplay({ bufferSize: 1, refCount: true })
+  );
 
   // Anti-flicker guards during nav.
   private _lastBanner = '';
@@ -51,14 +52,18 @@ export class QuizBannerService {
 
     try {
       localStorage.setItem('correctAnswersText', text);
-    } catch (err: unknown) { swallow('quiz-banner.service.ts', err); /* localStorage may be full / unavailable */ }
+    } catch (err: unknown) {
+      swallow('quiz-banner.service.ts', err); /* localStorage may be full / unavailable */
+    }
   }
 
   clearStoredCorrectAnswersText(): void {
     try {
       localStorage.removeItem('correctAnswersText');
       this.correctAnswersCountTextSig.set('');
-    } catch (err: unknown) { swallow('quiz-banner.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('quiz-banner.service.ts', err); /* ignore */
+    }
   }
 
   // ── Question-number badge ──────────────────────────────────────────
@@ -66,9 +71,13 @@ export class QuizBannerService {
   readonly badgeText$ = toObservable(this.badgeTextSig);
 
   updateBadgeText(questionIndex: number, totalQuestions: number): void {
-    if (!Number.isInteger(questionIndex) || questionIndex < 1 ||
-        !Number.isInteger(totalQuestions) || totalQuestions < 1 ||
-        questionIndex > totalQuestions) {
+    if (
+      !Number.isInteger(questionIndex) ||
+      questionIndex < 1 ||
+      !Number.isInteger(totalQuestions) ||
+      totalQuestions < 1 ||
+      questionIndex > totalQuestions
+    ) {
       return;
     }
     const newBadgeText = `Question ${questionIndex} of ${totalQuestions}`;

@@ -15,7 +15,10 @@ import { BackendInterviewTimerService } from '@shared/services/interview/backend
 import { InterviewSessionReferenceStorage } from '@shared/services/interview/interview-session-reference.storage';
 import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
 import { InterviewApiService } from '@shared/services/api/interview-api.service';
-import { InterviewApiError, type InterviewApiErrorCode } from '@shared/services/api/interview-api.errors';
+import {
+  InterviewApiError,
+  type InterviewApiErrorCode
+} from '@shared/services/api/interview-api.errors';
 import type {
   InterviewResultViewModel,
   InterviewSessionViewModel
@@ -41,14 +44,25 @@ const SESSION_URL = '/interview/session/is_1';
 const RESULTS_URL = '/interview/results/is_1';
 
 const SESSION: InterviewSessionViewModel = {
-  sessionId: 'is_1', status: 'active',
-  createdAtMs: 1_700_000_000_000, expiresAtMs: 1_700_000_900_000,
-  durationSeconds: 900, remainingSeconds: 900,
+  sessionId: 'is_1',
+  status: 'active',
+  createdAtMs: 1_700_000_000_000,
+  expiresAtMs: 1_700_000_900_000,
+  durationSeconds: 900,
+  remainingSeconds: 900,
   config: { mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs'], questionCount: 1 },
-  questions: [{
-    questionId: 'rxjs:q:0', sourceQuizId: 'rxjs', questionText: 'Which answer is correct?',
-    type: 'single', options: [{ optionId: 101, text: 'A' }, { optionId: 102, text: 'B' }]
-  }],
+  questions: [
+    {
+      questionId: 'rxjs:q:0',
+      sourceQuizId: 'rxjs',
+      questionText: 'Which answer is correct?',
+      type: 'single',
+      options: [
+        { optionId: 101, text: 'A' },
+        { optionId: 102, text: 'B' }
+      ]
+    }
+  ],
   answers: new Map(),
   flags: new Map()
 };
@@ -58,18 +72,44 @@ function result(over: Partial<InterviewResultViewModel> = {}): InterviewResultVi
     sessionId: 'is_1',
     submittedAtMs: Date.parse('2026-08-01T12:00:00.000Z'),
     submittedByExpiry: false,
-    total: 1, answered: 1, unanswered: 0, correct: 1, incorrect: 0, percentage: 100,
-    durationSeconds: 900, timeUsedSeconds: 540,
+    total: 1,
+    answered: 1,
+    unanswered: 0,
+    correct: 1,
+    incorrect: 0,
+    percentage: 100,
+    durationSeconds: 900,
+    timeUsedSeconds: 540,
     config: { mode: 'custom', difficulty: 'beginner', topicIds: ['rxjs'], questionCount: 1 },
     byTopic: [
-      { topicId: 'rxjs', title: 'RxJS', correct: 1, incorrect: 0, unanswered: 0, total: 1, percentage: 100 }
+      {
+        topicId: 'rxjs',
+        title: 'RxJS',
+        correct: 1,
+        incorrect: 0,
+        unanswered: 0,
+        total: 1,
+        percentage: 100
+      }
     ],
-    review: [{
-      questionId: 'rxjs:q:0', sourceQuizId: 'rxjs', questionText: 'Q?', type: 'single',
-      options: [{ optionId: 101, text: 'A' }, { optionId: 102, text: 'B' }],
-      selectedOptionIds: [101], correctOptionIds: [101], explanation: 'Because.',
-      isCorrect: true, isAnswered: true, flagged: false
-    }],
+    review: [
+      {
+        questionId: 'rxjs:q:0',
+        sourceQuizId: 'rxjs',
+        questionText: 'Q?',
+        type: 'single',
+        options: [
+          { optionId: 101, text: 'A' },
+          { optionId: 102, text: 'B' }
+        ],
+        selectedOptionIds: [101],
+        correctOptionIds: [101],
+        explanation: 'Because.',
+        isCorrect: true,
+        isAnswered: true,
+        flagged: false
+      }
+    ],
     ...over
   };
 }
@@ -117,12 +157,15 @@ beforeAll(() => {
   const guardProto = BackendInterviewSessionGuard.prototype;
   const originalCanActivate = guardProto.canActivate;
   jest.spyOn(guardProto, 'canActivate').mockImplementation(async function (
-    this: BackendInterviewSessionGuard, route
+    this: BackendInterviewSessionGuard,
+    route
   ) {
     const outcome = await originalCanActivate.call(this, route);
     if (outcome === true) {
       macrotaskElapsed = false;
-      setTimeout(() => { macrotaskElapsed = true; }, 0);
+      setTimeout(() => {
+        macrotaskElapsed = true;
+      }, 0);
     }
     return outcome;
   });
@@ -131,8 +174,11 @@ afterAll(() => jest.restoreAllMocks());
 
 // ── harness ──────────────────────────────────────────────────────────
 let api: {
-  resumeSession: jest.Mock; getResult: jest.Mock; submitSession: jest.Mock;
-  saveAnswer: jest.Mock; setReviewFlag: jest.Mock;
+  resumeSession: jest.Mock;
+  getResult: jest.Mock;
+  submitSession: jest.Mock;
+  saveAnswer: jest.Mock;
+  setReviewFlag: jest.Mock;
 };
 let storage: InterviewSessionReferenceStorage;
 
@@ -173,8 +219,11 @@ beforeEach(() => {
   seen.length = 0;
   macrotaskElapsed = false;
   api = {
-    resumeSession: jest.fn(), getResult: jest.fn(), submitSession: jest.fn(),
-    saveAnswer: jest.fn(), setReviewFlag: jest.fn()
+    resumeSession: jest.fn(),
+    getResult: jest.fn(),
+    submitSession: jest.fn(),
+    saveAnswer: jest.fn(),
+    setReviewFlag: jest.fn()
   };
   configure();
 });
@@ -214,16 +263,18 @@ describe('the probe itself (positive control)', () => {
     sessionService().activateCreatedSession(SESSION, TOKEN);
     api.submitSession.mockReturnValue(of(result()));
 
-    return sessionService().submit().then(() => {
-      expect(sessionService().status()).toBe('submitted');
+    return sessionService()
+      .submit()
+      .then(() => {
+        expect(sessionService().status()).toBe('submitted');
 
-      // Bypasses the router and its guard entirely — the one way to build it over a finished session.
-      const fixture = TestBed.createComponent(InterviewSessionComponent);
-      fixture.detectChanges();
-      fixture.destroy();
+        // Bypasses the router and its guard entirely — the one way to build it over a finished session.
+        const fixture = TestBed.createComponent(InterviewSessionComponent);
+        fixture.detectChanges();
+        fixture.destroy();
 
-      expect(statusesAtInit()).toEqual(['submitted']);
-    });
+        expect(statusesAtInit()).toEqual(['submitted']);
+      });
   });
 });
 
@@ -260,7 +311,7 @@ describe('active session', () => {
     await RouterTestingHarness.create(SESSION_URL);
     expect(statusesAtInit()).toEqual(['active']);
 
-    configure();   // new page load: every singleton is new, sessionStorage survives
+    configure(); // new page load: every singleton is new, sessionStorage survives
     api.resumeSession.mockReturnValue(of(SESSION));
     await RouterTestingHarness.create(SESSION_URL);
 
@@ -323,17 +374,20 @@ describe.each([
       ['a 500', 'BACKEND_UNAVAILABLE', 500],
       ['a network failure', 'BACKEND_UNAVAILABLE', 0],
       ['a 409 (still running)', 'CONFLICT', 409]
-    ] as const)('%s: the component IS created — over the ERROR state, never over a finished one', async (_l, code, status) => {
-      resumeFails(resumeCode, 409);
-      resultFails(code, status);
+    ] as const)(
+      '%s: the component IS created — over the ERROR state, never over a finished one',
+      async (_l, code, status) => {
+        resumeFails(resumeCode, 409);
+        resultFails(code, status);
 
-      await RouterTestingHarness.create(SESSION_URL);
+        await RouterTestingHarness.create(SESSION_URL);
 
-      expect(currentPath()).toBe(SESSION_URL);
-      expect(statusesAtInit()).toEqual(['error']);
-      expect(sessionService().errorReason()).toBe('unconfirmed');
-      expectNeverInitialisedOverAFinishedSession();
-    });
+        expect(currentPath()).toBe(SESSION_URL);
+        expect(statusesAtInit()).toEqual(['error']);
+        expect(sessionService().errorReason()).toBe('unconfirmed');
+        expectNeverInitialisedOverAFinishedSession();
+      }
+    );
 
     it('Retry from there: a CONFIRMED finish leaves for Results without a second initialisation', async () => {
       resumeFails(resumeCode, 409);
@@ -444,12 +498,12 @@ describe('state left over in the singleton services', () => {
     await harness.navigateByUrl(RESULTS_URL);
     expect(currentPath()).toBe(RESULTS_URL);
 
-    resumeFails('CONFLICT', 409);   // the server: already submitted
-    await harness.navigateByUrl(SESSION_URL);   // the browser Back button
+    resumeFails('CONFLICT', 409); // the server: already submitted
+    await harness.navigateByUrl(SESSION_URL); // the browser Back button
 
     expect(currentPath()).toBe(RESULTS_URL);
-    expect(statusesAtInit()).toEqual(['active']);   // only the original, pre-submit initialisation
-    expect(api.getResult).not.toHaveBeenCalled();   // proven from the in-memory result
+    expect(statusesAtInit()).toEqual(['active']); // only the original, pre-submit initialisation
+    expect(api.getResult).not.toHaveBeenCalled(); // proven from the in-memory result
   });
 });
 
@@ -460,8 +514,8 @@ describe('a navigation that never completes', () => {
     api.resumeSession.mockReturnValue(gate);
 
     const harness = await RouterTestingHarness.create('/interview');
-    const pending = harness.navigateByUrl(SESSION_URL);   // the guard is now awaiting the gated resume
-    await harness.navigateByUrl('/interview');            // the user goes elsewhere first
+    const pending = harness.navigateByUrl(SESSION_URL); // the guard is now awaiting the gated resume
+    await harness.navigateByUrl('/interview'); // the user goes elsewhere first
     gate.next(SESSION);
     gate.complete();
     await pending.catch(() => undefined);
@@ -479,7 +533,7 @@ describe('a navigation that never completes', () => {
 
     const harness = await RouterTestingHarness.create('/interview');
     const pending = harness.navigateByUrl(SESSION_URL);
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));   // let the guard reach the result call
+    await new Promise<void>((resolve) => setTimeout(resolve, 0)); // let the guard reach the result call
     await harness.navigateByUrl('/interview');
     gate.next(result());
     gate.complete();

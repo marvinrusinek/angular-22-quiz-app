@@ -264,7 +264,7 @@ describe('HighlightOptionDirective', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
 
-    it('does not clear a newly-selected option\'s icon when optionBinding schedules updateHighlight()\'s setTimeout', () => {
+    it("does not clear a newly-selected option's icon when optionBinding schedules updateHighlight()'s setTimeout", () => {
       const option = makeOption({ showIcon: false, selected: false, highlight: false });
       const config = makeConfig({ option, isOptionSelected: false });
       const binding = makeBinding(option, { isSelected: false });

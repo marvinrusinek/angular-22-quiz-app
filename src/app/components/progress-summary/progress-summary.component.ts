@@ -32,7 +32,13 @@ import { PracticeSessionService } from '@shared/services/features/practice/pract
           [attr.aria-label]="variant() === 'details' ? 'Progress details' : null"
         >
           @if (variant() === 'full') {
-            <h2 id="progress-summary-heading" class="progress-summary__heading" i18n>Your Progress</h2>
+            <h2
+              id="progress-summary-heading"
+              class="progress-summary__heading"
+              i18n
+            >
+              Your Progress
+            </h2>
           }
 
           <!-- Completed count is header-owned in the accordion, so it's shown only
@@ -40,13 +46,23 @@ import { PracticeSessionService } from '@shared/services/features/practice/pract
           <dl class="progress-summary__rows">
             @if (variant() === 'full') {
               <div class="progress-summary__row">
-                <dt class="progress-summary__label" i18n>Completed</dt>
+                <dt
+                  class="progress-summary__label"
+                  i18n
+                >
+                  Completed
+                </dt>
                 <dd class="progress-summary__value">{{ s.completedCount }} / {{ s.totalCount }}</dd>
               </div>
             }
 
             <div class="progress-summary__row">
-              <dt class="progress-summary__label" i18n>Overall Progress</dt>
+              <dt
+                class="progress-summary__label"
+                i18n
+              >
+                Overall Progress
+              </dt>
               <dd class="progress-summary__value">
                 <span class="progress-summary__pct">{{ s.completionPercentage }}%</span>
                 <span
@@ -57,7 +73,10 @@ import { PracticeSessionService } from '@shared/services/features/practice/pract
                   [attr.aria-valuenow]="s.completionPercentage"
                   [attr.aria-label]="'Overall progress: ' + s.completionPercentage + ' percent'"
                 >
-                  <span class="progress-summary__bar-fill" [style.width.%]="s.completionPercentage"></span>
+                  <span
+                    class="progress-summary__bar-fill"
+                    [style.width.%]="s.completionPercentage"
+                  ></span>
                 </span>
               </dd>
             </div>
@@ -69,18 +88,29 @@ import { PracticeSessionService } from '@shared/services/features/practice/pract
                 <div class="progress-summary__row">
                   <dt class="progress-summary__label">{{ level.difficulty | titlecase }}</dt>
                   <dd class="progress-summary__value">
-                    <span class="progress-summary__count">{{ level.completed }} / {{ level.total }}</span>
+                    <span class="progress-summary__count">
+                      {{ level.completed }} / {{ level.total }}
+                    </span>
                     <span
                       class="progress-summary__bar"
                       role="progressbar"
                       aria-valuemin="0"
                       [attr.aria-valuemax]="level.total"
                       [attr.aria-valuenow]="level.completed"
-                      [attr.aria-label]="(level.difficulty | titlecase) + ': ' + level.completed + ' of ' + level.total + ' completed'"
+                      [attr.aria-label]="
+                        (level.difficulty | titlecase) +
+                        ': ' +
+                        level.completed +
+                        ' of ' +
+                        level.total +
+                        ' completed'
+                      "
                     >
                       <span
                         class="progress-summary__bar-fill"
-                        [style.width.%]="level.total > 0 ? (level.completed / level.total) * 100 : 0"
+                        [style.width.%]="
+                          level.total > 0 ? (level.completed / level.total) * 100 : 0
+                        "
                       ></span>
                     </span>
                   </dd>
@@ -92,17 +122,36 @@ import { PracticeSessionService } from '@shared/services/features/practice/pract
           <!-- Key stats (derived in ProgressService). Shown beneath the existing
                progress info; always present so 0-values appear when nothing is
                completed yet. -->
-          <dl class="progress-summary__stats" aria-label="Key stats" i18n-aria-label>
+          <dl
+            class="progress-summary__stats"
+            aria-label="Key stats"
+            i18n-aria-label
+          >
             <div class="progress-summary__stat">
-              <dt class="progress-summary__stat-label" i18n>Average Score</dt>
+              <dt
+                class="progress-summary__stat-label"
+                i18n
+              >
+                Average Score
+              </dt>
               <dd class="progress-summary__stat-value">{{ s.averageScore }}%</dd>
             </div>
             <div class="progress-summary__stat">
-              <dt class="progress-summary__stat-label" i18n>Perfect Scores</dt>
+              <dt
+                class="progress-summary__stat-label"
+                i18n
+              >
+                Perfect Scores
+              </dt>
               <dd class="progress-summary__stat-value">{{ s.perfectScores }}</dd>
             </div>
             <div class="progress-summary__stat">
-              <dt class="progress-summary__stat-label" i18n>Questions Completed</dt>
+              <dt
+                class="progress-summary__stat-label"
+                i18n
+              >
+                Questions Completed
+              </dt>
               <dd class="progress-summary__stat-value">{{ s.questionsCompleted }}</dd>
             </div>
           </dl>
@@ -111,8 +160,15 @@ import { PracticeSessionService } from '@shared/services/features/practice/pract
             <dl class="progress-summary__rows progress-summary__rows--highlights">
               @if (s.strongestQuiz; as strong) {
                 <div class="progress-summary__row">
-                  <dt class="progress-summary__label" i18n>Strongest</dt>
-                  <dd class="progress-summary__value">{{ strong.milestone }} — {{ strong.bestScore }}%</dd>
+                  <dt
+                    class="progress-summary__label"
+                    i18n
+                  >
+                    Strongest
+                  </dt>
+                  <dd class="progress-summary__value">
+                    {{ strong.milestone }} — {{ strong.bestScore }}%
+                  </dd>
                 </div>
               }
               <!-- Needs Review is driven by WeakAreasService, NOT the
@@ -121,11 +177,17 @@ import { PracticeSessionService } from '@shared/services/features/practice/pract
                    best-score percentage cannot say how many questions were
                    answered. There is deliberately no percentage fallback. -->
               <div class="progress-summary__row">
-                <dt class="progress-summary__label" i18n>Needs Review</dt>
+                <dt
+                  class="progress-summary__label"
+                  i18n
+                >
+                  Needs Review
+                </dt>
                 <dd class="progress-summary__value">
                   @if (weakTopics().length > 0) {
                     <ul class="progress-summary__weak-list">
                       @for (t of weakTopics(); track t.topicId) {
+                        <!-- prettier-ignore -->
                         <li class="progress-summary__weak-topic">{{ t.topicName }} — {{ t.percentage }}%</li>
                       }
                     </ul>
@@ -157,185 +219,187 @@ import { PracticeSessionService } from '@shared/services/features/practice/pract
       }
     }
   `,
-  styles: [`
-    .progress-summary {
-      max-width: 560px;
-      margin: 4px auto 18px;
-      padding: 14px 20px;
-      border: 1px solid var(--border-color, #e0e0e0);
-      border-radius: 12px;
-      background: var(--bg-secondary, rgba(255, 255, 255, 0.6));
-      box-sizing: border-box;
-    }
+  styles: [
+    `
+      .progress-summary {
+        max-width: 560px;
+        margin: 4px auto 18px;
+        padding: 14px 20px;
+        border: 1px solid var(--border-color, #e0e0e0);
+        border-radius: 12px;
+        background: var(--bg-secondary, rgba(255, 255, 255, 0.6));
+        box-sizing: border-box;
+      }
 
-    .progress-summary__heading {
-      margin: 0 0 10px;
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text-primary, #212121);
-    }
+      .progress-summary__heading {
+        margin: 0 0 10px;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary, #212121);
+      }
 
-    .progress-summary__rows {
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-    }
+      .progress-summary__rows {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
 
-    .progress-summary__rows--difficulty,
-    .progress-summary__rows--highlights {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border-color, #e0e0e0);
-    }
+      .progress-summary__rows--difficulty,
+      .progress-summary__rows--highlights {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border-color, #e0e0e0);
+      }
 
-    /* Three understated stat cells beneath the progress rows. */
-    .progress-summary__stats {
-      margin: 12px 0 0;
-      padding-top: 12px;
-      border-top: 1px solid var(--border-color, #e0e0e0);
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
+      /* Three understated stat cells beneath the progress rows. */
+      .progress-summary__stats {
+        margin: 12px 0 0;
+        padding-top: 12px;
+        border-top: 1px solid var(--border-color, #e0e0e0);
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
 
-    .progress-summary__stat {
-      margin: 0;
-      /* column-reverse: DOM is label→value (screen readers hear "Average Score,
+      .progress-summary__stat {
+        margin: 0;
+        /* column-reverse: DOM is label→value (screen readers hear "Average Score,
          80%"), but the value shows on top like a stat tile. */
-      display: flex;
-      flex-direction: column-reverse;
-      align-items: center;
-      gap: 2px;
-      text-align: center;
-    }
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: center;
+        gap: 2px;
+        text-align: center;
+      }
 
-    .progress-summary__stat-value {
-      margin: 0;
-      font-size: 19px;
-      font-weight: 700;
-      line-height: 1.1;
-      color: var(--text-primary, #212121);
-      font-variant-numeric: tabular-nums;
-    }
+      .progress-summary__stat-value {
+        margin: 0;
+        font-size: 19px;
+        font-weight: 700;
+        line-height: 1.1;
+        color: var(--text-primary, #212121);
+        font-variant-numeric: tabular-nums;
+      }
 
-    .progress-summary__stat-label {
-      margin: 0;
-      font-size: 10.5px;
-      font-weight: 600;
-      letter-spacing: 0.4px;
-      line-height: 1.2;
-      text-transform: uppercase;
-      color: var(--text-secondary, #555555);
-    }
+      .progress-summary__stat-label {
+        margin: 0;
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.4px;
+        line-height: 1.2;
+        text-transform: uppercase;
+        color: var(--text-secondary, #555555);
+      }
 
-    /* Details variant lives inside the expansion panel: drop the card chrome and
+      /* Details variant lives inside the expansion panel: drop the card chrome and
        the leading divider so it sits flush in the panel body. */
-    .progress-summary--details {
-      max-width: none;
-      margin: 0;
-      padding: 0;
-      border: none;
-      background: transparent;
-    }
+      .progress-summary--details {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+      }
 
-    .progress-summary--details .progress-summary__rows:first-child {
-      margin-top: 0;
-      padding-top: 0;
-      border-top: none;
-    }
+      .progress-summary--details .progress-summary__rows:first-child {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+      }
 
-    .progress-summary__row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
+      .progress-summary__row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
 
-    .progress-summary__label {
-      margin: 0;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-secondary, #555555);
-      white-space: nowrap;
-    }
+      .progress-summary__label {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary, #555555);
+        white-space: nowrap;
+      }
 
-    .progress-summary__value {
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-primary, #212121);
-      font-variant-numeric: tabular-nums;
-    }
+      .progress-summary__value {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary, #212121);
+        font-variant-numeric: tabular-nums;
+      }
 
-    .progress-summary__pct,
-    .progress-summary__count {
-      min-width: 44px;
-      text-align: right;
-    }
+      .progress-summary__pct,
+      .progress-summary__count {
+        min-width: 44px;
+        text-align: right;
+      }
 
-    /* Needs Review: ONE TOPIC PER LINE. These were bare inline spans with no
+      /* Needs Review: ONE TOPIC PER LINE. These were bare inline spans with no
        separator, so several topics ran together ("A — 33%B — 67%"). A real list,
        left-aligned beneath its heading. */
-    .progress-summary__weak-list {
-      margin: 0;
-      padding: 0;
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 3px;
-      text-align: left;
-      /* On a narrow screen a long name wraps; balance the lines so the
+      .progress-summary__weak-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 3px;
+        text-align: left;
+        /* On a narrow screen a long name wraps; balance the lines so the
          percentage stays attached to a word instead of stranding alone. */
-      text-wrap: balance;
-    }
+        text-wrap: balance;
+      }
 
-    /* Strongest and Needs Review: heading on top, value(s) beneath it, left-
+      /* Strongest and Needs Review: heading on top, value(s) beneath it, left-
        aligned. ONE shared rule, so the two rows can never drift apart. The gap
        between the two blocks exceeds the heading-to-value gap so each block
        reads as one group. */
-    .progress-summary__rows--highlights {
-      gap: 12px;
-    }
+      .progress-summary__rows--highlights {
+        gap: 12px;
+      }
 
-    .progress-summary__rows--highlights .progress-summary__row {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 4px;
-    }
-
-    .progress-summary__bar {
-      display: inline-block;
-      width: 120px;
-      height: 8px;
-      border-radius: 999px;
-      background: var(--bg-hover, rgba(0, 0, 0, 0.1));
-      overflow: hidden;
-    }
-
-    .progress-summary__bar-fill {
-      display: block;
-      height: 100%;
-      border-radius: 999px;
-      background: var(--text-link, #3b98fd);
-    }
-
-    @media (max-width: 600px) {
-      .progress-summary {
-        margin: 4px 8px 16px;
-        padding: 12px 14px;
+      .progress-summary__rows--highlights .progress-summary__row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
       }
 
       .progress-summary__bar {
-        width: 84px;
+        display: inline-block;
+        width: 120px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--bg-hover, rgba(0, 0, 0, 0.1));
+        overflow: hidden;
       }
-    }
-  `]
+
+      .progress-summary__bar-fill {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: var(--text-link, #3b98fd);
+      }
+
+      @media (max-width: 600px) {
+        .progress-summary {
+          margin: 4px 8px 16px;
+          padding: 12px 14px;
+        }
+
+        .progress-summary__bar {
+          width: 84px;
+        }
+      }
+    `
+  ]
 })
 export class ProgressSummaryComponent {
   private readonly weakAreas = inject(WeakAreasService);
@@ -356,7 +420,9 @@ export class ProgressSummaryComponent {
 
   /** Names the topics in the action's accessible label, not colour or position. */
   readonly practiceAriaLabel = computed(() => {
-    const names = this.weakTopics().map((t) => t.topicName).join(', ');
+    const names = this.weakTopics()
+      .map((t) => t.topicName)
+      .join(', ');
     return names ? `Practice weak areas: ${names}` : 'Practice weak areas';
   });
 

@@ -52,8 +52,14 @@ describe('FeedbackService.buildFeedbackMessage — multi-answer win condition', 
       providers: [
         FeedbackService,
         { provide: QuizService, useValue: quizService },
-        { provide: ExplanationTextService, useValue: { latestExplanationIndex: -1, getCorrectOptionIndices: () => [] } },
-        { provide: SelectedOptionService, useValue: { getSelectedOptionsForQuestion: (_i: number) => [] } }
+        {
+          provide: ExplanationTextService,
+          useValue: { latestExplanationIndex: -1, getCorrectOptionIndices: () => [] }
+        },
+        {
+          provide: SelectedOptionService,
+          useValue: { getSelectedOptionsForQuestion: (_i: number) => [] }
+        }
       ]
     });
     service = TestBed.inject(FeedbackService);
@@ -75,7 +81,15 @@ describe('FeedbackService.buildFeedbackMessage — multi-answer win condition', 
     for (const [i, o] of options.entries()) o.selected = selectedFlags[i];
     const selected = options.filter((_, i) => selectedFlags[i]);
     const question = multiQuestion(options);
-    return service.buildFeedbackMessage(question, selected, false, false, 0, options, options[targetIdx]);
+    return service.buildFeedbackMessage(
+      question,
+      selected,
+      false,
+      false,
+      0,
+      options,
+      options[targetIdx]
+    );
   }
 
   it('one of two correct → reports how many correct answers remain', () => {
@@ -112,10 +126,16 @@ describe('FeedbackService.buildFeedbackMessage — multi-answer win condition', 
       opt(3, 'Charlie', true)
     ];
     // Prove it uses the displayed question, not the raw questions[] array.
-    quizService.questions = [multiQuestion([
-      opt(1, 'Alpha', true), opt(2, 'Bravo', false), opt(3, 'Charlie', true), opt(4, 'Delta', false)
-    ])];
-    quizService.getDisplayedQuestion = (i: number) => (i === 0 ? multiQuestion(displayed) : undefined);
+    quizService.questions = [
+      multiQuestion([
+        opt(1, 'Alpha', true),
+        opt(2, 'Bravo', false),
+        opt(3, 'Charlie', true),
+        opt(4, 'Delta', false)
+      ])
+    ];
+    quizService.getDisplayedQuestion = (i: number) =>
+      i === 0 ? multiQuestion(displayed) : undefined;
     window.history.pushState({}, '', '/question/demo/1');
 
     const options = displayed.map((o) => ({ ...o }));
@@ -124,7 +144,13 @@ describe('FeedbackService.buildFeedbackMessage — multi-answer win condition', 
     const selected = [options[1], options[3]];
 
     const msg = service.buildFeedbackMessage(
-      multiQuestion(options), selected, false, false, 0, options, options[3]
+      multiQuestion(options),
+      selected,
+      false,
+      false,
+      0,
+      options,
+      options[3]
     );
     expect(msg).toBe("You're right! The correct answers are Options 2 and 4.");
   });
@@ -188,8 +214,14 @@ describe('FeedbackService.buildFeedbackMessage — partial-progress from authori
         FeedbackService,
         { provide: QuizService, useValue: quizService },
         { provide: QuestionVerdictService, useValue: verdictService },
-        { provide: ExplanationTextService, useValue: { latestExplanationIndex: -1, getCorrectOptionIndices: () => [] } },
-        { provide: SelectedOptionService, useValue: { getSelectedOptionsForQuestion: (_i: number) => [] } }
+        {
+          provide: ExplanationTextService,
+          useValue: { latestExplanationIndex: -1, getCorrectOptionIndices: () => [] }
+        },
+        {
+          provide: SelectedOptionService,
+          useValue: { getSelectedOptionsForQuestion: (_i: number) => [] }
+        }
       ]
     });
     service = TestBed.inject(FeedbackService);
@@ -254,7 +286,10 @@ describe('FeedbackService.buildFeedbackMessage — partial-progress from authori
     currentVerdict = {
       phase: 'incomplete',
       selectedOptionTexts: ['Alpha', 'Bravo'],
-      selectedVerdicts: new Map([['Alpha', true], ['Bravo', false]]),
+      selectedVerdicts: new Map([
+        ['Alpha', true],
+        ['Bravo', false]
+      ]),
       remainingCorrectCount: 1,
       correctOptionTexts: [],
       explanation: null,
@@ -267,7 +302,7 @@ describe('FeedbackService.buildFeedbackMessage — partial-progress from authori
     expect(msg).toBe('Not this one, try again!');
   });
 
-  it('does NOT latch an earlier wrong click onto a LATER correct click\'s message (the regression: correct -> wrong -> correct)', () => {
+  it("does NOT latch an earlier wrong click onto a LATER correct click's message (the regression: correct -> wrong -> correct)", () => {
     // The exact sequence reported live: Option A (correct), Option B (wrong),
     // Option C (correct). Clicking C must describe C's own verdict, not
     // B's leftover `false` still sitting in selectedVerdicts.
@@ -282,14 +317,26 @@ describe('FeedbackService.buildFeedbackMessage — partial-progress from authori
     currentVerdict = {
       phase: 'incomplete',
       selectedOptionTexts: ['Alpha', 'Bravo', 'Charlie'],
-      selectedVerdicts: new Map([['Alpha', true], ['Bravo', false], ['Charlie', true]]),
+      selectedVerdicts: new Map([
+        ['Alpha', true],
+        ['Bravo', false],
+        ['Charlie', true]
+      ]),
       remainingCorrectCount: 1,
       correctOptionTexts: [],
       explanation: null,
       isResolvedCorrect: null
     };
 
-    const msg = service.buildFeedbackMessage(q, [alpha, bravo, charlie], false, false, 0, q.options, charlie);
+    const msg = service.buildFeedbackMessage(
+      q,
+      [alpha, bravo, charlie],
+      false,
+      false,
+      0,
+      q.options,
+      charlie
+    );
     expect(msg).toBe("That's correct! Please select 1 more correct answer.");
     expect(msg).not.toBe('Not this one, try again!');
   });
@@ -326,8 +373,20 @@ describe('FeedbackService.buildFeedbackMessage — single-answer', () => {
     TestBed.configureTestingModule({
       providers: [
         FeedbackService,
-        { provide: QuizService, useValue: { currentQuestionIndex: 0, getCurrentQuestionIndex: () => 0, questions: [], getDisplayedQuestion: () => undefined, getPristineCorrectTextsForQuestion: () => new Set<string>() } },
-        { provide: ExplanationTextService, useValue: { latestExplanationIndex: -1, getCorrectOptionIndices: () => [] } },
+        {
+          provide: QuizService,
+          useValue: {
+            currentQuestionIndex: 0,
+            getCurrentQuestionIndex: () => 0,
+            questions: [],
+            getDisplayedQuestion: () => undefined,
+            getPristineCorrectTextsForQuestion: () => new Set<string>()
+          }
+        },
+        {
+          provide: ExplanationTextService,
+          useValue: { latestExplanationIndex: -1, getCorrectOptionIndices: () => [] }
+        },
         { provide: SelectedOptionService, useValue: { getSelectedOptionsForQuestion: () => [] } }
       ]
     });

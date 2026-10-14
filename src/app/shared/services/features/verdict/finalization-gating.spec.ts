@@ -38,8 +38,10 @@ const url = {
 };
 
 const RESOLVED = {
-  status: 'resolved', correct: true,
-  correctOptionTexts: ['map', 'filter'], explanation: 'e'
+  status: 'resolved',
+  correct: true,
+  correctOptionTexts: ['map', 'filter'],
+  explanation: 'e'
 };
 
 /**
@@ -53,9 +55,11 @@ const RESOLVED = {
 function beginCheck(quiz: string, question: string, texts: string[]) {
   verdicts.checkAnswer(quiz, question, texts).subscribe({ error: () => undefined });
 
-  http.match({ method: 'POST', url: url.attempts(quiz) })
+  http
+    .match({ method: 'POST', url: url.attempts(quiz) })
     .forEach((req) => req.flush({ attemptReceipt: 'a' }));
-  http.match({ method: 'POST', url: url.start(quiz) })
+  http
+    .match({ method: 'POST', url: url.start(quiz) })
     .forEach((req) => req.flush({ questionReceipt: 'q' }));
 
   return http.expectOne({ method: 'POST', url: url.check(quiz) });
@@ -68,7 +72,10 @@ beforeEach(() => {
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: BASE },
       { provide: TOPIC_QUIZ_VERDICT_ADAPTER, useExisting: ApiTopicQuizVerdictAdapter },
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
 
@@ -109,7 +116,12 @@ describe('checking blocks finalization', () => {
     // SERVICE-level backstop only tracks checking/error (the final question's
     // OWN selection-based submission policy, which resolved-incorrect DOES
     // satisfy, lives at the component level — see progression-gate.ts).
-    second.flush({ status: 'resolved', correct: false, correctOptionTexts: ['x'], explanation: 'e' });
+    second.flush({
+      status: 'resolved',
+      correct: false,
+      correctOptionTexts: ['x'],
+      explanation: 'e'
+    });
     expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(false);
   });
 });
@@ -156,7 +168,9 @@ describe('states that do NOT block', () => {
     http.expectOne({ method: 'POST', url: url.attempts(QUIZ) }).flush({ attemptReceipt: 'a' });
     http.expectOne({ method: 'POST', url: url.start(QUIZ) }).flush({ questionReceipt: 'q' });
     http.expectOne({ method: 'POST', url: url.check(QUIZ) }).flush({
-      status: 'expired', correctOptionTexts: ['map'], explanation: 'e'
+      status: 'expired',
+      correctOptionTexts: ['map'],
+      explanation: 'e'
     });
 
     expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(false);
@@ -164,7 +178,7 @@ describe('states that do NOT block', () => {
 });
 
 describe('scoping', () => {
-  it('another quiz\'s pending check does not block this one', () => {
+  it("another quiz's pending check does not block this one", () => {
     const other = beginCheck(OTHER_QUIZ, 'What does computed() return?', ['A promise']);
 
     expect(verdicts.hasBlockingVerdicts(OTHER_QUIZ)).toBe(true);
@@ -172,7 +186,12 @@ describe('scoping', () => {
     // strand the user here.
     expect(verdicts.hasBlockingVerdicts(QUIZ)).toBe(false);
 
-    other.flush({ status: 'resolved', correct: false, correctOptionTexts: ['x'], explanation: 'e' });
+    other.flush({
+      status: 'resolved',
+      correct: false,
+      correctOptionTexts: ['x'],
+      explanation: 'e'
+    });
   });
 
   it('an unscoped query sees any quiz', () => {

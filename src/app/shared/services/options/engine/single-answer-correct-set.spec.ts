@@ -62,7 +62,9 @@ function makeComp(mode: 'lying' | 'bare' | 'truthful') {
   return {
     optionsToDisplay: opts,
     optionBindings: Object.assign(() => bindings, {
-      set: (next: any[]) => { bindings = next; }
+      set: (next: any[]) => {
+        bindings = next;
+      }
     }),
     currentQuestion: () => ({ questionText: QUESTION, options: opts }),
     getQuestionAtDisplayIndex: () => ({ questionText: QUESTION, options: opts }),
@@ -71,7 +73,9 @@ function makeComp(mode: 'lying' | 'bare' | 'truthful') {
     cdRef: { markForCheck: () => undefined, detectChanges: () => undefined },
     emitExplanation: () => undefined,
     _feedbackDisplay: null as any,
-    get bindings() { return bindings; }
+    get bindings() {
+      return bindings;
+    }
   };
 }
 
@@ -80,14 +84,19 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       {
         provide: QuizService,
         useValue: {
           quizId: 'rxjs',
           questions: [{ questionText: QUESTION, options: optionsFor('truthful') }],
-          getQuestionsInDisplayOrder: () => [{ questionText: QUESTION, options: optionsFor('truthful') }],
+          getQuestionsInDisplayOrder: () => [
+            { questionText: QUESTION, options: optionsFor('truthful') }
+          ],
           isShuffleEnabled: () => false,
           shuffledQuestions: [],
           totalQuestions: () => 1,
@@ -104,7 +113,10 @@ beforeEach(() => {
           clickConfirmedDotStatus: new Map()
         }
       },
-      { provide: TimerService, useValue: { stopTimer: () => undefined, resetTimer: () => undefined } },
+      {
+        provide: TimerService,
+        useValue: { stopTimer: () => undefined, resetTimer: () => undefined }
+      },
       { provide: FeedbackService, useValue: { setCorrectMessage: () => '' } },
       { provide: QuestionVerdictService, useValue: { verdictFor: () => IDLE_VERDICT_STATE } }
     ]

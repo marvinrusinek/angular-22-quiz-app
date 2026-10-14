@@ -40,8 +40,8 @@ const QUESTIONS = [
     questionText: SINGLE,
     explanation: 'local explanation',
     options: [
-      { text: 'A multicast observable' },      // verdict: CORRECT
-      { text: 'A pipe', correct: true }         // verdict: INCORRECT
+      { text: 'A multicast observable' }, // verdict: CORRECT
+      { text: 'A pipe', correct: true } // verdict: INCORRECT
     ]
   },
   {
@@ -55,9 +55,7 @@ const QUESTIONS = [
   }
 ];
 
-const BANK = [
-  { quizId: QUIZ, milestone: 'RxJS', questions: QUESTIONS }
-] as unknown as Quiz[];
+const BANK = [{ quizId: QUIZ, milestone: 'RxJS', questions: QUESTIONS }] as unknown as Quiz[];
 
 if (typeof (globalThis as any).structuredClone !== 'function') {
   (globalThis as any).structuredClone = (value: unknown) => JSON.parse(JSON.stringify(value));
@@ -117,7 +115,10 @@ beforeEach(() => {
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: BASE },
       { provide: TOPIC_QUIZ_VERDICT_ADAPTER, useExisting: ApiTopicQuizVerdictAdapter },
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
 
@@ -160,7 +161,10 @@ describe('pending verdict', () => {
     expect(lastCorrectFor(0)).toBeUndefined();
 
     http.expectOne({ method: 'POST', url: url.check }).flush({
-      status: 'resolved', correct: false, correctOptionTexts: ['A multicast observable'], explanation: 'e'
+      status: 'resolved',
+      correct: false,
+      correctOptionTexts: ['A multicast observable'],
+      explanation: 'e'
     });
   });
 
@@ -170,7 +174,10 @@ describe('pending verdict', () => {
     expect(dotFor(0)).toBeUndefined();
 
     http.expectOne({ method: 'POST', url: url.check }).flush({
-      status: 'resolved', correct: true, correctOptionTexts: ['A multicast observable'], explanation: 'e'
+      status: 'resolved',
+      correct: true,
+      correctOptionTexts: ['A multicast observable'],
+      explanation: 'e'
     });
 
     expect(dotFor(0)).toBe('correct');
@@ -180,12 +187,15 @@ describe('pending verdict', () => {
 
 describe('the backend overrules the local answer key', () => {
   it('a locally-CORRECT option the verdict rejects produces a WRONG dot', () => {
-    expect(QUESTIONS[0]!.options[1]!.correct).toBe(true);   // local says correct
+    expect(QUESTIONS[0]!.options[1]!.correct).toBe(true); // local says correct
 
     click(0, SINGLE, ['A pipe'], 'A pipe');
     grantReceipts();
     http.expectOne({ method: 'POST', url: url.check }).flush({
-      status: 'resolved', correct: false, correctOptionTexts: ['A multicast observable'], explanation: 'e'
+      status: 'resolved',
+      correct: false,
+      correctOptionTexts: ['A multicast observable'],
+      explanation: 'e'
     });
 
     expect(dotFor(0)).toBe('wrong');
@@ -193,12 +203,15 @@ describe('the backend overrules the local answer key', () => {
   });
 
   it('a locally-UNFLAGGED option the verdict accepts produces a CORRECT dot', () => {
-    expect(QUESTIONS[0]!.options[0]!).not.toHaveProperty('correct');   // local says nothing
+    expect(QUESTIONS[0]!.options[0]!).not.toHaveProperty('correct'); // local says nothing
 
     click(0, SINGLE, ['A multicast observable'], 'A multicast observable');
     grantReceipts();
     http.expectOne({ method: 'POST', url: url.check }).flush({
-      status: 'resolved', correct: true, correctOptionTexts: ['A multicast observable'], explanation: 'e'
+      status: 'resolved',
+      correct: true,
+      correctOptionTexts: ['A multicast observable'],
+      explanation: 'e'
     });
 
     expect(dotFor(0)).toBe('correct');
@@ -211,7 +224,10 @@ describe('single answer', () => {
     click(0, SINGLE, ['A pipe'], 'A pipe');
     grantReceipts();
     http.expectOne({ method: 'POST', url: url.check }).flush({
-      status: 'resolved', correct: false, correctOptionTexts: ['A multicast observable'], explanation: 'e'
+      status: 'resolved',
+      correct: false,
+      correctOptionTexts: ['A multicast observable'],
+      explanation: 'e'
     });
 
     // Resolved, but wrong. The dot must reflect the second fact, not the first.
@@ -251,7 +267,10 @@ describe('multiple answer', () => {
     click(1, MULTI, ['map', 'filter', 'Observable'], 'filter');
     grantReceipts();
     http.expectOne({ method: 'POST', url: url.check }).flush({
-      status: 'resolved', correct: true, correctOptionTexts: ['map', 'filter'], explanation: 'e'
+      status: 'resolved',
+      correct: true,
+      correctOptionTexts: ['map', 'filter'],
+      explanation: 'e'
     });
 
     expect(verdicts.verdictFor(QUIZ, MULTI).isResolvedCorrect).toBe(true);
@@ -271,10 +290,13 @@ describe('stale responses', () => {
 
     second.flush({
       status: 'incomplete',
-      selectedVerdicts: [{ text: 'Observable', correct: false }, { text: 'map', correct: true }],
+      selectedVerdicts: [
+        { text: 'Observable', correct: false },
+        { text: 'map', correct: true }
+      ],
       remainingCorrectCount: 1
     });
-    expect(dotFor(1)).toBe('correct');   // 'map' was the newer click
+    expect(dotFor(1)).toBe('correct'); // 'map' was the newer click
 
     // The stale response arrives afterwards and must not move the dot.
     first.flush({
@@ -308,7 +330,7 @@ describe('shuffle-aware mapping', () => {
     expect(sync.displayIndexOf('Not in this quiz')).toBe(-1);
   });
 
-  it('a verdict for question A never writes question B\'s dot', () => {
+  it("a verdict for question A never writes question B's dot", () => {
     // Shuffled so the multi question is at display index 0.
     (quizService as any).getQuestionsInDisplayOrder = () => [QUESTIONS[1], QUESTIONS[0]];
 
@@ -321,7 +343,7 @@ describe('shuffle-aware mapping', () => {
     });
 
     expect(dotFor(0)).toBe('correct');
-    expect(dotFor(1)).toBeUndefined();   // the single question is untouched
+    expect(dotFor(1)).toBeUndefined(); // the single question is untouched
   });
 });
 
@@ -333,7 +355,10 @@ describe('lifecycle', () => {
     sync.cancel(0);
 
     http.expectOne({ method: 'POST', url: url.check }).flush({
-      status: 'resolved', correct: false, correctOptionTexts: ['A multicast observable'], explanation: 'e'
+      status: 'resolved',
+      correct: false,
+      correctOptionTexts: ['A multicast observable'],
+      explanation: 'e'
     });
 
     expect(dotFor(0)).toBeUndefined();
@@ -343,8 +368,7 @@ describe('lifecycle', () => {
     click(0, SINGLE, ['A pipe'], 'A pipe');
     grantReceipts();
 
-    http.expectOne({ method: 'POST', url: url.check })
-      .error(new ProgressEvent('network error'));
+    http.expectOne({ method: 'POST', url: url.check }).error(new ProgressEvent('network error'));
 
     expect(dotFor(0)).toBeUndefined();
     expect(lastCorrectFor(0)).toBeUndefined();

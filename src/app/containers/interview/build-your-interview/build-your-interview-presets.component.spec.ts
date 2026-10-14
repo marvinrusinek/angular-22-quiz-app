@@ -42,7 +42,6 @@ const asTopic = (quiz: Quiz) => ({
   questionCount: quiz.questions?.length ?? 0
 });
 
-
 /**
  * Stage 9C: the builder creates the assessment on the BACKEND. The fixture
  * deliberately carries no correctness and no explanation.
@@ -57,11 +56,22 @@ const CREATED = {
     expiresAtMs: 1_700_000_900_000,
     durationSeconds: 900,
     remainingSeconds: 900,
-    config: { mode: 'preset' as const, presetId: 'junior', topicIds: ['typescript'], questionCount: 15 },
+    config: {
+      mode: 'preset' as const,
+      presetId: 'junior',
+      topicIds: ['typescript'],
+      questionCount: 15
+    },
     questions: [
       {
-        questionId: 'typescript:q:0', sourceQuizId: 'typescript', questionText: 'Q?',
-        type: 'single' as const, options: [{ optionId: 101, text: 'a' }, { optionId: 102, text: 'b' }]
+        questionId: 'typescript:q:0',
+        sourceQuizId: 'typescript',
+        questionText: 'Q?',
+        type: 'single' as const,
+        options: [
+          { optionId: 101, text: 'a' },
+          { optionId: 102, text: 'b' }
+        ]
       }
     ],
     answers: new Map<string, readonly number[]>()
@@ -117,11 +127,18 @@ function render(catalogLoading = false): ComponentFixture<BuildYourInterviewComp
               .map(asTopic);
           },
           availableQuestions: (ids: readonly string[]) =>
-            catalogLoading ? 0 : SYNTHETIC_CATALOG
-              .filter((quiz) => ids.includes(quiz.quizId))
-              .reduce((sum, quiz) => sum + (quiz.questions?.length ?? 0), 0),
+            catalogLoading
+              ? 0
+              : SYNTHETIC_CATALOG.filter((quiz) => ids.includes(quiz.quizId)).reduce(
+                  (sum, quiz) => sum + (quiz.questions?.length ?? 0),
+                  0
+                ),
           questionsByDifficulty: (ids: readonly string[]) => {
-            const byDifficulty: Record<string, number> = { beginner: 0, intermediate: 0, advanced: 0 };
+            const byDifficulty: Record<string, number> = {
+              beginner: 0,
+              intermediate: 0,
+              advanced: 0
+            };
             if (catalogLoading) return byDifficulty;
             const counted = new Set<string>();
             for (const quiz of catalogQuizzes) {
@@ -168,7 +185,9 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
     const el = render().nativeElement as HTMLElement;
     const group = el.querySelector('[role="radiogroup"][aria-label="Interview setup"]');
     expect(group).not.toBeNull();
-    const labels = [...(group?.querySelectorAll('label.chip') ?? [])].map((l) => text(l as HTMLElement).trim());
+    const labels = [...(group?.querySelectorAll('label.chip') ?? [])].map((l) =>
+      text(l as HTMLElement).trim()
+    );
     expect(labels).toEqual(['Custom', 'Junior', 'Mid-Level', 'Senior']);
   });
 
@@ -184,31 +203,34 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
     const fixture = render();
     const el = fixture.nativeElement as HTMLElement;
     const radios = [...el.querySelectorAll<HTMLInputElement>('input[name="quickSetup"]')];
-    expect(radios[0].checked).toBe(true);            // Custom
+    expect(radios[0].checked).toBe(true); // Custom
 
     fixture.componentInstance.selectPreset('senior');
     fixture.detectChanges();
     const after = [...el.querySelectorAll<HTMLInputElement>('input[name="quickSetup"]')];
     expect(after[0].checked).toBe(false);
-    expect(after[3].checked).toBe(true);             // Senior
+    expect(after[3].checked).toBe(true); // Senior
   });
 
   it.each([
     ['junior', 'Junior Angular Developer', '15', '20'],
     ['mid-level', 'Mid-Level Angular Developer', '20', '30'],
     ['senior', 'Senior Angular Developer', '25', '40']
-  ] as const)('previews %s with name, description, count and duration', (id, name, count, minutes) => {
-    const fixture = render();
-    fixture.componentInstance.selectPreset(id);
-    fixture.detectChanges();
+  ] as const)(
+    'previews %s with name, description, count and duration',
+    (id, name, count, minutes) => {
+      const fixture = render();
+      fixture.componentInstance.selectPreset(id);
+      fixture.detectChanges();
 
-    const preview = fixture.nativeElement.querySelector('.preset-preview') as HTMLElement;
-    expect(preview).not.toBeNull();
-    expect(text(preview)).toContain(name);
-    expect(text(preview)).toContain(findInterviewPreset(id)!.description);
-    expect(text(preview)).toContain(count);
-    expect(text(preview)).toContain(minutes);
-  });
+      const preview = fixture.nativeElement.querySelector('.preset-preview') as HTMLElement;
+      expect(preview).not.toBeNull();
+      expect(text(preview)).toContain(name);
+      expect(text(preview)).toContain(findInterviewPreset(id)!.description);
+      expect(text(preview)).toContain(count);
+      expect(text(preview)).toContain(minutes);
+    }
+  );
 
   it('shows the resolved difficulty MIX as counts, not percentages', () => {
     const fixture = render();
@@ -225,10 +247,12 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
     const fixture = render();
     fixture.componentInstance.selectPreset('junior');
     fixture.detectChanges();
-    expect(fixture.componentInstance.presetTopicNames().length)
-      .toBe(findInterviewPreset('junior')!.topicIds.length);
-    expect(text(fixture.nativeElement.querySelector('.preset-preview__topics') as HTMLElement))
-      .toContain('Topics:');
+    expect(fixture.componentInstance.presetTopicNames().length).toBe(
+      findInterviewPreset('junior')!.topicIds.length
+    );
+    expect(
+      text(fixture.nativeElement.querySelector('.preset-preview__topics') as HTMLElement)
+    ).toContain('Topics:');
   });
 
   it('always shows the representativeness disclaimer', () => {
@@ -286,7 +310,9 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
     fixture.componentInstance.selectPreset('junior');
     fixture.detectChanges();
 
-    const button = fixture.nativeElement.querySelector('button.start-interview-btn') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector(
+      'button.start-interview-btn'
+    ) as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     button.click();
     fixture.detectChanges();
@@ -301,11 +327,16 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
 
   it('keeps the real Start button DISABLED when a preset cannot be filled', () => {
     // Starve the BACKEND catalogue — the builder no longer reads the local bank.
-    catalogQuizzes = SYNTHETIC_CATALOG.map((q) => ({ ...q, questions: (q.questions ?? []).slice(0, 1) })) as Quiz[];
+    catalogQuizzes = SYNTHETIC_CATALOG.map((q) => ({
+      ...q,
+      questions: (q.questions ?? []).slice(0, 1)
+    })) as Quiz[];
     const fixture = render();
     fixture.componentInstance.selectPreset('senior');
     fixture.detectChanges();
-    const button = fixture.nativeElement.querySelector('button.start-interview-btn') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector(
+      'button.start-interview-btn'
+    ) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
   });
 
@@ -351,8 +382,10 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
     expect(createSession).toHaveBeenCalledTimes(1);
     expect(createSession).toHaveBeenCalledWith(
       {
-        mode: 'custom', difficulty: 'beginner',
-        topicIds: ['typescript', 'templates'], questionCount: 10
+        mode: 'custom',
+        difficulty: 'beginner',
+        topicIds: ['typescript', 'templates'],
+        questionCount: 10
       },
       expect.stringMatching(UUID_RE)
     );
@@ -371,7 +404,10 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
   it('disables Start and explains the shortfall when capacity is insufficient', () => {
     // Starve the bank so no preset can be filled.
     // Starve the BACKEND catalogue — the builder no longer reads the local bank.
-    catalogQuizzes = SYNTHETIC_CATALOG.map((q) => ({ ...q, questions: (q.questions ?? []).slice(0, 1) })) as Quiz[];
+    catalogQuizzes = SYNTHETIC_CATALOG.map((q) => ({
+      ...q,
+      questions: (q.questions ?? []).slice(0, 1)
+    })) as Quiz[];
 
     const fixture = render();
     fixture.componentInstance.selectPreset('senior');
@@ -379,8 +415,8 @@ describe('BuildYourInterviewComponent — Quick Setup presets', () => {
 
     expect(fixture.componentInstance.presetStartDisabled()).toBe(true);
     const reason = fixture.componentInstance.presetInvalidReason();
-    expect(reason).toContain('25');                      // required
-    expect(reason).toMatch(/Only \d+ of the 25/);        // available vs required
+    expect(reason).toContain('25'); // required
+    expect(reason).toMatch(/Only \d+ of the 25/); // available vs required
   });
 
   /**

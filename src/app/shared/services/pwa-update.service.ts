@@ -21,7 +21,7 @@ export class PwaUpdateService {
   private readonly swUpdate = inject(SwUpdate);
 
   // ----- props -----
-  private readonly CHECK_INTERVAL_MS = 60 * 60 * 1000;  // hourly
+  private readonly CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly
 
   // ----- public -----
   init(): void {

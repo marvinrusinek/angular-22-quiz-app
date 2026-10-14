@@ -1,6 +1,10 @@
 import { Service } from '@angular/core';
 
-import { SK_DOT_CONFIRMED, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP } from '@shared/constants/session-keys';
+import {
+  SK_DOT_CONFIRMED,
+  SK_SEL_Q,
+  SK_SELECTED_OPTIONS_MAP
+} from '@shared/constants/session-keys';
 
 import { SelectedOption } from '@shared/models';
 
@@ -31,7 +35,9 @@ export class SelectionPersistenceService {
       const raw = sessionStorage.getItem('rawSelectionsMap');
       if (raw) {
         const parsed = JSON.parse(raw);
-        ctx.rawSelectionsMap = new Map(Object.entries(parsed).map(([k, v]) => [Number(k), v as any]));
+        ctx.rawSelectionsMap = new Map(
+          Object.entries(parsed).map(([k, v]) => [Number(k), v as any])
+        );
       }
 
       const selected = sessionStorage.getItem(SK_SELECTED_OPTIONS_MAP);
@@ -43,7 +49,7 @@ export class SelectionPersistenceService {
           const userClicks = arr.filter(
             (o: any) => o && o.highlight === true && o.showIcon === true
           ) as SelectedOption[];
-          if (userClicks.length > 0) entries.push([Number(k), userClicks]);          
+          if (userClicks.length > 0) entries.push([Number(k), userClicks]);
         }
         ctx.selectedOptionsMap = new Map(entries);
         ctx.selectedOptionsMapSig.set(new Map(ctx.selectedOptionsMap));
@@ -60,13 +66,17 @@ export class SelectionPersistenceService {
             }
           }
         }
-      } catch (err: unknown) { swallow('selection-persistence.service.ts', err); /* ignore */ }
+      } catch (err: unknown) {
+        swallow('selection-persistence.service.ts', err); /* ignore */
+      }
 
       if (ctx.selectedOptionsMap.size > 0) {
         ctx._refreshBackup = new Map(ctx.selectedOptionsMap);
       }
 
-      const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+      const navEntries = performance.getEntriesByType(
+        'navigation'
+      ) as PerformanceNavigationTiming[];
       let isPageRefresh = navEntries.length > 0 && navEntries[0].type === 'reload';
       if (!isPageRefresh && navEntries.length === 0) {
         for (let i = 0; i < 100; i++) {
@@ -82,8 +92,9 @@ export class SelectionPersistenceService {
       } else {
         this.clearStaleSessionData(ctx);
       }
-
-    } catch (err: unknown) { swallow('selection-persistence.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('selection-persistence.service.ts', err);
+    }
   }
 
   private restoreFromRefresh(ctx: SelectionStateContext): void {
@@ -104,12 +115,18 @@ export class SelectionPersistenceService {
             // user didn't click it, which would otherwise get persisted
             // as a "userClick" and pollute selectedOptionsMap on rehydrate).
             const userClicks = opts.filter(
-              (o: any) => o && o.highlight === true && o.showIcon === true &&
+              (o: any) =>
+                o &&
+                o.highlight === true &&
+                o.showIcon === true &&
                 !(o._autoRevealedCorrect === true && o.selected !== true)
             );
             if (userClicks.length > 0) {
               ctx.selectedOptionsMap.set(i, userClicks);
-              ctx._selectionHistory.set(i, userClicks.map((o: any) => ({ ...o })));
+              ctx._selectionHistory.set(
+                i,
+                userClicks.map((o: any) => ({ ...o }))
+              );
               if (userClicks.length !== opts.length) {
                 sessionStorage.setItem(SK_SEL_Q + i, JSON.stringify(userClicks));
               }
@@ -118,7 +135,9 @@ export class SelectionPersistenceService {
               sessionStorage.removeItem(SK_SEL_Q + i);
             }
           }
-        } catch (err: unknown) { swallow('selection-persistence.service.ts', err); /* ignore */ }
+        } catch (err: unknown) {
+          swallow('selection-persistence.service.ts', err); /* ignore */
+        }
       }
     }
     if (ctx.selectedOptionsMap.size > 0) {
@@ -162,7 +181,9 @@ export class SelectionPersistenceService {
         ...ctx._selectionHistory.keys()
       ]);
       for (const idx of durableIndices) this.mergeAndPersistQuestion(ctx, idx);
-    } catch (err: unknown) { swallow('selection-persistence.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('selection-persistence.service.ts', err);
+    }
   }
 
   private mergeAndPersistQuestion(ctx: SelectionStateContext, idx: number): void {
@@ -176,7 +197,9 @@ export class SelectionPersistenceService {
         const parsed = JSON.parse(priorRaw);
         if (Array.isArray(parsed)) fromPrior = parsed;
       }
-    } catch (err: unknown) { swallow('selection-persistence.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('selection-persistence.service.ts', err); /* ignore */
+    }
 
     const merged = new Map<string, any>();
 
@@ -224,16 +247,23 @@ export class SelectionPersistenceService {
 
   // ── Durable answer persistence (localStorage) ──────────────
 
-  persistAnswerForResults(questionIndex: number, selections: { optionId: number; text: string }[]): void {
+  persistAnswerForResults(
+    questionIndex: number,
+    selections: { optionId: number; text: string }[]
+  ): void {
     try {
       const key = 'quizAnswersForResults';
       const existing = JSON.parse(localStorage.getItem(key) || '{}');
       existing[questionIndex] = selections;
       localStorage.setItem(key, JSON.stringify(existing));
-    } catch (err: unknown) { swallow('selection-persistence.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('selection-persistence.service.ts', err); /* ignore */
+    }
   }
 
-  recoverAnswersForResults(rawSelectionsMap: Map<number, { optionId: number; text: string }[]>): void {
+  recoverAnswersForResults(
+    rawSelectionsMap: Map<number, { optionId: number; text: string }[]>
+  ): void {
     try {
       const key = 'quizAnswersForResults';
       const stored = localStorage.getItem(key);
@@ -247,13 +277,17 @@ export class SelectionPersistenceService {
           }
         }
       }
-    } catch (err: unknown) { swallow('selection-persistence.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('selection-persistence.service.ts', err); /* ignore */
+    }
   }
 
   clearAnswersForResults(): void {
     try {
       localStorage.removeItem('quizAnswersForResults');
-    } catch (err: unknown) { swallow('selection-persistence.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('selection-persistence.service.ts', err); /* ignore */
+    }
   }
 
   // ── Session key cleanup ────────────────────────────────────

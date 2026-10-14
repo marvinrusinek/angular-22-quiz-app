@@ -1,5 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router, convertToParamMap, type ActivatedRouteSnapshot } from '@angular/router';
+import {
+  provideRouter,
+  Router,
+  convertToParamMap,
+  type ActivatedRouteSnapshot
+} from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { BackendInterviewResultService } from './backend-interview-result.service';
@@ -7,7 +12,10 @@ import { BackendInterviewSessionService } from './backend-interview-session.serv
 import { InterviewSessionReferenceStorage } from './interview-session-reference.storage';
 import { BackendInterviewResultGuard } from '../../../router/guards/backend-interview-result-guard';
 import { InterviewApiService } from '@shared/services/api/interview-api.service';
-import { InterviewApiError, type InterviewApiErrorCode } from '@shared/services/api/interview-api.errors';
+import {
+  InterviewApiError,
+  type InterviewApiErrorCode
+} from '@shared/services/api/interview-api.errors';
 import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
 import { SK_INTERVIEW_HISTORY } from '@shared/constants/session-keys';
 import type { InterviewResultViewModel } from '@shared/models/interview/interview-view-models';
@@ -25,18 +33,44 @@ function result(over: Partial<InterviewResultViewModel> = {}): InterviewResultVi
     sessionId: 'is_1',
     submittedAtMs: Date.parse('2026-08-01T12:00:00.000Z'),
     submittedByExpiry: false,
-    total: 10, answered: 9, unanswered: 1, correct: 7, incorrect: 2, percentage: 70,
-    durationSeconds: 900, timeUsedSeconds: 540,
+    total: 10,
+    answered: 9,
+    unanswered: 1,
+    correct: 7,
+    incorrect: 2,
+    percentage: 70,
+    durationSeconds: 900,
+    timeUsedSeconds: 540,
     config: { mode: 'custom', difficulty: 'beginner', topicIds: ['rxjs'], questionCount: 10 },
     byTopic: [
-      { topicId: 'rxjs', title: 'RxJS', correct: 7, incorrect: 2, unanswered: 1, total: 10, percentage: 70 }
+      {
+        topicId: 'rxjs',
+        title: 'RxJS',
+        correct: 7,
+        incorrect: 2,
+        unanswered: 1,
+        total: 10,
+        percentage: 70
+      }
     ],
-    review: [{
-      questionId: 'rxjs:q:0', sourceQuizId: 'rxjs', questionText: 'Q?', type: 'single',
-      options: [{ optionId: 1, text: 'A' }, { optionId: 2, text: 'B' }],
-      selectedOptionIds: [1], correctOptionIds: [1], explanation: 'Because.',
-      isCorrect: true, isAnswered: true, flagged: false
-    }],
+    review: [
+      {
+        questionId: 'rxjs:q:0',
+        sourceQuizId: 'rxjs',
+        questionText: 'Q?',
+        type: 'single',
+        options: [
+          { optionId: 1, text: 'A' },
+          { optionId: 2, text: 'B' }
+        ],
+        selectedOptionIds: [1],
+        correctOptionIds: [1],
+        explanation: 'Because.',
+        isCorrect: true,
+        isAnswered: true,
+        flagged: false
+      }
+    ],
     ...over
   };
 }
@@ -46,20 +80,30 @@ let guard: BackendInterviewResultGuard;
 let storage: InterviewSessionReferenceStorage;
 let history: InterviewHistoryService;
 let router: Router;
-let api: { getResult: jest.Mock; submitSession: jest.Mock; resumeSession: jest.Mock; saveAnswer: jest.Mock };
+let api: {
+  getResult: jest.Mock;
+  submitSession: jest.Mock;
+  resumeSession: jest.Mock;
+  saveAnswer: jest.Mock;
+};
 
 const fails = (code: InterviewApiErrorCode, status: number) =>
   api.getResult.mockReturnValue(throwError(() => new InterviewApiError(code, status)));
 
 const snapshot = (sessionId: string) =>
-  ({ paramMap: convertToParamMap({ sessionId }) } as unknown as ActivatedRouteSnapshot);
+  ({ paramMap: convertToParamMap({ sessionId }) }) as unknown as ActivatedRouteSnapshot;
 
 const url = (value: unknown) => router.serializeUrl(value as never);
 
 beforeEach(() => {
   sessionStorage.clear();
   localStorage.clear();
-  api = { getResult: jest.fn(), submitSession: jest.fn(), resumeSession: jest.fn(), saveAnswer: jest.fn() };
+  api = {
+    getResult: jest.fn(),
+    submitSession: jest.fn(),
+    resumeSession: jest.fn(),
+    saveAnswer: jest.fn()
+  };
 
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
@@ -114,30 +158,49 @@ describe('loading', () => {
 
     // Drive a real submit so the session service is holding the response.
     const session = TestBed.inject(BackendInterviewSessionService);
-    session.activateCreatedSession({
-      sessionId: 'is_1', status: 'active', createdAtMs: 0, expiresAtMs: 0,
-      durationSeconds: 900, remainingSeconds: 900,
-      config: { mode: 'custom', topicIds: ['rxjs'], questionCount: 1 },
-      questions: [], answers: new Map(), flags: new Map()
-    }, TOKEN);
+    session.activateCreatedSession(
+      {
+        sessionId: 'is_1',
+        status: 'active',
+        createdAtMs: 0,
+        expiresAtMs: 0,
+        durationSeconds: 900,
+        remainingSeconds: 900,
+        config: { mode: 'custom', topicIds: ['rxjs'], questionCount: 1 },
+        questions: [],
+        answers: new Map(),
+        flags: new Map()
+      },
+      TOKEN
+    );
     await session.submit();
 
     const outcome = await service.load('is_1');
 
     expect(outcome.kind).toBe('loaded');
-    expect(api.getResult).not.toHaveBeenCalled();   // submit already returned it
+    expect(api.getResult).not.toHaveBeenCalled(); // submit already returned it
   });
 
   it('a NEW session does not inherit the previous attempt result', async () => {
     // Otherwise submit() short-circuits and returns the old result, and the
     // results route is asked for a session the backend still calls active.
     const session = TestBed.inject(BackendInterviewSessionService);
-    const activate = (sessionId: string) => session.activateCreatedSession({
-      sessionId, status: 'active', createdAtMs: 0, expiresAtMs: 0,
-      durationSeconds: 900, remainingSeconds: 900,
-      config: { mode: 'custom', topicIds: ['rxjs'], questionCount: 1 },
-      questions: [], answers: new Map(), flags: new Map()
-    }, TOKEN);
+    const activate = (sessionId: string) =>
+      session.activateCreatedSession(
+        {
+          sessionId,
+          status: 'active',
+          createdAtMs: 0,
+          expiresAtMs: 0,
+          durationSeconds: 900,
+          remainingSeconds: 900,
+          config: { mode: 'custom', topicIds: ['rxjs'], questionCount: 1 },
+          questions: [],
+          answers: new Map(),
+          flags: new Map()
+        },
+        TOKEN
+      );
 
     api.submitSession.mockReturnValue(of(result({ sessionId: 'is_1' })));
     activate('is_1');
@@ -186,7 +249,7 @@ describe('error handling', () => {
     fails('BACKEND_UNAVAILABLE', 0);
     expect((await service.load('is_1')).kind).toBe('unavailable');
     expect(storage.read()?.sessionId).toBe('is_1');
-    expect(service.result()).toBeNull();   // never a local fallback
+    expect(service.result()).toBeNull(); // never a local fallback
 
     api.getResult.mockReturnValue(of(result()));
     expect((await service.reload('is_1')).kind).toBe('loaded');
@@ -212,12 +275,12 @@ describe('history recording', () => {
   it('records ONE sanitized attempt however many times the result is loaded', async () => {
     api.getResult.mockReturnValue(of(result()));
 
-    await service.load('is_1');      // navigate
+    await service.load('is_1'); // navigate
     service.clear();
-    await service.load('is_1');      // refresh
+    await service.load('is_1'); // refresh
     service.clear();
-    await service.load('is_1');      // remount
-    await service.reload('is_1');    // explicit retry
+    await service.load('is_1'); // remount
+    await service.reload('is_1'); // explicit retry
 
     expect(api.getResult).toHaveBeenCalledTimes(3);
     expect(history.history()).toHaveLength(1);
@@ -238,7 +301,7 @@ describe('history recording', () => {
     api.getResult.mockReturnValue(of(result()));
     await service.load('is_1');
 
-    expect(service.result()!.review).toHaveLength(1);          // in memory
+    expect(service.result()!.review).toHaveLength(1); // in memory
     expect(JSON.stringify(localStorage)).not.toContain('Because.');
     expect(JSON.stringify(sessionStorage)).not.toContain('Because.');
   });
@@ -326,16 +389,19 @@ describe('confirmFinished', () => {
     ['still running (409)', 'CONFLICT', 409],
     ['unreachable', 'BACKEND_UNAVAILABLE', 0],
     ['a server error', 'BACKEND_UNAVAILABLE', 500]
-  ] as const)('%s cannot confirm it: unresolved, error state, reference kept, NO result exposed', async (_l, code, status) => {
-    storage.write('is_1', TOKEN, 0);
-    fails(code, status);
+  ] as const)(
+    '%s cannot confirm it: unresolved, error state, reference kept, NO result exposed',
+    async (_l, code, status) => {
+      storage.write('is_1', TOKEN, 0);
+      fails(code, status);
 
-    expect(await service.confirmFinished()).toEqual({ kind: 'unresolved' });
-    expect(session().status()).toBe('error');
-    expect(storage.read()?.sessionId).toBe('is_1');
-    expect(service.result()).toBeNull();
-    expect(service.hasResult()).toBe(false);
-  });
+      expect(await service.confirmFinished()).toEqual({ kind: 'unresolved' });
+      expect(session().status()).toBe('error');
+      expect(storage.read()?.sessionId).toBe('is_1');
+      expect(service.result()).toBeNull();
+      expect(service.hasResult()).toBe(false);
+    }
+  );
 
   it('a body that is not a usable result cannot confirm it either', async () => {
     storage.write('is_1', TOKEN, 0);
@@ -358,12 +424,14 @@ describe('overlapping loads', () => {
     expect(api.getResult).toHaveBeenCalledTimes(1);
 
     await service.load('is_1');
-    expect(api.getResult).toHaveBeenCalledTimes(1);   // in-memory result, no request
+    expect(api.getResult).toHaveBeenCalledTimes(1); // in-memory result, no request
   });
 
   it('a failed load is never cached: the next call asks the backend again', async () => {
     storage.write('is_1', TOKEN, 0);
-    api.getResult.mockReturnValueOnce(throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0)));
+    api.getResult.mockReturnValueOnce(
+      throwError(() => new InterviewApiError('BACKEND_UNAVAILABLE', 0))
+    );
     expect((await service.load('is_1')).kind).toBe('unavailable');
 
     api.getResult.mockReturnValueOnce(of(result()));

@@ -40,13 +40,13 @@ export interface InterviewCertificateProgress {
   // When the certificate journey began (topic curriculum finished). Undefined
   // until qualification starts; only interviews on/after it count.
   qualificationStartedAt?: string;
-  interviewMasterEarned: boolean;          // the Interview Master achievement
-  angularExplorerEarned: boolean;          // the achievement source of truth (implies all)
-  qualifyingInterviewsCompleted: number;   // completed interviews since qualification
-  requiredInterviews: number;              // REQUIRED_CERTIFICATE_INTERVIEWS
-  interviewsRemaining: number;             // max(required - qualifying, 0)
-  isEligible: boolean;                     // both requirements satisfied
-  isUnlocked: boolean;                     // persisted certificate state
+  interviewMasterEarned: boolean; // the Interview Master achievement
+  angularExplorerEarned: boolean; // the achievement source of truth (implies all)
+  qualifyingInterviewsCompleted: number; // completed interviews since qualification
+  requiredInterviews: number; // REQUIRED_CERTIFICATE_INTERVIEWS
+  interviewsRemaining: number; // max(required - qualifying, 0)
+  isEligible: boolean; // both requirements satisfied
+  isUnlocked: boolean; // persisted certificate state
 }
 
 /**
@@ -58,7 +58,7 @@ export interface InterviewCertificateProgress {
 export interface InterviewCertificateRecord {
   version: typeof INTERVIEW_CERTIFICATE_VERSION;
   unlocked: boolean;
-  unlockedAt: string;          // ISO 8601
-  certificateId: string;       // stable once issued
-  recipientName?: string;      // optional; user-entered on the certificate page
+  unlockedAt: string; // ISO 8601
+  certificateId: string; // stable once issued
+  recipientName?: string; // optional; user-entered on the certificate page
 }

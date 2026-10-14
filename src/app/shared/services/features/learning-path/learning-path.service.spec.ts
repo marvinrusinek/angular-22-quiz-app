@@ -103,8 +103,8 @@ describe('LearningPathService', () => {
     // An interview assessment id in the sets must not be recommended or counted.
     const s = service.recommend(
       CATALOG,
-      set('interview-1'),          // not a catalog quizId
-      set('interview-session-x')   // not a catalog quizId
+      set('interview-1'), // not a catalog quizId
+      set('interview-session-x') // not a catalog quizId
     );
     // No catalog quiz is completed → treated as a new user → intro quiz.
     expect(s.recommendation?.quizId).toBe('create-first-app');

@@ -1,4 +1,4 @@
-﻿import { inject, Service, signal } from '@angular/core';
+import { inject, Service, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, Router } from '@angular/router';
 import { firstValueFrom, forkJoin, lastValueFrom, of } from 'rxjs';
@@ -12,7 +12,6 @@ import {
   Quiz,
   QuizQuestion
 } from '@shared/models';
-
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuestionTimingService } from '@shared/services/features/timer/question-timing.service';
@@ -162,16 +161,12 @@ export class QqcQlStreamService {
           explanation: string | null;
         };
 
-        const question$ = this.quizService
-          .getQuestionByIndex(questionIndex)
-          .pipe(take(1));
-        const options$ = this.quizService
-          .getCurrentOptions(questionIndex)
-          .pipe(take(1));
+        const question$ = this.quizService.getQuestionByIndex(questionIndex).pipe(take(1));
+        const options$ = this.quizService.getCurrentOptions(questionIndex).pipe(take(1));
         const explanation$ = this.explanationTextService.explanationsInitialized
           ? this.explanationTextService
-            .getFormattedExplanationTextForQuestion(questionIndex)
-            .pipe(take(1))
+              .getFormattedExplanationTextForQuestion(questionIndex)
+              .pipe(take(1))
           : of('');
 
         const data: FetchedData = await lastValueFrom(
@@ -265,9 +260,7 @@ export class QqcQlStreamService {
     // render it. Idempotent per question, so arriving here after the direct
     // route already activated the same question replays the same deadline
     // rather than granting a second one.
-    this.questionTimingService.activateQuestionTiming(
-      this.activeQuizId, q.questionText, index
-    );
+    this.questionTimingService.activateQuestionTiming(this.activeQuizId, q.questionText, index);
 
     this.emitQaPayload(q, cloned, index, explanation);
 
@@ -305,8 +298,7 @@ export class QqcQlStreamService {
   }
 
   private readRouteParam(param: string): string | null {
-    let snapshot: ActivatedRouteSnapshot | null =
-      this.router.routerState.snapshot.root;
+    let snapshot: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
 
     while (snapshot) {
       const value = snapshot.paramMap?.get(param);
@@ -322,21 +314,12 @@ export class QqcQlStreamService {
   private canServeQuestionFromCache(index: number): boolean {
     const activeQuizId = this.activeQuizId ?? this.quizService.quizId ?? null;
 
-    if (
-      activeQuizId &&
-      this.quizService.quizDataLoader.hasCachedQuestion(activeQuizId, index)
-    ) return true;
+    if (activeQuizId && this.quizService.quizDataLoader.hasCachedQuestion(activeQuizId, index))
+      return true;
 
-    if (
-      !Array.isArray(this.questionsArray) ||
-      this.questionsArray.length === 0
-    ) return false;
+    if (!Array.isArray(this.questionsArray) || this.questionsArray.length === 0) return false;
 
-    if (
-      !Number.isInteger(index) ||
-      index < 0 ||
-      index >= this.questionsArray.length
-    ) return false;
+    if (!Number.isInteger(index) || index < 0 || index >= this.questionsArray.length) return false;
 
     const question = this.questionsArray[index];
     if (!question) return false;
@@ -393,10 +376,7 @@ export class QqcQlStreamService {
   private async fetchQuestionAndOptions(
     index: number
   ): Promise<{ q: QuizQuestion | null; opts: Option[] }> {
-    const quizId =
-      this.readRouteParam('quizId') ??
-      this.activeQuizId ??
-      this.quizService.quizId;
+    const quizId = this.readRouteParam('quizId') ?? this.activeQuizId ?? this.quizService.quizId;
     if (!quizId) {
       return { q: null, opts: [] };
     }
@@ -406,9 +386,7 @@ export class QqcQlStreamService {
       this.lastQuizId = quizId;
     }
 
-    if (this.quizService.isShuffleEnabled() && 
-      this.quizService.shuffledQuestions?.length > 0
-    ) {
+    if (this.quizService.isShuffleEnabled() && this.quizService.shuffledQuestions?.length > 0) {
       this.questionsArray = [...this.quizService.shuffledQuestions];
     } else {
       let questions = this.quizService.questions;
@@ -416,11 +394,13 @@ export class QqcQlStreamService {
       if (!Array.isArray(questions) || questions.length === 0) {
         if (this.quizService.isShuffleEnabled()) {
           try {
-            const fetched = await firstValueFrom(this.quizService.getAllQuestions().pipe(
-              filter(q => Array.isArray(q) && q.length > 0),
-              take(1),
-              timeout(5000)
-            ));
+            const fetched = await firstValueFrom(
+              this.quizService.getAllQuestions().pipe(
+                filter((q) => Array.isArray(q) && q.length > 0),
+                take(1),
+                timeout(5000)
+              )
+            );
 
             if (this.quizService.shuffledQuestions?.length > 0) {
               this.questionsArray = [...this.quizService.shuffledQuestions];
@@ -428,7 +408,9 @@ export class QqcQlStreamService {
               this.questionsArray = [...(fetched as QuizQuestion[])];
             }
           } catch {
-            this.questionsArray = await firstValueFrom(this.quizDataService.getQuestionsForQuiz(quizId));
+            this.questionsArray = await firstValueFrom(
+              this.quizDataService.getQuestionsForQuiz(quizId)
+            );
             this.quizService.questions = [...this.questionsArray];
           }
         } else {
@@ -530,11 +512,7 @@ export class QqcQlStreamService {
       selectionMessage: this.selectionMessageService.getCurrentMessage()
     });
 
-    this.setQuestionDetails(
-      question.questionText.trim(),
-      optionsForPayload,
-      explanationForPayload
-    );
+    this.setQuestionDetails(question.questionText.trim(), optionsForPayload, explanationForPayload);
     this.currentQuestionIndex = index;
     this.shouldRenderQuestionComponent = true;
 
@@ -548,18 +526,11 @@ export class QqcQlStreamService {
     });
   }
 
-  private async postEmitUpdates(
-    q: QuizQuestion,
-    opts: Option[],
-    idx: number
-  ): Promise<void> {
+  private async postEmitUpdates(q: QuizQuestion, opts: Option[], idx: number): Promise<void> {
     const optionIdSet = new Set(
-      opts
-        .map((opt) => opt.optionId)
-        .filter((id): id is number => typeof id === 'number')
+      opts.map((opt) => opt.optionId).filter((id): id is number => typeof id === 'number')
     );
-    const selectedOptions =
-      this.selectedOptionService.getSelectedOptionsForQuestion(idx);
+    const selectedOptions = this.selectedOptionService.getSelectedOptionsForQuestion(idx);
     const validSelections = (selectedOptions ?? []).filter((opt: any) =>
       optionIdSet.has(opt.optionId ?? -1)
     );
@@ -619,10 +590,7 @@ export class QqcQlStreamService {
 
     if (isAnswered) {
       explanationText = q.explanation?.trim() || 'No explanation available';
-      this.explanationTextService.setExplanationTextForQuestionIndex(
-        idx,
-        explanationText
-      );
+      this.explanationTextService.setExplanationTextForQuestionIndex(idx, explanationText);
 
       this.quizStateService.setDisplayState({
         mode: 'explanation',
@@ -680,8 +648,7 @@ export class QqcQlStreamService {
     options: Option[],
     explanationText: string
   ): void {
-    this.questionToDisplay =
-      questionText?.trim() || 'No question text available';
+    this.questionToDisplay = questionText?.trim() || 'No question text available';
 
     this.optionsToDisplay = Array.isArray(options) ? options : [];
 
@@ -760,19 +727,15 @@ export class QqcQlStreamService {
     const i0 = Math.trunc(index);
     if (i0 < 0) return;
 
-    if (!Array.isArray(this.questionsArray) || i0 >= this.questionsArray.length)
-      return;
+    if (!Array.isArray(this.questionsArray) || i0 >= this.questionsArray.length) return;
 
     const question = this.questionsArray[i0];
-    if (
-      !question ||
-      !Array.isArray(question.options) ||
-      question.options.length === 0
-    ) return;
+    if (!question || !Array.isArray(question.options) || question.options.length === 0) return;
 
     const options = question.options;
     const correctCount = options.reduce(
-      (total, option) => (option?.correct ? total + 1 : total), 0
+      (total, option) => (option?.correct ? total + 1 : total),
+      0
     );
     const totalCorrect = Math.max(correctCount, 1);
 
@@ -821,7 +784,7 @@ export class QqcQlStreamService {
         allQuestions = this.quizService.shuffledQuestions;
       } else {
         allQuestions = (await firstValueFrom(
-          this.quizDataService.getQuestionsForQuiz(this.activeQuizId),
+          this.quizDataService.getQuestionsForQuiz(this.activeQuizId)
         )) as QuizQuestion[];
       }
 
@@ -835,12 +798,13 @@ export class QqcQlStreamService {
       }
 
       const correctIndices = opts
-        .map((o, i) => o.correct ? i + 1 : null)
+        .map((o, i) => (o.correct ? i + 1 : null))
         .filter((n): n is number => n !== null)
         .sort((a, b) => a - b);
-      const correctLabel = correctIndices.length === 1
-        ? `The correct answer is Option ${correctIndices[0]}.`
-        : `The correct answers are Options ${correctIndices.slice(0, -1).join(', ')}${correctIndices.length > 2 ? ',' : ''} and ${correctIndices.slice(-1)}.`;
+      const correctLabel =
+        correctIndices.length === 1
+          ? `The correct answer is Option ${correctIndices[0]}.`
+          : `The correct answers are Options ${correctIndices.slice(0, -1).join(', ')}${correctIndices.length > 2 ? ',' : ''} and ${correctIndices.slice(-1)}.`;
 
       const finalOpts = opts.map((o, i) => ({
         ...o,
@@ -927,7 +891,9 @@ export class QqcQlStreamService {
       this.questionToDisplaySig.set('');
       this._lastQuestionText = '';
       this._lastRenderedIndex = -1;
-    } catch (err: unknown) { swallow('qqc-ql-stream.service.ts clearQuestionTextBeforeNavigation', err); }
+    } catch (err: unknown) {
+      swallow('qqc-ql-stream.service.ts clearQuestionTextBeforeNavigation', err);
+    }
   }
 
   public freezeQuestionStream(durationMs = 120): void {

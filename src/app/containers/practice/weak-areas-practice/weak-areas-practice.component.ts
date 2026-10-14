@@ -34,7 +34,12 @@ import { ScrollDownIndicatorComponent } from '../../../components/scroll-down-in
 @Component({
   selector: 'codelab-weak-areas-practice',
   standalone: true,
-  imports: [RouterLink, PracticeOptionsComponent, ThemeToggleComponent, ScrollDownIndicatorComponent],
+  imports: [
+    RouterLink,
+    PracticeOptionsComponent,
+    ThemeToggleComponent,
+    ScrollDownIndicatorComponent
+  ],
   templateUrl: './weak-areas-practice.component.html',
   styleUrls: ['./weak-areas-practice.component.scss'],
   encapsulation: ViewEncapsulation.None,
@@ -74,7 +79,7 @@ export class WeakAreasPracticeComponent {
     // FROM /quizzes. "Topic name" and the catalogue's `milestone` are the same
     // field — topicId IS the quizId — so this is a metadata lookup, not a bank
     // read. Falls back to the id exactly as before if metadata is not in yet.
-    this.metadataApi.milestoneByQuiz();   // track so the label fills in on load
+    this.metadataApi.milestoneByQuiz(); // track so the label fills in on load
     return this.metadataApi.milestoneFor(sourceQuizId);
   });
 
@@ -124,16 +129,19 @@ export class WeakAreasPracticeComponent {
 
     if (selectedTexts.length === 0) return;
 
-    this.verdicts
-      .check(quizId, question.questionText ?? '', selectedTexts)
-      .subscribe({ error: () => { /* verdict marked errored; UI stays neutral */ } });
+    this.verdicts.check(quizId, question.questionText ?? '', selectedTexts).subscribe({
+      error: () => {
+        /* verdict marked errored; UI stays neutral */
+      }
+    });
   }
 
   /** Correct option texts the server released for the current question. */
   readonly revealedCorrectTexts = computed<readonly string[]>(() => {
     const question = this.currentQuestion();
     if (!question?.sourceQuizId) return [];
-    return this.verdicts.verdictFor(question.sourceQuizId, question.questionText ?? '').correctTexts;
+    return this.verdicts.verdictFor(question.sourceQuizId, question.questionText ?? '')
+      .correctTexts;
   });
 
   /** Picked option texts the server judged wrong. Never unpicked options. */

@@ -83,8 +83,12 @@ export interface TopicQuizCodeSnippetView {
   readonly filename?: string;
 }
 
-const VALID_CODE_SNIPPET_LANGUAGES: readonly TopicQuizCodeSnippetLanguage[] =
-  ['typescript', 'html', 'css', 'json'];
+const VALID_CODE_SNIPPET_LANGUAGES: readonly TopicQuizCodeSnippetLanguage[] = [
+  'typescript',
+  'html',
+  'css',
+  'json'
+];
 
 /** A question the player can see. No correctness, no explanation, no ids. */
 export interface TopicQuizQuestionView {
@@ -202,9 +206,7 @@ export class TopicQuizQuestionsService {
       // correct"); -1 is the absence of a claim.
       const rawCount = (question as { correctCount?: unknown }).correctCount;
       const correctCount =
-        typeof rawCount === 'number' && Number.isInteger(rawCount) && rawCount >= 0
-          ? rawCount
-          : -1;
+        typeof rawCount === 'number' && Number.isInteger(rawCount) && rawCount >= 0 ? rawCount : -1;
 
       return {
         questionText: question.questionText,

@@ -8,7 +8,7 @@ import { Quiz, QuizMetadata } from '@shared/models';
   imports: [],
   templateUrl: './summary-icons.component.html',
   styleUrls: ['./summary-icons.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SummaryIconsComponent {
   // ── inputs ──────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ export class SummaryIconsComponent {
     return {
       percentage: Number.isFinite(percentageSource) ? percentageSource : 0,
       milestone: this.quiz()?.milestone ?? '',
-      codelabUrl: this.codelabUrl() ?? '',
+      codelabUrl: this.codelabUrl() ?? ''
     };
   }
 }

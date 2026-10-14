@@ -13,7 +13,14 @@ import type { QuizMetadataDto } from '@shared/models/api/interview-api.dto';
  * independent of any one component's own template logic.
  */
 function metadata(quizId: string, questionCount = 10): QuizMetadataDto {
-  return { quizId, milestone: quizId, summary: '', image: '', difficulty: 'beginner', questionCount };
+  return {
+    quizId,
+    milestone: quizId,
+    summary: '',
+    image: '',
+    difficulty: 'beginner',
+    questionCount
+  };
 }
 
 describe('InterviewCatalogService', () => {

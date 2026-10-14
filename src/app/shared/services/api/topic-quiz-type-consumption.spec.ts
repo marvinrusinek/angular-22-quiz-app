@@ -45,7 +45,10 @@ const QUESTIONS = [
   {
     questionText: LOOKS_MULTI_IS_SINGLE,
     explanation: 'e',
-    options: [{ text: 'map', correct: true }, { text: 'of', correct: true }]
+    options: [
+      { text: 'map', correct: true },
+      { text: 'of', correct: true }
+    ]
   }
 ];
 
@@ -54,8 +57,18 @@ const BANK = [{ quizId: QUIZ, milestone: 'RxJS', questions: QUESTIONS }] as unkn
 const API_RESPONSE = {
   quizId: QUIZ,
   questions: [
-    { questionText: LOOKS_SINGLE_IS_MULTI, type: 'multiple', difficulty: null, options: [{ text: 'map' }, { text: 'filter' }] },
-    { questionText: LOOKS_MULTI_IS_SINGLE, type: 'single', difficulty: null, options: [{ text: 'map' }, { text: 'of' }] }
+    {
+      questionText: LOOKS_SINGLE_IS_MULTI,
+      type: 'multiple',
+      difficulty: null,
+      options: [{ text: 'map' }, { text: 'filter' }]
+    },
+    {
+      questionText: LOOKS_MULTI_IS_SINGLE,
+      type: 'single',
+      difficulty: null,
+      options: [{ text: 'map' }, { text: 'of' }]
+    }
   ]
 };
 
@@ -82,7 +95,10 @@ beforeEach(() => {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: BASE },
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
 
@@ -99,7 +115,7 @@ afterEach(() => {
 });
 
 describe('entering a quiz populates the registry', () => {
-  it('initializeData requests this quiz\'s declared types', () => {
+  it("initializeData requests this quiz's declared types", () => {
     quizService.initializeData();
 
     const req = http.expectOne({ method: 'GET', url: URL });
@@ -186,11 +202,14 @@ describe('trueFalse', () => {
     quizService.initializeData();
     http.expectOne({ method: 'GET', url: URL }).flush({
       quizId: QUIZ,
-      questions: [{
-        questionText: 'Is a Subject also an Observable?',
-        type: 'trueFalse', difficulty: null,
-        options: [{ text: 'True' }, { text: 'False' }]
-      }]
+      questions: [
+        {
+          questionText: 'Is a Subject also an Observable?',
+          type: 'trueFalse',
+          difficulty: null,
+          options: [{ text: 'True' }, { text: 'False' }]
+        }
+      ]
     });
 
     // `type` here drives radio-vs-checkbox, which is a selection concern.

@@ -28,17 +28,15 @@ import { norm } from '@shared/utils/text-norm';
  * `i` is a display position. Getting this wrong keys every verdict lookup to
  * someone else's question, so it is resolved in exactly one place.
  */
-export function questionTextForDisplayIndex(
-  quizService: QuizService,
-  qIdx: number
-): string | null {
+export function questionTextForDisplayIndex(quizService: QuizService, qIdx: number): string | null {
   const service = quizService as any;
   const inDisplayOrder = service?.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText;
   if (typeof inDisplayOrder === 'string' && inDisplayOrder.length > 0) return inDisplayOrder;
 
-  const isShuffled = service?.isShuffleEnabled?.()
-    && Array.isArray(service?.shuffledQuestions)
-    && service.shuffledQuestions.length > 0;
+  const isShuffled =
+    service?.isShuffleEnabled?.() &&
+    Array.isArray(service?.shuffledQuestions) &&
+    service.shuffledQuestions.length > 0;
   const fallback = isShuffled
     ? service?.shuffledQuestions?.[qIdx]?.questionText
     : service?.questions?.[qIdx]?.questionText;
@@ -134,9 +132,7 @@ export function authorizedExplanation(
  * re-deriving it would risk keying to a different question than the one they
  * are rendering.
  */
-export function explanationFromVerdict(
-  state: QuestionVerdictState | null
-): string | null {
+export function explanationFromVerdict(state: QuestionVerdictState | null): string | null {
   if (!state) return null;
   if (state.phase !== 'resolved' && state.phase !== 'expired') return null;
 
@@ -175,9 +171,7 @@ export function selectedVerdictFor(
  * Null when unknown. Reads only authorized facts: a terminal correct result, or
  * the count of correct options still outstanding — never which ones.
  */
-export function allCorrectSelectedFromVerdict(
-  state: QuestionVerdictState | null
-): boolean | null {
+export function allCorrectSelectedFromVerdict(state: QuestionVerdictState | null): boolean | null {
   if (!state) return null;
   if (state.phase === 'resolved') return state.isResolvedCorrect === true;
   if (state.phase === 'incomplete') {

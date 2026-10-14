@@ -114,7 +114,7 @@ export class InterviewReportComponent {
       window.removeEventListener('beforeprint', this.onBeforePrint);
       window.removeEventListener('afterprint', this.onAfterPrint);
       mql?.removeEventListener('change', onMediaChange);
-      this.restoreTitle();                       // never leave the app titled as the report
+      this.restoreTitle(); // never leave the app titled as the report
     });
 
     // Route entry: start at the top and put focus on the page heading.
@@ -134,7 +134,7 @@ export class InterviewReportComponent {
 
   private applyPrintTitle(): void {
     const r = this.result();
-    if (!r || this.originalTitle !== null) return;   // nothing to print, or already applied
+    if (!r || this.originalTitle !== null) return; // nothing to print, or already applied
     this.originalTitle = this.documentTitle.getTitle();
     this.documentTitle.setTitle(interviewReportTitle(r.config, r.submittedAtMs));
   }

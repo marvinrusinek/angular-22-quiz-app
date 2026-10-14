@@ -1,6 +1,14 @@
 import {
-  ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef,
-  effect, inject, input, OnInit, signal
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  input,
+  OnInit,
+  signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -35,8 +43,7 @@ export class StatisticsComponent implements OnInit {
   // Signal input aliased to "quizId" so parent template binding stays the same.
   // Internal code may reassign the backing field, so we mirror via effect().
   readonly quizIdInput = input<string>('', { alias: 'quizId' });
-  readonly viewMode =
-    input<'score' | 'resources' | 'all'>('all');
+  readonly viewMode = input<'score' | 'resources' | 'all'>('all');
 
   // ── remaining variables ─────────────────────────────────────────
   readonly quizId = signal('');
@@ -61,9 +68,7 @@ export class StatisticsComponent implements OnInit {
   // ── score breakdown (Correct / Incorrect / Timed Out) ───────────
   readonly totalCount = computed(() => this.quizMetadata().totalQuestions ?? 0);
   readonly correctCount = computed(() => this.quizMetadata().correctAnswersCount?.() ?? 0);
-  readonly incorrectCount = computed(() =>
-    Math.max(0, this.totalCount() - this.correctCount())
-  );
+  readonly incorrectCount = computed(() => Math.max(0, this.totalCount() - this.correctCount()));
   readonly timedOutCount = computed(() => this.countTimedOutQuestions());
 
   readonly feedbackLevel = computed<'excellent' | 'good' | 'poor'>(() => {
@@ -86,9 +91,7 @@ export class StatisticsComponent implements OnInit {
     this.quizMetadata().totalQuestions === 1 ? 'question' : 'questions'
   );
 
-  readonly minuteLabel = computed(() =>
-    this.elapsedMinutes() === 1 ? 'minute' : 'minutes'
-  );
+  readonly minuteLabel = computed(() => (this.elapsedMinutes() === 1 ? 'minute' : 'minutes'));
 
   CONGRATULATIONS =
     'https://raw.githubusercontent.com/marvinrusinek/angular-9-quiz-app/master/src/assets/images/congratulations.jpg';
@@ -123,9 +126,7 @@ export class StatisticsComponent implements OnInit {
     const total = this.quizService.totalQuestions();
     if (total === 0) return 0; // Prevent NaN
 
-    return Math.round(
-      (100 * this.quizService.correctAnswersCountSig()) / total
-    );
+    return Math.round((100 * this.quizService.correctAnswersCountSig()) / total);
   }
 
   private initComponent(): void {
@@ -186,7 +187,8 @@ export class StatisticsComponent implements OnInit {
     // failure, so the panel behaves exactly as it does for the twelve quizzes
     // that have no links.
     if (this.quizId()) {
-      this.resourcesApi.loadResources(this.quizId())
+      this.resourcesApi
+        .loadResources(this.quizId())
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe((resources) => {
           this.resources.set(resources);

@@ -9,7 +9,10 @@ import { QuestionVerdictService } from '@shared/services/features/verdict/questi
 import { QuizService } from '@shared/services/data/quiz.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import {
+  IDLE_VERDICT_STATE,
+  type QuestionVerdictState
+} from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * Stopping the countdown once every required answer is in.
@@ -34,8 +37,10 @@ let service: SharedOptionClickService;
 let verdictState: QuestionVerdictState;
 let stopped: number;
 
-const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState =>
-  ({ ...IDLE_VERDICT_STATE, ...over });
+const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState => ({
+  ...IDLE_VERDICT_STATE,
+  ...over
+});
 
 /** The bank claims map+filter — only the no-verdict fallback consults it. */
 const BANK_QUESTION = {
@@ -55,7 +60,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       {
         provide: QuizService,
@@ -69,7 +77,14 @@ beforeEach(() => {
           quizReset$: of(undefined)
         }
       },
-      { provide: TimerService, useValue: { stopTimer: () => { stopped++; } } },
+      {
+        provide: TimerService,
+        useValue: {
+          stopTimer: () => {
+            stopped++;
+          }
+        }
+      },
       { provide: QuestionVerdictService, useValue: { verdictFor: () => verdictState } }
     ]
   });
@@ -88,7 +103,10 @@ describe('the verdict decides when the countdown stops', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     maybeStop([0, 1]);
@@ -112,7 +130,11 @@ describe('the verdict decides when the countdown stops', () => {
     verdictState = state({
       phase: 'incomplete',
       remainingCorrectCount: 0,
-      selectedVerdicts: new Map([['map', true], ['filter', true], ['Observable', false]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true],
+        ['Observable', false]
+      ])
     });
 
     maybeStop([0, 1, 2]);
@@ -138,7 +160,10 @@ describe('the local answer key cannot stop the clock', () => {
     verdictState = state({
       phase: 'incomplete',
       remainingCorrectCount: 1,
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     maybeStop([0, 1]);
@@ -164,7 +189,10 @@ describe('the local answer key cannot stop the clock', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     maybeStop([0, 1], []);
@@ -200,7 +228,10 @@ describe('selection order is irrelevant', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['filter', true], ['map', true]])
+      selectedVerdicts: new Map([
+        ['filter', true],
+        ['map', true]
+      ])
     });
 
     maybeStop([1, 0]);

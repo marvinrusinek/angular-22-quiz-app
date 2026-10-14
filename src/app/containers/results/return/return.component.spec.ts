@@ -25,10 +25,12 @@ describe('ReturnComponent — Results actions', () => {
 
   afterEach(() => sessionStorage.clear());
 
-  const anchors = (): HTMLAnchorElement[] => Array.from(el.querySelectorAll<HTMLAnchorElement>('a.btn'));
+  const anchors = (): HTMLAnchorElement[] =>
+    Array.from(el.querySelectorAll<HTMLAnchorElement>('a.btn'));
   const byTitle = (title: string): HTMLAnchorElement | undefined =>
     anchors().find((a) => a.getAttribute('title') === title);
-  const label = (a: Element | undefined): string => (a?.textContent ?? '').replace(/[\s ]+/g, ' ').trim();
+  const label = (a: Element | undefined): string =>
+    (a?.textContent ?? '').replace(/[\s ]+/g, ' ').trim();
 
   it('offers "View Your Progress", routed to /progress', () => {
     const progress = byTitle('your progress');
@@ -51,7 +53,9 @@ describe('ReturnComponent — Results actions', () => {
   });
 
   it('navigates to /progress when activated, without running the quiz-reset paths', () => {
-    const navigateByUrl = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const navigateByUrl = jest
+      .spyOn(TestBed.inject(Router), 'navigateByUrl')
+      .mockResolvedValue(true);
     const restart = jest.spyOn(fixture.componentInstance, 'restartQuiz');
     const select = jest.spyOn(fixture.componentInstance, 'selectQuiz');
 

@@ -4,10 +4,21 @@ import { InterviewAnalytics, TopicPerformance } from '@shared/models';
 import { TopicPerformanceListComponent } from './topic-performance-list.component';
 
 function tp(topicId: string, pct: number, band: TopicPerformance['band']): TopicPerformance {
-  return { topicId, topicName: topicId.toUpperCase(), correct: pct, total: 100, percentage: pct, band };
+  return {
+    topicId,
+    topicName: topicId.toUpperCase(),
+    correct: pct,
+    total: 100,
+    percentage: pct,
+    band
+  };
 }
 
-function analytics(topics: TopicPerformance[], strong: TopicPerformance[] = [], weak: TopicPerformance[] = []): InterviewAnalytics {
+function analytics(
+  topics: TopicPerformance[],
+  strong: TopicPerformance[] = [],
+  weak: TopicPerformance[] = []
+): InterviewAnalytics {
   return { topics, strongestTopics: strong, weakestTopics: weak };
 }
 
@@ -33,11 +44,13 @@ describe('TopicPerformanceListComponent', () => {
   });
 
   it('renders Strongest / Needs Review highlights when present', () => {
-    const el = render(analytics(
-      [tp('a', 90, 'strong'), tp('b', 30, 'weak')],
-      [tp('a', 90, 'strong')],
-      [tp('b', 30, 'weak')]
-    ));
+    const el = render(
+      analytics(
+        [tp('a', 90, 'strong'), tp('b', 30, 'weak')],
+        [tp('a', 90, 'strong')],
+        [tp('b', 30, 'weak')]
+      )
+    );
     expect(el.querySelector('#ir-strongest')?.textContent).toContain('Strongest');
     expect(el.querySelector('#ir-needs-review')?.textContent).toContain('Needs Review');
   });

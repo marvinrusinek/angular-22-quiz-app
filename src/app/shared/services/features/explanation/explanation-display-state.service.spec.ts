@@ -21,7 +21,7 @@ describe('ExplanationDisplayStateService', () => {
       fetByIndex: new Map<number, string>(),
       lockedFetIndices: new Set<number>(),
       explanationsUpdatedSig: { set: jest.fn() },
-      explanationsInitializedSig: jest.fn().mockReturnValue(false),
+      explanationsInitializedSig: jest.fn().mockReturnValue(false)
     };
 
     TestBed.configureTestingModule({
@@ -325,8 +325,12 @@ describe('ExplanationDisplayStateService', () => {
 
     beforeEach(() => {
       jest.useFakeTimers();
-      rafSpy = jest.spyOn(window, 'requestAnimationFrame')
-        .mockImplementation(((cb: FrameRequestCallback) => { cb(0); return 1; }) as any);
+      rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(((
+        cb: FrameRequestCallback
+      ) => {
+        cb(0);
+        return 1;
+      }) as any);
       cafSpy = jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
     });
 
@@ -346,7 +350,7 @@ describe('ExplanationDisplayStateService', () => {
 
     it('releases the lock after the settle delay', () => {
       service.purgeAndDefer(2);
-      jest.advanceTimersByTime(200);  // > 120ms settle
+      jest.advanceTimersByTime(200); // > 120ms settle
       expect(service._fetLocked).toBe(false);
     });
 
@@ -362,7 +366,7 @@ describe('ExplanationDisplayStateService', () => {
     });
 
     it('watchdog force-unlocks when the rAF settle path never runs', () => {
-      rafSpy.mockImplementation((() => 1) as any);  // never invoke the callback
+      rafSpy.mockImplementation((() => 1) as any); // never invoke the callback
       service._fetLocked = false;
       service.purgeAndDefer(3);
       expect(service._fetLocked).toBe(true);

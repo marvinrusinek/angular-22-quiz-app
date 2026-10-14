@@ -116,7 +116,10 @@ describe('practice-scoring — question type comes from the DECLARED type', () =
       questionText: 'From the API',
       type: QuestionType.MultipleAnswer,
       sourceQuizId: 'rxjs',
-      options: [{ optionId: 1, text: 'a' }, { optionId: 2, text: 'b' }]
+      options: [
+        { optionId: 1, text: 'a' },
+        { optionId: 2, text: 'b' }
+      ]
     } as unknown as QuizQuestion;
 
     for (const option of apiShaped.options ?? []) {
@@ -128,7 +131,10 @@ describe('practice-scoring — question type comes from the DECLARED type', () =
   it('an UNDECLARED type is null — never silently single', () => {
     const undeclared = {
       questionText: 'No type',
-      options: [{ optionId: 1, text: 'a', correct: true }, { optionId: 2, text: 'b', correct: true }]
+      options: [
+        { optionId: 1, text: 'a', correct: true },
+        { optionId: 2, text: 'b', correct: true }
+      ]
     } as unknown as QuizQuestion;
     expect(declaredMultiAnswer(undeclared)).toBeNull();
   });
@@ -188,7 +194,10 @@ describe('practice-scoring — the Next gate (verified topic-quiz behaviour)', (
     const undeclared = {
       questionText: 'No type',
       sourceQuizId: 'rxjs',
-      options: [{ optionId: 1, text: 'a' }, { optionId: 2, text: 'b' }]
+      options: [
+        { optionId: 1, text: 'a' },
+        { optionId: 2, text: 'b' }
+      ]
     } as unknown as QuizQuestion;
     // Unknown must not be treated as single-answer, which would let a
     // multi-answer question advance on a single pick.
@@ -306,13 +315,39 @@ describe('practice-scoring — results (final-state scoring)', () => {
 describe('practice-scoring — per-topic breakdown', () => {
   it('groups by the preserved sourceQuizId, never by wording', () => {
     const questions = [
-      question('A', QuestionType.SingleAnswer, [{ id: 1, text: 'x', correct: true }, { id: 2, text: 'y' }], 'rxjs'),
-      question('B', QuestionType.SingleAnswer, [{ id: 1, text: 'x', correct: true }, { id: 2, text: 'y' }], 'rxjs'),
-      question('C', QuestionType.SingleAnswer, [{ id: 1, text: 'x', correct: true }, { id: 2, text: 'y' }], 'signals')
+      question(
+        'A',
+        QuestionType.SingleAnswer,
+        [
+          { id: 1, text: 'x', correct: true },
+          { id: 2, text: 'y' }
+        ],
+        'rxjs'
+      ),
+      question(
+        'B',
+        QuestionType.SingleAnswer,
+        [
+          { id: 1, text: 'x', correct: true },
+          { id: 2, text: 'y' }
+        ],
+        'rxjs'
+      ),
+      question(
+        'C',
+        QuestionType.SingleAnswer,
+        [
+          { id: 1, text: 'x', correct: true },
+          { id: 2, text: 'y' }
+        ],
+        'signals'
+      )
     ];
     const answers = { 0: [1], 1: [2], 2: [1] };
     const byText: Record<string, number[]> = {
-      A: answers[0], B: answers[1], C: answers[2]
+      A: answers[0],
+      B: answers[1],
+      C: answers[2]
     };
 
     const r = computePracticeResult({
@@ -327,9 +362,19 @@ describe('practice-scoring — per-topic breakdown', () => {
 
     const rxjs = r.perTopic.find((t) => t.topicId === 'rxjs')!;
     const signals = r.perTopic.find((t) => t.topicId === 'signals')!;
-    expect(rxjs).toEqual({ topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 2, percentage: 50 });
+    expect(rxjs).toEqual({
+      topicId: 'rxjs',
+      topicName: 'RxJS',
+      correct: 1,
+      total: 2,
+      percentage: 50
+    });
     expect(signals).toEqual({
-      topicId: 'signals', topicName: 'Signals', correct: 1, total: 1, percentage: 100
+      topicId: 'signals',
+      topicName: 'Signals',
+      correct: 1,
+      total: 1,
+      percentage: 100
     });
   });
 });

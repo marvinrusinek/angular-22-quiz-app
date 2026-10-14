@@ -12,13 +12,9 @@ import {
   SK_IS_ANSWERED,
   SK_SEL_Q,
   SK_SELECTED_OPTIONS_MAP,
-  SK_STARTED_QUIZ_IDS,
+  SK_STARTED_QUIZ_IDS
 } from '@shared/constants/session-keys';
-import {
-  readSessionJson,
-  removeSessionKey,
-  writeSessionJson,
-} from '@shared/utils/session-storage';
+import { readSessionJson, removeSessionKey, writeSessionJson } from '@shared/utils/session-storage';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
@@ -38,7 +34,7 @@ import { swallow } from '@shared/utils/error-logging';
   imports: [MatCardModule, MatListModule, RouterLink],
   templateUrl: './return.component.html',
   styleUrls: ['./return.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReturnComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────

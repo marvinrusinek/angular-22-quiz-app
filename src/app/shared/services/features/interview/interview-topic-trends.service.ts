@@ -95,7 +95,10 @@ export function getTopicStrengthBand(aggregatePercentage: number): TopicStrength
 
 /** A topic needs attention when it is declining or weak overall. Insufficient
  *  data alone never forces priority. */
-export function isPriorityTopic(aggregatePercentage: number, direction: TopicTrendDirection): boolean {
+export function isPriorityTopic(
+  aggregatePercentage: number,
+  direction: TopicTrendDirection
+): boolean {
   return aggregatePercentage < MODERATE_MIN || direction === 'declining';
 }
 
@@ -140,7 +143,7 @@ export function sortTopicTrends(topics: readonly TopicTrend[]): TopicTrend[] {
     if (t.direction === 'declining') return 0;
     if (t.isPriority) return 1;
     if (t.direction === 'improving') return 2;
-    return 3;   // steady, non-priority
+    return 3; // steady, non-priority
   };
   return [...topics].sort((a, b) => {
     const ga = group(a);
@@ -148,14 +151,15 @@ export function sortTopicTrends(topics: readonly TopicTrend[]): TopicTrend[] {
     if (ga !== gb) return ga - gb;
     // Priority groups (declining/other-priority): lowest aggregate first.
     if (ga <= 1) {
-      if (a.aggregatePercentage !== b.aggregatePercentage) return a.aggregatePercentage - b.aggregatePercentage;
+      if (a.aggregatePercentage !== b.aggregatePercentage)
+        return a.aggregatePercentage - b.aggregatePercentage;
     } else if (ga === 2) {
       // Improving: largest positive change first.
       const ca = a.change ?? 0;
       const cb = b.change ?? 0;
       if (ca !== cb) return cb - ca;
     }
-    return a.topicName.localeCompare(b.topicName);   // stable final tie-break
+    return a.topicName.localeCompare(b.topicName); // stable final tie-break
   });
 }
 

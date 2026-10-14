@@ -14,15 +14,11 @@ describe('topicQuizDocumentTitle', () => {
   });
 
   it('is case-insensitive when checking for a trailing "Quiz"', () => {
-    expect(topicQuizDocumentTitle('Some Topic QUIZ')).toBe(
-      'Some Topic QUIZ | Angular Quiz App'
-    );
+    expect(topicQuizDocumentTitle('Some Topic QUIZ')).toBe('Some Topic QUIZ | Angular Quiz App');
   });
 
   it('trims surrounding whitespace before composing', () => {
-    expect(topicQuizDocumentTitle('  TypeScript  ')).toBe(
-      'TypeScript Quiz | Angular Quiz App'
-    );
+    expect(topicQuizDocumentTitle('  TypeScript  ')).toBe('TypeScript Quiz | Angular Quiz App');
   });
 
   it('falls back to the bare default title for an empty or whitespace-only milestone', () => {

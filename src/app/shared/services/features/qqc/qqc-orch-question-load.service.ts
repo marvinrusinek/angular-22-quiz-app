@@ -24,8 +24,11 @@ interface LoadPrep {
  */
 @Service()
 export class QqcOrchQuestionLoadService {
-
-  async runLoadDynamicComponent(host: Host, question: QuizQuestion, options: Option[]): Promise<void> {
+  async runLoadDynamicComponent(
+    host: Host,
+    question: QuizQuestion,
+    options: Option[]
+  ): Promise<void> {
     try {
       const container = host.dynamicAnswerContainer?.();
       if (
@@ -110,7 +113,11 @@ export class QqcOrchQuestionLoadService {
       if (host.displayStateManager.computeRenderReadiness(instance.optionsToDisplay())) {
         host.shouldRenderOptions.set(true);
       }
-      try { componentRef.changeDetectorRef.markForCheck(); } catch (err: unknown) { swallow('qqc-orch-question-load.service.ts markForCheck', err); }
+      try {
+        componentRef.changeDetectorRef.markForCheck();
+      } catch (err: unknown) {
+        swallow('qqc-orch-question-load.service.ts markForCheck', err);
+      }
     } catch (err: unknown) {
       // Any failure after entry — unlatch so the effect can retry.
       reportError('loadDynamicComponent', err);
@@ -167,7 +174,10 @@ export class QqcOrchQuestionLoadService {
     });
 
     this.applyExplanationClearOrRestore(
-      host, prep.shouldKeepExplanationVisible, prep.explanationSnapshot, lockedIndex
+      host,
+      prep.shouldKeepExplanationVisible,
+      prep.explanationSnapshot,
+      lockedIndex
     );
 
     const loadResult = await host.questionLoader.performLoadQuestionPostReset({
@@ -244,7 +254,7 @@ export class QqcOrchQuestionLoadService {
         questionState: explanationSnapshot.questionState,
         quizId: host.quizId(),
         quizServiceQuizId: host.quizService.quizId,
-        currentQuizId: host.quizService.getCurrentQuizId(),
+        currentQuizId: host.quizService.getCurrentQuizId()
       });
       if (!restoreResult.shouldSkip) {
         host.explanationToDisplay.set(restoreResult.explanationText);
@@ -293,7 +303,10 @@ export class QqcOrchQuestionLoadService {
       activatedRoute: host.activatedRoute,
       getTotalQuestions: () => host.totalQuestions(),
       parseRouteIndex: (rawParam: string | null) =>
-        host.initializer.handleRouteChangeParsing({ rawParam, totalQuestions: host.totalQuestions() }),
+        host.initializer.handleRouteChangeParsing({
+          rawParam,
+          totalQuestions: host.totalQuestions()
+        }),
       onRouteChange: async (zeroBasedIndex: number, _displayIndex: number) => {
         host.currentQuestionIndex.set(zeroBasedIndex);
         host.explanationVisible.set(false);
@@ -348,7 +361,8 @@ export class QqcOrchQuestionLoadService {
         routeQuizId: host.quizId() ?? null,
         setQuestionOptions: () => host.setQuestionOptions(),
         questionLoader: host.questionLoader,
-        prepareExplanationForQuestion: (p: any) => host.initializer.prepareExplanationForQuestion(p),
+        prepareExplanationForQuestion: (p: any) =>
+          host.initializer.prepareExplanationForQuestion(p),
         getExplanationText: (idx: number) => host.explanationManager.getExplanationText(idx)
       });
       if (result) {
@@ -362,10 +376,9 @@ export class QqcOrchQuestionLoadService {
   }
 
   async runInitializeQuizDataAndRouting(host: Host): Promise<void> {
-    const result = 
-      await host.questionLoader.performQuizDataAndRoutingInit(
-        { quizId: host.quizId() }
-      );
+    const result = await host.questionLoader.performQuizDataAndRoutingInit({
+      quizId: host.quizId()
+    });
     if (!result) return;
 
     host.questions.set(result.questions);
@@ -373,10 +386,10 @@ export class QqcOrchQuestionLoadService {
     if (result.quiz) host.quiz.set(result.quiz);
     if (!host.quiz()) return;
 
-    host.quizService.questionsLoaded$.pipe(
-      take(1), debounceTime(100)
-    ).subscribe((loaded: boolean) => {
-      if (loaded) host.setupRouteChangeHandler();
-    });
+    host.quizService.questionsLoaded$
+      .pipe(take(1), debounceTime(100))
+      .subscribe((loaded: boolean) => {
+        if (loaded) host.setupRouteChangeHandler();
+      });
   }
 }

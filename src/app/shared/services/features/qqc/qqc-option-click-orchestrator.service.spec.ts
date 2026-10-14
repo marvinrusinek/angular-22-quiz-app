@@ -37,15 +37,16 @@ describe('QqcOptionClickOrchestratorService — dead evtOpt.correct branches (St
   let selectedOptionService: any;
   let selectionMessageService: any;
 
-  const makeQuestion = (type: QuestionType): QuizQuestion => ({
-    questionText: 'Sample question?',
-    type,
-    options: [
-      { optionId: 1, text: 'A' },
-      { optionId: 2, text: 'B' }
-    ],
-    explanation: 'because'
-  } as unknown as QuizQuestion);
+  const makeQuestion = (type: QuestionType): QuizQuestion =>
+    ({
+      questionText: 'Sample question?',
+      type,
+      options: [
+        { optionId: 1, text: 'A' },
+        { optionId: 2, text: 'B' }
+      ],
+      explanation: 'because'
+    }) as unknown as QuizQuestion;
 
   beforeEach(() => {
     selectedOptionService = {
@@ -80,7 +81,11 @@ describe('QqcOptionClickOrchestratorService — dead evtOpt.correct branches (St
       const evtOpt: SelectedOption = { optionId: 2, text: 'B' } as SelectedOption; // no `.correct`
 
       const result = service.buildCanonicalOptions({
-        question, questionIndex: 0, evtIdx: 1, evtOpt, checked: true
+        question,
+        questionIndex: 0,
+        evtIdx: 1,
+        evtOpt,
+        checked: true
       });
 
       expect(result.map((o) => o.selected)).toEqual([false, true]);
@@ -92,7 +97,11 @@ describe('QqcOptionClickOrchestratorService — dead evtOpt.correct branches (St
       const evtOpt = { optionId: 2, text: 'B', correct: true } as SelectedOption;
 
       const result = service.buildCanonicalOptions({
-        question, questionIndex: 0, evtIdx: 1, evtOpt, checked: true
+        question,
+        questionIndex: 0,
+        evtIdx: 1,
+        evtOpt,
+        checked: true
       });
 
       // Already selected via the unconditional `i === evtIdx` assignment —
@@ -107,7 +116,11 @@ describe('QqcOptionClickOrchestratorService — dead evtOpt.correct branches (St
       const evtOpt: SelectedOption = { optionId: 1, text: 'A' } as SelectedOption;
 
       const result = service.buildCanonicalOptions({
-        question, questionIndex: 0, evtIdx: 0, evtOpt, checked: true
+        question,
+        questionIndex: 0,
+        evtIdx: 0,
+        evtOpt,
+        checked: true
       });
 
       expect(result[0]!.selected).toBe(true);
@@ -120,7 +133,10 @@ describe('QqcOptionClickOrchestratorService — dead evtOpt.correct branches (St
       const evtOpt: SelectedOption = { optionId: 2, text: 'B' } as SelectedOption;
 
       service.applyOptionLocks({
-        questionIndex: 0, evtOpt, question, optionsToDisplay: question.options as any
+        questionIndex: 0,
+        evtOpt,
+        question,
+        optionsToDisplay: question.options as any
       });
 
       expect(selectedOptionService.lockOption).toHaveBeenCalledWith(0, 2);
@@ -132,7 +148,10 @@ describe('QqcOptionClickOrchestratorService — dead evtOpt.correct branches (St
       const evtOpt = { optionId: 2, text: 'B', correct: true } as SelectedOption;
 
       service.applyOptionLocks({
-        questionIndex: 0, evtOpt, question, optionsToDisplay: question.options as any
+        questionIndex: 0,
+        evtOpt,
+        question,
+        optionsToDisplay: question.options as any
       });
 
       expect(selectedOptionService.lockMany).not.toHaveBeenCalled();
@@ -143,7 +162,10 @@ describe('QqcOptionClickOrchestratorService — dead evtOpt.correct branches (St
       const evtOpt: SelectedOption = { optionId: 1, text: 'A' } as SelectedOption;
 
       service.applyOptionLocks({
-        questionIndex: 0, evtOpt, question, optionsToDisplay: question.options as any
+        questionIndex: 0,
+        evtOpt,
+        question,
+        optionsToDisplay: question.options as any
       });
 
       expect(selectedOptionService.lockOption).toHaveBeenCalledWith(0, 1);

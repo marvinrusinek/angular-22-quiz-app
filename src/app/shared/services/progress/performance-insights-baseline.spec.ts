@@ -1,9 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import {
-  SK_INTERVIEW_HISTORY,
-  SK_TOPIC_PERFORMANCE_HISTORY
-} from '@shared/constants/session-keys';
+import { SK_INTERVIEW_HISTORY, SK_TOPIC_PERFORMANCE_HISTORY } from '@shared/constants/session-keys';
 import {
   INTERVIEW_HISTORY_MAX,
   TOPIC_PERFORMANCE_HISTORY_MAX,
@@ -73,7 +70,15 @@ function sanitized(over: Partial<SanitizedAttemptInput> = {}): SanitizedAttemptI
     configuredDifficulty: 'beginner',
     selectedTopicIds: ['rxjs'],
     topicPerformance: [
-      { topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5, percentage: 80, incorrect: 1, unanswered: 0 }
+      {
+        topicId: 'rxjs',
+        topicName: 'RxJS',
+        correct: 4,
+        total: 5,
+        percentage: 80,
+        incorrect: 1,
+        unanswered: 0
+      }
     ],
     ...over
   };
@@ -92,8 +97,12 @@ afterEach(() => {
 describe('BASELINE — topic performance history', () => {
   it('retains `source` per record and keeps the two sources distinguishable', () => {
     const { topic } = stack();
-    topic.record('quiz:rxjs:1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5 }]);
-    topic.record('practice:p1', 'weak-areas-practice', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 2 }]);
+    topic.record('quiz:rxjs:1', 'topic-quiz', [
+      { topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5 }
+    ]);
+    topic.record('practice:p1', 'weak-areas-practice', [
+      { topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 2 }
+    ]);
 
     expect(topic.records().map((r) => [r.attemptId, r.source])).toEqual([
       ['quiz:rxjs:1', 'topic-quiz'],
@@ -123,14 +132,22 @@ describe('BASELINE — topic performance history', () => {
 
   it('writes exactly { version, records[] } with exactly the seven record fields', () => {
     const { topic } = stack();
-    topic.record('a1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 3, total: 4 }]);
+    topic.record('a1', 'topic-quiz', [
+      { topicId: 'rxjs', topicName: 'RxJS', correct: 3, total: 4 }
+    ]);
 
     const store = persistedTopic();
     expect(Object.keys(store).sort()).toEqual(['records', 'version']);
     expect(store.version).toBe(TOPIC_PERFORMANCE_HISTORY_VERSION);
-    expect(Object.keys(store.records[0]!).sort()).toEqual(
-      ['attemptId', 'completedAt', 'correct', 'source', 'topicId', 'topicName', 'total']
-    );
+    expect(Object.keys(store.records[0]!).sort()).toEqual([
+      'attemptId',
+      'completedAt',
+      'correct',
+      'source',
+      'topicId',
+      'topicName',
+      'total'
+    ]);
   });
 
   it('stamps one completedAt for every topic row of a multi-topic attempt', () => {
@@ -211,19 +228,37 @@ describe('BASELINE — topic performance history', () => {
 describe('BASELINE — Interview history', () => {
   it('stores correct, total, percentage, timestamp and the topic breakdown verbatim', () => {
     const { interview } = stack();
-    interview.recordAttempt(sanitized({
-      sessionId: 'is_9',
-      completedAt: '2026-08-09T09:30:00.000Z',
-      score: 6,
-      totalQuestions: 8,
-      percentage: 75,
-      topicPerformance: [
-        { topicId: 'rxjs', topicName: 'RxJS', correct: 2, total: 4, percentage: 50, incorrect: 1, unanswered: 1 },
-        { topicId: 'forms', topicName: 'Forms', correct: 4, total: 4, percentage: 100, incorrect: 0, unanswered: 0 }
-      ]
-    }));
+    interview.recordAttempt(
+      sanitized({
+        sessionId: 'is_9',
+        completedAt: '2026-08-09T09:30:00.000Z',
+        score: 6,
+        totalQuestions: 8,
+        percentage: 75,
+        topicPerformance: [
+          {
+            topicId: 'rxjs',
+            topicName: 'RxJS',
+            correct: 2,
+            total: 4,
+            percentage: 50,
+            incorrect: 1,
+            unanswered: 1
+          },
+          {
+            topicId: 'forms',
+            topicName: 'Forms',
+            correct: 4,
+            total: 4,
+            percentage: 100,
+            incorrect: 0,
+            unanswered: 0
+          }
+        ]
+      })
+    );
 
-    const [entry] = stack().interview.history();   // through a reload
+    const [entry] = stack().interview.history(); // through a reload
     expect(entry).toMatchObject({
       sessionId: 'is_9',
       completedAt: '2026-08-09T09:30:00.000Z',
@@ -232,8 +267,24 @@ describe('BASELINE — Interview history', () => {
       percentage: 75
     });
     expect(entry!.topicPerformance).toEqual([
-      { topicId: 'rxjs', topicName: 'RxJS', correct: 2, total: 4, percentage: 50, incorrect: 1, unanswered: 1 },
-      { topicId: 'forms', topicName: 'Forms', correct: 4, total: 4, percentage: 100, incorrect: 0, unanswered: 0 }
+      {
+        topicId: 'rxjs',
+        topicName: 'RxJS',
+        correct: 2,
+        total: 4,
+        percentage: 50,
+        incorrect: 1,
+        unanswered: 1
+      },
+      {
+        topicId: 'forms',
+        topicName: 'Forms',
+        correct: 4,
+        total: 4,
+        percentage: 100,
+        incorrect: 0,
+        unanswered: 0
+      }
     ]);
   });
 
@@ -242,17 +293,19 @@ describe('BASELINE — Interview history', () => {
     expect(INTERVIEW_HISTORY_MAX).toBe(20);
 
     for (let i = 1; i <= INTERVIEW_HISTORY_MAX + 1; i++) {
-      interview.recordAttempt(sanitized({
-        sessionId: `is_${i}`,
-        completedAt: new Date(Date.UTC(2026, 7, i)).toISOString()
-      }));
+      interview.recordAttempt(
+        sanitized({
+          sessionId: `is_${i}`,
+          completedAt: new Date(Date.UTC(2026, 7, i)).toISOString()
+        })
+      );
     }
     expect(interview.history()).toHaveLength(20);
     expect(interview.history()[0]!.sessionId).toBe('is_2');
     expect(interview.history()[19]!.sessionId).toBe('is_21');
 
     const reloaded = stack().interview;
-    reloaded.recordAttempt(sanitized({ sessionId: 'is_21' }));   // the same session again
+    reloaded.recordAttempt(sanitized({ sessionId: 'is_21' })); // the same session again
     expect(reloaded.history()).toHaveLength(20);
     expect(reloaded.history().filter((e) => e.sessionId === 'is_21')).toHaveLength(1);
   });
@@ -271,18 +324,26 @@ describe('BASELINE — WeakAreasService (Needs Review authority)', () => {
    * forms  : interview 9/10 + practice 1/2         = 10/12 = 83.3% → NOT weak
    */
   function seedMixed(s: Stack): void {
-    s.interview.recordAttempt(sanitized({
-      sessionId: 'is_1',
-      completedAt: '2026-08-01T12:00:00.000Z',
-      topicPerformance: [
-        { topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 10, percentage: 10 },
-        { topicId: 'signals', topicName: 'Signals', correct: 2, total: 2, percentage: 100 },
-        { topicId: 'forms', topicName: 'Forms', correct: 9, total: 10, percentage: 90 }
-      ]
-    }));
-    s.topic.record('quiz:rxjs:1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 2, total: 5 }]);
-    s.topic.record('quiz:signals:1', 'topic-quiz', [{ topicId: 'signals', topicName: 'Signals', correct: 1, total: 2 }]);
-    s.topic.record('practice:p1', 'weak-areas-practice', [{ topicId: 'forms', topicName: 'Forms', correct: 1, total: 2 }]);
+    s.interview.recordAttempt(
+      sanitized({
+        sessionId: 'is_1',
+        completedAt: '2026-08-01T12:00:00.000Z',
+        topicPerformance: [
+          { topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 10, percentage: 10 },
+          { topicId: 'signals', topicName: 'Signals', correct: 2, total: 2, percentage: 100 },
+          { topicId: 'forms', topicName: 'Forms', correct: 9, total: 10, percentage: 90 }
+        ]
+      })
+    );
+    s.topic.record('quiz:rxjs:1', 'topic-quiz', [
+      { topicId: 'rxjs', topicName: 'RxJS', correct: 2, total: 5 }
+    ]);
+    s.topic.record('quiz:signals:1', 'topic-quiz', [
+      { topicId: 'signals', topicName: 'Signals', correct: 1, total: 2 }
+    ]);
+    s.topic.record('practice:p1', 'weak-areas-practice', [
+      { topicId: 'forms', topicName: 'Forms', correct: 1, total: 2 }
+    ]);
   }
 
   it('merges Interview + Topic Quiz + Practice, interview attempts first', () => {
@@ -290,8 +351,8 @@ describe('BASELINE — WeakAreasService (Needs Review authority)', () => {
     seedMixed(s);
 
     const merged = s.weak.mergedAttempts();
-    expect(merged).toHaveLength(1 + 3);                       // 1 interview attempt + 3 topic rows
-    expect(merged[0]!.topicPerformance).toHaveLength(3);      // the interview attempt leads
+    expect(merged).toHaveLength(1 + 3); // 1 interview attempt + 3 topic rows
+    expect(merged[0]!.topicPerformance).toHaveLength(3); // the interview attempt leads
   });
 
   it('produces the current Needs Review output: weakest first, raw sums across every source', () => {
@@ -319,25 +380,31 @@ describe('BASELINE — WeakAreasService (Needs Review authority)', () => {
 
   it('pools the minimum-sample across sources (2 + 2 answered makes 4)', () => {
     const s = stack();
-    s.interview.recordAttempt(sanitized({
-      topicPerformance: [{ topicId: 'http', topicName: 'HTTP', correct: 0, total: 2, percentage: 0 }]
-    }));
-    expect(s.weak.weakTopics()).toEqual([]);                  // 2 answered: not judgeable yet
+    s.interview.recordAttempt(
+      sanitized({
+        topicPerformance: [
+          { topicId: 'http', topicName: 'HTTP', correct: 0, total: 2, percentage: 0 }
+        ]
+      })
+    );
+    expect(s.weak.weakTopics()).toEqual([]); // 2 answered: not judgeable yet
 
-    s.topic.record('quiz:http:1', 'topic-quiz', [{ topicId: 'http', topicName: 'HTTP', correct: 1, total: 2 }]);
-    expect(s.weak.weakTopics().map((t) => t.topicId)).toEqual(['http']);   // 1/4, now judgeable
+    s.topic.record('quiz:http:1', 'topic-quiz', [
+      { topicId: 'http', topicName: 'HTTP', correct: 1, total: 2 }
+    ]);
+    expect(s.weak.weakTopics().map((t) => t.topicId)).toEqual(['http']); // 1/4, now judgeable
   });
 
   it('reports insufficient data only until some topic reaches the minimum sample', () => {
     const s = stack();
-    expect(s.weak.hasInsufficientData()).toBe(true);          // no history at all
+    expect(s.weak.hasInsufficientData()).toBe(true); // no history at all
     expect(s.weak.weakTopics()).toEqual([]);
 
     s.topic.record('quiz:rxjs:1', 'topic-quiz', [{ topicId: 'rxjs', correct: 2, total: 2 }]);
-    expect(s.weak.hasInsufficientData()).toBe(true);          // 2 answered < 3
+    expect(s.weak.hasInsufficientData()).toBe(true); // 2 answered < 3
 
     s.topic.record('quiz:rxjs:2', 'topic-quiz', [{ topicId: 'rxjs', correct: 2, total: 2 }]);
-    expect(s.weak.hasInsufficientData()).toBe(false);         // 4 answered, and 100% is fine
+    expect(s.weak.hasInsufficientData()).toBe(false); // 4 answered, and 100% is fine
     expect(s.weak.hasWeakTopics()).toBe(false);
   });
 
@@ -346,7 +413,9 @@ describe('BASELINE — WeakAreasService (Needs Review authority)', () => {
     s.topic.record('quiz:rxjs:1', 'topic-quiz', [{ topicId: 'rxjs', correct: 0, total: 5 }]);
     expect(s.weak.weakTopicIds()).toEqual(['rxjs']);
 
-    s.topic.record('practice:p1', 'weak-areas-practice', [{ topicId: 'rxjs', correct: 45, total: 45 }]);
-    expect(s.weak.weakTopicIds()).toEqual([]);                // 45/50 = 90%
+    s.topic.record('practice:p1', 'weak-areas-practice', [
+      { topicId: 'rxjs', correct: 45, total: 45 }
+    ]);
+    expect(s.weak.weakTopicIds()).toEqual([]); // 45/50 = 90%
   });
 });

@@ -16,10 +16,20 @@ import {
 } from './interview-readiness.service';
 
 function topic(topicId: string, correct: number, total: number): InterviewTopicHistoryEntry {
-  return { topicId, topicName: topicId.toUpperCase(), correct, total, percentage: Math.round((correct / total) * 100) };
+  return {
+    topicId,
+    topicName: topicId.toUpperCase(),
+    correct,
+    total,
+    percentage: Math.round((correct / total) * 100)
+  };
 }
 
-function attempt(pct: number, topics: InterviewTopicHistoryEntry[] = [], i = 0): InterviewAttemptHistoryEntry {
+function attempt(
+  pct: number,
+  topics: InterviewTopicHistoryEntry[] = [],
+  i = 0
+): InterviewAttemptHistoryEntry {
   return {
     id: `a${i}-${pct}`,
     attemptNumber: i + 1,
@@ -53,7 +63,7 @@ describe('Recent Performance', () => {
   });
 
   it('3. calculates the correct average (rounded)', () => {
-    expect(calculateRecentPerformance(attempts([70, 75]))).toBe(73);   // 72.5 → 73
+    expect(calculateRecentPerformance(attempts([70, 75]))).toBe(73); // 72.5 → 73
   });
 
   it('4. handles empty history safely', () => {
@@ -73,8 +83,8 @@ describe('Consistency', () => {
   });
 
   it('7. applies the recent-performance safeguard (stable-low < stable-high)', () => {
-    const stableLow = calculateConsistency(attempts([40, 42]));   // ~100 * 0.41
-    const stableHigh = calculateConsistency(attempts([90, 92]));  // ~100 * 0.91
+    const stableLow = calculateConsistency(attempts([40, 42])); // ~100 * 0.41
+    const stableHigh = calculateConsistency(attempts([90, 92])); // ~100 * 0.91
     expect(stableLow).toBeLessThan(stableHigh);
     expect(stableLow).toBe(41);
     expect(stableHigh).toBe(91);
@@ -93,10 +103,10 @@ describe('Topic Coverage', () => {
   it('9/10. counts unique topics only (no duplicate appearances)', () => {
     const list = [
       attempt(80, [topic('a', 4, 5), topic('b', 3, 5)], 0),
-      attempt(70, [topic('a', 2, 5), topic('c', 4, 5)], 1)   // 'a' repeats
+      attempt(70, [topic('a', 2, 5), topic('c', 4, 5)], 1) // 'a' repeats
     ];
     expect(uniquePracticedTopics(list).sort()).toEqual(['a', 'b', 'c']);
-    expect(calculateTopicCoverage(list, 6)).toBe(50);        // 3 / 6 * 100
+    expect(calculateTopicCoverage(list, 6)).toBe(50); // 3 / 6 * 100
   });
 
   it('11. uses the eligible topic total dynamically', () => {
@@ -126,7 +136,10 @@ describe('Topic Strength', () => {
   });
 
   it('16. handles missing / zero-total topic data safely', () => {
-    const list = [attempt(0, [], 0), attempt(0, [{ topicId: 'z', topicName: 'Z', correct: 0, total: 0, percentage: 0 }], 1)];
+    const list = [
+      attempt(0, [], 0),
+      attempt(0, [{ topicId: 'z', topicName: 'Z', correct: 0, total: 0, percentage: 0 }], 1)
+    ];
     expect(calculateTopicStrength(list)).toBe(0);
     expect(aggregateTopicPercentages(list)).toEqual([]);
   });
@@ -194,7 +207,9 @@ describe('Limited Data', () => {
 
   it('23. reports the correct number of attempts used (capped at 5)', () => {
     expect(calculateReadiness(attempts([70, 80, 90]), EIGHT_TOPICS)!.attemptsUsed).toBe(3);
-    expect(calculateReadiness(attempts([10, 20, 30, 40, 50, 60, 70]), EIGHT_TOPICS)!.attemptsUsed).toBe(5);
+    expect(
+      calculateReadiness(attempts([10, 20, 30, 40, 50, 60, 70]), EIGHT_TOPICS)!.attemptsUsed
+    ).toBe(5);
   });
 
   it('returns null for no attempts (section hidden)', () => {
@@ -235,7 +250,7 @@ describe('Explanation & Recommendations', () => {
       rawConsistency: 90
     });
     expect(recs[0]).toContain('Review');
-    expect(recs[0]).toContain('SIGNALS');   // weakest topic surfaced by name
+    expect(recs[0]).toContain('SIGNALS'); // weakest topic surfaced by name
   });
 
   it('appends an estimate caveat for the interview-ready band', () => {
@@ -258,20 +273,22 @@ describe('Explanation & Recommendations', () => {
   });
 
   it('still praises a genuinely strong highest factor (≥ 75)', () => {
-    expect(buildExplanation(
-      { key: 'recent-performance', value: 88 },
-      { key: 'topic-coverage', value: 30 },
-      100,
-      'strong'
-    )).toContain('Your recent interview scores are strong.');
+    expect(
+      buildExplanation(
+        { key: 'recent-performance', value: 88 },
+        { key: 'topic-coverage', value: 30 },
+        100,
+        'strong'
+      )
+    ).toContain('Your recent interview scores are strong.');
   });
 
   // #5 — consistency wording uses RAW stability, not the safeguarded factor.
   it('does not tell a stable-but-low user their scores "vary"', () => {
     const stable = buildExplanation(
       { key: 'recent-performance', value: 70 },
-      { key: 'consistency', value: 45 },   // low adjusted factor…
-      100,                                 // …but perfectly stable (raw 100)
+      { key: 'consistency', value: 45 }, // low adjusted factor…
+      100, // …but perfectly stable (raw 100)
       'progressing'
     );
     expect(stable).toContain('steady');
@@ -282,7 +299,7 @@ describe('Explanation & Recommendations', () => {
     const varying = buildExplanation(
       { key: 'recent-performance', value: 70 },
       { key: 'consistency', value: 40 },
-      40,   // raw stability low → scores actually vary
+      40, // raw stability low → scores actually vary
       'progressing'
     );
     expect(varying.toLowerCase()).toContain('vary');
@@ -306,8 +323,8 @@ describe('Explanation & Recommendations', () => {
   });
 
   it('rawConsistency reflects range only (not performance)', () => {
-    expect(calculateRawConsistency(attempts([45, 45, 45]))).toBe(100);   // stable
-    expect(calculateRawConsistency(attempts([30, 70]))).toBe(20);        // wide range
-    expect(calculateRawConsistency(attempts([80]))).toBe(0);             // < 2 attempts
+    expect(calculateRawConsistency(attempts([45, 45, 45]))).toBe(100); // stable
+    expect(calculateRawConsistency(attempts([30, 70]))).toBe(20); // wide range
+    expect(calculateRawConsistency(attempts([80]))).toBe(0); // < 2 attempts
   });
 });

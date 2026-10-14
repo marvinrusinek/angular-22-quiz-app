@@ -44,7 +44,13 @@ function sanitized(over: Partial<SanitizedAttemptInput> = {}): SanitizedAttemptI
 
 // ── factories ─────────────────────────────────────────────────────────
 function topic(quizId: string, correct: number, total: number): InterviewTopicScore {
-  return { quizId, title: quizId.toUpperCase(), correct, total, percentage: Math.round((correct / total) * 100) };
+  return {
+    quizId,
+    title: quizId.toUpperCase(),
+    correct,
+    total,
+    percentage: Math.round((correct / total) * 100)
+  };
 }
 
 // A distinct InterviewResult with a given percentage/score (new object each call
@@ -68,7 +74,10 @@ function makeResult(pct: number, over: Partial<InterviewResult> = {}): Interview
   };
 }
 
-function entry(pct: number, over: Partial<InterviewAttemptHistoryEntry> = {}): InterviewAttemptHistoryEntry {
+function entry(
+  pct: number,
+  over: Partial<InterviewAttemptHistoryEntry> = {}
+): InterviewAttemptHistoryEntry {
   return {
     id: `id-${pct}-${Math.round(pct * 7)}`,
     completedAt: '2026-07-22T10:00:00.000Z',
@@ -130,7 +139,7 @@ describe('InterviewHistoryService — persistence', () => {
     const svc = freshService();
     const r = makeResult(64);
     svc.record(r);
-    svc.record(r);   // e.g. a stray Results re-render calling through again
+    svc.record(r); // e.g. a stray Results re-render calling through again
     svc.record(r);
     expect(svc.history()).toHaveLength(1);
   });
@@ -190,7 +199,7 @@ describe('InterviewHistoryService — persistence', () => {
   it('durably skips an attempt already persisted (same id, new result object)', () => {
     const svc = freshService();
     svc.record(makeResult(70), 'att-X');
-    svc.record(makeResult(70), 'att-X');   // distinct object, same attempt id
+    svc.record(makeResult(70), 'att-X'); // distinct object, same attempt id
     expect(svc.history()).toHaveLength(1);
     expect(svc.history()[0].id).toBe('att-X');
   });
@@ -205,24 +214,37 @@ describe('InterviewHistoryService — persistence', () => {
   it('durable dedup survives service recreation (reload)', () => {
     const s1 = freshService();
     s1.record(makeResult(70), 'att-keep');
-    const s2 = freshService();               // reloads persisted history
-    s2.record(makeResult(70), 'att-keep');   // same attempt id, fresh object
+    const s2 = freshService(); // reloads persisted history
+    s2.record(makeResult(70), 'att-keep'); // same attempt id, fresh object
     expect(s2.history()).toHaveLength(1);
   });
 
   it('clamps a stored score that would exceed the question count', () => {
     const svc = freshService();
-    svc.record(makeResult(80, { correct: 999, total: 10, percentage: 100, perTopic: [topic('a', 10, 10)] }));
+    svc.record(
+      makeResult(80, { correct: 999, total: 10, percentage: 100, perTopic: [topic('a', 10, 10)] })
+    );
     const e = svc.history()[0];
     expect(e.score).toBeLessThanOrEqual(e.totalQuestions);
   });
 
   it('reuses Topic Performance analytics for topicPerformance', () => {
     const svc = freshService();
-    svc.record(makeResult(75, { perTopic: [topic('forms', 4, 5), topic('http', 1, 2)], correct: 5, total: 7, percentage: 71 }));
+    svc.record(
+      makeResult(75, {
+        perTopic: [topic('forms', 4, 5), topic('http', 1, 2)],
+        correct: 5,
+        total: 7,
+        percentage: 71
+      })
+    );
     const tp = svc.history()[0].topicPerformance;
     expect(tp.map((t) => t.topicId).sort()).toEqual(['forms', 'http']);
-    expect(tp.find((t) => t.topicId === 'forms')).toMatchObject({ correct: 4, total: 5, percentage: 80 });
+    expect(tp.find((t) => t.topicId === 'forms')).toMatchObject({
+      correct: 4,
+      total: 5,
+      percentage: 80
+    });
   });
 });
 
@@ -246,8 +268,15 @@ describe('sanitized v2 storage', () => {
     const raw = localStorage.getItem(SK_INTERVIEW_HISTORY) ?? '';
     expect(readStore().version).toBe(2);
     for (const banned of [
-      'review', 'questions', 'options', 'selectedOptionIds', 'correctOptionIds',
-      'explanation', 'answerKey', 'sessionToken', 'questionText'
+      'review',
+      'questions',
+      'options',
+      'selectedOptionIds',
+      'correctOptionIds',
+      'explanation',
+      'answerKey',
+      'sessionToken',
+      'questionText'
     ]) {
       expect(raw).not.toContain(banned);
     }
@@ -255,12 +284,18 @@ describe('sanitized v2 storage', () => {
 
   it('recordAttempt stores the backend summary and per-topic tallies', () => {
     const svc = freshService();
-    svc.recordAttempt(sanitized({ sessionId: 'is_1', score: 8, totalQuestions: 10, percentage: 80 }));
+    svc.recordAttempt(
+      sanitized({ sessionId: 'is_1', score: 8, totalQuestions: 10, percentage: 80 })
+    );
 
     const [entry] = svc.history();
     expect(entry).toMatchObject({
-      sessionId: 'is_1', score: 8, totalQuestions: 10, percentage: 80,
-      completionReason: 'submitted', focusChanges: 2
+      sessionId: 'is_1',
+      score: 8,
+      totalQuestions: 10,
+      percentage: 80,
+      completionReason: 'submitted',
+      focusChanges: 2
     });
     expect(entry!.topicPerformance[0]).toMatchObject({ topicId: 'rxjs', topicName: 'RxJS' });
     expect('review' in entry!).toBe(false);
@@ -284,17 +319,26 @@ describe('sanitized v2 storage', () => {
 
   it('a preset attempt gets no invented difficulty; a custom one keeps its own', () => {
     const svc = freshService();
-    svc.recordAttempt(sanitized({
-      sessionId: 'is_preset', configKind: 'preset', presetId: 'junior',
-      presetName: 'Junior Developer', configuredDifficulty: undefined
-    }));
-    svc.recordAttempt(sanitized({
-      sessionId: 'is_custom', configKind: 'custom', configuredDifficulty: 'advanced'
-    }));
+    svc.recordAttempt(
+      sanitized({
+        sessionId: 'is_preset',
+        configKind: 'preset',
+        presetId: 'junior',
+        presetName: 'Junior Developer',
+        configuredDifficulty: undefined
+      })
+    );
+    svc.recordAttempt(
+      sanitized({
+        sessionId: 'is_custom',
+        configKind: 'custom',
+        configuredDifficulty: 'advanced'
+      })
+    );
 
     const [preset, custom] = svc.history();
     expect(preset!.configKind).toBe('preset');
-    expect(preset!.configuredDifficulty).toBeUndefined();   // mixed by design
+    expect(preset!.configuredDifficulty).toBeUndefined(); // mixed by design
     expect(preset!.presetName).toBe('Junior Developer');
     expect(custom!.configuredDifficulty).toBe('advanced');
     expect(custom!.presetName).toBeUndefined();
@@ -336,10 +380,7 @@ describe('v1 → v2 migration', () => {
   };
 
   function seedV1(attempts: unknown[]): void {
-    localStorage.setItem(
-      'interviewAttemptHistory:v1',
-      JSON.stringify({ version: 1, attempts })
-    );
+    localStorage.setItem('interviewAttemptHistory:v1', JSON.stringify({ version: 1, attempts }));
   }
 
   it('preserves analytics, drops the retained Q&A, and removes v1', () => {
@@ -348,8 +389,12 @@ describe('v1 → v2 migration', () => {
 
     const [entry] = svc.history();
     expect(entry).toMatchObject({
-      id: 'att_old_1', attemptNumber: 3, score: 7, totalQuestions: 10,
-      percentage: 70, configuredDifficulty: 'beginner'
+      id: 'att_old_1',
+      attemptNumber: 3,
+      score: 7,
+      totalQuestions: 10,
+      percentage: 70,
+      configuredDifficulty: 'beginner'
     });
     expect(entry!.topicPerformance[0]).toMatchObject({ topicId: 'rxjs', topicName: 'RxJS' });
 
@@ -368,9 +413,9 @@ describe('v1 → v2 migration', () => {
   it('keeps recoverable summaries and discards records too broken to trust', () => {
     seedV1([
       v1Entry,
-      { ...v1Entry, id: 'att_old_2', review: 'not-an-array' },   // recoverable
+      { ...v1Entry, id: 'att_old_2', review: 'not-an-array' }, // recoverable
       { id: 'att_bad', completedAt: 'nonsense', score: 1, totalQuestions: 2, percentage: 50 },
-      { review: [{ questionText: 'orphan' }] }                    // no id → dropped
+      { review: [{ questionText: 'orphan' }] } // no id → dropped
     ]);
     const svc = freshService();
 
@@ -406,7 +451,7 @@ describe('validateHistoryStore / validateAttemptEntry', () => {
   it('9. invalid JSON fails safely (returns [])', () => {
     localStorage.clear();
     localStorage.setItem(SK_INTERVIEW_HISTORY, '{ not valid json');
-    const svc = freshService();   // load() → readLocalJson swallows → validate(null) → []
+    const svc = freshService(); // load() → readLocalJson swallows → validate(null) → []
     expect(svc.history()).toEqual([]);
     localStorage.clear();
   });
@@ -420,7 +465,13 @@ describe('validateHistoryStore / validateAttemptEntry', () => {
   it('11. malformed entries are ignored, valid ones kept, without crashing', () => {
     const out = validateHistoryStore({
       version: 2,
-      attempts: [entry(70), null, 42, { id: '', completedAt: 'x', score: 1, totalQuestions: 1, percentage: 1 }, entry(90)]
+      attempts: [
+        entry(70),
+        null,
+        42,
+        { id: '', completedAt: 'x', score: 1, totalQuestions: 1, percentage: 1 },
+        entry(90)
+      ]
     });
     expect(out.map((e) => e.percentage)).toEqual([70, 90]);
   });
@@ -441,7 +492,9 @@ describe('validateHistoryStore / validateAttemptEntry', () => {
 
   it('honours the retention window when loading an over-long store', () => {
     const many = Array.from({ length: 30 }, (_, i) => entry(i + 1, { id: `e${i}` }));
-    expect(validateHistoryStore({ version: 2, attempts: many })).toHaveLength(INTERVIEW_HISTORY_MAX);
+    expect(validateHistoryStore({ version: 2, attempts: many })).toHaveLength(
+      INTERVIEW_HISTORY_MAX
+    );
   });
 
   it('rejects internally-inconsistent records (score > totalQuestions)', () => {
@@ -454,18 +507,22 @@ describe('validateHistoryStore / validateAttemptEntry', () => {
   });
 
   it('treats a negative duration as not recorded (undefined)', () => {
-    expect(validateAttemptEntry(entry(70, { durationSeconds: -5 }))?.durationSeconds).toBeUndefined();
+    expect(
+      validateAttemptEntry(entry(70, { durationSeconds: -5 }))?.durationSeconds
+    ).toBeUndefined();
     expect(validateAttemptEntry(entry(70, { durationSeconds: 120 }))?.durationSeconds).toBe(120);
   });
 
   it('drops topics with non-positive total or out-of-range correct', () => {
-    const out = validateAttemptEntry(entry(70, {
-      topicPerformance: [
-        { topicId: 'ok', topicName: 'OK', correct: 2, total: 4, percentage: 50 },
-        { topicId: 'zero', topicName: 'Z', correct: 0, total: 0, percentage: 0 },
-        { topicId: 'over', topicName: 'O', correct: 5, total: 3, percentage: 100 }
-      ]
-    }));
+    const out = validateAttemptEntry(
+      entry(70, {
+        topicPerformance: [
+          { topicId: 'ok', topicName: 'OK', correct: 2, total: 4, percentage: 50 },
+          { topicId: 'zero', topicName: 'Z', correct: 0, total: 0, percentage: 0 },
+          { topicId: 'over', topicName: 'O', correct: 5, total: 3, percentage: 100 }
+        ]
+      })
+    );
     expect(out?.topicPerformance.map((t) => t.topicId)).toEqual(['ok']);
   });
 
@@ -506,11 +563,13 @@ describe('InterviewHistoryService — attemptNumber migration', () => {
     expect(svc.history().map((e) => e.attemptNumber)).toEqual([1, 2, 3]);
     // Persisted back so numbering is stable on the next load.
     const stored = JSON.parse(localStorage.getItem(SK_INTERVIEW_HISTORY)!);
-    expect(stored.attempts.every((a: { attemptNumber?: number }) => typeof a.attemptNumber === 'number')).toBe(true);
+    expect(
+      stored.attempts.every((a: { attemptNumber?: number }) => typeof a.attemptNumber === 'number')
+    ).toBe(true);
   });
 
   it('continues numbering from the migrated max', () => {
-    seed([entry(70, { id: 'a' }), entry(80, { id: 'b' })]);   // → 1, 2
+    seed([entry(70, { id: 'a' }), entry(80, { id: 'b' })]); // → 1, 2
     const svc = freshService();
     svc.record(makeResult(95));
     expect(svc.history().map((e) => e.attemptNumber)).toEqual([1, 2, 3]);
@@ -547,8 +606,8 @@ describe('summarizeTrends — calculations', () => {
     const t = summarizeTrends([entry(70), entry(90), entry(84)]);
     expect(t.latest).toBe(84);
     expect(t.best).toBe(90);
-    expect(t.average).toBe(Math.round((70 + 90 + 84) / 3));  // 81
-    expect(t.change).toBe(84 - 90);                           // -6 percentage points
+    expect(t.average).toBe(Math.round((70 + 90 + 84) / 3)); // 81
+    expect(t.change).toBe(84 - 90); // -6 percentage points
   });
 
   it('17. different question counts compare correctly via percentages', () => {
@@ -571,15 +630,22 @@ describe('summarizeTrends — calculations', () => {
 
   it('empty history summarizes to nulls', () => {
     const t = summarizeTrends([]);
-    expect(t).toMatchObject({ count: 0, latest: null, best: null, average: null, change: null, direction: 'none' });
+    expect(t).toMatchObject({
+      count: 0,
+      latest: null,
+      best: null,
+      average: null,
+      change: null,
+      direction: 'none'
+    });
   });
 
   it('interpretation follows the ±5 point thresholds', () => {
-    expect(summarizeTrends([entry(70), entry(76)]).direction).toBe('improving');   // +6
-    expect(summarizeTrends([entry(70), entry(72)]).direction).toBe('steady');      // +2
-    expect(summarizeTrends([entry(80), entry(72)]).direction).toBe('declining');   // -8
-    expect(summarizeTrends([entry(70), entry(74)]).direction).toBe('steady');      // +4 (dead band)
-    expect(summarizeTrends([entry(70), entry(75)]).direction).toBe('improving');   // +5 (threshold)
+    expect(summarizeTrends([entry(70), entry(76)]).direction).toBe('improving'); // +6
+    expect(summarizeTrends([entry(70), entry(72)]).direction).toBe('steady'); // +2
+    expect(summarizeTrends([entry(80), entry(72)]).direction).toBe('declining'); // -8
+    expect(summarizeTrends([entry(70), entry(74)]).direction).toBe('steady'); // +4 (dead band)
+    expect(summarizeTrends([entry(70), entry(75)]).direction).toBe('improving'); // +5 (threshold)
   });
 
   describe('isPersonalBest', () => {

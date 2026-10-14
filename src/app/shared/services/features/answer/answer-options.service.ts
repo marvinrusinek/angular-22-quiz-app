@@ -9,8 +9,7 @@ import { isOptionCorrect } from '@shared/utils/is-option-correct';
 @Service()
 export class AnswerOptionsService {
   getEffectiveOptionId(option: any, index: number): number {
-    return option?.optionId != null && option.optionId !== -1
-      ? option.optionId : index;
+    return option?.optionId != null && option.optionId !== -1 ? option.optionId : index;
   }
 
   isCorrectOptionValue(option: any): boolean {
@@ -24,10 +23,7 @@ export class AnswerOptionsService {
     }));
   }
 
-  resolveOptionsSource(
-    optionsToDisplay: Option[],
-    question: QuizQuestion
-  ): Option[] {
+  resolveOptionsSource(optionsToDisplay: Option[], question: QuizQuestion): Option[] {
     return optionsToDisplay?.length ? optionsToDisplay : question.options;
   }
 
@@ -44,9 +40,7 @@ export class AnswerOptionsService {
 
     // REMOVE IN /questions CONTENT CUTOVER.
     const correctCount =
-      optionsSource?.filter((option: any) =>
-        isOptionCorrect(option)
-      ).length ?? 0;
+      optionsSource?.filter((option: any) => isOptionCorrect(option)).length ?? 0;
 
     return currentType === 'multiple' || correctCount > 1;
   }

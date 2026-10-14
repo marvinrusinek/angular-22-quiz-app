@@ -1,6 +1,4 @@
-import {
-  animate, keyframes, style, transition, trigger
-} from '@angular/animations';
+import { animate, keyframes, style, transition, trigger } from '@angular/animations';
 
 /***************************************
  * Slide Left → Right (Intro)
@@ -9,10 +7,7 @@ export const SlideLeftToRightAnimation = {
   slideLeftToRight: trigger('slideLeftToRight', [
     transition(':enter', [
       style({ transform: 'translateX(-100%)' }),
-      animate(
-        '900ms cubic-bezier(0.4, 0.0, 0.2, 1)',
-        style({ transform: 'translateX(0%)' })
-      )
+      animate('900ms cubic-bezier(0.4, 0.0, 0.2, 1)', style({ transform: 'translateX(0%)' }))
     ])
   ])
 };
@@ -43,9 +38,9 @@ export const ChangeRouteAnimation = {
 };
 
 /***************************************
- * Correct answer pop-in: 
+ * Correct answer pop-in:
  * Scales from 92% to 100% and fades in over 180ms.
- ***************************************/ 
+ ***************************************/
 export const correctAnswerAnim = trigger('correctAnswer', [
   transition(':enter', [
     style({

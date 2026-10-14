@@ -16,56 +16,66 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (fact(); as text) {
-      <section class="quiz-fact" role="note">
+      <section
+        class="quiz-fact"
+        role="note"
+      >
         <h3 class="quiz-fact__heading">
-          <span class="quiz-fact__icon" aria-hidden="true">💡</span>
+          <span
+            class="quiz-fact__icon"
+            aria-hidden="true"
+          >
+            💡
+          </span>
           <ng-container i18n>Angular Fact</ng-container>
         </h3>
         <p class="quiz-fact__text">{{ text }}</p>
       </section>
     }
   `,
-  styles: [`
-    .quiz-fact {
-      max-width: 640px;
-      margin: 22px auto 8px;
-      padding: 14px 18px;
-      border: 1px solid var(--border-color, #e0e0e0);
-      border-left: 4px solid var(--text-link, #3b98fd);
-      border-radius: 10px;
-      background: var(--bg-secondary, #f5f5f5);
-      box-sizing: border-box;
-    }
-
-    .quiz-fact__heading {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0 0 6px;
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text-primary, #212121);
-    }
-
-    .quiz-fact__icon {
-      font-size: 18px;
-      line-height: 1;
-    }
-
-    .quiz-fact__text {
-      margin: 0;
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--text-secondary, #555555);
-    }
-
-    @media (max-width: 600px) {
+  styles: [
+    `
       .quiz-fact {
-        margin: 18px 8px 8px;
-        padding: 12px 14px;
+        max-width: 640px;
+        margin: 22px auto 8px;
+        padding: 14px 18px;
+        border: 1px solid var(--border-color, #e0e0e0);
+        border-left: 4px solid var(--text-link, #3b98fd);
+        border-radius: 10px;
+        background: var(--bg-secondary, #f5f5f5);
+        box-sizing: border-box;
       }
-    }
-  `]
+
+      .quiz-fact__heading {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-primary, #212121);
+      }
+
+      .quiz-fact__icon {
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      .quiz-fact__text {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--text-secondary, #555555);
+      }
+
+      @media (max-width: 600px) {
+        .quiz-fact {
+          margin: 18px 8px 8px;
+          padding: 12px 14px;
+        }
+      }
+    `
+  ]
 })
 export class QuizFactComponent {
   /** The quiz's facts (1-3). Optional — the component renders nothing if empty. */

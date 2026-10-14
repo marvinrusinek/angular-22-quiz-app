@@ -14,7 +14,7 @@ import {
   signal,
   untracked,
   viewChild,
-  ViewEncapsulation,
+  ViewEncapsulation
 } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { NgClass } from '@angular/common';
@@ -28,7 +28,7 @@ import { MatTooltip, MatTooltipModule } from '@angular/material/tooltip';
 
 import {
   SK_RESULTS_REACHED_ATTEMPT,
-  SK_SAVED_QUESTION_INDEX,
+  SK_SAVED_QUESTION_INDEX
 } from '@shared/constants/session-keys';
 
 import {
@@ -59,7 +59,7 @@ import { QuizStateService } from '@shared/services/state/quizstate.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import {
   SHOW_RESULTS_MSG,
-  SelectionMessageService,
+  SelectionMessageService
 } from '@shared/services/features/selection-message/selection-message.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
 
@@ -67,7 +67,7 @@ import { CodelabQuizContentComponent } from './quiz-content/codelab-quiz-content
 import { CodelabQuizHeaderComponent } from './quiz-header/quiz-header.component';
 import {
   ConfirmDialogComponent,
-  ConfirmDialogData,
+  ConfirmDialogData
 } from '../../components/dialogs/confirm-dialog/confirm-dialog.component';
 import { QuizQuestionComponent } from '../../components/question/quiz-question/quiz-question.component';
 import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
@@ -82,7 +82,10 @@ import { norm } from '@shared/utils/text-norm';
 import { swallow } from '@shared/utils/error-logging';
 import { verdictStateForDisplayIndex } from '@shared/services/features/verdict/authorized-correctness';
 import { buildVerdictNotice, type VerdictNotice } from '@shared/utils/verdict-notice';
-import { blocksIntermediateProgression, canSubmitFinalQuestion } from '@shared/services/features/verdict/progression-gate';
+import {
+  blocksIntermediateProgression,
+  canSubmitFinalQuestion
+} from '@shared/services/features/verdict/progression-gate';
 import { topicQuizDocumentTitle } from '@shared/utils/topic-quiz-document-title';
 import { VerdictNoticeComponent } from '../../components/verdict-notice/verdict-notice.component';
 
@@ -103,7 +106,7 @@ type AnimationState = 'animationStarted' | 'none';
     CodelabQuizContentComponent,
     ScoreboardComponent,
     CodeSnippetComponent,
-    VerdictNoticeComponent,
+    VerdictNoticeComponent
   ],
   templateUrl: './quiz.component.html',
   styleUrls: ['./quiz.component.scss'],
@@ -114,8 +117,8 @@ type AnimationState = 'animationStarted' | 'none';
     '(window:keydown)': 'onGlobalKey($event)',
     '(window:focus)': 'onWindowFocus()',
     '(window:scroll)': 'onWindowScroll()',
-    '(window:resize)': 'onWindowResize()',
-  },
+    '(window:resize)': 'onWindowResize()'
+  }
 })
 export class QuizComponent implements OnInit, AfterViewInit {
   // ── injects ─────────────────────────────────────────────────────
@@ -214,7 +217,11 @@ export class QuizComponent implements OnInit, AfterViewInit {
    */
   private readonly currentVerdictState = computed(() => {
     this.verdicts.states();
-    return verdictStateForDisplayIndex(this.quizService, this.currentQuestionIndex(), this.verdicts);
+    return verdictStateForDisplayIndex(
+      this.quizService,
+      this.currentQuestionIndex(),
+      this.verdicts
+    );
   });
 
   /**
@@ -272,7 +279,9 @@ export class QuizComponent implements OnInit, AfterViewInit {
    * share the identical expiry carve-out.
    */
   private currentQuestionTimerExpired(): boolean {
-    return this.timerService.expiredForQuestionIndexSig() === this.quizService.getCurrentQuestionIndex();
+    return (
+      this.timerService.expiredForQuestionIndexSig() === this.quizService.getCurrentQuestionIndex()
+    );
   }
 
   /**
@@ -375,7 +384,7 @@ export class QuizComponent implements OnInit, AfterViewInit {
             return {
               question: urlQ,
               options: urlQ.options,
-              explanation: urlQ.explanation ?? '',
+              explanation: urlQ.explanation ?? ''
             };
           }
         }
@@ -396,7 +405,7 @@ export class QuizComponent implements OnInit, AfterViewInit {
         return {
           question: correctQ,
           options: correctQ.options ?? [],
-          explanation: correctQ.explanation ?? '',
+          explanation: correctQ.explanation ?? ''
         };
       }
     }
@@ -941,11 +950,7 @@ export class QuizComponent implements OnInit, AfterViewInit {
   private unlockNextQuestion(): void {
     const quizId = this.quizId() || this.quizService.quizId || undefined;
     if (!quizId) return;
-    const total = Math.max(
-      this.totalQuestions(),
-      this.quizService.questions?.length ?? 0,
-      1
-    );
+    const total = Math.max(this.totalQuestions(), this.quizService.questions?.length ?? 0, 1);
     // currentQuestionIndex() is 0-based; the route is 1-based, and the index
     // being UNLOCKED is the one right after the current route position.
     this.progressionService.unlockThrough(quizId, this.currentQuestionIndex() + 2, total);
@@ -1010,8 +1015,8 @@ export class QuizComponent implements OnInit, AfterViewInit {
           message: 'Your progress will be lost.',
           confirmText: 'Restart',
           cancelText: 'Cancel',
-          confirmColor: 'warn',
-        },
+          confirmColor: 'warn'
+        }
       }
     );
 
@@ -1212,7 +1217,7 @@ export class QuizComponent implements OnInit, AfterViewInit {
       currentQuestionIndex: this.currentQuestionIndex(),
       optionsToDisplay: this.optionsToDisplaySig(),
       currentQuestion: this.currentQuestion(),
-      questionsArray: this.questionsArray(),
+      questionsArray: this.questionsArray()
     };
   }
 }

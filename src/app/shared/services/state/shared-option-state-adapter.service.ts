@@ -107,7 +107,7 @@ export class SharedOptionStateAdapterService {
   }
 
   // OPTION INTERACTION STATE ADAPTER (your existing behavior)
-  
+
   /**
    * Build the state object needed by OptionInteractionService.
    * Reads from host.ui if present, otherwise falls back to legacy fields.

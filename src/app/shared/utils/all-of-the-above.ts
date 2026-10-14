@@ -12,12 +12,12 @@
 /** True for an "All of the above"-style text (HTML/entities/trailing punctuation ignored). */
 export function isAllOfTheAbove(text: unknown): boolean {
   const normalized = String(text ?? '')
-    .replace(/<[^>]*>/g, ' ')   // strip any HTML tags
+    .replace(/<[^>]*>/g, ' ') // strip any HTML tags
     .replace(/&nbsp;/gi, ' ')
     .trim()
     .toLowerCase()
     .replace(/\s+/g, ' ')
-    .replace(/[.!?]+$/, '')      // drop trailing punctuation
+    .replace(/[.!?]+$/, '') // drop trailing punctuation
     .trim();
   return normalized === 'all of the above';
 }

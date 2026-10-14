@@ -15,8 +15,7 @@ describe('QuizCardProgressComponent', () => {
     fixture.componentRef.setInput('bestScore', bestScore);
     fixture.detectChanges();
   };
-  const text = (): string =>
-    (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const text = (): string => (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ').trim();
 
   it('shows "Not Started"', () => {
     set('not-started');
@@ -41,7 +40,7 @@ describe('QuizCardProgressComponent', () => {
   });
 
   it('does not show a best score in non-completed states', () => {
-    set('in-progress', 90);  // score ignored unless completed
+    set('in-progress', 90); // score ignored unless completed
     expect(text()).not.toContain('90');
   });
 });

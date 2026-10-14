@@ -187,9 +187,8 @@ import { PracticeSessionService } from '@shared/services/features/practice/pract
                   @if (weakTopics().length > 0) {
                     <ul class="progress-summary__weak-list">
                       @for (t of weakTopics(); track t.topicId) {
-                        <li class="progress-summary__weak-topic">
-                          {{ t.topicName }} — {{ t.percentage }}%
-                        </li>
+                        <!-- prettier-ignore -->
+                        <li class="progress-summary__weak-topic">{{ t.topicName }} — {{ t.percentage }}%</li>
                       }
                     </ul>
                   } @else if (insufficientData()) {

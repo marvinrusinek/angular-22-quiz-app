@@ -9,7 +9,6 @@ import {
   SelectedOption
 } from '@shared/models';
 
-
 import { SK_DOT_CONFIRMED, SK_MULTI_PERFECT } from '@shared/constants/session-keys';
 import { writeSessionString } from '@shared/utils/session-storage';
 
@@ -124,7 +123,10 @@ export class OptionInteractionService {
    * Distinct from allCorrectFromVerdict: this asks about ONE option the user
    * selected, not whether the question is complete.
    */
-  private clickedCorrectFromVerdict(question: QuizQuestion | null, clickedOption: any): boolean | null {
+  private clickedCorrectFromVerdict(
+    question: QuizQuestion | null,
+    clickedOption: any
+  ): boolean | null {
     const quizId = (this.quizService as any)?.quizId as string | undefined;
     const questionText = question?.questionText;
     const optionText = clickedOption?.text as string | undefined;
@@ -148,7 +150,7 @@ export class OptionInteractionService {
     const state = this.verdicts.verdictFor(quizId, questionText);
     if (state.phase === 'resolved') return state.isResolvedCorrect === true;
     if (state.phase === 'incomplete') return false;
-    return null;   // idle | checking | expired | error → caller decides
+    return null; // idle | checking | expired | error → caller decides
   }
 
   /**
@@ -216,13 +218,13 @@ export class OptionInteractionService {
     // via `authorizedCorrectnessForOption`, TEXT matching, shuffle-safe),
     // capturing qIdx + state. Despite the name, this has not read
     // `quizInitialState` since S5-pre — see isPristineCorrectFor below.
-    const isPristineCorrect = (o: any): boolean =>
-      this.isPristineCorrectFor(o, qIdx, state);
+    const isPristineCorrect = (o: any): boolean => this.isPristineCorrectFor(o, qIdx, state);
 
     this.quizStateService.markUserInteracted(qIdx);
     if (event && event.stopPropagation) event.stopPropagation();
 
-    const getEffectiveId = (o: any, i: number) => (o?.optionId != null && o.optionId !== -1) ? o.optionId : i;
+    const getEffectiveId = (o: any, i: number) =>
+      o?.optionId != null && o.optionId !== -1 ? o.optionId : i;
     const targetKey = getEffectiveId(binding.option, index);
     // Composite identity (id|displayIndex): optionId alone can collide when
     // loader fallbacks produce duplicate ids; keep each position distinct.
@@ -251,7 +253,11 @@ export class OptionInteractionService {
     }
 
     return {
-      qIdx, isPristineCorrect, targetKey, targetCompositeKey, isMultipleMode
+      qIdx,
+      isPristineCorrect,
+      targetKey,
+      targetCompositeKey,
+      isMultipleMode
     };
   }
 
@@ -276,10 +282,17 @@ export class OptionInteractionService {
 
     let simulatedSelection = this.resolveSimulatedSelection(qIdx, state);
     const existingIdx = this.findExistingSelectionIndex(simulatedSelection, targetCompositeKey);
-    const isCurrentlySelected = (existingIdx !== -1);
+    const isCurrentlySelected = existingIdx !== -1;
 
     let futureSelection = this.buildFutureSelection(
-      isCurrentlySelected, simulatedSelection, existingIdx, binding, targetKey, qIdx, index, isMultipleMode
+      isCurrentlySelected,
+      simulatedSelection,
+      existingIdx,
+      binding,
+      targetKey,
+      qIdx,
+      index,
+      isMultipleMode
     );
     const futureKeys = this.buildFutureKeysAndSyncMap(futureSelection, state);
 
@@ -291,8 +304,14 @@ export class OptionInteractionService {
     const mockEvent = this.buildMockEvent(isMultipleMode, newState, binding, index);
 
     return {
-      ...base, question, questionOptions, isCurrentlySelected,
-      futureSelection, futureKeys, newState, mockEvent
+      ...base,
+      question,
+      questionOptions,
+      isCurrentlySelected,
+      futureSelection,
+      futureKeys,
+      newState,
+      mockEvent
     };
   }
 
@@ -311,9 +330,17 @@ export class OptionInteractionService {
     updateOptionAndUI: (b: OptionBindings, i: number, ev: any, ctx?: any) => void
   ): void {
     const {
-      qIdx, isPristineCorrect, targetKey,
-      isMultipleMode, question, questionOptions, isCurrentlySelected,
-      futureSelection, futureKeys, newState, mockEvent
+      qIdx,
+      isPristineCorrect,
+      targetKey,
+      isMultipleMode,
+      question,
+      questionOptions,
+      isCurrentlySelected,
+      futureSelection,
+      futureKeys,
+      newState,
+      mockEvent
     } = ctx;
 
     this.updateSelectionHistory(state, newState, index);
@@ -355,10 +382,18 @@ export class OptionInteractionService {
 
     this.applyHighlightSync(state, index, qIdx, targetKey, isMultipleMode, futureKeys);
 
-    const isShuffleActive = (this.quizService as any)?.isShuffleEnabled?.() &&
+    const isShuffleActive =
+      (this.quizService as any)?.isShuffleEnabled?.() &&
       (this.quizService as any)?.shuffledQuestions?.length > 0;
 
-    this.stopTimerIfAnswerCorrect(isShuffleActive, isMultipleMode, isPristineCorrect, binding.option, allCorrectFound, question);
+    this.stopTimerIfAnswerCorrect(
+      isShuffleActive,
+      isMultipleMode,
+      isPristineCorrect,
+      binding.option,
+      allCorrectFound,
+      question
+    );
 
     // In shuffled mode scoring/FET is handled by the SOC, so OIS must not score
     // or emit there.
@@ -372,8 +407,13 @@ export class OptionInteractionService {
     // single for as long as the type is missing.
     const declaredMultiAnswer = declaredIsMultiAnswer(question) ?? isMultipleMode;
     this.scoreAndEmitIfUnshuffledPerfect(
-      isShuffleActive, allCorrectFound, isMultipleMode, declaredMultiAnswer,
-      qIdx, state, emitExplanation
+      isShuffleActive,
+      allCorrectFound,
+      isMultipleMode,
+      declaredMultiAnswer,
+      qIdx,
+      state,
+      emitExplanation
     );
 
     this.updateFeedbackAnchor(state, isCurrentlySelected, index, futureKeys);
@@ -443,7 +483,7 @@ export class OptionInteractionService {
     state: OptionInteractionState
   ): Set<number> {
     const getEffectiveId = (o: any, i: number) =>
-      (o?.optionId != null && o.optionId !== -1) ? o.optionId : i;
+      o?.optionId != null && o.optionId !== -1 ? o.optionId : i;
     const futureKeys = new Set<number>();
     for (const s of futureSelection) {
       const sId = s.optionId;
@@ -451,17 +491,25 @@ export class OptionInteractionService {
       let idx = s.displayIndex ?? s.index ?? s.idx;
 
       if (idx === undefined || idx === null || idx === -1 || isNaN(Number(idx))) {
-        const foundIdx = state.optionBindings.findIndex(b => {
+        const foundIdx = state.optionBindings.findIndex((b) => {
           if (b.option === s) return true;
           const bId = b.option?.optionId;
-          if (sId != null && sId !== -1 && bId != null && bId !== -1 && String(sId) === String(bId)) return true;
+          if (sId != null && sId !== -1 && bId != null && bId !== -1 && String(sId) === String(bId))
+            return true;
           return !!sText && norm(b.option?.text) === sText;
         });
         if (foundIdx !== -1) idx = foundIdx;
         else {
-          const oIdx = state.optionsToDisplay.findIndex(o => {
+          const oIdx = state.optionsToDisplay.findIndex((o) => {
             if (o === s) return true;
-            if (sId != null && sId !== -1 && o.optionId != null && o.optionId !== -1 && String(sId) === String(o.optionId)) return true;
+            if (
+              sId != null &&
+              sId !== -1 &&
+              o.optionId != null &&
+              o.optionId !== -1 &&
+              String(sId) === String(o.optionId)
+            )
+              return true;
             return !!sText && norm(o.text) === sText;
           });
           if (oIdx !== -1) idx = oIdx;
@@ -548,7 +596,9 @@ export class OptionInteractionService {
       if (isPristineCorrect(binding.option)) {
         (this.quizService as any)?.scoringService?.recordCorrectClick?.(qIdx, binding.option.text);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   /**
@@ -614,10 +664,12 @@ export class OptionInteractionService {
       this.clickedCorrectFromVerdict(question, clickedOption) ?? isPristineCorrect(clickedOption);
 
     const shouldStopTimer = isShuffleActive
-      ? (!isMultipleMode && clickedIsCorrect)
-      : (allCorrectFound || (!isMultipleMode && clickedIsCorrect));
+      ? !isMultipleMode && clickedIsCorrect
+      : allCorrectFound || (!isMultipleMode && clickedIsCorrect);
     if (shouldStopTimer) {
-      try { this.timerService.stopTimer?.(undefined, { force: true, bypassAntiThrash: true }); } catch (err: unknown) {
+      try {
+        this.timerService.stopTimer?.(undefined, { force: true, bypassAntiThrash: true });
+      } catch (err: unknown) {
         console.error('OptionInteractionService.stopTimerIfAnswerCorrect timer stop failed:', err);
       }
     }
@@ -641,9 +693,11 @@ export class OptionInteractionService {
   private resolveActiveDisplayIndex(state: OptionInteractionState): number {
     const stateIdx = state.currentQuestionIndex;
     const liveIdx = this.quizService?.getCurrentQuestionIndex?.();
-    return (typeof stateIdx === 'number' && Number.isFinite(stateIdx) && stateIdx >= 0)
+    return typeof stateIdx === 'number' && Number.isFinite(stateIdx) && stateIdx >= 0
       ? stateIdx
-      : ((typeof liveIdx === 'number' && Number.isFinite(liveIdx) && liveIdx >= 0) ? liveIdx : 0);
+      : typeof liveIdx === 'number' && Number.isFinite(liveIdx) && liveIdx >= 0
+        ? liveIdx
+        : 0;
   }
 
   /**
@@ -654,14 +708,11 @@ export class OptionInteractionService {
    * sessionStorage/_selectionHistory entries — those are legitimate prior clicks
    * that must rehydrate as prev-clicked. Extracted verbatim from handleOptionClick.
    */
-  private resolveSimulatedSelection(
-    qIdx: number,
-    state: OptionInteractionState
-  ): SelectedOption[] {
+  private resolveSimulatedSelection(qIdx: number, state: OptionInteractionState): SelectedOption[] {
     const storedSelection = this.selectedOptionService.getSelectedOptionsForQuestion(qIdx) ?? [];
     const durableClicks = (state as any)._multiSelectByQuestion?.get(qIdx);
-    const isStaleFromRefresh = storedSelection.length > 0
-      && (!durableClicks || durableClicks.size === 0);
+    const isStaleFromRefresh =
+      storedSelection.length > 0 && (!durableClicks || durableClicks.size === 0);
     return isStaleFromRefresh ? [] : [...storedSelection];
   }
 
@@ -676,8 +727,9 @@ export class OptionInteractionService {
     simulatedSelection: SelectedOption[],
     targetCompositeKey: string
   ): number {
-    const getEffectiveId = (o: any, i: number) => (o?.optionId != null && o.optionId !== -1) ? o.optionId : i;
-    return simulatedSelection.findIndex(o => {
+    const getEffectiveId = (o: any, i: number) =>
+      o?.optionId != null && o.optionId !== -1 ? o.optionId : i;
+    return simulatedSelection.findIndex((o) => {
       const sIdx = o.displayIndex ?? (o as any).index ?? (o as any).idx ?? -1;
       const sKey = `${getEffectiveId(o, sIdx)}|${sIdx}`;
       return sKey === targetCompositeKey;
@@ -708,9 +760,8 @@ export class OptionInteractionService {
    */
   private resolveCorrectCountInBindings(state: OptionInteractionState): number {
     const _rawBindings = state.optionBindings as any;
-    const bindingsForScore: any[] = typeof _rawBindings === 'function'
-      ? (_rawBindings() ?? [])
-      : (_rawBindings ?? []);
+    const bindingsForScore: any[] =
+      typeof _rawBindings === 'function' ? (_rawBindings() ?? []) : (_rawBindings ?? []);
     return bindingsForScore.filter((b: any) => isOptionCorrect(b.option)).length;
   }
 
@@ -725,7 +776,8 @@ export class OptionInteractionService {
     correctCountInBindings: number
   ): boolean {
     const qText = state.currentQuestion?.questionText?.toLowerCase() || '';
-    const isExplicitMulti = qText.includes('select all') || qText.includes('multiple') || qText.includes('apply');
+    const isExplicitMulti =
+      qText.includes('select all') || qText.includes('multiple') || qText.includes('apply');
 
     // DECLARED TYPE WINS. The OR-chain below let two answer-key counts
     // (`correctCountInBindings`, `pristineCorrectCount`) promote a declared
@@ -744,10 +796,12 @@ export class OptionInteractionService {
     //
     // MODE INPUTS STILL PROMOTE. Passing them as the fallback ARGUMENT meant a
     // declared type discarded them; declared type replaces the COUNTS only.
-    return state.type === 'multiple'
-      || (state as any).isMultiMode === true
-      || isExplicitMulti
-      || resolveIsMultiAnswer(state.currentQuestion, correctCountInBindings > 1);
+    return (
+      state.type === 'multiple' ||
+      (state as any).isMultiMode === true ||
+      isExplicitMulti ||
+      resolveIsMultiAnswer(state.currentQuestion, correctCountInBindings > 1)
+    );
   }
 
   /**
@@ -764,7 +818,7 @@ export class OptionInteractionService {
       state.selectedOptionHistory.push(index);
     } else if (!newState) {
       const hIdx = state.selectedOptionHistory.indexOf(index);
-      if (hIdx !== -1)  state.selectedOptionHistory.splice(hIdx, 1);
+      if (hIdx !== -1) state.selectedOptionHistory.splice(hIdx, 1);
     }
   }
 
@@ -818,23 +872,31 @@ export class OptionInteractionService {
     index: number,
     futureKeys: Set<number>
   ): void {
-    const getEffectiveId = (o: any, i: number) => (o?.optionId != null && o.optionId !== -1) ? o.optionId : i;
+    const getEffectiveId = (o: any, i: number) =>
+      o?.optionId != null && o.optionId !== -1 ? o.optionId : i;
     if (!isCurrentlySelected) {
       state.lastFeedbackOptionId = index;
     } else {
       // Robustly find the most recent in history that is STILL selected
-      const stillSelectedId = [...(state.selectedOptionHistory || [])]
-        .reverse()
-        .find(histId => {
-          // Find the option in optionsToDisplay that corresponds to this history entry
-          const oIdx = state.optionsToDisplay.findIndex((_, i) => i === histId || String(i) === String(histId));
-          const opt = oIdx !== -1 ? state.optionsToDisplay[oIdx] : state.optionsToDisplay.find(o => o.optionId != null && o.optionId !== -1 && o.optionId == histId);
-          return opt && futureKeys.has(getEffectiveId(opt, state.optionsToDisplay.indexOf(opt)));
-        });
+      const stillSelectedId = [...(state.selectedOptionHistory || [])].reverse().find((histId) => {
+        // Find the option in optionsToDisplay that corresponds to this history entry
+        const oIdx = state.optionsToDisplay.findIndex(
+          (_, i) => i === histId || String(i) === String(histId)
+        );
+        const opt =
+          oIdx !== -1
+            ? state.optionsToDisplay[oIdx]
+            : state.optionsToDisplay.find(
+                (o) => o.optionId != null && o.optionId !== -1 && o.optionId == histId
+              );
+        return opt && futureKeys.has(getEffectiveId(opt, state.optionsToDisplay.indexOf(opt)));
+      });
 
       if (stillSelectedId !== undefined) {
         // Find its reliable index to use as the lastFeedbackOptionId
-        const finalIdx = state.optionsToDisplay.findIndex((_, i) => i === stillSelectedId || String(i) === String(stillSelectedId));
+        const finalIdx = state.optionsToDisplay.findIndex(
+          (_, i) => i === stillSelectedId || String(i) === String(stillSelectedId)
+        );
         state.lastFeedbackOptionId = finalIdx !== -1 ? finalIdx : stillSelectedId;
       } else {
         state.lastFeedbackOptionId = -1;
@@ -885,19 +947,26 @@ export class OptionInteractionService {
     state: OptionInteractionState
   ): SelectedOption[] {
     return futureSelection.map((s: SelectedOption) => {
-      const hasIdx =
-        s?.displayIndex != null && Number.isFinite(Number(s.displayIndex));
+      const hasIdx = s?.displayIndex != null && Number.isFinite(Number(s.displayIndex));
       if (hasIdx) return s;
       const sId = s?.optionId;
       const sText = norm(s?.text);
       let pos = state.optionBindings.findIndex((b: OptionBindings) => {
         const bId = b?.option?.optionId;
-        if (sId != null && sId !== -1 && bId != null && bId !== -1 && String(sId) === String(bId)) return true;
+        if (sId != null && sId !== -1 && bId != null && bId !== -1 && String(sId) === String(bId))
+          return true;
         return !!sText && norm(b?.option?.text) === sText;
       });
       if (pos === -1) {
         pos = state.optionsToDisplay.findIndex((o: Option) => {
-          if (sId != null && sId !== -1 && o?.optionId != null && o.optionId !== -1 && String(sId) === String(o.optionId)) return true;
+          if (
+            sId != null &&
+            sId !== -1 &&
+            o?.optionId != null &&
+            o.optionId !== -1 &&
+            String(sId) === String(o.optionId)
+          )
+            return true;
           return !!sText && norm(o?.text) === sText;
         });
       }
@@ -916,7 +985,7 @@ export class OptionInteractionService {
   private normalizeStateOptionBindings(state: OptionInteractionState): void {
     const _rawOb = (state as any).optionBindings;
     if (typeof _rawOb === 'function') {
-      (state as any).optionBindings = (_rawOb() ?? []);
+      (state as any).optionBindings = _rawOb() ?? [];
     } else if (!Array.isArray(_rawOb)) {
       (state as any).optionBindings = [];
     }
@@ -933,11 +1002,7 @@ export class OptionInteractionService {
    * delegate that captures them by reference so late `qIdx` reassignments are
    * honored at call-time.
    */
-  private isPristineCorrectFor(
-    o: any,
-    qIdx: number,
-    state: OptionInteractionState
-  ): boolean {
+  private isPristineCorrectFor(o: any, qIdx: number, state: OptionInteractionState): boolean {
     if (!o) return false;
     try {
       const optText = norm(o?.text);
@@ -946,27 +1011,31 @@ export class OptionInteractionService {
       // CRITICAL: In shuffled mode, state.currentQuestion points to the
       // WRONG question (original order). ALWAYS prefer display-order
       // sources first in shuffled mode.
-      const isShuffledPC = (this.quizService as any)?.isShuffleEnabled?.()
-        && (this.quizService as any)?.shuffledQuestions?.length > 0;
+      const isShuffledPC =
+        (this.quizService as any)?.isShuffleEnabled?.() &&
+        (this.quizService as any)?.shuffledQuestions?.length > 0;
       let question: any;
       if (isShuffledPC) {
-        question = this.quizService.getQuestionsInDisplayOrder?.()?.[qIdx]
-          ?? (this.quizService as any)?.shuffledQuestions?.[qIdx]
-          ?? state.currentQuestion
-          ?? (this.quizService as any)?.questions?.[qIdx];
+        question =
+          this.quizService.getQuestionsInDisplayOrder?.()?.[qIdx] ??
+          (this.quizService as any)?.shuffledQuestions?.[qIdx] ??
+          state.currentQuestion ??
+          (this.quizService as any)?.questions?.[qIdx];
       } else {
-        question = state.currentQuestion
-          ?? (this.quizService as any)?.questions?.[qIdx]
-          ?? this.quizService.getQuestionsInDisplayOrder?.()?.[qIdx];
+        question =
+          state.currentQuestion ??
+          (this.quizService as any)?.questions?.[qIdx] ??
+          this.quizService.getQuestionsInDisplayOrder?.()?.[qIdx];
       }
       // AUTHORIZED, PER-OPTION (S5-pre). Asks the verdict about the ONE option
       // the player selected rather than loading the whole correct set from the
       // client bank. `null` is unknown and must not read as correct.
-      return this.quizService.authorizedCorrectnessForOption(
-        question?.questionText,
-        optText
-      ) === true;
-    } catch { /* ignore */ }
+      return (
+        this.quizService.authorizedCorrectnessForOption(question?.questionText, optText) === true
+      );
+    } catch {
+      /* ignore */
+    }
     return false;
   }
 
@@ -984,15 +1053,17 @@ export class OptionInteractionService {
     state: OptionInteractionState
   ): void {
     const getEffectiveId = (o: any, i: number) =>
-      (o?.optionId != null && o.optionId !== -1) ? o.optionId : i;
+      o?.optionId != null && o.optionId !== -1 ? o.optionId : i;
     this.selectedOptionService.syncSelectionState(qIdx, [...futureSelection]);
     this.quizService.updateUserAnswer(
       qIdx,
-      Array.from(futureKeys).map(idx => {
-        const o = state.optionsToDisplay[idx] || state.optionBindings[idx]?.option;
-        const eid = getEffectiveId(o, idx);
-        return typeof eid === 'number' ? eid : -1;
-      }).filter(id => id !== -1)
+      Array.from(futureKeys)
+        .map((idx) => {
+          const o = state.optionsToDisplay[idx] || state.optionBindings[idx]?.option;
+          const eid = getEffectiveId(o, idx);
+          return typeof eid === 'number' ? eid : -1;
+        })
+        .filter((id) => id !== -1)
     );
   }
 
@@ -1031,13 +1102,14 @@ export class OptionInteractionService {
           const sId = s?.optionId;
           let pos = -1;
           if (sText) {
-            pos = state.optionBindings.findIndex((b: OptionBindings) =>
-              norm(b?.option?.text) === sText
+            pos = state.optionBindings.findIndex(
+              (b: OptionBindings) => norm(b?.option?.text) === sText
             );
           }
           if (pos === -1 && sId != null && sId !== -1) {
-            pos = state.optionBindings.findIndex((b: OptionBindings) =>
-              b?.option?.optionId != null && String(b.option.optionId) === String(sId)
+            pos = state.optionBindings.findIndex(
+              (b: OptionBindings) =>
+                b?.option?.optionId != null && String(b.option.optionId) === String(sId)
             );
           }
           if (pos === -1) {
@@ -1051,9 +1123,11 @@ export class OptionInteractionService {
             }
           }
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       for (const [i, b] of state.optionBindings.entries()) {
-        const isCurrent = (i === index);
+        const isCurrent = i === index;
         const wasPreviouslyClicked = historySet.has(i);
         // Radio state: only current
         b.isSelected = isCurrent;
@@ -1070,7 +1144,8 @@ export class OptionInteractionService {
       state.selectedOptionMap.clear();
       state.selectedOptionMap.set(targetKey, true);
       state.feedbackConfigs = {};
-    } else { // Multiple mode: two-pass update to ensure correct results regardless of binding order
+    } else {
+      // Multiple mode: two-pass update to ensure correct results regardless of binding order
       // Pass 1: Sync 'selected' state for all bindings AND optionsToDisplay based on futureKeys.
       // Binding options are structuredClone'd copies of optionsToDisplay, so both must be updated.
       for (const [i, b] of state.optionBindings.entries()) {

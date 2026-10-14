@@ -63,15 +63,20 @@ afterEach(() => {
 
 /** Answer the attempt request, then the question-start request. */
 function grantReceipts(questionText: string, receipt = 'q-receipt'): void {
-  http.expectOne({ method: 'POST', url: url.attempts })
+  http
+    .expectOne({ method: 'POST', url: url.attempts })
     .flush({ quizId: QUIZ, attemptReceipt: 'attempt-receipt', startedAt: 1, expiresAt: 2 });
 
   const start = http.expectOne({ method: 'POST', url: url.start });
   expect(start.request.body).toEqual({ questionText });
   expect(start.request.headers.get('X-Attempt-Receipt')).toBe('attempt-receipt');
   start.flush({
-    quizId: QUIZ, questionText, durationSeconds: 30,
-    startedAt: 1, expiresAt: 30_001, questionReceipt: receipt
+    quizId: QUIZ,
+    questionText,
+    durationSeconds: 30,
+    startedAt: 1,
+    expiresAt: 30_001,
+    questionReceipt: receipt
   });
 }
 
@@ -103,8 +108,14 @@ describe('the request Angular sends', () => {
     // Nothing resembling an identifier or the answer key leaves the browser.
     const wire = JSON.stringify(req.request.body);
     for (const banned of [
-      'questionId', 'optionId', 'questionIndex', 'optionIndex',
-      'correct', 'isCorrect', 'explanation', 'id'
+      'questionId',
+      'optionId',
+      'questionIndex',
+      'optionIndex',
+      'correct',
+      'isCorrect',
+      'explanation',
+      'id'
     ]) {
       expect(wire).not.toContain(banned);
     }
@@ -132,7 +143,14 @@ describe('attempt and question lifecycle', () => {
     verdicts.checkAnswer(QUIZ, SINGLE, ['A pipe']).subscribe();
     // A second question starts its own timer, but NOT a second attempt.
     const start = http.expectOne({ method: 'POST', url: url.start });
-    start.flush({ questionReceipt: 'q2', expiresAt: 1, startedAt: 0, quizId: QUIZ, questionText: SINGLE, durationSeconds: 30 });
+    start.flush({
+      questionReceipt: 'q2',
+      expiresAt: 1,
+      startedAt: 0,
+      quizId: QUIZ,
+      questionText: SINGLE,
+      durationSeconds: 30
+    });
     http.expectOne({ method: 'POST', url: url.check }).flush(INCOMPLETE);
 
     http.expectNone({ method: 'POST', url: url.attempts });
@@ -156,7 +174,8 @@ describe('attempt and question lifecycle', () => {
     attempts.startQuestion(QUIZ, MULTI).subscribe();
     attempts.startQuestion(QUIZ, SINGLE).subscribe();
 
-    http.expectOne({ method: 'POST', url: url.attempts })
+    http
+      .expectOne({ method: 'POST', url: url.attempts })
       .flush({ attemptReceipt: 'attempt-receipt' });
 
     const starts = http.match({ method: 'POST', url: url.start });
@@ -179,16 +198,20 @@ describe('attempt and question lifecycle', () => {
     req.flush(RESOLVED);
   });
 
-  it('a DIFFERENT quiz cannot reuse the previous quiz\'s receipt', () => {
+  it("a DIFFERENT quiz cannot reuse the previous quiz's receipt", () => {
     attempts.startQuestion(QUIZ, MULTI).subscribe();
     grantReceipts(MULTI);
 
     attempts.startQuestion('signals', 'What does computed() return?').subscribe();
 
     // Switching quizzes discards the old attempt and starts a fresh one.
-    http.expectOne({ method: 'POST', url: `${BASE}/quizzes/signals/attempts` })
+    http
+      .expectOne({ method: 'POST', url: `${BASE}/quizzes/signals/attempts` })
       .flush({ attemptReceipt: 'signals-attempt' });
-    const start = http.expectOne({ method: 'POST', url: `${BASE}/quizzes/signals/questions/start` });
+    const start = http.expectOne({
+      method: 'POST',
+      url: `${BASE}/quizzes/signals/questions/start`
+    });
     expect(start.request.headers.get('X-Attempt-Receipt')).toBe('signals-attempt');
     start.flush({ questionReceipt: 'signals-q' });
 
@@ -204,7 +227,7 @@ describe('attempt and question lifecycle', () => {
     expect(attempts.hasStarted(QUIZ, MULTI)).toBe(false);
 
     attempts.startQuestion(QUIZ, MULTI).subscribe();
-    grantReceipts(MULTI);   // a whole new attempt + start
+    grantReceipts(MULTI); // a whole new attempt + start
   });
 
   it('never writes the receipt to browser storage', () => {
@@ -305,11 +328,10 @@ describe('failure is closed', () => {
     });
 
     grantReceipts(MULTI);
-    http.expectOne({ method: 'POST', url: url.check })
-      .error(new ProgressEvent('network error'));
+    http.expectOne({ method: 'POST', url: url.check }).error(new ProgressEvent('network error'));
   });
 
-  it('keeps the user\'s selection after a failure', (done) => {
+  it("keeps the user's selection after a failure", (done) => {
     verdicts.checkAnswer(QUIZ, MULTI, ['map', 'filter']).subscribe({
       error: () => {
         expect(verdicts.verdictFor(QUIZ, MULTI).selectedOptionTexts).toEqual(['map', 'filter']);
@@ -318,7 +340,9 @@ describe('failure is closed', () => {
     });
 
     grantReceipts(MULTI);
-    http.expectOne({ method: 'POST', url: url.check }).flush('nope', { status: 500, statusText: 'Server Error' });
+    http
+      .expectOne({ method: 'POST', url: url.check })
+      .flush('nope', { status: 500, statusText: 'Server Error' });
   });
 
   it('does not leak backend error detail to the caller', (done) => {
@@ -331,7 +355,8 @@ describe('failure is closed', () => {
     });
 
     grantReceipts(MULTI);
-    http.expectOne({ method: 'POST', url: url.check })
+    http
+      .expectOne({ method: 'POST', url: url.check })
       .flush({ message: 'stack trace from server' }, { status: 400, statusText: 'Bad Request' });
   });
 
@@ -339,8 +364,7 @@ describe('failure is closed', () => {
     attempts.startQuestion(QUIZ, MULTI).subscribe({ error: () => undefined });
 
     http.expectOne({ method: 'POST', url: url.attempts }).flush({ attemptReceipt: 'a' });
-    http.expectOne({ method: 'POST', url: url.start })
-      .error(new ProgressEvent('network error'));
+    http.expectOne({ method: 'POST', url: url.start }).error(new ProgressEvent('network error'));
 
     expect(attempts.hasStarted(QUIZ, MULTI)).toBe(false);
 
@@ -395,7 +419,9 @@ describe('expiry', () => {
     verdicts.revealExpiredQuestion(QUIZ, MULTI).subscribe();
     const reveal = http.expectOne({ method: 'POST', url: url.check });
     reveal.flush({
-      status: 'expired', correctOptionTexts: ['map', 'filter'], explanation: 'x'
+      status: 'expired',
+      correctOptionTexts: ['map', 'filter'],
+      explanation: 'x'
     });
 
     // The earlier selection response must not undo the reveal.

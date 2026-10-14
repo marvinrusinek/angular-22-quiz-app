@@ -12,4 +12,3 @@ export interface FeedbackProps {
   questionIndex?: number;
   timedOut?: boolean;
 }
-

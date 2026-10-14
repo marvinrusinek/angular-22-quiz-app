@@ -1,9 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import {
   questionFromApiView,
@@ -47,8 +44,11 @@ describe('the mapped question carries content and nothing else', () => {
   it('takes questionText and option text from the API view', () => {
     const q = questionFromApiView(view(), 0);
     expect(q.questionText).toBe('API QUESTION');
-    expect(q.options.map((o) => o.text))
-      .toEqual(['API OPTION ONE', 'API OPTION TWO', 'API OPTION THREE']);
+    expect(q.options.map((o) => o.text)).toEqual([
+      'API OPTION ONE',
+      'API OPTION TWO',
+      'API OPTION THREE'
+    ]);
   });
 
   it('NEVER puts `correct` on an option', () => {
@@ -73,8 +73,14 @@ describe('the mapped question carries content and nothing else', () => {
     // ban on "answer" would fail on the TYPE and prove nothing about the key.
     const keysDeep = (v: unknown, out: string[] = []): string[] => {
       if (v === null || typeof v !== 'object') return out;
-      if (Array.isArray(v)) { for (const i of v) keysDeep(i, out); return out; }
-      for (const [k, nested] of Object.entries(v)) { out.push(k); keysDeep(nested, out); }
+      if (Array.isArray(v)) {
+        for (const i of v) keysDeep(i, out);
+        return out;
+      }
+      for (const [k, nested] of Object.entries(v)) {
+        out.push(k);
+        keysDeep(nested, out);
+      }
       return out;
     };
 
@@ -113,20 +119,24 @@ describe('C. the declared API type wins', () => {
   it('a MULTIPLE question with one correct option stays multiple', () => {
     // The count never decides the type — that inference is what the
     // type-authority work removed.
-    expect(questionFromApiView(view({ type: 'multiple', correctCount: 1 }), 0).type)
-      .toBe(QuestionType.MultipleAnswer);
+    expect(questionFromApiView(view({ type: 'multiple', correctCount: 1 }), 0).type).toBe(
+      QuestionType.MultipleAnswer
+    );
   });
 
   it('a SINGLE question with three correct options stays single', () => {
-    expect(questionFromApiView(view({ type: 'single', correctCount: 3 }), 0).type)
-      .toBe(QuestionType.SingleAnswer);
+    expect(questionFromApiView(view({ type: 'single', correctCount: 3 }), 0).type).toBe(
+      QuestionType.SingleAnswer
+    );
   });
 });
 
 describe('order and option identity', () => {
   it('preserves the server order', () => {
     const qs = questionsFromApiViews([
-      view({ questionText: 'FIRST' }), view({ questionText: 'SECOND' }), view({ questionText: 'THIRD' })
+      view({ questionText: 'FIRST' }),
+      view({ questionText: 'SECOND' }),
+      view({ questionText: 'THIRD' })
     ]);
     expect(qs.map((q) => q.questionText)).toEqual(['FIRST', 'SECOND', 'THIRD']);
   });
@@ -184,7 +194,15 @@ describe('the questions request is shared, not duplicated', () => {
 
     http.expectOne(`${BASE}/quizzes/rxjs/questions`).flush({
       quizId: 'rxjs',
-      questions: [{ questionText: 'Q', type: 'single', difficulty: null, correctCount: 1, options: [{ text: 'A' }] }]
+      questions: [
+        {
+          questionText: 'Q',
+          type: 'single',
+          difficulty: null,
+          correctCount: 1,
+          options: [{ text: 'A' }]
+        }
+      ]
     });
 
     expect(seen).toHaveLength(2);
@@ -195,11 +213,21 @@ describe('the questions request is shared, not duplicated', () => {
     service.loadQuestions('rxjs').subscribe();
     http.expectOne(`${BASE}/quizzes/rxjs/questions`).flush({
       quizId: 'rxjs',
-      questions: [{ questionText: 'Q', type: 'single', difficulty: null, correctCount: 1, options: [{ text: 'A' }] }]
+      questions: [
+        {
+          questionText: 'Q',
+          type: 'single',
+          difficulty: null,
+          correctCount: 1,
+          options: [{ text: 'A' }]
+        }
+      ]
     });
 
     let late: readonly TopicQuizQuestionView[] | null = null;
-    service.loadQuestions('rxjs').subscribe((v) => { late = v; });
+    service.loadQuestions('rxjs').subscribe((v) => {
+      late = v;
+    });
     expect(late).not.toBeNull();
     http.expectNone(`${BASE}/quizzes/rxjs/questions`);
   });
@@ -214,7 +242,8 @@ describe('the questions request is shared, not duplicated', () => {
   it('does NOT cache a failure — the next attempt re-requests', () => {
     // A cached rejection would make one flaky response permanent for the session.
     service.loadQuestions('rxjs').subscribe({ next: () => undefined, error: () => undefined });
-    http.expectOne(`${BASE}/quizzes/rxjs/questions`)
+    http
+      .expectOne(`${BASE}/quizzes/rxjs/questions`)
       .flush('boom', { status: 500, statusText: 'Server Error' });
 
     service.loadQuestions('rxjs').subscribe({ next: () => undefined, error: () => undefined });

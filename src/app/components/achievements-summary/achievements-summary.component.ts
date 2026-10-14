@@ -16,45 +16,61 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (total() > 0) {
-      <section class="achievements-summary" [attr.aria-label]="label()">
-        <span class="achievements-summary__icon" aria-hidden="true">🏆</span>
-        <span class="achievements-summary__label" aria-hidden="true">
+      <section
+        class="achievements-summary"
+        [attr.aria-label]="label()"
+      >
+        <span
+          class="achievements-summary__icon"
+          aria-hidden="true"
+        >
+          🏆
+        </span>
+        <span
+          class="achievements-summary__label"
+          aria-hidden="true"
+        >
           <ng-container i18n>Achievements</ng-container>
         </span>
-        <span class="achievements-summary__count" aria-hidden="true">
+        <span
+          class="achievements-summary__count"
+          aria-hidden="true"
+        >
           {{ earned() }} / {{ total() }}
         </span>
       </section>
     }
   `,
-  styles: [`
-    .achievements-summary {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border: 1px solid var(--border-color, #e0e0e0);
-      border-radius: 999px;
-      background: var(--bg-secondary, #f5f5f5);
-      font-size: 13px;
-      color: var(--text-primary, #212121);
-      white-space: nowrap;   /* keep "Achievements X / N" on ONE line (never wraps) */
-    }
+  styles: [
+    `
+      .achievements-summary {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border: 1px solid var(--border-color, #e0e0e0);
+        border-radius: 999px;
+        background: var(--bg-secondary, #f5f5f5);
+        font-size: 13px;
+        color: var(--text-primary, #212121);
+        white-space: nowrap; /* keep "Achievements X / N" on ONE line (never wraps) */
+      }
 
-    .achievements-summary__icon {
-      font-size: 15px;
-      line-height: 1;
-    }
+      .achievements-summary__icon {
+        font-size: 15px;
+        line-height: 1;
+      }
 
-    .achievements-summary__label {
-      font-weight: 600;
-    }
+      .achievements-summary__label {
+        font-weight: 600;
+      }
 
-    .achievements-summary__count {
-      font-variant-numeric: tabular-nums;
-      color: var(--text-secondary, #555555);
-    }
-  `]
+      .achievements-summary__count {
+        font-variant-numeric: tabular-nums;
+        color: var(--text-secondary, #555555);
+      }
+    `
+  ]
 })
 export class AchievementsSummaryComponent {
   /** Number of achievements earned so far. */

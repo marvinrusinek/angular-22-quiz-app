@@ -52,7 +52,7 @@ describe('CertificateEarnedBadgeComponent', () => {
   });
 
   it('persists across refresh — a fresh render with unlocked state shows it', () => {
-    unlockedSig.set(true);            // == loaded-from-storage on a new page load
+    unlockedSig.set(true); // == loaded-from-storage on a new page load
     expect((render().nativeElement as HTMLElement).querySelector('.cert-badge')).not.toBeNull();
   });
 
@@ -66,8 +66,10 @@ describe('CertificateEarnedBadgeComponent', () => {
 
   it('is a keyboard-accessible link to the certificate page', () => {
     unlockedSig.set(true);
-    const link = (render().nativeElement as HTMLElement).querySelector('.cert-badge') as HTMLAnchorElement;
-    expect(link.tagName).toBe('A');                                   // focusable / keyboard-operable
+    const link = (render().nativeElement as HTMLElement).querySelector(
+      '.cert-badge'
+    ) as HTMLAnchorElement;
+    expect(link.tagName).toBe('A'); // focusable / keyboard-operable
     expect(link.getAttribute('href')).toContain('/interview/certificate');
   });
 
@@ -75,6 +77,8 @@ describe('CertificateEarnedBadgeComponent', () => {
     unlockedSig.set(true);
     const el = render().nativeElement as HTMLElement;
     expect(el.querySelector('.cert-badge__icon')?.getAttribute('aria-hidden')).toBe('true');
-    expect(el.querySelector('.cert-badge')?.getAttribute('aria-label')).toMatch(/Certificate earned/i);
+    expect(el.querySelector('.cert-badge')?.getAttribute('aria-label')).toMatch(
+      /Certificate earned/i
+    );
   });
 });

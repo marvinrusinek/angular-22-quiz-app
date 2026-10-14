@@ -1,5 +1,11 @@
 import {
-  ChangeDetectionStrategy, Component, effect, inject, input, output, signal
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  inject,
+  input,
+  output,
+  signal
 } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,7 +14,11 @@ import { FeedbackProps, Option, QuizQuestion } from '@shared/models';
 
 import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
-import { authorizedCorrectTexts, selectedVerdictFor, verdictStateForDisplayIndex } from '@shared/services/features/verdict/authorized-correctness';
+import {
+  authorizedCorrectTexts,
+  selectedVerdictFor,
+  verdictStateForDisplayIndex
+} from '@shared/services/features/verdict/authorized-correctness';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 
@@ -27,7 +37,10 @@ export interface FeedbackEmission {
  * component. `prev` is `null` for an instance's first-ever computation
  * (never equal to anything, so the first emission always goes through).
  */
-export function isSameFeedbackEmission(prev: FeedbackEmission | null, next: FeedbackEmission): boolean {
+export function isSameFeedbackEmission(
+  prev: FeedbackEmission | null,
+  next: FeedbackEmission
+): boolean {
   return !!prev && prev.text === next.text && prev.isCorrect === next.isCorrect;
 }
 
@@ -125,7 +138,10 @@ export class FeedbackComponent {
       // `lastEmitted = null` and so always emits at least once — the
       // announcer still gets a fresh event for every new selection, even
       // one whose text happens to match an earlier, DIFFERENT click's text.
-      const next: FeedbackEmission = { text: this.displayMessage(), isCorrect: this.isSelectedOptionCorrect() };
+      const next: FeedbackEmission = {
+        text: this.displayMessage(),
+        isCorrect: this.isSelectedOptionCorrect()
+      };
       if (isSameFeedbackEmission(this.lastEmitted, next)) return;
       this.lastEmitted = next;
       this.messageAnnounced.emit(next);
@@ -140,7 +156,6 @@ export class FeedbackComponent {
       this.displayMessage.set('');
     }
   }
-
 
   /**
    * Was the user's own pick correct, per the AUTHORIZED verdict?
@@ -211,7 +226,11 @@ export class FeedbackComponent {
       // selected, skip the cache and regenerate so the win message shows.
       const isPartialProgress = /please select\b.*\bmore correct answers?\b/i.test(cachedFeedback);
       const staleOnCompletion = isPartialProgress && this.allCorrectSelectedForCurrentQuestion();
-      if (!staleOnCompletion && this.cachedFeedbackMatchesUrl(cfg, cachedFeedback) && cfg.feedback) {
+      if (
+        !staleOnCompletion &&
+        this.cachedFeedbackMatchesUrl(cfg, cachedFeedback) &&
+        cfg.feedback
+      ) {
         this.displayMessage.set(cfg.feedback);
         return;
       }
@@ -237,7 +256,7 @@ export class FeedbackComponent {
         const urlIdx = Number(m[1]) - 1;
         const liveQ = this.quizService.questions?.[urlIdx];
         const correctIdxs: number[] = (liveQ?.options ?? [])
-          .map((o: Option, i: number) => o?.correct ? i + 1 : null)
+          .map((o: Option, i: number) => (o?.correct ? i + 1 : null))
           .filter((n: number | null): n is number => n !== null);
         // If the cached string says "Option N" but the live question's
         // actual correct option isn't N, fall through and regenerate.
@@ -252,8 +271,11 @@ export class FeedbackComponent {
         // in the live URL question. Single-answer questions on the last
         // index were cementing the negative message because the upstream
         // click handler couldn't see the canonical correct flag.
-        if (cacheMatchesUrl && /not this one/i.test(cachedFeedback) &&
-            this.clickedTextMatchesCorrectOption(cfg, urlIdx, liveQ)) {
+        if (
+          cacheMatchesUrl &&
+          /not this one/i.test(cachedFeedback) &&
+          this.clickedTextMatchesCorrectOption(cfg, urlIdx, liveQ)
+        ) {
           cacheMatchesUrl = false;
         }
       }
@@ -272,8 +294,7 @@ export class FeedbackComponent {
       if (!m) return false;
       const urlIdx = Number(m[1]) - 1;
       const liveQ =
-        this.quizService.getDisplayedQuestion?.(urlIdx) ??
-        this.quizService.questions?.[urlIdx];
+        this.quizService.getDisplayedQuestion?.(urlIdx) ?? this.quizService.questions?.[urlIdx];
       const opts: Option[] = liveQ?.options ?? [];
       if (!opts.length) return false;
 
@@ -282,7 +303,9 @@ export class FeedbackComponent {
       // and a stale "select N more" message survived the completing click on a
       // REVISIT, hiding the win.
       const authorized = authorizedCorrectTexts(
-        this.quizService, urlIdx, this.questionVerdictService
+        this.quizService,
+        urlIdx,
+        this.questionVerdictService
       );
 
       const correctTexts = new Set<string>(authorized ?? []);
@@ -292,7 +315,7 @@ export class FeedbackComponent {
         if (t) allTexts.add(t);
         if (!authorized && isOptionCorrect(o) && t) correctTexts.add(t);
       }
-      if (correctTexts.size <= 1) return false;  // multi-answer only
+      if (correctTexts.size <= 1) return false; // multi-answer only
 
       const ui = this.selectedOptionService.uiSelectedTextsForQuestion(urlIdx);
       let correct = 0;
@@ -328,13 +351,13 @@ export class FeedbackComponent {
       for (const s of liveSelections) {
         if (s?.text) candidates.push(norm(s.text));
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     if (candidates.length && Array.isArray(liveQ?.options)) {
       for (const candidateText of candidates) {
-        const match = liveQ.options.find(
-          (o: Option) => norm(o?.text) === candidateText
-        );
+        const match = liveQ.options.find((o: Option) => norm(o?.text) === candidateText);
         if (isOptionCorrect(match)) return true;
       }
     }
@@ -348,57 +371,52 @@ export class FeedbackComponent {
     )
       ? ((cfg.selectedOption as { questionIndex?: number }).questionIndex as number)
       : undefined;
-    const activeQuestionIndex = Number.isFinite(
-      this.quizService.currentQuestionIndex
-    )
+    const activeQuestionIndex = Number.isFinite(this.quizService.currentQuestionIndex)
       ? (this.quizService.currentQuestionIndex as number)
       : undefined;
-    const idx =
-      cfg.questionIndex ?? selectedQuestionIndex ?? activeQuestionIndex ?? fallbackIndex;
+    const idx = cfg.questionIndex ?? selectedQuestionIndex ?? activeQuestionIndex ?? fallbackIndex;
 
     const question =
       cfg.question ??
       this.quizService.questions?.[idx] ??
       (cfg.options
         ? {
-          questionText: '',
-          options: cfg.options,
-          explanation: '',
-          type: undefined
-        }
+            questionText: '',
+            options: cfg.options,
+            explanation: '',
+            type: undefined
+          }
         : null);
 
     // MULTI-ANSWER: use ALL selections for this question
-    const selectedFromMap =
-      this.selectedOptionService.getSelectedOptionsForQuestion(idx) ?? [];
+    const selectedFromMap = this.selectedOptionService.getSelectedOptionsForQuestion(idx) ?? [];
     const fallbackSelected = cfg.selectedOption
       ? [
-        {
-          ...cfg.selectedOption,
-          selected: true,
-          questionIndex: idx
-        }
-      ]
+          {
+            ...cfg.selectedOption,
+            selected: true,
+            questionIndex: idx
+          }
+        ]
       : [];
-    const selected =
-      selectedFromMap.length > 0 ? selectedFromMap : fallbackSelected;
+    const selected = selectedFromMap.length > 0 ? selectedFromMap : fallbackSelected;
 
     return question
       ? this.feedbackService.buildFeedbackMessage(
-        question,
-        selected,
-        false,
-        cfg.timedOut === true,
-        idx,
-        undefined,
-        // This config is built per-option (getInlineFeedbackConfig(b, i) in
-        // shared-option-binding.service.ts), so `cfg.selectedOption` IS the
-        // option this specific feedback render is about — the piece
-        // buildFeedbackMessage needs to ask the verdict for THIS click's own
-        // correctness rather than scanning the whole question's selection
-        // history (see the fix in FeedbackService for what that scan broke).
-        cfg.selectedOption ?? undefined
-      )
+          question,
+          selected,
+          false,
+          cfg.timedOut === true,
+          idx,
+          undefined,
+          // This config is built per-option (getInlineFeedbackConfig(b, i) in
+          // shared-option-binding.service.ts), so `cfg.selectedOption` IS the
+          // option this specific feedback render is about — the piece
+          // buildFeedbackMessage needs to ask the verdict for THIS click's own
+          // correctness rather than scanning the whole question's selection
+          // history (see the fix in FeedbackService for what that scan broke).
+          cfg.selectedOption ?? undefined
+        )
       : '';
   }
 }

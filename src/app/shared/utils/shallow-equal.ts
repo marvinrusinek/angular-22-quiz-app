@@ -9,10 +9,7 @@ export function shallowArrayEqual(a: readonly any[], b: readonly any[]): boolean
 }
 
 /** Shallow-compare two plain objects by own enumerable keys + strict value equality. */
-export function shallowObjectEqual(
-  a: Record<string, any>,
-  b: Record<string, any>
-): boolean {
+export function shallowObjectEqual(a: Record<string, any>, b: Record<string, any>): boolean {
   if (a === b) return true;
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);

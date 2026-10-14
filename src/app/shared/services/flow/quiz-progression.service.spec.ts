@@ -39,11 +39,11 @@ describe('QuizProgressionService', () => {
         mintCount += 1;
         currentAttemptId = `att_lazy_${mintCount}`;
         return currentAttemptId;
-      }),
+      })
     };
 
     TestBed.configureTestingModule({
-      providers: [QuizProgressionService, { provide: QuizService, useValue: quizService }],
+      providers: [QuizProgressionService, { provide: QuizService, useValue: quizService }]
     });
     service = TestBed.inject(QuizProgressionService);
   });
@@ -177,11 +177,9 @@ describe('QuizProgressionService', () => {
     });
 
     it('a failed persistence write does not leave an apparently unlocked in-memory state', () => {
-      const setItemSpy = jest
-        .spyOn(Storage.prototype, 'setItem')
-        .mockImplementation(() => {
-          throw new Error('quota exceeded');
-        });
+      const setItemSpy = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('quota exceeded');
+      });
       try {
         expect(() => service.unlockThrough('angular', 2, 6)).not.toThrow();
         // The write failed — there is no separate in-memory cache to drift,

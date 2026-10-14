@@ -9,7 +9,9 @@ describe('QuizStateService', () => {
   beforeEach(() => {
     // Mock sessionStorage
     store = {};
-    jest.spyOn(Storage.prototype, 'getItem').mockImplementation((key: string) => store[key] ?? null);
+    jest
+      .spyOn(Storage.prototype, 'getItem')
+      .mockImplementation((key: string) => store[key] ?? null);
     jest.spyOn(Storage.prototype, 'setItem').mockImplementation((key: string, value: string) => {
       store[key] = value;
     });
@@ -18,9 +20,9 @@ describe('QuizStateService', () => {
     });
 
     // Mock performance.getEntriesByType to return non-reload so constructor skips restore
-    (performance as any).getEntriesByType = jest.fn().mockReturnValue([
-      { type: 'navigate' } as any
-    ]);
+    (performance as any).getEntriesByType = jest
+      .fn()
+      .mockReturnValue([{ type: 'navigate' } as any]);
 
     TestBed.configureTestingModule({ providers: [QuizStateService] });
     service = TestBed.inject(QuizStateService);

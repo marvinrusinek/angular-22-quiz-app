@@ -4,7 +4,6 @@ import { catchError, map, tap } from 'rxjs/operators';
 
 import { Option, QuestionType, QuizQuestion } from '@shared/models';
 
-
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 import { norm } from '@shared/utils/text-norm';
 
@@ -16,13 +15,13 @@ export class QuizOptionsService {
     return options.map((opt, idx) => {
       const safeId =
         Number.isInteger(opt?.optionId) && (opt?.optionId as number) >= 0
-          ? (opt.optionId as number) : idx + 1;
+          ? (opt.optionId as number)
+          : idx + 1;
 
       const safeText = (opt?.text ?? '').trim() || `Option ${idx + 1}`;
       const normalizedHighlight =
         typeof opt?.highlight === 'boolean' ? opt.highlight : !!opt?.highlight;
-      const normalizedActive =
-        typeof opt?.active === 'boolean' ? opt.active : true;
+      const normalizedActive = typeof opt?.active === 'boolean' ? opt.active : true;
 
       const sanitized: Option = {
         ...opt,
@@ -37,8 +36,7 @@ export class QuizOptionsService {
         active: normalizedActive,
         highlight: normalizedHighlight,
         showIcon: opt?.showIcon === true,
-        showFeedback:
-          typeof opt?.showFeedback === 'boolean' ? opt.showFeedback : false,
+        showFeedback: typeof opt?.showFeedback === 'boolean' ? opt.showFeedback : false,
         feedback: (opt?.feedback ?? 'No feedback available').trim(),
         styleClass: opt?.styleClass ?? ''
       };
@@ -69,9 +67,11 @@ export class QuizOptionsService {
         const deepClone = (obj: any) => JSON.parse(JSON.stringify(obj));
         const normalized = this.cloneOptions(this.sanitizeOptions(question.options));
 
-        return normalized.map(opt => deepClone(opt));
+        return normalized.map((opt) => deepClone(opt));
       }),
-      tap(options => { currentOptionsSig.set(options); }),
+      tap((options) => {
+        currentOptionsSig.set(options);
+      }),
       catchError(() => {
         return of([]);
       })
@@ -92,7 +92,8 @@ export class QuizOptionsService {
 
         const deepClone =
           typeof structuredClone === 'function'
-            ? structuredClone : (obj: any) => JSON.parse(JSON.stringify(obj));
+            ? structuredClone
+            : (obj: any) => JSON.parse(JSON.stringify(obj));
 
         const sanitized = question.options.map((opt, index) => ({
           ...deepClone(opt),
@@ -104,9 +105,7 @@ export class QuizOptionsService {
           // invisible to array-based tracing; it is the renderer-side twin of
           // the question-array producers.
           ...(opt.correct === undefined ? {} : { correct: isOptionCorrect(opt) }),
-          feedback:
-            opt.feedback ??
-            `Generated feedback for Q${questionIndex} Option ${index}`
+          feedback: opt.feedback ?? `Generated feedback for Q${questionIndex} Option ${index}`
         }));
         return sanitized;
       }),
@@ -118,7 +117,7 @@ export class QuizOptionsService {
 
   getSafeOptionId(option: any, index: number): number | undefined {
     if (option && typeof option.optionId === 'number') return option.optionId;
-    
+
     return index;
   }
 
@@ -137,9 +136,7 @@ export class QuizOptionsService {
         };
       }
 
-      const uniqueId = Number(
-        `${questionIndex + 1}${(localIdx + 1).toString().padStart(2, '0')}`
-      );
+      const uniqueId = Number(`${questionIndex + 1}${(localIdx + 1).toString().padStart(2, '0')}`);
       return {
         ...option,
         optionId: uniqueId,
@@ -159,26 +156,18 @@ export class QuizOptionsService {
     }));
   }
 
-  assignOptionActiveStates(
-    options: Option[],
-    correctOptionSelected: boolean
-  ): Option[] {
+  assignOptionActiveStates(options: Option[], correctOptionSelected: boolean): Option[] {
     if (!Array.isArray(options) || options.length === 0) return [];
 
     return options.map((opt) => ({
       ...opt,
       active: correctOptionSelected ? opt.correct : true,
       feedback: correctOptionSelected && !opt.correct ? 'x' : undefined,
-      showIcon: correctOptionSelected
-        ? opt.correct || opt.showIcon 
-        : opt.showIcon
+      showIcon: correctOptionSelected ? opt.correct || opt.showIcon : opt.showIcon
     }));
   }
 
-  mergeOptionsWithCanonical(
-    question: QuizQuestion,
-    incoming: Option[] = []
-  ): Option[] {
+  mergeOptionsWithCanonical(question: QuizQuestion, incoming: Option[] = []): Option[] {
     const canonical = Array.isArray(question?.options) ? question.options : [];
 
     const toNumericId = (value: unknown, fallback: number): number => {
@@ -188,21 +177,18 @@ export class QuizOptionsService {
     };
 
     if (!canonical.length) {
-      return this.normalizeOptionDisplayOrder(incoming ?? []).map(
-        (option, index) => ({
-          ...option,
-          optionId: toNumericId(option.optionId, index + 1),
-          displayOrder: index,
-          correct: (option.correct as any) === true || (option.correct as any) === 'true',
-          selected: option.selected === true,
-          highlight: option.highlight ?? false,
-          showIcon: option.showIcon ?? false
-        })
-      );
+      return this.normalizeOptionDisplayOrder(incoming ?? []).map((option, index) => ({
+        ...option,
+        optionId: toNumericId(option.optionId, index + 1),
+        displayOrder: index,
+        correct: (option.correct as any) === true || (option.correct as any) === 'true',
+        selected: option.selected === true,
+        highlight: option.highlight ?? false,
+        showIcon: option.showIcon ?? false
+      }));
     }
 
-    const textKey = (value: string | null | undefined) =>
-      norm(value);
+    const textKey = (value: string | null | undefined) => norm(value);
 
     const incomingList = Array.isArray(incoming) ? incoming : [];
     const incomingById = new Map<number, Option>();
@@ -216,9 +202,7 @@ export class QuizOptionsService {
       const id = toNumericId(option?.optionId, index + 1);
       const match =
         incomingById.get(id) ||
-        incomingList.find(
-          (candidate) => textKey(candidate?.text) === textKey(option?.text)
-        );
+        incomingList.find((candidate) => textKey(candidate?.text) === textKey(option?.text));
 
       const merged: Option = {
         ...option,
@@ -227,7 +211,8 @@ export class QuizOptionsService {
         // PRESERVE ABSENCE — see sanitizeOptions above. The canonical option is
         // merged for identity and display state, not to invent correctness.
         ...(option.correct === undefined && (match as any)?.correct === undefined
-          ? {} : { correct: isOptionCorrect(option) }),
+          ? {}
+          : { correct: isOptionCorrect(option) }),
         selected: match?.selected === true || option.selected === true,
         highlight: match?.highlight ?? option.highlight ?? false,
         showIcon: match?.showIcon ?? option.showIcon ?? false
@@ -241,10 +226,7 @@ export class QuizOptionsService {
     });
   }
 
-  buildCorrectAnswerCountLabel(
-    question: QuizQuestion,
-    options: Option[]
-  ): string {
+  buildCorrectAnswerCountLabel(question: QuizQuestion, options: Option[]): string {
     if (!question) return '';
 
     const isMultipleAnswer =
@@ -255,9 +237,7 @@ export class QuizOptionsService {
     const correctCount = options.filter((option) => option.correct).length;
     if (!correctCount) return '';
 
-    return correctCount === 1
-      ? '1 correct answer'
-      : `${correctCount} correct answers`;
+    return correctCount === 1 ? '1 correct answer' : `${correctCount} correct answers`;
   }
 
   getCorrectOptionsForCurrentQuestion(question: QuizQuestion): Option[] {
@@ -277,10 +257,7 @@ export class QuizOptionsService {
       .map((option) => option.optionId as number);
 
     if (correctAnswers.length === 0) {
-      console.warn(
-        '[QuizOptions] No correct answers found for question',
-        question?.questionText
-      );
+      console.warn('[QuizOptions] No correct answers found for question', question?.questionText);
     }
 
     return correctAnswers;
@@ -309,17 +286,16 @@ export class QuizOptionsService {
     return correctAnswers;
   }
 
-  async determineCorrectAnswer(
-    question: QuizQuestion,
-    answers: Option[]
-  ): Promise<boolean[]> {
+  async determineCorrectAnswer(question: QuizQuestion, answers: Option[]): Promise<boolean[]> {
     return (answers ?? []).map((answer) => {
       if (!answer) return false;
 
       const found = question.options.find(
         (option) =>
           option === answer ||
-          (option.optionId !== undefined && answer.optionId !== undefined && String(option.optionId) === String(answer.optionId)) ||
+          (option.optionId !== undefined &&
+            answer.optionId !== undefined &&
+            String(option.optionId) === String(answer.optionId)) ||
           (option.text && answer.text && norm(option.text) === norm(answer.text))
       );
       return isOptionCorrect(found);

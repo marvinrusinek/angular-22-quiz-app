@@ -43,8 +43,8 @@ const QUESTIONS: QuizQuestion[] = [
     explanation: 'local explanation',
     options: [
       { optionId: 1, text: 'map', correct: true },
-      { optionId: 2, text: 'filter' },                    // truly correct
-      { optionId: 3, text: 'Observable', correct: true }   // NOT correct
+      { optionId: 2, text: 'filter' }, // truly correct
+      { optionId: 3, text: 'Observable', correct: true } // NOT correct
     ]
   }
 ] as unknown as QuizQuestion[];
@@ -69,21 +69,27 @@ function stubAdapter(): TopicQuizVerdictAdapter {
 
       if (missing.length === 0 && selected.size > 0) {
         return of({
-          status: 'resolved' as const, correct: true,
-          correctOptionTexts: TRUE_CORRECT, explanation: 'AUTHORIZED'
+          status: 'resolved' as const,
+          correct: true,
+          correctOptionTexts: TRUE_CORRECT,
+          explanation: 'AUTHORIZED'
         });
       }
       return of({
         status: 'incomplete' as const,
         selectedVerdicts: [...selected].map((text) => ({
-          text, correct: TRUE_CORRECT.some((t) => canon(t) === text)
+          text,
+          correct: TRUE_CORRECT.some((t) => canon(t) === text)
         })),
         remainingCorrectCount: missing.length
       });
     },
-    revealExpired: () => of({
-      status: 'expired' as const, correctOptionTexts: TRUE_CORRECT, explanation: 'AUTHORIZED'
-    })
+    revealExpired: () =>
+      of({
+        status: 'expired' as const,
+        correctOptionTexts: TRUE_CORRECT,
+        explanation: 'AUTHORIZED'
+      })
   };
 }
 
@@ -94,8 +100,7 @@ let selectedOptionService: SelectedOptionService;
 const question = () => QUESTIONS[0]!;
 const status = () => evaluation.getResolutionStatus(question(), [] as never, false);
 
-const submit = (texts: string[]) =>
-  selectedOptionService.setUiSelectedTextsForQuestion(0, texts);
+const submit = (texts: string[]) => selectedOptionService.setUiSelectedTextsForQuestion(0, texts);
 
 beforeEach(() => {
   setQuizDataCache(JSON.parse(JSON.stringify(BANK)) as Quiz[], []);
@@ -105,7 +110,10 @@ beforeEach(() => {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: TOPIC_QUIZ_VERDICT_ADAPTER, useValue: stubAdapter() },
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
 
@@ -224,7 +232,7 @@ describe('isQuestionComplete follows the verdict', () => {
   });
 
   it('an EMPTY selection is not complete', () => {
-    submit(['map', 'filter']);   // verdict resolves…
+    submit(['map', 'filter']); // verdict resolves…
     expect(evaluation.isQuestionComplete(question(), [] as never)).toBe(false);
   });
 
@@ -250,8 +258,8 @@ describe('isQuestionComplete follows the verdict', () => {
     // The historical contract. Scoring credits a superset; completion does not.
     submit(['map', 'filter', 'Observable']);
 
-    expect(status().resolved).toBe(true);          // scoring rule
-    expect(isComplete()).toBe(false);              // completion rule
+    expect(status().resolved).toBe(true); // scoring rule
+    expect(isComplete()).toBe(false); // completion rule
   });
 
   it('a partial selection is not complete', () => {

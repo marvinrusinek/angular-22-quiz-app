@@ -24,7 +24,13 @@ import type {
  * local quiz bank and never generates an assessment.
  */
 
-export type BackendSessionStatus = 'idle' | 'loading' | 'active' | 'expired' | 'submitted' | 'error';
+export type BackendSessionStatus =
+  | 'idle'
+  | 'loading'
+  | 'active'
+  | 'expired'
+  | 'submitted'
+  | 'error';
 
 /**
  * WHY the session is in `status === 'error'`. Meaningful only while that status
@@ -279,7 +285,9 @@ export class BackendInterviewSessionService {
     this._questions.set(session.questions);
     this._answers.set(new Map(session.answers));
     this._optimistic.set(new Map());
-    this._confirmedFlags.set(new Set([...session.flags].filter(([, flagged]) => flagged).map(([id]) => id)));
+    this._confirmedFlags.set(
+      new Set([...session.flags].filter(([, flagged]) => flagged).map(([id]) => id))
+    );
     this._optimisticFlags.set(new Map());
     this.reviewSaveState.clear();
     this._config.set(session.config);
@@ -350,7 +358,10 @@ export class BackendInterviewSessionService {
    * write always matches the last UI selection; different questions save
    * concurrently.
    */
-  async updateAnswer(questionId: string, nextSelectedOptionIds: readonly number[]): Promise<SaveOutcome> {
+  async updateAnswer(
+    questionId: string,
+    nextSelectedOptionIds: readonly number[]
+  ): Promise<SaveOutcome> {
     const question = this._questions().find((q) => q.questionId === questionId);
     if (!question) {
       return { kind: 'failed', error: new InterviewApiError('BAD_REQUEST', 400) };
@@ -525,7 +536,11 @@ export class BackendInterviewSessionService {
     await run;
   }
 
-  private async performFlagSave(questionId: string, flagged: boolean, version: number): Promise<void> {
+  private async performFlagSave(
+    questionId: string,
+    flagged: boolean,
+    version: number
+  ): Promise<void> {
     const state = this.reviewState(questionId);
 
     try {
@@ -533,13 +548,13 @@ export class BackendInterviewSessionService {
         this.api.setReviewFlag(this._sessionId(), this.token, questionId, flagged)
       );
 
-      if (version < state.requestedVersion) return;   // a newer toggle already won
+      if (version < state.requestedVersion) return; // a newer toggle already won
       if (version <= state.confirmedVersion) return;
       state.confirmedVersion = version;
 
       this.commitConfirmedFlag(questionId, response.flagged);
     } catch {
-      if (version < state.requestedVersion) return;    // a newer toggle already won
+      if (version < state.requestedVersion) return; // a newer toggle already won
       // Roll back to the last CONFIRMED value — the same fail-closed contract
       // as a failed answer save.
       this.rollbackFlag(questionId);
@@ -591,7 +606,7 @@ export class BackendInterviewSessionService {
     if (this._submitting()) throw new InterviewApiError('CONFLICT', 409);
 
     const existing = this._result();
-    if (existing) return existing;   // suppress duplicate submits in the UI
+    if (existing) return existing; // suppress duplicate submits in the UI
 
     this._submitting.set(true);
     try {
@@ -599,9 +614,7 @@ export class BackendInterviewSessionService {
       // the user believes they changed.
       await this.awaitPendingSaves();
 
-      const result = await firstValueFrom(
-        this.api.submitSession(this._sessionId(), this.token)
-      );
+      const result = await firstValueFrom(this.api.submitSession(this._sessionId(), this.token));
       this._result.set(result);
       this._status.set('submitted');
       return result;

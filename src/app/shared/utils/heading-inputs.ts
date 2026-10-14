@@ -50,14 +50,14 @@ export interface HeadingInputDeps {
  */
 export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
   const { idx } = d;
-  const dq = d.quizService.getQuestionsInDisplayOrder?.()?.[idx];   // shuffle-aware
+  const dq = d.quizService.getQuestionsInDisplayOrder?.()?.[idx]; // shuffle-aware
   if (!dq) {
     return null;
   }
 
   const qText = dq.questionText ?? '';
   const selectedTexts = new Set<string>(
-    ((((d.selectedOptionService as any).selectedOptionsMap?.get?.(idx)) ?? []) as any[])
+    (((d.selectedOptionService as any).selectedOptionsMap?.get?.(idx) ?? []) as any[])
       .filter((o) => o?.selected !== false)
       .map((o) => norm(o?.text))
   );
@@ -160,12 +160,13 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
   // NULL IS NOT ZERO. Unknown means the banner does not render — a supplemental
   // hint is worth losing; a wrong or locally-reconstructed one is not.
   let questionHtml = qText;
-  const totalOpts = (dq.options?.length ?? 0);
+  const totalOpts = dq.options?.length ?? 0;
   const bannerCount = bannerCorrectCount(isMultiAnswer, d.topicQuizTypeRegistry, dq.questionText);
 
   if (bannerCount !== null && totalOpts > 0) {
     const banner = d.quizQuestionManagerService.getNumberOfCorrectAnswersText(
-      bannerCount, totalOpts
+      bannerCount,
+      totalOpts
     );
     questionHtml = withCorrectCountBanner(qText, banner);
   }
@@ -187,12 +188,12 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
   // words may be shown at all. Composing the authorized explanation is the next
   // step of the explanation-pipeline migration, not this one.
   const _fetHtml = withTerminalPeriod(
-    (ets.formattedExplanations?.[idx]?.explanation ?? '')
-      || (ets.fetByIndex?.get?.(idx) ?? '')
-      || (ets.timeoutFetByIndex?.get?.(idx) ?? '')   // durable timeout FET (purge-proof)
+    (ets.formattedExplanations?.[idx]?.explanation ?? '') ||
+      (ets.fetByIndex?.get?.(idx) ?? '') ||
+      (ets.timeoutFetByIndex?.get?.(idx) ?? '') || // durable timeout FET (purge-proof)
       // Last resort: the verdict's own raw explanation, so an authorized reveal
       // is never silently blank when the formatter has not run.
-      || authorizedExplanation
+      authorizedExplanation
   );
   return {
     questionHtml,
@@ -211,8 +212,8 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
     isMultiAnswerComplete:
       verdictComplete !== null
         ? verdictComplete
-        : d.quizService.isMultiAnswerComplete?.(idx) === true
-          || ets.fetBypassForQuestion?.get?.(idx) === true,
+        : d.quizService.isMultiAnswerComplete?.(idx) === true ||
+          ets.fetBypassForQuestion?.get?.(idx) === true,
     isSingleAnswered: !isMultiAnswer && selectedCorrectFromAuthority > 0,
     // A LIVE timeout only.
     //
@@ -230,11 +231,11 @@ export function buildHeadingInputs(d: HeadingInputDeps): HeadingInputs | null {
       return efi === idx && eoa !== idx;
     })(),
     hasInteracted: d.quizStateService.hasUserInteracted?.(idx) === true,
-    optionsReady: typeof document !== 'undefined'
-      && document.querySelectorAll('.option-row').length > 0,
+    optionsReady:
+      typeof document !== 'undefined' && document.querySelectorAll('.option-row').length > 0,
     isNavigatingToPrevious: d.quizNavigationService.isNavigatingToPreviousSig?.() === true,
     interactedThisVisit: d.quizStateService.wasInteractedThisVisit?.(idx) === true,
     deferFeedback: d.feedbackPolicyService?.feedbackMode?.() === 'deferred',
-    verdictEarnedReveal,
+    verdictEarnedReveal
   };
 }

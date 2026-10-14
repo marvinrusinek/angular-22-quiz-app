@@ -7,9 +7,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 
-type PaginatorItem =
-  | { kind: 'page'; index: number }
-  | { kind: 'ellipsis'; key: string };
+type PaginatorItem = { kind: 'page'; index: number } | { kind: 'ellipsis'; key: string };
 
 /**
  * Compact numeric pagination for Interview Mode — a windowed alternative to the
@@ -35,10 +33,10 @@ type PaginatorItem =
 })
 export class InterviewPaginatorComponent {
   readonly total = input.required<number>();
-  readonly currentIndex = input.required<number>();          // 0-based
-  readonly answered = input<ReadonlySet<number>>(new Set());  // 0-based indices
+  readonly currentIndex = input.required<number>(); // 0-based
+  readonly answered = input<ReadonlySet<number>>(new Set()); // 0-based indices
   /** Mark-for-Review state. Independent of `answered` — never overlaps it structurally. */
-  readonly marked = input<ReadonlySet<number>>(new Set());    // 0-based indices
+  readonly marked = input<ReadonlySet<number>>(new Set()); // 0-based indices
 
   /**
    * Whether forward navigation is currently allowed. Supplied by the session

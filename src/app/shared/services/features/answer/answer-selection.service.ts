@@ -12,7 +12,6 @@ import { SK_DOT_CONFIRMED, SK_MULTI_PERFECT } from '@shared/constants/session-ke
 import { writeSessionString } from '@shared/utils/session-storage';
 import { swallow } from '@shared/utils/error-logging';
 
-
 import { AnswerOptionsService } from './answer-options.service';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { QuizStateService } from '@shared/services/state/quizstate.service';
@@ -34,14 +33,12 @@ export class AnswerSelectionService {
     const rawOption = payload.option;
     const wasChecked = payload.checked ?? true;
 
-    const targetKey = this.answerOptionsService.getEffectiveOptionId(
-      rawOption,
-      payload.index
-    );
+    const targetKey = this.answerOptionsService.getEffectiveOptionId(rawOption, payload.index);
 
     const canonical =
-      optionsToDisplay?.find((option: Option, index: number) =>
-        this.answerOptionsService.getEffectiveOptionId(option, index) === targetKey
+      optionsToDisplay?.find(
+        (option: Option, index: number) =>
+          this.answerOptionsService.getEffectiveOptionId(option, index) === targetKey
       ) ?? rawOption;
 
     return {
@@ -96,13 +93,13 @@ export class AnswerSelectionService {
     isMultiAnswer: boolean
   ): void {
     this.selectedOptionService.currentQuestionType = !isMultiAnswer
-      ? QuestionType.SingleAnswer : QuestionType.MultipleAnswer;
+      ? QuestionType.SingleAnswer
+      : QuestionType.MultipleAnswer;
 
     if (!isMultiAnswer) {
-      this.selectedOptionService.setSelectedOptionsForQuestion(
-        activeQuestionIndex,
-        [enrichedOption]
-      );
+      this.selectedOptionService.setSelectedOptionsForQuestion(activeQuestionIndex, [
+        enrichedOption
+      ]);
 
       return;
     }
@@ -110,14 +107,10 @@ export class AnswerSelectionService {
     this.selectedOptionService.addOption(activeQuestionIndex, enrichedOption);
   }
 
-  updateQuestionCompletionState(
-    questionIndex: number | null,
-    question: QuizQuestion
-  ): boolean {
+  updateQuestionCompletionState(questionIndex: number | null, question: QuizQuestion): boolean {
     if (questionIndex == null) return false;
 
-    const allSelected =
-      this.selectedOptionService.getSelectedOptionsForQuestion(questionIndex);
+    const allSelected = this.selectedOptionService.getSelectedOptionsForQuestion(questionIndex);
 
     return this.selectedOptionService.isQuestionComplete(question, allSelected);
   }
@@ -130,20 +123,15 @@ export class AnswerSelectionService {
     complete: boolean
   ): void {
     if (isMultiAnswer && selectedOptions?.length > 0) {
-      const totalCorrectInQuestion =
-        optionsSource.filter(option =>
-          this.answerOptionsService.isCorrectOptionValue(option)
-        ).length;
+      const totalCorrectInQuestion = optionsSource.filter((option) =>
+        this.answerOptionsService.isCorrectOptionValue(option)
+      ).length;
 
-      const correctSelectedCount =
-        selectedOptions.filter(option =>
-          this.answerOptionsService.isCorrectOptionValue(option)
-        ).length;
+      const correctSelectedCount = selectedOptions.filter((option) =>
+        this.answerOptionsService.isCorrectOptionValue(option)
+      ).length;
 
-      if (
-        correctSelectedCount === totalCorrectInQuestion &&
-        totalCorrectInQuestion > 0
-      ) {
+      if (correctSelectedCount === totalCorrectInQuestion && totalCorrectInQuestion > 0) {
         // NO SCORE HERE, for the same reason as completion below: the gate
         // counts correct options from the local answer key, so crediting from
         // it would let the bank decide the score. The point is applied by
@@ -171,18 +159,12 @@ export class AnswerSelectionService {
     this.quizStateService.setAnswerSelected(complete);
   }
 
-  updateDotStatus(
-    activeQuestionIndex: number,
-    enrichedOption: SelectedOption
-  ): void {
+  updateDotStatus(activeQuestionIndex: number, enrichedOption: SelectedOption): void {
     if (enrichedOption.selected !== true || activeQuestionIndex == null) return;
 
     const dotStatus = enrichedOption.correct ? 'correct' : 'wrong';
 
-    this.selectedOptionService.clickConfirmedDotStatus.set(
-      activeQuestionIndex,
-      dotStatus
-    );
+    this.selectedOptionService.clickConfirmedDotStatus.set(activeQuestionIndex, dotStatus);
 
     this.selectedOptionService.lastClickedCorrectByQuestion.set(
       activeQuestionIndex,
@@ -191,6 +173,8 @@ export class AnswerSelectionService {
 
     try {
       sessionStorage.setItem(SK_DOT_CONFIRMED + activeQuestionIndex, dotStatus);
-    } catch (err: unknown) { swallow('answer-selection.service.ts dot-confirmed persist', err); }
+    } catch (err: unknown) {
+      swallow('answer-selection.service.ts dot-confirmed persist', err);
+    }
   }
 }

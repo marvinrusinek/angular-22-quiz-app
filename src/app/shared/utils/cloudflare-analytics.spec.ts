@@ -27,9 +27,13 @@ describe('installCloudflareAnalytics', () => {
 
       const [script] = beacons();
       expect(beacons()).toHaveLength(1);
-      expect(script.getAttribute('src')).toBe('https://static.cloudflareinsights.com/beacon.min.js');
+      expect(script.getAttribute('src')).toBe(
+        'https://static.cloudflareinsights.com/beacon.min.js'
+      );
       expect(script.type).toBe('module');
-      expect(JSON.parse(script.getAttribute('data-cf-beacon')!)).toEqual({ token: 'c29822f3c9394d9aab170a07597cbd66' });
+      expect(JSON.parse(script.getAttribute('data-cf-beacon')!)).toEqual({
+        token: 'c29822f3c9394d9aab170a07597cbd66'
+      });
     });
 
     it('treats a browser that does not report webdriver (undefined / false) as a normal visitor', () => {
@@ -67,7 +71,10 @@ describe('installCloudflareAnalytics', () => {
       ['127.0.0.1', '127.0.0.1'],
       ['IPv6 loopback', '[::1]'],
       ['empty hostname', ''],
-      ['StackBlitz webcontainer preview', 'abc123xyz--4200--96435430.local-credentialless.webcontainer.io'],
+      [
+        'StackBlitz webcontainer preview',
+        'abc123xyz--4200--96435430.local-credentialless.webcontainer.io'
+      ],
       ['StackBlitz editor host', 'stackblitz.com'],
       ['another github.io site', 'someoneelse.github.io'],
       ['bare github.io', 'github.io'],
@@ -111,7 +118,9 @@ describe('installCloudflareAnalytics', () => {
     it('never throws — a failing document just reports "not loaded"', () => {
       const hostile = {
         querySelector: () => null,
-        createElement: () => { throw new Error('boom'); }
+        createElement: () => {
+          throw new Error('boom');
+        }
       } as unknown as Document;
       expect(() => installCloudflareAnalytics(hostile, PROD, false)).not.toThrow();
       expect(installCloudflareAnalytics(hostile, PROD, false)).toBe(false);
@@ -142,16 +151,30 @@ describe('installCloudflareAnalytics', () => {
     const html: string = require('fs').readFileSync('src/index.html', 'utf8');
     const csp = /http-equiv="Content-Security-Policy"\s+content="([^"]+)"/.exec(html)![1];
     const directive = (name: string): string[] =>
-      csp.split(';').map((d) => d.trim().split(/\s+/)).find((d) => d[0] === name)?.slice(1) ?? [];
+      csp
+        .split(';')
+        .map((d) => d.trim().split(/\s+/))
+        .find((d) => d[0] === name)
+        ?.slice(1) ?? [];
 
     it('script-src allows exactly self + the exact beacon file', () => {
-      expect(directive('script-src')).toEqual(["'self'", 'https://static.cloudflareinsights.com/beacon.min.js']);
+      expect(directive('script-src')).toEqual([
+        "'self'",
+        'https://static.cloudflareinsights.com/beacon.min.js'
+      ]);
     });
 
     it('connect-src gains only https://cloudflareinsights.com and keeps its existing entries', () => {
       const connect = directive('connect-src');
       expect(connect).toContain('https://cloudflareinsights.com');
-      for (const kept of ["'self'", 'https://cdn.jsdelivr.net', 'https://interview-api-spring.marvinrusinek.com', 'https://interview-api-c842.onrender.com', 'http://localhost:8080', 'http://localhost:3000']) {
+      for (const kept of [
+        "'self'",
+        'https://cdn.jsdelivr.net',
+        'https://interview-api-spring.marvinrusinek.com',
+        'https://interview-api-c842.onrender.com',
+        'http://localhost:8080',
+        'http://localhost:3000'
+      ]) {
         expect(connect).toContain(kept);
       }
     });

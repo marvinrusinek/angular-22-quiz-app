@@ -7,10 +7,7 @@ import { of } from 'rxjs';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import { ApiTopicQuizVerdictAdapter } from './api-verdict.adapter';
 import { LocalTopicQuizVerdictAdapter } from './local-verdict.adapter.service';
-import {
-  TOPIC_QUIZ_VERDICT_ADAPTER,
-  provideApiTopicQuizVerdictAdapter
-} from './verdict-adapter';
+import { TOPIC_QUIZ_VERDICT_ADAPTER, provideApiTopicQuizVerdictAdapter } from './verdict-adapter';
 
 /**
  * WHICH ADAPTER THE APPLICATION SELECTS.
@@ -28,7 +25,10 @@ function configure(providers: unknown[] = []) {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       ...(providers as never[])
     ]
   });
@@ -37,8 +37,7 @@ function configure(providers: unknown[] = []) {
 describe('adapter selection', () => {
   it('defaults to the LOCAL adapter when nothing overrides it', () => {
     configure();
-    expect(TestBed.inject(TOPIC_QUIZ_VERDICT_ADAPTER))
-      .toBeInstanceOf(LocalTopicQuizVerdictAdapter);
+    expect(TestBed.inject(TOPIC_QUIZ_VERDICT_ADAPTER)).toBeInstanceOf(LocalTopicQuizVerdictAdapter);
   });
 
   it('provideApiTopicQuizVerdictAdapter() selects the API adapter', () => {
@@ -54,8 +53,9 @@ describe('adapter selection', () => {
 
     // useExisting, not useClass — one adapter, so its in-memory receipt cache
     // is shared rather than duplicated per injection site.
-    expect(TestBed.inject(TOPIC_QUIZ_VERDICT_ADAPTER))
-      .toBe(TestBed.inject(ApiTopicQuizVerdictAdapter));
+    expect(TestBed.inject(TOPIC_QUIZ_VERDICT_ADAPTER)).toBe(
+      TestBed.inject(ApiTopicQuizVerdictAdapter)
+    );
   });
 });
 

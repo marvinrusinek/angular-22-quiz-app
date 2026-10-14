@@ -5,7 +5,10 @@ import { QuizService } from '@shared/services/data/quiz.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { QuestionType } from '@shared/models';
 import type { OptionBindings } from '@shared/models';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import {
+  IDLE_VERDICT_STATE,
+  type QuestionVerdictState
+} from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * WHO DECIDES WHICH OPTIONS LOCK.
@@ -33,8 +36,10 @@ const TRULY_CORRECT = ['map', 'filter'];
 let service: OptionLockPolicyService;
 let verdictState: QuestionVerdictState;
 
-const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState =>
-  ({ ...IDLE_VERDICT_STATE, ...over });
+const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState => ({
+  ...IDLE_VERDICT_STATE,
+  ...over
+});
 
 /** Bindings whose `correct` flags are INVERTED relative to the truth. */
 function makeBindings(selected: string[] = [], mode: 'lying' | 'bare' = 'lying'): OptionBindings[] {
@@ -68,7 +73,10 @@ function run(bindings: OptionBindings[], type = QuestionType.MultipleAnswer) {
 }
 
 const lockedTexts = (bindings: OptionBindings[]) =>
-  bindings.filter((b) => b.disabled).map((b) => (b.option as any).text).sort();
+  bindings
+    .filter((b) => b.disabled)
+    .map((b) => (b.option as any).text)
+    .sort();
 
 beforeEach(() => {
   verdictState = IDLE_VERDICT_STATE;
@@ -87,15 +95,21 @@ beforeEach(() => {
           shuffledQuestions: [],
           // Present and lying. If the policy ever reads it again, the
           // no-early-lock tests below fail.
-          quizInitialState: [{
-            quizId: 'rxjs',
-            questions: [{
-              questionText: QUESTION,
-              options: TEXTS.map((text, i) => ({
-                optionId: i + 1, text, correct: !TRULY_CORRECT.includes(text)
-              }))
-            }]
-          }]
+          quizInitialState: [
+            {
+              quizId: 'rxjs',
+              questions: [
+                {
+                  questionText: QUESTION,
+                  options: TEXTS.map((text, i) => ({
+                    optionId: i + 1,
+                    text,
+                    correct: !TRULY_CORRECT.includes(text)
+                  }))
+                }
+              ]
+            }
+          ]
         }
       },
       { provide: QuestionVerdictService, useValue: { verdictFor: () => verdictState } }
@@ -225,7 +239,10 @@ describe('terminal phases authorize the full reveal', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
     const bindings = makeBindings(['map', 'filter']);
 
@@ -242,7 +259,11 @@ describe('terminal phases authorize the full reveal', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true], ['Observable', false]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true],
+        ['Observable', false]
+      ])
     });
     const bindings = makeBindings(['map', 'filter', 'Observable']);
 
@@ -270,7 +291,10 @@ describe('terminal phases authorize the full reveal', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
     const bindings = makeBindings(['map', 'filter']);
 

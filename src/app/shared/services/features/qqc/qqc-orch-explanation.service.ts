@@ -14,7 +14,6 @@ type Host = QuizQuestionComponent;
  */
 @Service()
 export class QqcOrchExplanationService {
-
   async runOnVisibilityChange(host: Host): Promise<void> {
     // Self-heal qIdx by text fingerprint. host.currentQuestionIndex() can
     // be stuck at 0 while the user is on Q2/Q3 (same desync the click
@@ -32,7 +31,9 @@ export class QqcOrchExplanationService {
             if (fixed >= 0) return fixed;
           }
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       return fallback;
     };
 
@@ -75,11 +76,13 @@ export class QqcOrchExplanationService {
         generateFeedbackText: (q: QuizQuestion) => host.generateFeedbackText(q),
         applyOptionFeedback: (opt: Option) => host.applyOptionFeedback(opt),
         restoreFeedbackState: () => {
-          host.optionsToDisplay.set(host.feedbackManager.restoreFeedbackState(
-            host.currentQuestion(),
-            host.optionsToDisplay(),
-            host.correctMessage()
-          ));
+          host.optionsToDisplay.set(
+            host.feedbackManager.restoreFeedbackState(
+              host.currentQuestion(),
+              host.optionsToDisplay(),
+              host.correctMessage()
+            )
+          );
         }
       });
 
@@ -112,7 +115,7 @@ export class QqcOrchExplanationService {
       setTimeout(async () => {
         const result = await host.explanationDisplay.performUpdateExplanationDisplay({
           shouldDisplay: true,
-          currentQuestionIndex: host.currentQuestionIndex(),
+          currentQuestionIndex: host.currentQuestionIndex()
         });
         host.explanationToDisplay.set(result.explanationToDisplay);
         host.explanationToDisplayChange.emit(result.explanationToDisplay);
@@ -121,7 +124,7 @@ export class QqcOrchExplanationService {
     } else {
       const result = await host.explanationDisplay.performUpdateExplanationDisplay({
         shouldDisplay: false,
-        currentQuestionIndex: host.currentQuestionIndex(),
+        currentQuestionIndex: host.currentQuestionIndex()
       });
       if (result.explanationToDisplay !== undefined) {
         host.explanationToDisplay.set(result.explanationToDisplay);
@@ -136,7 +139,10 @@ export class QqcOrchExplanationService {
     host.resetExplanation();
 
     const ensureLoaded = async () => {
-      const r = await host.questionLoader.ensureQuestionsLoaded(host.questionsArray(), host.quizId());
+      const r = await host.questionLoader.ensureQuestionsLoaded(
+        host.questionsArray(),
+        host.quizId()
+      );
       if (r.loaded && r.questions) {
         host.questions.set(r.questions);
         host.questionsArray.set(r.questions);
@@ -181,7 +187,10 @@ export class QqcOrchExplanationService {
       host.quizService.setCurrentQuestion(validated.currentQuestion);
       delay(100)
         .then(async () => {
-          if (host.shouldDisplayExplanation() && (await host.isAnyOptionSelected(validated.adjustedIndex))) {
+          if (
+            host.shouldDisplayExplanation() &&
+            (await host.isAnyOptionSelected(validated.adjustedIndex))
+          ) {
             host.emitExplanationChange('', false);
             host.explanationToDisplay.set(explanationText);
             host.emitExplanationChange(host.explanationToDisplay() ?? '', true);
@@ -192,7 +201,11 @@ export class QqcOrchExplanationService {
     } catch {}
   }
 
-  async runUpdateExplanationIfAnswered(host: Host, index: number, question: QuizQuestion): Promise<void> {
+  async runUpdateExplanationIfAnswered(
+    host: Host,
+    index: number,
+    question: QuizQuestion
+  ): Promise<void> {
     const result = await host.explanationFlow.updateExplanationIfAnswered({
       index,
       question,
@@ -211,7 +224,7 @@ export class QqcOrchExplanationService {
   runHandlePageVisibilityChange(host: Host, isHidden: boolean): void {
     const action = host.navigationHandler.computeVisibilityAction(isHidden);
     if (action.shouldClearSubscriptions) {
-      for (const sub of (host.displaySubscriptions ?? [])) {
+      for (const sub of host.displaySubscriptions ?? []) {
         sub.unsubscribe();
       }
       host.displaySubscriptions = [];
@@ -243,7 +256,10 @@ export class QqcOrchExplanationService {
   }
 
   runResetExplanation(host: Host, force = false): void {
-    const result = host.explanationFlow.performResetExplanation({ force, questionIndex: host.fixedQuestionIndex() ?? host.currentQuestionIndex() ?? 0 });
+    const result = host.explanationFlow.performResetExplanation({
+      force,
+      questionIndex: host.fixedQuestionIndex() ?? host.currentQuestionIndex() ?? 0
+    });
     host.displayExplanation.set(result.displayExplanation);
     host.explanationToDisplay.set(result.explanationToDisplay);
     if (!result.blocked) {
@@ -258,14 +274,14 @@ export class QqcOrchExplanationService {
   }
 
   async runUpdateExplanationText(host: Host, index: number): Promise<string> {
-    return host.explanationDisplay.updateExplanationText(
-      { index, 
-        normalizeIndex: (idx: number) => host.normalizeIndex(idx), 
-        questionsArray: host.questionsArray(), 
-        currentQuestionIndex: host.currentQuestionIndex(), 
-        currentQuestion: host.currentQuestion(), 
-        optionsToDisplay: host.optionsToDisplay(), 
-        options: host.options() ?? []
-      });
+    return host.explanationDisplay.updateExplanationText({
+      index,
+      normalizeIndex: (idx: number) => host.normalizeIndex(idx),
+      questionsArray: host.questionsArray(),
+      currentQuestionIndex: host.currentQuestionIndex(),
+      currentQuestion: host.currentQuestion(),
+      optionsToDisplay: host.optionsToDisplay(),
+      options: host.options() ?? []
+    });
   }
 }

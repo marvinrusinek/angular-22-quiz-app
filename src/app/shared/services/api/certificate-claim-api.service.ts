@@ -4,7 +4,10 @@ import { catchError, map, type Observable } from 'rxjs';
 
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 import type { VerifiedCertificate } from '@shared/models/certificate-claim.model';
-import { CertificateClaimApiError, toCertificateClaimApiError } from './certificate-claim-api.errors';
+import {
+  CertificateClaimApiError,
+  toCertificateClaimApiError
+} from './certificate-claim-api.errors';
 
 /**
  * The ONLY place certificate-claim HTTP calls are made. Node-owned, like
@@ -56,11 +59,17 @@ export class CertificateClaimApiService {
    * caller must not try to distinguish "new" from "already exists" from
    * this response — there is nothing to distinguish.
    */
-  submitClaim(name: string, email: string, eligibilitySnapshot: EligibilitySnapshotDto): Observable<void> {
+  submitClaim(
+    name: string,
+    email: string,
+    eligibilitySnapshot: EligibilitySnapshotDto
+  ): Observable<void> {
     const url = `${this.apiBaseUrl}/certificate-claims`;
     return this.http.post(url, { name, email, eligibilitySnapshot }).pipe(
       map(() => undefined),
-      catchError((err: unknown) => { throw toCertificateClaimApiError(err); })
+      catchError((err: unknown) => {
+        throw toCertificateClaimApiError(err);
+      })
     );
   }
 
@@ -69,7 +78,9 @@ export class CertificateClaimApiService {
     const url = `${this.apiBaseUrl}/certificate-claims/resend`;
     return this.http.post(url, { email }).pipe(
       map(() => undefined),
-      catchError((err: unknown) => { throw toCertificateClaimApiError(err); })
+      catchError((err: unknown) => {
+        throw toCertificateClaimApiError(err);
+      })
     );
   }
 
@@ -77,7 +88,9 @@ export class CertificateClaimApiService {
   previewToken(token: string): Observable<PreviewTokenResult> {
     const url = `${this.apiBaseUrl}/certificate-claims/verify/preview`;
     return this.http.post<PreviewTokenResult>(url, { token }).pipe(
-      catchError((err: unknown) => { throw toCertificateClaimApiError(err); })
+      catchError((err: unknown) => {
+        throw toCertificateClaimApiError(err);
+      })
     );
   }
 
@@ -85,7 +98,9 @@ export class CertificateClaimApiService {
   confirmToken(token: string): Observable<ConfirmedCertificateDto> {
     const url = `${this.apiBaseUrl}/certificate-claims/verify/confirm`;
     return this.http.post<ConfirmedCertificateDto>(url, { token }).pipe(
-      catchError((err: unknown) => { throw toCertificateClaimApiError(err); })
+      catchError((err: unknown) => {
+        throw toCertificateClaimApiError(err);
+      })
     );
   }
 
@@ -102,7 +117,9 @@ export class CertificateClaimApiService {
           recipientName: dto.recipientName,
           issuedAt: new Date(dto.issuedAt).toISOString()
         })),
-        catchError((err: unknown) => { throw toCertificateClaimApiError(err); })
+        catchError((err: unknown) => {
+          throw toCertificateClaimApiError(err);
+        })
       );
   }
 }

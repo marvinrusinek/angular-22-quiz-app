@@ -15,7 +15,7 @@ import {
   SecurityContext,
   signal,
   untracked,
-  viewChild,
+  viewChild
 } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -28,7 +28,7 @@ import { CombinedQuestionDataType, Option, QuizQuestion } from '@shared/models';
 import { CqcOrchestratorService } from '@shared/services/features/quiz-content/cqc-orchestrator.service';
 import {
   ExplanationTextService,
-  FETPayload,
+  FETPayload
 } from '@shared/services/features/explanation/explanation-text.service';
 import { QuizContentDisplayService } from '@shared/services/features/quiz-content/quiz-content-display.service';
 import { QuizDataService } from '@shared/services/data/quizdata.service';
@@ -54,7 +54,7 @@ import { deriveHeadingHtml, shouldShowFet } from '@shared/utils/heading-model';
   imports: [],
   templateUrl: './codelab-quiz-content.component.html',
   styleUrls: ['./codelab-quiz-content.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CodelabQuizContentComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
@@ -185,7 +185,7 @@ export class CodelabQuizContentComponent implements OnInit {
       quizQuestionManagerService: this.quizQuestionManagerService,
       feedbackPolicyService: this.feedbackPolicyService,
       questionVerdictService: this.questionVerdictService,
-      topicQuizTypeRegistry: this.topicQuizTypeRegistry,
+      topicQuizTypeRegistry: this.topicQuizTypeRegistry
     });
     if (!inputs) return '';
 
@@ -276,8 +276,7 @@ export class CodelabQuizContentComponent implements OnInit {
       // Sanitize before the innerHTML write — never trust the raw string. The
       // sanitizer keeps ordinary formatting (<code>/<strong>/<span>/<em>) and
       // strips only unsafe constructs (scripts, dangerous URLs, event handlers).
-      const sanitizedHtml =
-        this.sanitizer.sanitize(SecurityContext.HTML, this.headingHtml()) ?? '';
+      const sanitizedHtml = this.sanitizer.sanitize(SecurityContext.HTML, this.headingHtml()) ?? '';
       if ((el.innerHTML ?? '') === sanitizedHtml) return;
       this.renderer.setProperty(el, 'innerHTML', sanitizedHtml);
     });
@@ -338,7 +337,7 @@ export class CodelabQuizContentComponent implements OnInit {
 
     this.explanationTextService.resetForIndex(0);
     this.explanationTextService.setShouldDisplayExplanation(false, {
-      force: true,
+      force: true
     });
   }
 

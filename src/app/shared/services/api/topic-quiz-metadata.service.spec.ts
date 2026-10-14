@@ -88,8 +88,12 @@ describe('TopicQuizMetadataService', () => {
     let errored = false;
     let completed = false;
     service.load().subscribe({
-      error: () => { errored = true; },
-      complete: () => { completed = true; }
+      error: () => {
+        errored = true;
+      },
+      complete: () => {
+        completed = true;
+      }
     });
     http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('network error'));
 
@@ -98,7 +102,7 @@ describe('TopicQuizMetadataService', () => {
     expect(service.factsFor(UNKNOWN_QUIZ_ID)).toEqual([]);
   });
 
-  it('FAILS SOFT, BUT NOT BLANK: a network error keeps the bundled catalog\'s facts for a KNOWN quiz', () => {
+  it("FAILS SOFT, BUT NOT BLANK: a network error keeps the bundled catalog's facts for a KNOWN quiz", () => {
     service.load().subscribe();
     http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('network error'));
     expect(service.factsFor('rxjs').length).toBeGreaterThan(0);
@@ -187,13 +191,13 @@ describe('TopicQuizMetadataService — imagery', () => {
     expect(service.imageFor('c')).toBe('https://cdn.test/c.png');
   });
 
-  it('a failed load leaves an UNKNOWN quiz\'s imagery empty — consumers fall back, never crash', () => {
+  it("a failed load leaves an UNKNOWN quiz's imagery empty — consumers fall back, never crash", () => {
     service.load().subscribe();
     http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
     expect(service.imageFor(UNKNOWN_QUIZ_ID)).toBe('');
   });
 
-  it('a failed load keeps a KNOWN quiz\'s bundled-catalog imagery, never blanks it', () => {
+  it("a failed load keeps a KNOWN quiz's bundled-catalog imagery, never blanks it", () => {
     service.load().subscribe();
     http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
     expect(service.imageFor('rxjs')).not.toBe('');
@@ -266,7 +270,7 @@ describe('TopicQuizMetadataService — difficulty', () => {
     expect(service.difficultyByQuiz().has(UNKNOWN_QUIZ_ID)).toBe(false);
   });
 
-  it('a failed load keeps the bundled catalog\'s difficulty map, never blanks it', () => {
+  it("a failed load keeps the bundled catalog's difficulty map, never blanks it", () => {
     service.load().subscribe();
     http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
     expect(service.difficultyByQuiz().size).toBeGreaterThan(0);
@@ -275,7 +279,15 @@ describe('TopicQuizMetadataService — difficulty', () => {
   it('difficulty arrives from the SAME single request as facts/imagery/milestone', () => {
     service.load().subscribe();
     http.expectOne(`${BASE}/quizzes`).flush({
-      quizzes: [{ quizId: 'rxjs', milestone: 'RxJS', image: 'https://cdn.test/rxjs.png', facts: ['A'], difficulty: 'advanced' }]
+      quizzes: [
+        {
+          quizId: 'rxjs',
+          milestone: 'RxJS',
+          image: 'https://cdn.test/rxjs.png',
+          facts: ['A'],
+          difficulty: 'advanced'
+        }
+      ]
     });
     expect(service.difficultyByQuiz().get('rxjs')).toBe('advanced');
     expect(service.milestoneFor('rxjs')).toBe('RxJS');
@@ -358,7 +370,7 @@ describe('TopicQuizMetadataService — question count', () => {
     expect(service.questionCountByQuiz().has(UNKNOWN_QUIZ_ID)).toBe(false);
   });
 
-  it('a failed load keeps the bundled catalog\'s question-count map, never blanks it', () => {
+  it("a failed load keeps the bundled catalog's question-count map, never blanks it", () => {
     service.load().subscribe();
     http.expectOne(`${BASE}/quizzes`).error(new ProgressEvent('offline'));
     expect(service.questionCountByQuiz().size).toBeGreaterThan(0);

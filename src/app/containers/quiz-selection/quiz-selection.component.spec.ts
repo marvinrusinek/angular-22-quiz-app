@@ -58,11 +58,13 @@ describe('QuizSelectionComponent — bank-absence catalog (S6o)', () => {
   const factsMap = new Map<string, readonly string[]>();
 
   const makeMetadataApi = (): any => ({
-    load: jest.fn(() => of([
-      { quizId: 'create-first-app' },
-      { quizId: 'dependency-injection' },
-      { quizId: 'performance' }
-    ])),
+    load: jest.fn(() =>
+      of([
+        { quizId: 'create-first-app' },
+        { quizId: 'dependency-injection' },
+        { quizId: 'performance' }
+      ])
+    ),
     difficultyByQuiz: signal(difficultyMap),
     milestoneByQuiz: signal(milestoneMap),
     summaryByQuiz: signal(summaryMap),
@@ -80,23 +82,49 @@ describe('QuizSelectionComponent — bank-absence catalog (S6o)', () => {
       providers: [
         QuizSelectionComponent,
         {
-          provide: QuizService, useValue: {
+          provide: QuizService,
+          useValue: {
             setQuizId: jest.fn(),
             setQuizStatus: jest.fn(),
             setCompletedQuizId: jest.fn(),
             setCheckedShuffle: jest.fn(),
-            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            returnQuizSelectionParams: () => ({
+              startedQuizId: '',
+              continueQuizId: '',
+              quizCompleted: false
+            }),
             quizCompleted: false
           }
         },
-        { provide: AchievementService, useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() } },
-        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        {
+          provide: AchievementService,
+          useValue: {
+            evaluate: jest.fn(() => []),
+            summary: () => ({ earned: 0, total: 6 }),
+            earnedIds: () => new Set()
+          }
+        },
+        {
+          provide: ProgressService,
+          useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) }
+        },
         { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
-        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        {
+          provide: LearningPathService,
+          useValue: {
+            recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 }))
+          }
+        },
         { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
-        { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
+        {
+          provide: SessionEngagementService,
+          useValue: { engaged: () => false, markEngaged: jest.fn() }
+        },
         { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
-        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
+        {
+          provide: InterviewWarmupCoordinatorService,
+          useValue: { warmUp: jest.fn(() => of(undefined)) }
+        },
         { provide: Router, useValue: router }
       ]
     });
@@ -117,7 +145,7 @@ describe('QuizSelectionComponent — bank-absence catalog (S6o)', () => {
 
     const list = comp.quizzes();
     expect(list.length).toBe(3);
-    const byId = new Map(list.map(q => [q.quizId, q]));
+    const byId = new Map(list.map((q) => [q.quizId, q]));
     expect(byId.get('dependency-injection')?.milestone).toBe('Dependency Injection');
     expect(byId.get('dependency-injection')?.summary).toBe('Learn DI.');
     expect(byId.get('dependency-injection')?.difficulty).toBe('intermediate');
@@ -136,7 +164,7 @@ describe('QuizSelectionComponent — bank-absence catalog (S6o)', () => {
     comp.ngOnInit();
 
     comp.searchTerm.set('dep');
-    expect(comp.displayedQuizzes().map(q => q.quizId)).toEqual(['dependency-injection']);
+    expect(comp.displayedQuizzes().map((q) => q.quizId)).toEqual(['dependency-injection']);
 
     comp.searchTerm.set('');
     expect(comp.displayedQuizzes().length).toBe(3);
@@ -151,13 +179,17 @@ describe('QuizSelectionComponent — bank-absence catalog (S6o)', () => {
 
     comp.sortDifficulty.set('asc');
     comp.sortAlpha.set('az');
-    expect(comp.displayedQuizzes().map(q => q.quizId)).toEqual([
-      'create-first-app', 'dependency-injection', 'performance'
+    expect(comp.displayedQuizzes().map((q) => q.quizId)).toEqual([
+      'create-first-app',
+      'dependency-injection',
+      'performance'
     ]);
 
     comp.sortDifficulty.set('desc');
-    expect(comp.displayedQuizzes().map(q => q.quizId)).toEqual([
-      'performance', 'dependency-injection', 'create-first-app'
+    expect(comp.displayedQuizzes().map((q) => q.quizId)).toEqual([
+      'performance',
+      'dependency-injection',
+      'create-first-app'
     ]);
   });
 
@@ -167,7 +199,7 @@ describe('QuizSelectionComponent — bank-absence catalog (S6o)', () => {
     sessionStorage.setItem('startedQuizIds', JSON.stringify(['dependency-injection']));
     comp.ngOnInit();
 
-    const byId = new Map(comp.quizzes().map(q => [q.quizId, q]));
+    const byId = new Map(comp.quizzes().map((q) => [q.quizId, q]));
     expect(byId.get('create-first-app')?.status).toBe(QuizStatus.COMPLETED);
     expect(byId.get('dependency-injection')?.status).toBe(QuizStatus.STARTED);
     expect(byId.get('performance')?.status).toBeUndefined();
@@ -248,24 +280,49 @@ describe('QuizSelectionComponent — Your Progress visibility gate', () => {
       providers: [
         QuizSelectionComponent,
         {
-          provide: QuizService, useValue: {
-            setQuizId: jest.fn(), setQuizStatus: jest.fn(), setCompletedQuizId: jest.fn(),
+          provide: QuizService,
+          useValue: {
+            setQuizId: jest.fn(),
+            setQuizStatus: jest.fn(),
+            setCompletedQuizId: jest.fn(),
             setCheckedShuffle: jest.fn(),
-            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            returnQuizSelectionParams: () => ({
+              startedQuizId: '',
+              continueQuizId: '',
+              quizCompleted: false
+            }),
             quizCompleted: false
           }
         },
         {
           provide: AchievementService,
-          useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: opts.earnedAchievements ?? 0, total: 6 }), earnedIds: () => new Set() }
+          useValue: {
+            evaluate: jest.fn(() => []),
+            summary: () => ({ earned: opts.earnedAchievements ?? 0, total: 6 }),
+            earnedIds: () => new Set()
+          }
         },
-        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        {
+          provide: ProgressService,
+          useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) }
+        },
         { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
-        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        {
+          provide: LearningPathService,
+          useValue: {
+            recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 }))
+          }
+        },
         { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
-        { provide: SessionEngagementService, useValue: { engaged: () => opts.engaged ?? false, markEngaged: jest.fn() } },
+        {
+          provide: SessionEngagementService,
+          useValue: { engaged: () => opts.engaged ?? false, markEngaged: jest.fn() }
+        },
         { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
-        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
+        {
+          provide: InterviewWarmupCoordinatorService,
+          useValue: { warmUp: jest.fn(() => of(undefined)) }
+        },
         { provide: Router, useValue: router }
         // InterviewHistoryService: intentionally NOT stubbed — the real,
         // root-provided, localStorage-backed service is used, so a seeded
@@ -276,7 +333,10 @@ describe('QuizSelectionComponent — Your Progress visibility gate', () => {
 
   // Clears storage, configures TestBed, THEN instantiates — mirrors the
   // bank-absence block's setup() so a test can seed localStorage beforehand.
-  function setup(opts?: { engaged?: boolean; earnedAchievements?: number }): QuizSelectionComponent {
+  function setup(opts?: {
+    engaged?: boolean;
+    earnedAchievements?: number;
+  }): QuizSelectionComponent {
     configureTestBed(opts);
     const comp = TestBed.inject(QuizSelectionComponent);
     comp.ngOnInit();
@@ -285,14 +345,23 @@ describe('QuizSelectionComponent — Your Progress visibility gate', () => {
 
   /** A minimal, valid interviewAttemptHistory:v2 store `validateAttemptEntry` accepts. */
   function seedInterviewHistory(over: Record<string, unknown> = {}): void {
-    localStorage.setItem('interviewAttemptHistory:v2', JSON.stringify({
-      version: 2,
-      attempts: [{
-        id: 'att_1', completedAt: '2026-08-01T10:00:00.000Z',
-        score: 7, totalQuestions: 10, percentage: 70, completionReason: 'submitted',
-        ...over
-      }]
-    }));
+    localStorage.setItem(
+      'interviewAttemptHistory:v2',
+      JSON.stringify({
+        version: 2,
+        attempts: [
+          {
+            id: 'att_1',
+            completedAt: '2026-08-01T10:00:00.000Z',
+            score: 7,
+            totalQuestions: 10,
+            percentage: 70,
+            completionReason: 'submitted',
+            ...over
+          }
+        ]
+      })
+    );
   }
 
   beforeEach(() => {
@@ -323,7 +392,12 @@ describe('QuizSelectionComponent — Your Progress visibility gate', () => {
   });
 
   it('does NOT distinguish a preset Interview attempt from a custom one', () => {
-    seedInterviewHistory({ configKind: 'preset', presetId: 'junior', presetName: 'Junior Angular Developer', configuredDifficulty: undefined });
+    seedInterviewHistory({
+      configKind: 'preset',
+      presetId: 'junior',
+      presetName: 'Junior Angular Developer',
+      configuredDifficulty: undefined
+    });
     const comp = setup();
     expect(comp.showSelectionProgress()).toBe(true);
   });
@@ -341,7 +415,10 @@ describe('QuizSelectionComponent — Your Progress visibility gate', () => {
   });
 
   it('a malformed/empty Interview store is NOT sufficient (no false positive)', () => {
-    localStorage.setItem('interviewAttemptHistory:v2', JSON.stringify({ version: 2, attempts: [] }));
+    localStorage.setItem(
+      'interviewAttemptHistory:v2',
+      JSON.stringify({ version: 2, attempts: [] })
+    );
     expect(setup().showSelectionProgress()).toBe(false);
 
     localStorage.setItem('interviewAttemptHistory:v2', 'not json');
@@ -379,7 +456,9 @@ describe('QuizSelectionComponent — Your Progress entry point', () => {
     factsFor: () => []
   });
 
-  function render(opts: { engaged?: boolean; seed?: () => void } = {}): ComponentFixture<QuizSelectionComponent> {
+  function render(
+    opts: { engaged?: boolean; seed?: () => void } = {}
+  ): ComponentFixture<QuizSelectionComponent> {
     sessionStorage.clear();
     localStorage.clear();
     markEngaged.mockClear();
@@ -390,20 +469,49 @@ describe('QuizSelectionComponent — Your Progress entry point', () => {
         provideRouter([]),
         provideNoopAnimations(),
         {
-          provide: QuizService, useValue: {
-            setQuizId: jest.fn(), setQuizStatus: jest.fn(), setCompletedQuizId: jest.fn(), setCheckedShuffle: jest.fn(),
-            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+          provide: QuizService,
+          useValue: {
+            setQuizId: jest.fn(),
+            setQuizStatus: jest.fn(),
+            setCompletedQuizId: jest.fn(),
+            setCheckedShuffle: jest.fn(),
+            returnQuizSelectionParams: () => ({
+              startedQuizId: '',
+              continueQuizId: '',
+              quizCompleted: false
+            }),
             quizCompleted: false
           }
         },
-        { provide: AchievementService, useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() } },
-        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        {
+          provide: AchievementService,
+          useValue: {
+            evaluate: jest.fn(() => []),
+            summary: () => ({ earned: 0, total: 6 }),
+            earnedIds: () => new Set()
+          }
+        },
+        {
+          provide: ProgressService,
+          useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) }
+        },
         { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
-        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        {
+          provide: LearningPathService,
+          useValue: {
+            recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 }))
+          }
+        },
         { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
-        { provide: SessionEngagementService, useValue: { engaged: () => opts.engaged ?? false, markEngaged } },
+        {
+          provide: SessionEngagementService,
+          useValue: { engaged: () => opts.engaged ?? false, markEngaged }
+        },
         { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
-        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
+        {
+          provide: InterviewWarmupCoordinatorService,
+          useValue: { warmUp: jest.fn(() => of(undefined)) }
+        }
         // InterviewHistoryService: intentionally NOT stubbed.
       ]
     });
@@ -416,13 +524,23 @@ describe('QuizSelectionComponent — Your Progress entry point', () => {
   }
 
   const seedInterview = (over: Record<string, unknown> = {}): void => {
-    localStorage.setItem('interviewAttemptHistory:v2', JSON.stringify({
-      version: 2,
-      attempts: [{
-        id: 'att_1', completedAt: '2026-08-01T10:00:00.000Z', score: 7, totalQuestions: 10,
-        percentage: 70, completionReason: 'submitted', ...over
-      }]
-    }));
+    localStorage.setItem(
+      'interviewAttemptHistory:v2',
+      JSON.stringify({
+        version: 2,
+        attempts: [
+          {
+            id: 'att_1',
+            completedAt: '2026-08-01T10:00:00.000Z',
+            score: 7,
+            totalQuestions: 10,
+            percentage: 70,
+            completionReason: 'submitted',
+            ...over
+          }
+        ]
+      })
+    );
   };
   const q = (f: ComponentFixture<QuizSelectionComponent>, sel: string): HTMLElement | null =>
     f.nativeElement.querySelector(sel);
@@ -458,7 +576,10 @@ describe('QuizSelectionComponent — Your Progress entry point', () => {
 
     it('navigates to /progress with NO side effects: no engagement, no storage, no history change', () => {
       const f = render();
-      const before = { local: JSON.stringify({ ...localStorage }), session: JSON.stringify({ ...sessionStorage }) };
+      const before = {
+        local: JSON.stringify({ ...localStorage }),
+        session: JSON.stringify({ ...sessionStorage })
+      };
 
       (q(f, 'a.progress-entry__link') as HTMLAnchorElement).click();
 
@@ -512,12 +633,25 @@ describe('QuizSelectionComponent — Your Progress entry point', () => {
     });
 
     it('treats a preset Interview attempt the same as a custom one', () => {
-      const f = render({ seed: () => seedInterview({ configKind: 'preset', presetId: 'junior', presetName: 'Junior Angular Developer' }) });
+      const f = render({
+        seed: () =>
+          seedInterview({
+            configKind: 'preset',
+            presetId: 'junior',
+            presetName: 'Junior Angular Developer'
+          })
+      });
       expect(q(f, '.achievements-summary-row')).not.toBeNull();
     });
 
     it('an empty Interview store does NOT open the gate (no false positive)', () => {
-      const f = render({ seed: () => localStorage.setItem('interviewAttemptHistory:v2', JSON.stringify({ version: 2, attempts: [] })) });
+      const f = render({
+        seed: () =>
+          localStorage.setItem(
+            'interviewAttemptHistory:v2',
+            JSON.stringify({ version: 2, attempts: [] })
+          )
+      });
       expect(q(f, '.achievements-summary-row')).toBeNull();
     });
   });
@@ -563,7 +697,10 @@ describe('QuizSelectionComponent — tile keyboard accessibility', () => {
     factsFor: (id: string) => factsMap.get(id) ?? []
   });
 
-  function render(): { fixture: ComponentFixture<QuizSelectionComponent>; comp: QuizSelectionComponent } {
+  function render(): {
+    fixture: ComponentFixture<QuizSelectionComponent>;
+    comp: QuizSelectionComponent;
+  } {
     sessionStorage.clear();
     localStorage.clear();
 
@@ -572,23 +709,49 @@ describe('QuizSelectionComponent — tile keyboard accessibility', () => {
         provideRouter([]),
         provideNoopAnimations(),
         {
-          provide: QuizService, useValue: {
+          provide: QuizService,
+          useValue: {
             setQuizId: jest.fn(),
             setQuizStatus: jest.fn(),
             setCompletedQuizId: jest.fn(),
             setCheckedShuffle: jest.fn(),
-            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            returnQuizSelectionParams: () => ({
+              startedQuizId: '',
+              continueQuizId: '',
+              quizCompleted: false
+            }),
             quizCompleted: false
           }
         },
-        { provide: AchievementService, useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() } },
-        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        {
+          provide: AchievementService,
+          useValue: {
+            evaluate: jest.fn(() => []),
+            summary: () => ({ earned: 0, total: 6 }),
+            earnedIds: () => new Set()
+          }
+        },
+        {
+          provide: ProgressService,
+          useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) }
+        },
         { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
-        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        {
+          provide: LearningPathService,
+          useValue: {
+            recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 }))
+          }
+        },
         { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
-        { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
+        {
+          provide: SessionEngagementService,
+          useValue: { engaged: () => false, markEngaged: jest.fn() }
+        },
         { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
-        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
+        {
+          provide: InterviewWarmupCoordinatorService,
+          useValue: { warmUp: jest.fn(() => of(undefined)) }
+        }
       ]
     });
 
@@ -596,28 +759,34 @@ describe('QuizSelectionComponent — tile keyboard accessibility', () => {
     // status-icon link and the tile work exactly as they do in the app;
     // navigate() itself is spied rather than replaced, so onSelect()'s real
     // call still resolves.
-    router = { navigate: jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true) as any };
+    router = {
+      navigate: jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true) as any
+    };
 
     const fixture = TestBed.createComponent(QuizSelectionComponent);
     fixture.detectChanges();
     return { fixture, comp: fixture.componentInstance };
   }
 
-  it('renders the tile\'s activation control as a real native <button>, not a non-semantic clickable container', () => {
+  it("renders the tile's activation control as a real native <button>, not a non-semantic clickable container", () => {
     const { fixture } = render();
-    const activateBtn: HTMLElement | null =
-      fixture.nativeElement.querySelector('.quiz-tile:not(.interview-tile) .quiz-tile__activate');
+    const activateBtn: HTMLElement | null = fixture.nativeElement.querySelector(
+      '.quiz-tile:not(.interview-tile) .quiz-tile__activate'
+    );
 
     expect(activateBtn).not.toBeNull();
     expect(activateBtn!.tagName).toBe('BUTTON');
     expect(activateBtn!.getAttribute('type')).toBe('button');
   });
 
-  it('the button\'s accessible name is derived from the tile\'s own visible title and summary', () => {
+  it("the button's accessible name is derived from the tile's own visible title and summary", () => {
     const { fixture } = render();
-    const activateBtn: HTMLElement =
-      fixture.nativeElement.querySelector('.quiz-tile:not(.interview-tile) .quiz-tile__activate');
-    const labelledBy = (activateBtn.getAttribute('aria-labelledby') ?? '').split(' ').filter(Boolean);
+    const activateBtn: HTMLElement = fixture.nativeElement.querySelector(
+      '.quiz-tile:not(.interview-tile) .quiz-tile__activate'
+    );
+    const labelledBy = (activateBtn.getAttribute('aria-labelledby') ?? '')
+      .split(' ')
+      .filter(Boolean);
 
     expect(labelledBy.length).toBe(2);
     const labelText = labelledBy
@@ -630,8 +799,9 @@ describe('QuizSelectionComponent — tile keyboard accessibility', () => {
   it('activating the tile button invokes the SAME onSelect() path a mouse click always has', () => {
     const { fixture, comp } = render();
     const spy = jest.spyOn(comp, 'onSelect');
-    const activateBtn: HTMLElement =
-      fixture.nativeElement.querySelector('.quiz-tile:not(.interview-tile) .quiz-tile__activate');
+    const activateBtn: HTMLElement = fixture.nativeElement.querySelector(
+      '.quiz-tile:not(.interview-tile) .quiz-tile__activate'
+    );
 
     activateBtn.click();
 
@@ -641,7 +811,9 @@ describe('QuizSelectionComponent — tile keyboard accessibility', () => {
   it('the outer tile container itself no longer owns the click handler — only the button does', () => {
     const { fixture, comp } = render();
     const spy = jest.spyOn(comp, 'onSelect');
-    const tile: HTMLElement = fixture.nativeElement.querySelector('.quiz-tile:not(.interview-tile)');
+    const tile: HTMLElement = fixture.nativeElement.querySelector(
+      '.quiz-tile:not(.interview-tile)'
+    );
 
     // Dispatched directly on the container, NOT the button — before the fix
     // this alone called onSelect(); after the fix, activation lives solely on
@@ -684,8 +856,15 @@ describe('QuizSelectionComponent — tile image loading (NgOptimizedImage conver
   // 9 quizzes so priorityTileCount's default (6) has both a priority side
   // (indices 0-5) and a lazy side (6-8) to assert against in the same fixture.
   const quizIds = [
-    'typescript', 'create-first-app', 'templates', 'dependency-injection',
-    'component-tree', 'router', 'material', 'forms', 'performance'
+    'typescript',
+    'create-first-app',
+    'templates',
+    'dependency-injection',
+    'component-tree',
+    'router',
+    'material',
+    'forms',
+    'performance'
   ];
   const difficultyMap = new Map<string, string | null>([
     ['typescript', 'beginner'],
@@ -756,7 +935,10 @@ describe('QuizSelectionComponent — tile image loading (NgOptimizedImage conver
     factsFor: (id: string) => factsMap.get(id) ?? []
   });
 
-  function render(): { fixture: ComponentFixture<QuizSelectionComponent>; comp: QuizSelectionComponent } {
+  function render(): {
+    fixture: ComponentFixture<QuizSelectionComponent>;
+    comp: QuizSelectionComponent;
+  } {
     sessionStorage.clear();
     localStorage.clear();
 
@@ -765,27 +947,55 @@ describe('QuizSelectionComponent — tile image loading (NgOptimizedImage conver
         provideRouter([]),
         provideNoopAnimations(),
         {
-          provide: QuizService, useValue: {
+          provide: QuizService,
+          useValue: {
             setQuizId: jest.fn(),
             setQuizStatus: jest.fn(),
             setCompletedQuizId: jest.fn(),
             setCheckedShuffle: jest.fn(),
-            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            returnQuizSelectionParams: () => ({
+              startedQuizId: '',
+              continueQuizId: '',
+              quizCompleted: false
+            }),
             quizCompleted: false
           }
         },
-        { provide: AchievementService, useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() } },
-        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        {
+          provide: AchievementService,
+          useValue: {
+            evaluate: jest.fn(() => []),
+            summary: () => ({ earned: 0, total: 6 }),
+            earnedIds: () => new Set()
+          }
+        },
+        {
+          provide: ProgressService,
+          useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) }
+        },
         { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
-        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        {
+          provide: LearningPathService,
+          useValue: {
+            recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 }))
+          }
+        },
         { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
-        { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
+        {
+          provide: SessionEngagementService,
+          useValue: { engaged: () => false, markEngaged: jest.fn() }
+        },
         { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
-        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
+        {
+          provide: InterviewWarmupCoordinatorService,
+          useValue: { warmUp: jest.fn(() => of(undefined)) }
+        }
       ]
     });
 
-    router = { navigate: jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true) as any };
+    router = {
+      navigate: jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true) as any
+    };
 
     const fixture = TestBed.createComponent(QuizSelectionComponent);
     fixture.detectChanges();
@@ -800,7 +1010,9 @@ describe('QuizSelectionComponent — tile image loading (NgOptimizedImage conver
 
   it('renders a real <img> per tile, not a CSS background — no [style.background]/[style.background-image] on the tile', () => {
     const { fixture } = render();
-    const tile: HTMLElement = fixture.nativeElement.querySelector('.quiz-tile:not(.interview-tile)');
+    const tile: HTMLElement = fixture.nativeElement.querySelector(
+      '.quiz-tile:not(.interview-tile)'
+    );
     const img = tileImages(fixture)[0];
 
     expect(img).toBeTruthy();
@@ -876,7 +1088,7 @@ describe('QuizSelectionComponent — tile image loading (NgOptimizedImage conver
     expect(imgs[0].getAttribute('ngSrc') ?? imgs[0].src).toContain('dependency-injection.webp');
   });
 
-  it('sort still renders each tile\'s image matched to ITS OWN quiz, not a stale/shifted index', () => {
+  it("sort still renders each tile's image matched to ITS OWN quiz, not a stale/shifted index", () => {
     const { fixture, comp } = render();
     comp.sortDifficulty.set('asc');
     comp.sortAlpha.set('az');
@@ -948,7 +1160,10 @@ describe('QuizSelectionComponent — tile image loading (NgOptimizedImage conver
  * neither blocks the other or this component's own rendering.
  */
 describe('QuizSelectionComponent — early Spring warm-up', () => {
-  function render(): { fixture: ComponentFixture<QuizSelectionComponent>; http: HttpTestingController } {
+  function render(): {
+    fixture: ComponentFixture<QuizSelectionComponent>;
+    http: HttpTestingController;
+  } {
     sessionStorage.clear();
     localStorage.clear();
 
@@ -961,21 +1176,44 @@ describe('QuizSelectionComponent — early Spring warm-up', () => {
         { provide: API_BASE_URL, useValue: 'http://node.test/api' },
         { provide: INTERVIEW_API_BASE_URL, useValue: 'http://spring.test/api' },
         {
-          provide: QuizService, useValue: {
+          provide: QuizService,
+          useValue: {
             setQuizId: jest.fn(),
             setQuizStatus: jest.fn(),
             setCompletedQuizId: jest.fn(),
             setCheckedShuffle: jest.fn(),
-            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            returnQuizSelectionParams: () => ({
+              startedQuizId: '',
+              continueQuizId: '',
+              quizCompleted: false
+            }),
             quizCompleted: false
           }
         },
-        { provide: AchievementService, useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() } },
-        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        {
+          provide: AchievementService,
+          useValue: {
+            evaluate: jest.fn(() => []),
+            summary: () => ({ earned: 0, total: 6 }),
+            earnedIds: () => new Set()
+          }
+        },
+        {
+          provide: ProgressService,
+          useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) }
+        },
         { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
-        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        {
+          provide: LearningPathService,
+          useValue: {
+            recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 }))
+          }
+        },
         { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
-        { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } }
+        {
+          provide: SessionEngagementService,
+          useValue: { engaged: () => false, markEngaged: jest.fn() }
+        }
       ]
     });
 
@@ -997,7 +1235,9 @@ describe('QuizSelectionComponent — early Spring warm-up', () => {
     expect(healthReqs[0].request.method).toBe('GET');
     healthReqs[0].flush({ status: 'UP' });
 
-    http.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    http
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
   });
 
   it('rendering and Node /quizzes metadata loading are not blocked by the Spring warm-up — both outstanding at once, warm-up left unresolved', () => {
@@ -1026,14 +1266,19 @@ describe('QuizSelectionComponent — early Spring warm-up', () => {
 
     const healthReq = http.expectOne((req) => req.url === 'http://spring.test/api/health');
     expect(() =>
-      healthReq.error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' })
+      healthReq.error(new ProgressEvent('error'), {
+        status: 503,
+        statusText: 'Service Unavailable'
+      })
     ).not.toThrow();
 
     // Nothing on this Node-owned page reacts to it at all.
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.quiz-grid')).not.toBeNull();
 
-    http.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    http
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
   });
 
   it('destroying QuizSelectionComponent does NOT cancel the app-scoped in-flight warm-up', () => {
@@ -1047,7 +1292,9 @@ describe('QuizSelectionComponent — early Spring warm-up', () => {
     // Still resolvable after destruction, with no observable effect.
     expect(() => healthReq.flush({ status: 'UP' })).not.toThrow();
 
-    http.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    http
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
   });
 
   it('the warm-up never goes to Node, and Node metadata never goes to Spring', () => {
@@ -1058,7 +1305,9 @@ describe('QuizSelectionComponent — early Spring warm-up', () => {
     expect(http.match((req) => req.url === 'http://spring.test/api/quizzes')).toHaveLength(0);
 
     http.expectOne((req) => req.url === 'http://spring.test/api/health').flush({ status: 'UP' });
-    http.match((req) => req.url === 'http://node.test/api/quizzes').forEach((r) => r.flush({ quizzes: [] }));
+    http
+      .match((req) => req.url === 'http://node.test/api/quizzes')
+      .forEach((r) => r.flush({ quizzes: [] }));
   });
 });
 
@@ -1088,14 +1337,31 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
   // hand: rank groups Beginner < Intermediate < Advanced, then title A–Z / Z–A.
   const ASC_AZ = ['bindings', 'components', 'directives', 'signals', 'architecture', 'performance'];
   const ASC_ZA = ['components', 'bindings', 'signals', 'directives', 'performance', 'architecture'];
-  const DESC_AZ = ['architecture', 'performance', 'directives', 'signals', 'bindings', 'components'];
-  const DESC_ZA = ['performance', 'architecture', 'signals', 'directives', 'components', 'bindings'];
+  const DESC_AZ = [
+    'architecture',
+    'performance',
+    'directives',
+    'signals',
+    'bindings',
+    'components'
+  ];
+  const DESC_ZA = [
+    'performance',
+    'architecture',
+    'signals',
+    'directives',
+    'components',
+    'bindings'
+  ];
 
   const titleOf = (id: string): string => CATALOG.find(([qid]) => qid === id)![1];
   const AZ = 'A–Z';
   const ZA = 'Z–A';
 
-  function render(seed?: () => void): { fixture: ComponentFixture<QuizSelectionComponent>; comp: QuizSelectionComponent } {
+  function render(seed?: () => void): {
+    fixture: ComponentFixture<QuizSelectionComponent>;
+    comp: QuizSelectionComponent;
+  } {
     sessionStorage.clear();
     localStorage.clear();
     seed?.();
@@ -1117,23 +1383,49 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
         provideRouter([]),
         provideNoopAnimations(),
         {
-          provide: QuizService, useValue: {
+          provide: QuizService,
+          useValue: {
             setQuizId: jest.fn(),
             setQuizStatus: jest.fn(),
             setCompletedQuizId: jest.fn(),
             setCheckedShuffle: jest.fn(),
-            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            returnQuizSelectionParams: () => ({
+              startedQuizId: '',
+              continueQuizId: '',
+              quizCompleted: false
+            }),
             quizCompleted: false
           }
         },
-        { provide: AchievementService, useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() } },
-        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        {
+          provide: AchievementService,
+          useValue: {
+            evaluate: jest.fn(() => []),
+            summary: () => ({ earned: 0, total: 6 }),
+            earnedIds: () => new Set()
+          }
+        },
+        {
+          provide: ProgressService,
+          useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) }
+        },
         { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
-        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        {
+          provide: LearningPathService,
+          useValue: {
+            recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 }))
+          }
+        },
         { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
-        { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
+        {
+          provide: SessionEngagementService,
+          useValue: { engaged: () => false, markEngaged: jest.fn() }
+        },
         { provide: TopicQuizMetadataService, useValue: metadataApi },
-        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
+        {
+          provide: InterviewWarmupCoordinatorService,
+          useValue: { warmUp: jest.fn(() => of(undefined)) }
+        }
       ]
     });
 
@@ -1145,9 +1437,11 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
   // ── reading and driving the REAL rendered controls / tiles ─────────
   type Ctx = ReturnType<typeof render>;
   const el = ({ fixture }: Ctx): HTMLElement => fixture.nativeElement;
-  const difficultyBtn = (c: Ctx): HTMLButtonElement => el(c).querySelector('.toolbar .sort-btn--difficulty')!;
+  const difficultyBtn = (c: Ctx): HTMLButtonElement =>
+    el(c).querySelector('.toolbar .sort-btn--difficulty')!;
   const alphaBtn = (c: Ctx): HTMLButtonElement => el(c).querySelector('.toolbar .sort-btn--alpha')!;
-  const btnText = (b: HTMLButtonElement): string => b.querySelector('.sort-btn__text')!.textContent!.trim();
+  const btnText = (b: HTMLButtonElement): string =>
+    b.querySelector('.sort-btn__text')!.textContent!.trim();
   const arrow = (c: Ctx): string => difficultyBtn(c).querySelector('mat-icon')!.textContent!.trim();
   /** The tile order the USER sees, as quiz ids (via the rendered titles). */
   const renderedIds = (c: Ctx): string[] =>
@@ -1155,7 +1449,10 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
       const title = t.textContent!.trim();
       return CATALOG.find(([, ttl]) => ttl === title)![0];
     });
-  const click = (c: Ctx, btn: HTMLButtonElement): void => { btn.click(); c.fixture.detectChanges(); };
+  const click = (c: Ctx, btn: HTMLButtonElement): void => {
+    btn.click();
+    c.fixture.detectChanges();
+  };
 
   it('renders ONE Difficulty button and ONE alphabetical button — no "Sort by difficulty:" label, no ↑/↓ pair, no dropdown', () => {
     const c = render();
@@ -1174,8 +1471,14 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
       const c = render();
 
       expect(renderedIds(c)).toEqual(ASC_AZ);
-      expect(c.comp.displayedQuizzes().map((q) => q.difficulty))
-        .toEqual(['beginner', 'beginner', 'intermediate', 'intermediate', 'advanced', 'advanced']);
+      expect(c.comp.displayedQuizzes().map((q) => q.difficulty)).toEqual([
+        'beginner',
+        'beginner',
+        'intermediate',
+        'intermediate',
+        'advanced',
+        'advanced'
+      ]);
     });
 
     it('Difficulty ↓: Advanced → Intermediate → Beginner', () => {
@@ -1183,17 +1486,26 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
       click(c, difficultyBtn(c));
 
       expect(renderedIds(c)).toEqual(DESC_AZ);
-      expect(c.comp.displayedQuizzes().map((q) => q.difficulty))
-        .toEqual(['advanced', 'advanced', 'intermediate', 'intermediate', 'beginner', 'beginner']);
+      expect(c.comp.displayedQuizzes().map((q) => q.difficulty)).toEqual([
+        'advanced',
+        'advanced',
+        'intermediate',
+        'intermediate',
+        'beginner',
+        'beginner'
+      ]);
     });
 
     it('is NOT a plain alphabetical sort of the strings (that would put "advanced" before "beginner")', () => {
       const c = render();
 
-      const firstGroup = c.comp.displayedQuizzes().slice(0, 2).map((q) => q.difficulty);
+      const firstGroup = c.comp
+        .displayedQuizzes()
+        .slice(0, 2)
+        .map((q) => q.difficulty);
       expect(firstGroup).toEqual(['beginner', 'beginner']);
       const alphabeticalStrings = [...CATALOG.map(([, , d]) => d)].sort();
-      expect(alphabeticalStrings[0]).toBe('advanced');   // what a string sort would have led with
+      expect(alphabeticalStrings[0]).toBe('advanced'); // what a string sort would have led with
       expect(c.comp.displayedQuizzes()[0].difficulty).not.toBe(alphabeticalStrings[0]);
     });
   });
@@ -1201,29 +1513,50 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
   describe('the buttons toggle', () => {
     it('Difficulty: ↑ ↔ ↓ — arrow, accessible name and tile order all follow', () => {
       const c = render();
-      expect([arrow(c), difficultyBtn(c).getAttribute('aria-label')]).toEqual(['arrow_upward', 'Sort by difficulty ascending']);
+      expect([arrow(c), difficultyBtn(c).getAttribute('aria-label')]).toEqual([
+        'arrow_upward',
+        'Sort by difficulty ascending'
+      ]);
 
       click(c, difficultyBtn(c));
-      expect([arrow(c), difficultyBtn(c).getAttribute('aria-label')]).toEqual(['arrow_downward', 'Sort by difficulty descending']);
+      expect([arrow(c), difficultyBtn(c).getAttribute('aria-label')]).toEqual([
+        'arrow_downward',
+        'Sort by difficulty descending'
+      ]);
       expect(renderedIds(c)).toEqual(DESC_AZ);
       expect(c.comp.sortDifficulty()).toBe('desc');
 
       click(c, difficultyBtn(c));
-      expect([arrow(c), difficultyBtn(c).getAttribute('aria-label')]).toEqual(['arrow_upward', 'Sort by difficulty ascending']);
+      expect([arrow(c), difficultyBtn(c).getAttribute('aria-label')]).toEqual([
+        'arrow_upward',
+        'Sort by difficulty ascending'
+      ]);
       expect(renderedIds(c)).toEqual(ASC_AZ);
       expect(c.comp.sortDifficulty()).toBe('asc');
     });
 
     it('A–Z ↔ Z–A still works — reverses order WITHIN each difficulty and leaves the groups where they are', () => {
       const c = render();
-      expect([btnText(alphaBtn(c)), alphaBtn(c).getAttribute('aria-label')]).toEqual([AZ, 'Sort alphabetically A to Z']);
+      expect([btnText(alphaBtn(c)), alphaBtn(c).getAttribute('aria-label')]).toEqual([
+        AZ,
+        'Sort alphabetically A to Z'
+      ]);
 
       click(c, alphaBtn(c));
-      expect([btnText(alphaBtn(c)), alphaBtn(c).getAttribute('aria-label')]).toEqual([ZA, 'Sort alphabetically Z to A']);
+      expect([btnText(alphaBtn(c)), alphaBtn(c).getAttribute('aria-label')]).toEqual([
+        ZA,
+        'Sort alphabetically Z to A'
+      ]);
       expect(renderedIds(c)).toEqual(ASC_ZA);
       // Same three groups in the same order — only the order inside each changed.
-      expect(c.comp.displayedQuizzes().map((q) => q.difficulty))
-        .toEqual(['beginner', 'beginner', 'intermediate', 'intermediate', 'advanced', 'advanced']);
+      expect(c.comp.displayedQuizzes().map((q) => q.difficulty)).toEqual([
+        'beginner',
+        'beginner',
+        'intermediate',
+        'intermediate',
+        'advanced',
+        'advanced'
+      ]);
       expect(c.comp.sortAlpha()).toBe('za');
 
       click(c, alphaBtn(c));
@@ -1234,7 +1567,14 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
 
     it('switching between the two: each button changes only its own dimension, and the rendered order composes correctly every time', () => {
       const c = render();
-      const step = (btn: HTMLButtonElement, expected: string[], difficulty: string, alpha: string, arrowIcon: string, alphaText: string): void => {
+      const step = (
+        btn: HTMLButtonElement,
+        expected: string[],
+        difficulty: string,
+        alpha: string,
+        arrowIcon: string,
+        alphaText: string
+      ): void => {
         click(c, btn);
         expect(renderedIds(c)).toEqual(expected);
         expect([c.comp.sortDifficulty(), c.comp.sortAlpha()]).toEqual([difficulty, alpha]);
@@ -1250,7 +1590,7 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
 
     it('keeps keyboard focus on the pressed button after it re-renders (the old ↑/↓ pair disabled the pressed button)', () => {
       const c = render();
-      document.body.appendChild(el(c));   // focus needs an attached element
+      document.body.appendChild(el(c)); // focus needs an attached element
       const btn = difficultyBtn(c);
       btn.focus();
       click(c, btn);
@@ -1264,7 +1604,7 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
   describe('search and sorting together', () => {
     it('search narrows the list and every sort combination still orders the survivors correctly', () => {
       const c = render();
-      c.comp.searchTerm.set('angular');   // word-start match: everything except "Performance Tuning"
+      c.comp.searchTerm.set('angular'); // word-start match: everything except "Performance Tuning"
       c.fixture.detectChanges();
 
       expect(renderedIds(c)).toEqual(ASC_AZ.filter((id) => id !== 'performance'));
@@ -1292,12 +1632,12 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
 
     it('a search with no matches shows nothing; clearing it restores the list in the CURRENT sort order', () => {
       const c = render();
-      click(c, difficultyBtn(c));   // desc / az
+      click(c, difficultyBtn(c)); // desc / az
 
       c.comp.searchTerm.set('zzz-no-such-topic');
       c.fixture.detectChanges();
       expect(renderedIds(c)).toEqual([]);
-      click(c, alphaBtn(c));        // buttons keep working over an empty result
+      click(c, alphaBtn(c)); // buttons keep working over an empty result
 
       c.comp.searchTerm.set('');
       c.fixture.detectChanges();
@@ -1306,7 +1646,7 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
 
     it('search matches only the title (not the difficulty), exactly as before', () => {
       const c = render();
-      c.comp.searchTerm.set('advanced');   // a difficulty, not a title word
+      c.comp.searchTerm.set('advanced'); // a difficulty, not a title word
       c.fixture.detectChanges();
 
       expect(renderedIds(c)).toEqual([]);
@@ -1316,7 +1656,10 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
   describe('persistence is unchanged', () => {
     it('still stores the same two keys with the same values', () => {
       const c = render();
-      expect([localStorage.getItem('quizSortDifficulty'), localStorage.getItem('quizSortAlpha')]).toEqual(['asc', 'az']);
+      expect([
+        localStorage.getItem('quizSortDifficulty'),
+        localStorage.getItem('quizSortAlpha')
+      ]).toEqual(['asc', 'az']);
 
       click(c, difficultyBtn(c));
       click(c, alphaBtn(c));
@@ -1374,8 +1717,22 @@ describe('QuizSelectionComponent — difficulty filter', () => {
   // Worked out by hand. Sort orders when ALL difficulties are shown …
   const ASC_AZ = ['bindings', 'components', 'directives', 'signals', 'architecture', 'performance'];
   const ASC_ZA = ['components', 'bindings', 'signals', 'directives', 'performance', 'architecture'];
-  const DESC_AZ = ['architecture', 'performance', 'directives', 'signals', 'bindings', 'components'];
-  const DESC_ZA = ['performance', 'architecture', 'signals', 'directives', 'components', 'bindings'];
+  const DESC_AZ = [
+    'architecture',
+    'performance',
+    'directives',
+    'signals',
+    'bindings',
+    'components'
+  ];
+  const DESC_ZA = [
+    'performance',
+    'architecture',
+    'signals',
+    'directives',
+    'components',
+    'bindings'
+  ];
   // … and the members of each single difficulty, A–Z then Z–A.
   const ONLY: Record<'beginner' | 'intermediate' | 'advanced', { az: string[]; za: string[] }> = {
     beginner: { az: ['bindings', 'components'], za: ['components', 'bindings'] },
@@ -1383,7 +1740,10 @@ describe('QuizSelectionComponent — difficulty filter', () => {
     advanced: { az: ['architecture', 'performance'], za: ['performance', 'architecture'] }
   };
   const LABEL: Record<string, string> = {
-    all: 'All Difficulties', beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced'
+    all: 'All Difficulties',
+    beginner: 'Beginner',
+    intermediate: 'Intermediate',
+    advanced: 'Advanced'
   };
 
   async function render(catalog: ReadonlyArray<Row> = CATALOG) {
@@ -1407,48 +1767,83 @@ describe('QuizSelectionComponent — difficulty filter', () => {
         provideRouter([]),
         provideNoopAnimations(),
         {
-          provide: QuizService, useValue: {
+          provide: QuizService,
+          useValue: {
             setQuizId: jest.fn(),
             setQuizStatus: jest.fn(),
             setCompletedQuizId: jest.fn(),
             setCheckedShuffle: jest.fn(),
-            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            returnQuizSelectionParams: () => ({
+              startedQuizId: '',
+              continueQuizId: '',
+              quizCompleted: false
+            }),
             quizCompleted: false
           }
         },
-        { provide: AchievementService, useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() } },
-        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        {
+          provide: AchievementService,
+          useValue: {
+            evaluate: jest.fn(() => []),
+            summary: () => ({ earned: 0, total: 6 }),
+            earnedIds: () => new Set()
+          }
+        },
+        {
+          provide: ProgressService,
+          useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) }
+        },
         { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
-        { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+        {
+          provide: LearningPathService,
+          useValue: {
+            recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 }))
+          }
+        },
         { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
-        { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
+        {
+          provide: SessionEngagementService,
+          useValue: { engaged: () => false, markEngaged: jest.fn() }
+        },
         { provide: TopicQuizMetadataService, useValue: metadataApi },
-        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
+        {
+          provide: InterviewWarmupCoordinatorService,
+          useValue: { warmUp: jest.fn(() => of(undefined)) }
+        }
       ]
     });
 
     const fixture = TestBed.createComponent(QuizSelectionComponent);
     fixture.detectChanges();
-    await fixture.whenStable();   // MatSelect applies its initial selection in a microtask
+    await fixture.whenStable(); // MatSelect applies its initial selection in a microtask
     fixture.detectChanges();
     return { fixture, comp: fixture.componentInstance, catalog };
   }
 
   type Ctx = Awaited<ReturnType<typeof render>>;
   const el = (c: Ctx): HTMLElement => c.fixture.nativeElement;
-  const selectHost = (c: Ctx): HTMLElement => el(c).querySelector('.toolbar app-quiz-difficulty-filter mat-select')!;
+  const selectHost = (c: Ctx): HTMLElement =>
+    el(c).querySelector('.toolbar app-quiz-difficulty-filter mat-select')!;
   const selectShows = (c: Ctx): string =>
-    (el(c).querySelector('.toolbar .mat-mdc-select-value')?.textContent ?? '').replace(/\s+/g, ' ').trim();
-  const difficultyBtn = (c: Ctx): HTMLButtonElement => el(c).querySelector('.toolbar .sort-btn--difficulty')!;
+    (el(c).querySelector('.toolbar .mat-mdc-select-value')?.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  const difficultyBtn = (c: Ctx): HTMLButtonElement =>
+    el(c).querySelector('.toolbar .sort-btn--difficulty')!;
   const alphaBtn = (c: Ctx): HTMLButtonElement => el(c).querySelector('.toolbar .sort-btn--alpha')!;
-  const searchInput = (c: Ctx): HTMLInputElement => el(c).querySelector('.toolbar app-quiz-search input')!;
+  const searchInput = (c: Ctx): HTMLInputElement =>
+    el(c).querySelector('.toolbar app-quiz-search input')!;
   const titles = (c: Ctx): string[] =>
     Array.from(el(c).querySelectorAll('.quiz-title')).map((t) => t.textContent!.trim());
   const renderedIds = (c: Ctx): string[] =>
     titles(c).map((title) => c.catalog.find(([, ttl]) => ttl === title)![0]);
-  const noResults = (c: Ctx): HTMLElement[] => Array.from(el(c).querySelectorAll<HTMLElement>('.no-results'));
+  const noResults = (c: Ctx): HTMLElement[] =>
+    Array.from(el(c).querySelectorAll<HTMLElement>('.no-results'));
   const announcement = (c: Ctx): string | null =>
-    el(c).querySelector('.visually-hidden[role="status"]')?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
+    el(c)
+      .querySelector('.visually-hidden[role="status"]')
+      ?.textContent?.replace(/\s+/g, ' ')
+      .trim() ?? null;
 
   async function settle(c: Ctx): Promise<void> {
     c.fixture.detectChanges();
@@ -1456,11 +1851,15 @@ describe('QuizSelectionComponent — difficulty filter', () => {
     c.fixture.detectChanges();
   }
   /** Choose an option in the REAL select, the way a user does. */
-  async function chooseDifficulty(c: Ctx, value: 'all' | 'beginner' | 'intermediate' | 'advanced'): Promise<void> {
+  async function chooseDifficulty(
+    c: Ctx,
+    value: 'all' | 'beginner' | 'intermediate' | 'advanced'
+  ): Promise<void> {
     (el(c).querySelector('.toolbar .mat-mdc-select-trigger') as HTMLElement).click();
     c.fixture.detectChanges();
-    const option = Array.from(document.querySelectorAll<HTMLElement>('mat-option'))
-      .find((o) => o.textContent!.trim() === LABEL[value])!;
+    const option = Array.from(document.querySelectorAll<HTMLElement>('mat-option')).find(
+      (o) => o.textContent!.trim() === LABEL[value]
+    )!;
     option.click();
     await settle(c);
   }
@@ -1490,9 +1889,11 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       const c = await render();
 
       const group = el(c).querySelector('.toolbar .toolbar-controls')!;
-      expect(Array.from(group.children).map((e) => e.tagName.toLowerCase()))
-        .toEqual(['app-quiz-difficulty-filter', 'app-quiz-sort']);
-      expect(el(c).querySelectorAll('.toolbar app-quiz-sort button')).toHaveLength(2);   // the sort control is unchanged
+      expect(Array.from(group.children).map((e) => e.tagName.toLowerCase())).toEqual([
+        'app-quiz-difficulty-filter',
+        'app-quiz-sort'
+      ]);
+      expect(el(c).querySelectorAll('.toolbar app-quiz-sort button')).toHaveLength(2); // the sort control is unchanged
     });
   });
 
@@ -1540,22 +1941,28 @@ describe('QuizSelectionComponent — difficulty filter', () => {
   });
 
   describe('composes with the sort dimensions', () => {
-    it.each(['beginner', 'intermediate', 'advanced'] as const)('%s + A–Z: only that difficulty, alphabetical', async (difficulty) => {
-      const c = await render();
-      await chooseDifficulty(c, difficulty);
+    it.each(['beginner', 'intermediate', 'advanced'] as const)(
+      '%s + A–Z: only that difficulty, alphabetical',
+      async (difficulty) => {
+        const c = await render();
+        await chooseDifficulty(c, difficulty);
 
-      expect(c.comp.sortAlpha()).toBe('az');
-      expect(renderedIds(c)).toEqual(ONLY[difficulty].az);
-    });
+        expect(c.comp.sortAlpha()).toBe('az');
+        expect(renderedIds(c)).toEqual(ONLY[difficulty].az);
+      }
+    );
 
-    it.each(['beginner', 'intermediate', 'advanced'] as const)('%s + Z–A: only that difficulty, reverse-alphabetical', async (difficulty) => {
-      const c = await render();
-      await press(c, alphaBtn(c));            // → Z–A
-      await chooseDifficulty(c, difficulty);
+    it.each(['beginner', 'intermediate', 'advanced'] as const)(
+      '%s + Z–A: only that difficulty, reverse-alphabetical',
+      async (difficulty) => {
+        const c = await render();
+        await press(c, alphaBtn(c)); // → Z–A
+        await chooseDifficulty(c, difficulty);
 
-      expect(c.comp.sortAlpha()).toBe('za');
-      expect(renderedIds(c)).toEqual(ONLY[difficulty].za);
-    });
+        expect(c.comp.sortAlpha()).toBe('za');
+        expect(renderedIds(c)).toEqual(ONLY[difficulty].za);
+      }
+    );
 
     it('toggling A–Z / Z–A while a difficulty is selected reorders within it and keeps the selection', async () => {
       const c = await render();
@@ -1572,16 +1979,16 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       const c = await render();
       await chooseDifficulty(c, 'intermediate');
 
-      await press(c, difficultyBtn(c));   // ↓
+      await press(c, difficultyBtn(c)); // ↓
       expect(c.comp.sortDifficulty()).toBe('desc');
-      expect(renderedIds(c)).toEqual(ONLY.intermediate.az);   // same single group, same order
-      await press(c, difficultyBtn(c));   // ↑
+      expect(renderedIds(c)).toEqual(ONLY.intermediate.az); // same single group, same order
+      await press(c, difficultyBtn(c)); // ↑
       expect(c.comp.sortDifficulty()).toBe('asc');
       expect(renderedIds(c)).toEqual(ONLY.intermediate.az);
       expect(selectShows(c)).toBe('Intermediate');
 
       // The direction chosen meanwhile is remembered: back on All it groups accordingly.
-      await press(c, difficultyBtn(c));   // ↓ again
+      await press(c, difficultyBtn(c)); // ↓ again
       await chooseDifficulty(c, 'all');
       expect(renderedIds(c)).toEqual(DESC_AZ);
     });
@@ -1602,14 +2009,20 @@ describe('QuizSelectionComponent — difficulty filter', () => {
     it('choosing a filter never alters either sort dimension — in memory or in storage', async () => {
       const c = await render();
       await press(c, difficultyBtn(c));
-      await press(c, alphaBtn(c));   // desc / za
-      const sortKeys = { d: localStorage.getItem('quizSortDifficulty'), a: localStorage.getItem('quizSortAlpha') };
+      await press(c, alphaBtn(c)); // desc / za
+      const sortKeys = {
+        d: localStorage.getItem('quizSortDifficulty'),
+        a: localStorage.getItem('quizSortAlpha')
+      };
       expect(sortKeys).toEqual({ d: 'desc', a: 'za' });
 
       for (const d of ['beginner', 'advanced', 'intermediate', 'all'] as const) {
         await chooseDifficulty(c, d);
         expect([c.comp.sortDifficulty(), c.comp.sortAlpha()]).toEqual(['desc', 'za']);
-        expect([localStorage.getItem('quizSortDifficulty'), localStorage.getItem('quizSortAlpha')]).toEqual(['desc', 'za']);
+        expect([
+          localStorage.getItem('quizSortDifficulty'),
+          localStorage.getItem('quizSortAlpha')
+        ]).toEqual(['desc', 'za']);
       }
     });
   });
@@ -1618,16 +2031,19 @@ describe('QuizSelectionComponent — difficulty filter', () => {
     it.each([
       ['intermediate', 'angular', ['directives', 'signals']],
       ['beginner', 'angular', ['bindings', 'components']],
-      ['advanced', 'angular', ['architecture']],   // "Performance Tuning" fails the search
+      ['advanced', 'angular', ['architecture']], // "Performance Tuning" fails the search
       ['advanced', 'perf', ['performance']],
-      ['beginner', 'perf', []]                     // the search matches, but not in this difficulty
-    ] as const)('%s + search "%s" keeps only quizzes that satisfy BOTH', async (difficulty, term, expectedIds) => {
-      const c = await render();
-      await chooseDifficulty(c, difficulty);
-      await search(c, term);
+      ['beginner', 'perf', []] // the search matches, but not in this difficulty
+    ] as const)(
+      '%s + search "%s" keeps only quizzes that satisfy BOTH',
+      async (difficulty, term, expectedIds) => {
+        const c = await render();
+        await chooseDifficulty(c, difficulty);
+        await search(c, term);
 
-      expect(renderedIds(c)).toEqual(expectedIds);
-    });
+        expect(renderedIds(c)).toEqual(expectedIds);
+      }
+    );
 
     it('the order of the two actions does not matter', async () => {
       const a = await render();
@@ -1684,7 +2100,9 @@ describe('QuizSelectionComponent — difficulty filter', () => {
 
       expect(renderedIds(c)).toEqual([]);
       expect(noResults(c)).toHaveLength(1);
-      expect(noResults(c)[0].textContent!.trim()).toBe('No quizzes match your search and difficulty filter.');
+      expect(noResults(c)[0].textContent!.trim()).toBe(
+        'No quizzes match your search and difficulty filter.'
+      );
     });
 
     it('search alone: the existing message, unchanged', async () => {
@@ -1709,9 +2127,12 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       await chooseDifficulty(c, 'beginner');
       await search(c, 'perf');
       const message = noResults(c)[0];
-      expect([message.getAttribute('role'), message.getAttribute('aria-live')]).toEqual(['status', 'polite']);
+      expect([message.getAttribute('role'), message.getAttribute('aria-live')]).toEqual([
+        'status',
+        'polite'
+      ]);
 
-      await chooseDifficulty(c, 'all');   // "perf" now matches Performance Tuning
+      await chooseDifficulty(c, 'all'); // "perf" now matches Performance Tuning
       expect(noResults(c)).toHaveLength(0);
       expect(renderedIds(c)).toEqual(['performance']);
     });
@@ -1753,7 +2174,7 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       expect(keys.filter((k) => /filter/i.test(k))).toEqual([]);
       expect(Object.values({ ...localStorage, ...sessionStorage })).not.toContain('advanced');
 
-      TestBed.resetTestingModule();   // a fresh visit
+      TestBed.resetTestingModule(); // a fresh visit
       const fresh = await render();
       expect(fresh.comp.difficultyFilter()).toBe('all');
       expect(selectShows(fresh)).toBe('All Difficulties');
@@ -1771,7 +2192,7 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       expect(selectShows(c)).toBe('All Difficulties');
 
       await chooseDifficulty(c, 'advanced');
-      expect(selectShows(c)).toBe('Advanced');   // the state is text, not just colour
+      expect(selectShows(c)).toBe('Advanced'); // the state is text, not just colour
     });
 
     it('can be operated from the keyboard: the arrow keys change the filter and the list follows', async () => {
@@ -1779,12 +2200,20 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       selectHost(c).focus();
       expect(document.activeElement).toBe(selectHost(c));
 
-      selectHost(c).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true, cancelable: true }));
+      selectHost(c).dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'ArrowDown',
+          code: 'ArrowDown',
+          keyCode: 40,
+          bubbles: true,
+          cancelable: true
+        })
+      );
       await settle(c);
 
       expect(c.comp.difficultyFilter()).toBe('beginner');
       expect(renderedIds(c)).toEqual(ONLY.beginner.az);
-      expect(document.activeElement).toBe(selectHost(c));   // focus is kept
+      expect(document.activeElement).toBe(selectHost(c)); // focus is kept
     });
 
     it('sits in the normal tab order alongside the search box and the two sort buttons', async () => {
@@ -1792,7 +2221,9 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       const focusable = [searchInput(c), selectHost(c), difficultyBtn(c), alphaBtn(c)];
 
       expect(focusable.every((e) => e.tabIndex >= 0)).toBe(true);
-      const order = Array.from(el(c).querySelectorAll('.toolbar input, .toolbar mat-select, .toolbar .sort-btn'));
+      const order = Array.from(
+        el(c).querySelectorAll('.toolbar input, .toolbar mat-select, .toolbar .sort-btn')
+      );
       expect(order.slice(0, 4)).toEqual(focusable);
     });
   });

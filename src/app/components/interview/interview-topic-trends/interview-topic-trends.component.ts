@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal, ViewEncapsulation } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  signal,
+  ViewEncapsulation
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import {
@@ -27,7 +34,7 @@ const DIRECTION_LABEL: Record<TopicTrendDirection, string> = {
 const BAND_LABEL: Record<TopicStrengthBand, string> = {
   strong: $localize`Strong`,
   moderate: $localize`Moderate`,
-  weak: $localize`Needs Review`   // user-facing label for the internal 'weak'
+  weak: $localize`Needs Review` // user-facing label for the internal 'weak'
 };
 
 /**
@@ -146,9 +153,13 @@ export class InterviewTopicTrendsComponent {
     const padY = 4;
     const n = points.length;
     const x = (i: number) => padX + (i * (W - padX * 2)) / (n - 1);
-    const y = (pct: number) => padY + (H - padY * 2) * (1 - pct / 100);   // full 0–100 scale
+    const y = (pct: number) => padY + (H - padY * 2) * (1 - pct / 100); // full 0–100 scale
     const r1 = (v: number) => Math.round(v * 10) / 10;
-    const plotted = points.map((p, i) => ({ cx: r1(x(i)), cy: r1(y(p.percentage)), latest: i === n - 1 }));
+    const plotted = points.map((p, i) => ({
+      cx: r1(x(i)),
+      cy: r1(y(p.percentage)),
+      latest: i === n - 1
+    }));
     const line = plotted.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.cx} ${p.cy}`).join(' ');
     return { vb: `0 0 ${W} ${H}`, line, points: plotted };
   }

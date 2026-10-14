@@ -43,9 +43,12 @@ let service: SocAnswerProcessingService;
 
 /** Directives Q8's shape: options 0,1,2 correct; option 3 wrong. */
 function makeComp() {
-  const opts = ['reuse DOM behavior', 'encapsulate cross-cutting behavior', 'keep repeated logic in one place', 'display a new section of UI'].map(
-    (text, i) => ({ optionId: i + 1, text, correct: i < 3 })
-  );
+  const opts = [
+    'reuse DOM behavior',
+    'encapsulate cross-cutting behavior',
+    'keep repeated logic in one place',
+    'display a new section of UI'
+  ].map((text, i) => ({ optionId: i + 1, text, correct: i < 3 }));
   let bindings = opts.map((o, i) => ({
     option: { ...o, active: true },
     index: i,
@@ -55,7 +58,11 @@ function makeComp() {
   }));
   return {
     optionsToDisplay: opts,
-    optionBindings: Object.assign(() => bindings, { set: (n: any[]) => { bindings = n; } }),
+    optionBindings: Object.assign(() => bindings, {
+      set: (n: any[]) => {
+        bindings = n;
+      }
+    }),
     currentQuestion: () => ({ questionText: QUESTION, options: opts }),
     disabledOptionsPerQuestion: new Map<number, Set<number>>(),
     cdRef: { markForCheck: () => undefined, detectChanges: () => undefined },
@@ -70,7 +77,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       {
         provide: ExplanationTextService,
@@ -82,7 +92,10 @@ beforeEach(() => {
           formatExplanation: (_q: any, _i: number[], t: string) => t
         }
       },
-      { provide: NextButtonStateService, useValue: { setNextButtonState: () => undefined, forceEnable: () => undefined } },
+      {
+        provide: NextButtonStateService,
+        useValue: { setNextButtonState: () => undefined, forceEnable: () => undefined }
+      },
       {
         provide: QuizService,
         useValue: {
@@ -109,7 +122,10 @@ beforeEach(() => {
           clickConfirmedDotStatus: new Map()
         }
       },
-      { provide: TimerService, useValue: { stopTimer: () => undefined, resetTimer: () => undefined } },
+      {
+        provide: TimerService,
+        useValue: { stopTimer: () => undefined, resetTimer: () => undefined }
+      },
       { provide: FeedbackService, useValue: { setCorrectMessage: () => '' } },
       { provide: QuestionVerdictService, useValue: { verdictFor: () => IDLE_VERDICT_STATE } }
     ]
@@ -121,7 +137,12 @@ beforeEach(() => {
 /** Picked options 0 and 1 earlier, just clicked 3. Correct set is {0,1,2}. */
 const runMultiEndState = (comp: any) =>
   (service as any).applyAutoRevealBindings(
-    comp, comp.optionBindings(), new Set([0, 1, 2]), new Set([0, 1, 3]), 3, true
+    comp,
+    comp.optionBindings(),
+    new Set([0, 1, 2]),
+    new Set([0, 1, 3]),
+    3,
+    true
   );
 
 describe('multi-answer end state: green picks, red picks, grey leftovers', () => {
@@ -155,7 +176,7 @@ describe('multi-answer end state: green picks, red picks, grey leftovers', () =>
     const c = makeComp();
     runMultiEndState(c);
 
-    const b: any = c.optionBindings()[2];   // correct, never picked
+    const b: any = c.optionBindings()[2]; // correct, never picked
     expect(b.isSelected).toBe(false);
     expect(b.disabled).toBe(true);
     expect(b._autoRevealLocked).toBe(true);
@@ -181,7 +202,11 @@ describe('the single-answer reveal is untouched', () => {
     // the user eliminated every other option, so there is nothing left to give
     // away.
     (service as any).applyAutoRevealBindings(
-      c, c.optionBindings(), new Set([0]), new Set([1, 2, 3]), 3
+      c,
+      c.optionBindings(),
+      new Set([0]),
+      new Set([1, 2, 3]),
+      3
     );
 
     const revealed: any = c.optionBindings()[0];

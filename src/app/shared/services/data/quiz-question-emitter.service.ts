@@ -91,8 +91,9 @@ export class QuizQuestionEmitterService {
 
     // If shuffle is enabled, trust the questions/options passed in.
     if (isShuffleEnabled) {
-      optionsToUse = this.optionsService.normalizeOptionDisplayOrder(rawOptions ?? []).map(
-        (option, index) => ({
+      optionsToUse = this.optionsService
+        .normalizeOptionDisplayOrder(rawOptions ?? [])
+        .map((option, index) => ({
           ...option,
           optionId: this.toNumericId(option.optionId, index + 1),
           displayOrder: index,
@@ -112,8 +113,7 @@ export class QuizQuestionEmitterService {
           selected: option.selected === true,
           highlight: option.highlight ?? false,
           showIcon: option.showIcon ?? false
-        })
-      );
+        }));
     } else {
       if (canonical) {
         const sameQuestion =
@@ -123,28 +123,26 @@ export class QuizQuestionEmitterService {
         if (!sameQuestion) {
           questionToEmit = {
             ...canonical,
-            explanation:
-              canonical.explanation ?? currentQuestion.explanation ?? ''
+            explanation: canonical.explanation ?? currentQuestion.explanation ?? ''
           };
           optionsToUse = Array.isArray(canonical.options)
-            ? canonical.options.map((option) => ({ ...option })) : [];
+            ? canonical.options.map((option) => ({ ...option }))
+            : [];
         } else {
           questionToEmit = {
             ...currentQuestion,
-            explanation:
-              canonical.explanation ?? currentQuestion.explanation ?? '',
+            explanation: canonical.explanation ?? currentQuestion.explanation ?? '',
             options: Array.isArray(canonical.options)
-              ? canonical.options.map((option) => ({ ...option })) : []
+              ? canonical.options.map((option) => ({ ...option }))
+              : []
           };
         }
 
-        optionsToUse = this.optionsService.mergeOptionsWithCanonical(
-          questionToEmit,
-          optionsToUse
-        );
+        optionsToUse = this.optionsService.mergeOptionsWithCanonical(questionToEmit, optionsToUse);
       } else {
-        optionsToUse = this.optionsService.normalizeOptionDisplayOrder(optionsToUse ?? []).map(
-          (option, index) => ({
+        optionsToUse = this.optionsService
+          .normalizeOptionDisplayOrder(optionsToUse ?? [])
+          .map((option, index) => ({
             ...option,
             optionId: this.toNumericId(option.optionId, index + 1),
             displayOrder: index,
@@ -157,8 +155,7 @@ export class QuizQuestionEmitterService {
             selected: option.selected === true,
             highlight: option.highlight ?? false,
             showIcon: option.showIcon ?? false
-          })
-        );
+          }));
       }
     }
 

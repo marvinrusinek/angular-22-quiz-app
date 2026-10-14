@@ -32,9 +32,12 @@ import type {
 /** The server's vocabulary → the app's enum. `trueFalse` stays distinct. */
 export function questionTypeFromApi(type: TopicQuizQuestionType): QuestionType {
   switch (type) {
-    case 'multiple': return QuestionType.MultipleAnswer;
-    case 'trueFalse': return QuestionType.TrueFalse;
-    default: return QuestionType.SingleAnswer;
+    case 'multiple':
+      return QuestionType.MultipleAnswer;
+    case 'trueFalse':
+      return QuestionType.TrueFalse;
+    default:
+      return QuestionType.SingleAnswer;
   }
 }
 
@@ -79,8 +82,6 @@ export function questionFromApiView(
 }
 
 /** A whole quiz's questions, in the order the server returned them. */
-export function questionsFromApiViews(
-  views: readonly TopicQuizQuestionView[]
-): QuizQuestion[] {
+export function questionsFromApiViews(views: readonly TopicQuizQuestionView[]): QuizQuestion[] {
   return views.map((view, index) => questionFromApiView(view, index));
 }

@@ -2,7 +2,6 @@ import { TestBed } from '@angular/core/testing';
 
 import { Option, QuestionType, QuizQuestion, SelectedOption } from '@shared/models';
 
-
 import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { QuizShuffleService } from './quiz-shuffle.service';
@@ -201,7 +200,9 @@ describe('QuizDotStatusService', () => {
     });
 
     it('matches by display index when ids/text differ', () => {
-      expect(service.selectionMatchesOption({ displayIndex: 2 } as any, { text: 'x' }, 2)).toBe(true);
+      expect(service.selectionMatchesOption({ displayIndex: 2 } as any, { text: 'x' }, 2)).toBe(
+        true
+      );
     });
 
     it('returns false on mismatch and on null inputs', () => {
@@ -215,8 +216,8 @@ describe('QuizDotStatusService', () => {
   describe('getResolvedCorrectOptionEntries', () => {
     it('resolves correct options from the correct flag', () => {
       const entries = service.getResolvedCorrectOptionEntries(multiAnswer);
-      expect(entries.map(e => e.option.text)).toEqual(['A', 'C']);
-      expect(entries.map(e => e.index)).toEqual([0, 2]);
+      expect(entries.map((e) => e.option.text)).toEqual(['A', 'C']);
+      expect(entries.map((e) => e.index)).toEqual([0, 2]);
     });
 
     it('resolves from the answer array when present', () => {
@@ -225,12 +226,12 @@ describe('QuizDotStatusService', () => {
         answer: [{ optionId: 2, text: 'Wrong', correct: true, value: 2 }] as any
       };
       const entries = service.getResolvedCorrectOptionEntries(q);
-      expect(entries.map(e => e.option.optionId)).toEqual([2]);
+      expect(entries.map((e) => e.option.optionId)).toEqual([2]);
     });
 
     it('uses fallback options when the question has none', () => {
       const entries = service.getResolvedCorrectOptionEntries(null, multiAnswer.options);
-      expect(entries.map(e => e.option.text)).toEqual(['A', 'C']);
+      expect(entries.map((e) => e.option.text)).toEqual(['A', 'C']);
     });
 
     it('returns [] when there are no options at all', () => {
@@ -269,10 +270,12 @@ describe('QuizDotStatusService', () => {
     });
 
     it('multi-answer: all correct -> true', () => {
-      expect(evalFor(
-        [sel({ optionId: 10, selected: true }), sel({ optionId: 12, selected: true })],
-        multiAnswer
-      )).toBe(true);
+      expect(
+        evalFor(
+          [sel({ optionId: 10, selected: true }), sel({ optionId: 12, selected: true })],
+          multiAnswer
+        )
+      ).toBe(true);
     });
 
     it('multi-answer: partial (one of two) -> false', () => {
@@ -280,10 +283,12 @@ describe('QuizDotStatusService', () => {
     });
 
     it('multi-answer: any incorrect pick -> false', () => {
-      expect(evalFor(
-        [sel({ optionId: 10, selected: true }), sel({ optionId: 11, selected: true })],
-        multiAnswer
-      )).toBe(false);
+      expect(
+        evalFor(
+          [sel({ optionId: 10, selected: true }), sel({ optionId: 11, selected: true })],
+          multiAnswer
+        )
+      ).toBe(false);
     });
 
     it('returns null when there are no selections', () => {
@@ -304,10 +309,12 @@ describe('QuizDotStatusService', () => {
       });
 
     it('is true when ALL of a multi-answer question is correctly selected', () => {
-      expect(optimisticFor(
-        [sel({ optionId: 10, selected: true }), sel({ optionId: 12, selected: true })],
-        multiAnswer
-      )).toBe(true);
+      expect(
+        optimisticFor(
+          [sel({ optionId: 10, selected: true }), sel({ optionId: 12, selected: true })],
+          multiAnswer
+        )
+      ).toBe(true);
     });
 
     it('is false for a single-correct question (needs >1 correct option)', () => {
@@ -315,10 +322,12 @@ describe('QuizDotStatusService', () => {
     });
 
     it('is false when an incorrect option is among the selections', () => {
-      expect(optimisticFor(
-        [sel({ optionId: 10, selected: true }), sel({ optionId: 11, selected: true })],
-        multiAnswer
-      )).toBe(false);
+      expect(
+        optimisticFor(
+          [sel({ optionId: 10, selected: true }), sel({ optionId: 11, selected: true })],
+          multiAnswer
+        )
+      ).toBe(false);
     });
 
     it('is false with no selections', () => {

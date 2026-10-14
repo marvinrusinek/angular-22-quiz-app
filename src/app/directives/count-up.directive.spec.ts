@@ -6,7 +6,13 @@ import { CountUpDirective } from './count-up.directive';
 @Component({
   standalone: true,
   imports: [CountUpDirective],
-  template: `<span class="n" [appCountUp]="value" [countUpDelay]="0"></span>`
+  template: `
+    <span
+      class="n"
+      [appCountUp]="value"
+      [countUpDelay]="0"
+    ></span>
+  `
 })
 class HostComponent {
   value = 20;
@@ -49,8 +55,8 @@ describe('CountUpDirective', () => {
     const fixture: ComponentFixture<HostComponent> = TestBed.createComponent(HostComponent);
     fixture.componentInstance.value = value;
     fixture.detectChanges();
-    await fixture.whenStable();   // runs afterNextRender → animate() → setTimeout
-    await tick();                 // fire the delay-0 setTimeout → requests first frame
+    await fixture.whenStable(); // runs afterNextRender → animate() → setTimeout
+    await tick(); // fire the delay-0 setTimeout → requests first frame
     return fixture.nativeElement.querySelector('.n') as HTMLElement;
   }
 
@@ -73,15 +79,15 @@ describe('CountUpDirective', () => {
 
   it('clamps an early/decreasing frame timestamp to 0 instead of going negative', async () => {
     const span = await build(50);
-    frame(5000);            // anchor
-    frame(4990);            // pathological earlier timestamp
+    frame(5000); // anchor
+    frame(4990); // pathological earlier timestamp
     expect(Number(span.textContent)).toBeGreaterThanOrEqual(0);
   });
 
   it('lands exactly on the target value and pops', async () => {
     const span = await build(185);
-    frame(2000);            // anchor → progress 0
-    frame(2000 + 800);      // full 800ms duration → progress 1
+    frame(2000); // anchor → progress 0
+    frame(2000 + 800); // full 800ms duration → progress 1
     expect(span.textContent).toBe('185');
     expect(span.classList.contains('count-up-pop')).toBe(true);
   });

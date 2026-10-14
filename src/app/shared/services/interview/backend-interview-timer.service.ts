@@ -35,7 +35,8 @@ export class BackendInterviewTimerService {
   readonly durationSeconds = this._durationSeconds.asReadonly();
   readonly formatted = computed(() => formatMMSS(this._remaining()));
   readonly isLowTime = computed(
-    () => this._remaining() > 0 && this._remaining() <= BackendInterviewTimerService.LOW_TIME_THRESHOLD
+    () =>
+      this._remaining() > 0 && this._remaining() <= BackendInterviewTimerService.LOW_TIME_THRESHOLD
   );
 
   /** Injectable for tests; never used to decide expiry authoritatively. */

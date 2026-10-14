@@ -11,7 +11,10 @@ import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import {
+  IDLE_VERDICT_STATE,
+  type QuestionVerdictState
+} from '@shared/services/features/verdict/question-verdict.types';
 import { answerStateStub } from '@shared/testing/answer-state-stub';
 
 /**
@@ -43,17 +46,22 @@ const LYING_INDICES = [1, 3];
 let service: SocAnswerProcessingService;
 let verdictState: QuestionVerdictState;
 
-const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState =>
-  ({ ...IDLE_VERDICT_STATE, ...over });
+const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState => ({
+  ...IDLE_VERDICT_STATE,
+  ...over
+});
 
 /** `mode` decides what the local bank CLAIMS about each option. */
-function makeComp(mode: 'truthful' | 'lying' | 'bare' = 'lying', order: 'forward' | 'reversed' = 'forward') {
+function makeComp(
+  mode: 'truthful' | 'lying' | 'bare' = 'lying',
+  order: 'forward' | 'reversed' = 'forward'
+) {
   const texts = order === 'forward' ? [...OPTION_TEXTS] : [...OPTION_TEXTS].reverse();
   const opts = texts.map((text, i) => {
     const trulyCorrect = TRUE_CORRECT.map((c) => OPTION_TEXTS[c]).includes(text);
     if (mode === 'bare') return { optionId: i + 1, text };
     if (mode === 'truthful') return { optionId: i + 1, text, correct: trulyCorrect };
-    return { optionId: i + 1, text, correct: !trulyCorrect };  // inverted
+    return { optionId: i + 1, text, correct: !trulyCorrect }; // inverted
   });
 
   let bindings = opts.map((o, i) => ({
@@ -66,11 +74,17 @@ function makeComp(mode: 'truthful' | 'lying' | 'bare' = 'lying', order: 'forward
 
   return {
     optionsToDisplay: opts,
-    optionBindings: Object.assign(() => bindings, { set: (next: any[]) => { bindings = next; } }),
+    optionBindings: Object.assign(() => bindings, {
+      set: (next: any[]) => {
+        bindings = next;
+      }
+    }),
     currentQuestion: () => ({ questionText: QUESTION, options: opts }),
     disabledOptionsPerQuestion: new Map<number, Set<number>>(),
     cdRef: { markForCheck: () => undefined, detectChanges: () => undefined },
-    get bindings() { return bindings; },
+    get bindings() {
+      return bindings;
+    },
     indexOfText: (t: string) => texts.indexOf(t)
   };
 }
@@ -82,7 +96,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       {
         provide: QuizService,
@@ -109,7 +126,10 @@ beforeEach(() => {
           clickConfirmedDotStatus: new Map()
         }
       },
-      { provide: TimerService, useValue: { stopTimer: () => undefined, resetTimer: () => undefined } },
+      {
+        provide: TimerService,
+        useValue: { stopTimer: () => undefined, resetTimer: () => undefined }
+      },
       { provide: FeedbackService, useValue: { setCorrectMessage: () => '' } },
       { provide: QuestionVerdictService, useValue: { verdictFor: () => verdictState } }
     ]
@@ -120,16 +140,22 @@ beforeEach(() => {
 /** Drive the mutation with a deliberately misleading local correct set. */
 const run = (c: any, clickedIndex: number, durable: number[], correctIdxs = LYING_INDICES) =>
   (service as any).applyMultiAnswerDisableState(
-    c, clickedIndex, 0, 0, new Set(durable), correctIdxs
+    c,
+    clickedIndex,
+    0,
+    0,
+    new Set(durable),
+    correctIdxs
   );
 
 /** Partial play: user picked 'map' (correct); 'filter' is still outstanding. */
-const partialVerdict = () => state({
-  phase: 'incomplete',
-  selectedOptionTexts: ['map'],
-  selectedVerdicts: new Map([['map', true]]),
-  remainingCorrectCount: 1
-});
+const partialVerdict = () =>
+  state({
+    phase: 'incomplete',
+    selectedOptionTexts: ['map'],
+    selectedVerdicts: new Map([['map', true]]),
+    remainingCorrectCount: 1
+  });
 
 describe('while incomplete, an unselected option reveals nothing', () => {
   it('leaves untouched options with UNKNOWN correctness, not false', () => {
@@ -137,9 +163,9 @@ describe('while incomplete, an unselected option reveals nothing', () => {
     const c = makeComp();
     const { bindingUpdates } = run(c, 0, [0]);
 
-    expect(bindingUpdates[0].isCorrect).toBe(true);     // the user's own pick
-    expect(bindingUpdates[1].isCorrect).toBeNull();     // untouched
-    expect(bindingUpdates[2].isCorrect).toBeNull();     // untouched AND correct
+    expect(bindingUpdates[0].isCorrect).toBe(true); // the user's own pick
+    expect(bindingUpdates[1].isCorrect).toBeNull(); // untouched
+    expect(bindingUpdates[2].isCorrect).toBeNull(); // untouched AND correct
     expect(bindingUpdates[3].isCorrect).toBeNull();
   });
 
@@ -161,7 +187,7 @@ describe('while incomplete, an unselected option reveals nothing', () => {
 
   it('clears the bank flag off the option copy instead of passing it through', () => {
     verdictState = partialVerdict();
-    const c = makeComp('truthful');   // bank would happily say 'filter' is correct
+    const c = makeComp('truthful'); // bank would happily say 'filter' is correct
     const { bindingUpdates } = run(c, 0, [0]);
 
     expect(bindingUpdates[2].optionOverrides.correct).toBeUndefined();
@@ -231,14 +257,18 @@ describe('a wrong pick discloses only itself', () => {
 });
 
 describe('completion is authorized disclosure', () => {
-  const resolved = () => state({
-    phase: 'resolved',
-    isResolvedCorrect: true,
-    selectedOptionTexts: ['map', 'filter'],
-    selectedVerdicts: new Map([['map', true], ['filter', true]]),
-    correctOptionTexts: ['map', 'filter'],
-    remainingCorrectCount: 0
-  });
+  const resolved = () =>
+    state({
+      phase: 'resolved',
+      isResolvedCorrect: true,
+      selectedOptionTexts: ['map', 'filter'],
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ]),
+      correctOptionTexts: ['map', 'filter'],
+      remainingCorrectCount: 0
+    });
 
   it('greys out the losers and keeps the winners enabled', () => {
     verdictState = resolved();
@@ -274,14 +304,19 @@ describe('completion is authorized disclosure', () => {
 });
 
 describe('superset: extra wrong picks still count as complete', () => {
-  const supersetVerdict = () => state({
-    phase: 'resolved',
-    isResolvedCorrect: true,
-    selectedOptionTexts: ['map', 'filter', 'Subject'],
-    selectedVerdicts: new Map([['map', true], ['filter', true], ['Subject', false]]),
-    correctOptionTexts: ['map', 'filter'],
-    remainingCorrectCount: 0
-  });
+  const supersetVerdict = () =>
+    state({
+      phase: 'resolved',
+      isResolvedCorrect: true,
+      selectedOptionTexts: ['map', 'filter', 'Subject'],
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true],
+        ['Subject', false]
+      ]),
+      correctOptionTexts: ['map', 'filter'],
+      remainingCorrectCount: 0
+    });
 
   it('completes even though a wrong option is also selected', () => {
     verdictState = supersetVerdict();
@@ -308,11 +343,11 @@ describe('superset: extra wrong picks still count as complete', () => {
 describe('the verdict outranks the local answer key', () => {
   it('ignores a bank that inverts every flag', () => {
     verdictState = partialVerdict();
-    const c = makeComp('lying');   // bank says Subject+Observable are correct
+    const c = makeComp('lying'); // bank says Subject+Observable are correct
     const { clickState, bindingUpdates } = run(c, 0, [0]);
 
-    expect(clickState.isClickedCorrect).toBe(true);   // bank called 'map' wrong
-    expect(bindingUpdates[1].isCorrect).toBeNull();   // bank called 'Subject' right
+    expect(clickState.isClickedCorrect).toBe(true); // bank called 'map' wrong
+    expect(bindingUpdates[1].isCorrect).toBeNull(); // bank called 'Subject' right
     expect(bindingUpdates[3].isCorrect).toBeNull();
   });
 
@@ -336,7 +371,7 @@ describe('the verdict outranks the local answer key', () => {
 
   it('resolves by option TEXT, so display order does not matter', () => {
     verdictState = partialVerdict();
-    const c = makeComp('bare', 'reversed');   // Observable, filter, Subject, map
+    const c = makeComp('bare', 'reversed'); // Observable, filter, Subject, map
     const mapIdx = c.indexOfText('map');
     const { clickState, bindingUpdates } = run(c, mapIdx, [mapIdx]);
 
@@ -347,18 +382,15 @@ describe('the verdict outranks the local answer key', () => {
 });
 
 describe('an unchecked question falls back rather than guessing', () => {
-  it.each([['idle'], ['checking'], ['error']] as const)(
-    'uses the local set while %s',
-    (phase) => {
-      verdictState = state({ phase });
-      const c = makeComp();
-      // Fallback consults effectiveCorrectIndices, here the truthful [0, 2].
-      const { clickState } = run(c, 0, [0], TRUE_CORRECT);
+  it.each([['idle'], ['checking'], ['error']] as const)('uses the local set while %s', (phase) => {
+    verdictState = state({ phase });
+    const c = makeComp();
+    // Fallback consults effectiveCorrectIndices, here the truthful [0, 2].
+    const { clickState } = run(c, 0, [0], TRUE_CORRECT);
 
-      expect(clickState.isClickedCorrect).toBe(true);
-      expect(clickState.remaining).toBe(1);
-    }
-  );
+    expect(clickState.isClickedCorrect).toBe(true);
+    expect(clickState.remaining).toBe(1);
+  });
 
   it('falls back when the verdict cannot answer for the clicked option', () => {
     // Knows about a DIFFERENT pick, nothing for the one just clicked.

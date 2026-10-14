@@ -28,7 +28,9 @@ describe('InterviewPaginatorComponent', () => {
   const pageNumbers = () => pageButtons().map((b) => Number(b.textContent!.trim()));
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [InterviewPaginatorComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [InterviewPaginatorComponent]
+    }).compileComponents();
   });
 
   it('renders numeric page buttons on desktop', () => {
@@ -40,7 +42,7 @@ describe('InterviewPaginatorComponent', () => {
     setup(20, 7);
     const current = fixture.nativeElement.querySelector('.pg-page.current') as HTMLButtonElement;
     expect(current).toBeTruthy();
-    expect(Number(current.textContent!.trim())).toBe(8);   // 0-based 7 → shown "8"
+    expect(Number(current.textContent!.trim())).toBe(8); // 0-based 7 → shown "8"
     expect(current.getAttribute('aria-current')).toBe('true');
   });
 
@@ -54,7 +56,7 @@ describe('InterviewPaginatorComponent', () => {
   it('shows ellipses for omitted ranges', () => {
     setup(20, 7);
     const ellipses = fixture.nativeElement.querySelectorAll('.pg-ellipsis');
-    expect(ellipses.length).toBe(2);   // 1 … 6 7 8 9 10 … 20
+    expect(ellipses.length).toBe(2); // 1 … 6 7 8 9 10 … 20
   });
 
   it('does not render ellipses when everything fits', () => {
@@ -69,7 +71,7 @@ describe('InterviewPaginatorComponent', () => {
     component.select.subscribe((i) => emitted.push(i));
     const last = pageButtons().find((b) => b.textContent!.trim() === '20')!;
     last.click();
-    expect(emitted).toEqual([19]);   // "20" → 0-based 19
+    expect(emitted).toEqual([19]); // "20" → 0-based 19
   });
 
   it('ellipses are not interactive (rendered as non-button list items)', () => {
@@ -81,7 +83,7 @@ describe('InterviewPaginatorComponent', () => {
   });
 
   it('conveys answered state via a filled-background class + accessible label', () => {
-    setup(10, 3, new Set([2]));   // current Q4; Q3 answered; window covers Q1–Q6 + Q10
+    setup(10, 3, new Set([2])); // current Q4; Q3 answered; window covers Q1–Q6 + Q10
     const q3 = pageButtons().find((b) => b.textContent!.trim() === '3')!;
     expect(q3.classList.contains('answered')).toBe(true);
     expect(q3.getAttribute('aria-label')).toBe('Go to question 3, answered');
@@ -93,10 +95,12 @@ describe('InterviewPaginatorComponent', () => {
 
   describe('marked for review', () => {
     it('conveys marked state via its own class + accessible label suffix', () => {
-      setup(10, 3, new Set(), true, new Set([4]));   // Q5 marked, window covers Q1–Q6 + Q10
+      setup(10, 3, new Set(), true, new Set([4])); // Q5 marked, window covers Q1–Q6 + Q10
       const q5 = pageButtons().find((b) => b.textContent!.trim() === '5')!;
       expect(q5.classList.contains('marked')).toBe(true);
-      expect(q5.getAttribute('aria-label')).toBe('Go to question 5, not answered, marked for review');
+      expect(q5.getAttribute('aria-label')).toBe(
+        'Go to question 5, not answered, marked for review'
+      );
 
       const q3 = pageButtons().find((b) => b.textContent!.trim() === '3')!;
       expect(q3.classList.contains('marked')).toBe(false);
@@ -104,7 +108,7 @@ describe('InterviewPaginatorComponent', () => {
     });
 
     it('combines with answered — a question can be both at once, neither class overwrites the other', () => {
-      setup(10, 3, new Set([4]), true, new Set([4]));   // Q5 answered AND marked
+      setup(10, 3, new Set([4]), true, new Set([4])); // Q5 answered AND marked
       const q5 = pageButtons().find((b) => b.textContent!.trim() === '5')!;
       expect(q5.classList.contains('answered')).toBe(true);
       expect(q5.classList.contains('marked')).toBe(true);
@@ -139,23 +143,24 @@ describe('InterviewPaginatorComponent', () => {
   it('HIDES Prev at the first question and HIDES Next at the last', () => {
     setup(20, 0);
     // Prev is hidden on Q1 (nothing to go back to), mirroring Next on the last.
-    expect(fixture.nativeElement.querySelector('.pg-prev')).toBeNull();     // Prev hidden on first
-    expect(fixture.nativeElement.querySelector('.pg-next')).toBeTruthy();   // Next shown
+    expect(fixture.nativeElement.querySelector('.pg-prev')).toBeNull(); // Prev hidden on first
+    expect(fixture.nativeElement.querySelector('.pg-next')).toBeTruthy(); // Next shown
 
     setup(20, 19);
-    expect(fixture.nativeElement.querySelector('.pg-prev')).toBeTruthy();   // Prev shown
-    expect(fixture.nativeElement.querySelector('.pg-next')).toBeNull();     // Next hidden on last
+    expect(fixture.nativeElement.querySelector('.pg-prev')).toBeTruthy(); // Prev shown
+    expect(fixture.nativeElement.querySelector('.pg-next')).toBeNull(); // Next hidden on last
   });
 
   // ── forward-navigation gate (canNext) ──────────────────────────────
   // canNext comes from InterviewSessionService#canNavigateNext, the SAME rule
   // the keyboard's ArrowRight uses — the button must never decide for itself.
   describe('Next gating', () => {
-    const nextBtn = () => fixture.nativeElement.querySelector('.pg-next') as HTMLButtonElement | null;
+    const nextBtn = () =>
+      fixture.nativeElement.querySelector('.pg-next') as HTMLButtonElement | null;
 
     it('DISABLES Next when the current question is unanswered', () => {
       setup(10, 0, new Set(), /* canNext */ false);
-      expect(nextBtn()).toBeTruthy();          // still visible, just not usable
+      expect(nextBtn()).toBeTruthy(); // still visible, just not usable
       expect(nextBtn()!.disabled).toBe(true);
     });
 
@@ -206,7 +211,9 @@ describe('InterviewPaginatorComponent', () => {
       fixture.componentRef.setInput('total', 10);
       fixture.componentRef.setInput('currentIndex', 0);
       fixture.detectChanges();
-      expect((fixture.nativeElement.querySelector('.pg-next') as HTMLButtonElement).disabled).toBe(false);
+      expect((fixture.nativeElement.querySelector('.pg-next') as HTMLButtonElement).disabled).toBe(
+        false
+      );
     });
   });
 
@@ -225,8 +232,12 @@ describe('InterviewPaginatorComponent', () => {
 
     it('disables Previous, Next and every page button', () => {
       gated();
-      expect((fixture.nativeElement.querySelector('.pg-prev') as HTMLButtonElement).disabled).toBe(true);
-      expect((fixture.nativeElement.querySelector('.pg-next') as HTMLButtonElement).disabled).toBe(true);
+      expect((fixture.nativeElement.querySelector('.pg-prev') as HTMLButtonElement).disabled).toBe(
+        true
+      );
+      expect((fixture.nativeElement.querySelector('.pg-next') as HTMLButtonElement).disabled).toBe(
+        true
+      );
       expect(pageButtons().every((b) => b.disabled)).toBe(true);
     });
 
@@ -246,7 +257,9 @@ describe('InterviewPaginatorComponent', () => {
     it('defaults to enabled so the component works standalone', () => {
       setup(20, 5, new Set([5]), true);
       expect(component.disabled()).toBe(false);
-      expect((fixture.nativeElement.querySelector('.pg-next') as HTMLButtonElement).disabled).toBe(false);
+      expect((fixture.nativeElement.querySelector('.pg-next') as HTMLButtonElement).disabled).toBe(
+        false
+      );
     });
 
     it('re-enables every direction once the gate clears', () => {

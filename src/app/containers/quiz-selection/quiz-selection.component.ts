@@ -1,5 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, OnInit,
-  signal, ViewEncapsulation } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  OnInit,
+  signal,
+  ViewEncapsulation
+} from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { NgClass, NgOptimizedImage, TitleCasePipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
@@ -7,8 +15,19 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { SK_COMPLETED_QUIZ_IDS, SK_QUIZ_SEARCH_TERM, SK_QUIZ_SORT_ALPHA, SK_QUIZ_SORT_DIFFICULTY, SK_STARTED_QUIZ_IDS } from '@shared/constants/session-keys';
-import { readSessionJson, readSessionString, writeSessionJson, writeSessionString } from '@shared/utils/session-storage';
+import {
+  SK_COMPLETED_QUIZ_IDS,
+  SK_QUIZ_SEARCH_TERM,
+  SK_QUIZ_SORT_ALPHA,
+  SK_QUIZ_SORT_DIFFICULTY,
+  SK_STARTED_QUIZ_IDS
+} from '@shared/constants/session-keys';
+import {
+  readSessionJson,
+  readSessionString,
+  writeSessionJson,
+  writeSessionString
+} from '@shared/utils/session-storage';
 import { readLocalString, writeLocalString } from '@shared/utils/local-storage';
 
 import {
@@ -26,7 +45,6 @@ import {
   QuizStatus
 } from '@shared/models';
 
-
 import { QuizService } from '@shared/services/data/quiz.service';
 import { AchievementService } from '@shared/services/achievements/achievement.service';
 import { achievementCompletionMessage } from '@shared/utils/achievement-progress-message';
@@ -38,7 +56,6 @@ import { LearningPathService } from '@shared/services/features/learning-path/lea
 import { DifficultyRecommendationService } from '@shared/services/features/learning-path/difficulty-recommendation.service';
 import { SessionEngagementService } from '@shared/services/state/session-engagement.service';
 import { InterviewWarmupCoordinatorService } from '@shared/services/interview/interview-warmup-coordinator.service';
-
 
 import { AchievementsSummaryComponent } from '../../components/achievements-summary/achievements-summary.component';
 import { RecommendedNextQuizComponent } from '../../components/recommended-next-quiz/recommended-next-quiz.component';
@@ -116,11 +133,12 @@ export class QuizSelectionComponent implements OnInit {
   // touching a Topic Quiz tile would otherwise leave this panel — and the
   // Performance Insights section inside it — hidden despite the attempt
   // already being safely recorded and ready to display.
-  readonly showSelectionProgress = computed(() =>
-    this.sessionEngagement.engaged() ||
-    this.hasAccessedQuizzes() ||
-    this.achievementsEarned() > 0 ||
-    this.interviewHistory.history().length > 0
+  readonly showSelectionProgress = computed(
+    () =>
+      this.sessionEngagement.engaged() ||
+      this.hasAccessedQuizzes() ||
+      this.achievementsEarned() > 0 ||
+      this.interviewHistory.history().length > 0
   );
 
   // Compact "Achievements X / N" progress for the catalog header. Populated
@@ -167,16 +185,18 @@ export class QuizSelectionComponent implements OnInit {
     const counts = this.metadataApi.questionCountByQuiz();
     const statuses = this.statusByQuizId();
 
-    return [...difficulties.keys()].map((quizId): Quiz => ({
-      quizId,
-      milestone: milestones.get(quizId) ?? quizId,
-      summary: summaries.get(quizId) ?? '',
-      image: images.get(quizId) ?? '',
-      difficulty: (difficulties.get(quizId) ?? undefined) as QuizDifficulty | undefined,
-      facts: [...(facts.get(quizId) ?? [])],
-      questionCount: counts.get(quizId) ?? undefined,
-      status: statuses.get(quizId)
-    }));
+    return [...difficulties.keys()].map(
+      (quizId): Quiz => ({
+        quizId,
+        milestone: milestones.get(quizId) ?? quizId,
+        summary: summaries.get(quizId) ?? '',
+        image: images.get(quizId) ?? '',
+        difficulty: (difficulties.get(quizId) ?? undefined) as QuizDifficulty | undefined,
+        facts: [...(facts.get(quizId) ?? [])],
+        questionCount: counts.get(quizId) ?? undefined,
+        status: statuses.get(quizId)
+      })
+    );
   });
 
   // ── difficulty ranking (used by the 'difficulty' sort) ──────────
@@ -223,7 +243,7 @@ export class QuizSelectionComponent implements OnInit {
   // call at init time would evaluate against nothing; this effect re-fires
   // once real data arrives, same as the reactive imageByQuiz() tracking below.
   private readonly refreshAchievementsEffect = effect(() => {
-    this.metadataApi.difficultyByQuiz();   // reactive dependency
+    this.metadataApi.difficultyByQuiz(); // reactive dependency
     this.refreshAchievementsSummary();
   });
 
@@ -238,7 +258,7 @@ export class QuizSelectionComponent implements OnInit {
     const difficultyDir = this.sortDifficulty();
     const alphaDir = this.sortAlpha();
     const filtered = (this.quizzes() ?? []).filter(
-      quiz => this.matchesSearch(quiz, term) && this.matchesDifficulty(quiz, difficultyFilter)
+      (quiz) => this.matchesSearch(quiz, term) && this.matchesDifficulty(quiz, difficultyFilter)
     );
     return this.sortQuizzes(filtered, difficultyDir, alphaDir);
   });
@@ -282,8 +302,8 @@ export class QuizSelectionComponent implements OnInit {
       if (difficulty) counts.set(difficulty, (counts.get(difficulty) ?? 0) + 1);
     }
     const levels = ['beginner', 'intermediate', 'advanced']
-      .filter(difficulty => counts.has(difficulty))
-      .map(difficulty => ({
+      .filter((difficulty) => counts.has(difficulty))
+      .map((difficulty) => ({
         key: difficulty,
         label: `${difficulty[0].toUpperCase()}${difficulty.slice(1)}`,
         count: counts.get(difficulty) ?? 0
@@ -298,7 +318,9 @@ export class QuizSelectionComponent implements OnInit {
   // Per-quiz card state. 'completed' (durable best-score store, or an existing
   // completed status) wins; otherwise an existing STARTED/CONTINUE status →
   // 'in-progress'; otherwise 'not-started'. Best score shows only when recorded.
-  readonly quizCardProgress = computed<Map<string, { state: QuizCardProgressState; bestScore: number | null }>>(() => {
+  readonly quizCardProgress = computed<
+    Map<string, { state: QuizCardProgressState; bestScore: number | null }>
+  >(() => {
     const list = this.quizzes() ?? [];
     const completedIds = this.completedQuizIds();
     const byQuiz = new Map<string, QuizProgress>();
@@ -310,7 +332,11 @@ export class QuizSelectionComponent implements OnInit {
     for (const quiz of list) {
       const progress = byQuiz.get(quiz.quizId);
       let state: QuizCardProgressState;
-      if (progress?.completed || quiz.status === QuizStatus.COMPLETED || completedIds.has(quiz.quizId)) {
+      if (
+        progress?.completed ||
+        quiz.status === QuizStatus.COMPLETED ||
+        completedIds.has(quiz.quizId)
+      ) {
         state = 'completed';
       } else if (quiz.status === QuizStatus.STARTED || quiz.status === QuizStatus.CONTINUE) {
         state = 'in-progress';
@@ -351,14 +377,11 @@ export class QuizSelectionComponent implements OnInit {
   readonly totalQuizCountSig = signal(0);
   readonly hasAccessedQuizzes = computed(() => this.accessedCount() > 0);
 
-  readonly allQuizzesAccessed = computed(() =>
-    this.totalQuizCountSig() > 0 &&
-    this.accessedCount() >= this.totalQuizCountSig()
+  readonly allQuizzesAccessed = computed(
+    () => this.totalQuizCountSig() > 0 && this.accessedCount() >= this.totalQuizCountSig()
   );
 
-  readonly accessedQuizLabel = computed(() =>
-    this.accessedCount() === 1 ? 'quiz' : 'quizzes'
-  );
+  readonly accessedQuizLabel = computed(() => (this.accessedCount() === 1 ? 'quiz' : 'quizzes'));
 
   // Completion banner — reflects ACTUAL achievement state, never implying "all
   // done" at 4 / 6. Once every topic quiz is accessed it guides the user toward
@@ -434,8 +457,8 @@ export class QuizSelectionComponent implements OnInit {
       // S6o: status comes from the sessionStorage-authoritative projection
       // (statusByQuizId), never a client-bank Quiz object's .status field.
       const existingStatus = this.statusByQuizId().get(quizId);
-      const isCompleted = existingStatus === QuizStatus.COMPLETED
-        || this.completedQuizIds().has(quizId);
+      const isCompleted =
+        existingStatus === QuizStatus.COMPLETED || this.completedQuizIds().has(quizId);
       this.quizService.quizCompleted = isCompleted;
 
       // If quiz is completed, go to results instead of intro
@@ -448,7 +471,7 @@ export class QuizSelectionComponent implements OnInit {
 
       // Set status to STARTED if not already CONTINUE or COMPLETED
       if (!existingStatus || existingStatus === QuizStatus.STARTED) {
-        this.startedQuizIds.update(s => new Set(s).add(quizId));
+        this.startedQuizIds.update((s) => new Set(s).add(quizId));
         this.quizService.setQuizStatus(QuizStatus.STARTED);
       }
 
@@ -539,22 +562,19 @@ export class QuizSelectionComponent implements OnInit {
   readonly priorityTileCount = 6;
 
   tileImageUrl(quiz: Quiz): string {
-    this.metadataApi.imageByQuiz();   // track the signal so tiles restyle on load
-    const image = this.safeImageUrl(
-      this.metadataApi.imageFor(quiz?.quizId) || quiz?.image
-    );
+    this.metadataApi.imageByQuiz(); // track the signal so tiles restyle on load
+    const image = this.safeImageUrl(this.metadataApi.imageFor(quiz?.quizId) || quiz?.image);
     return image ?? 'assets/images/quiz-placeholder.svg';
   }
 
   getLinkClass(quiz: Quiz): string[] {
     const classes = ['status-link'];
     if (
-      quiz.status === QuizStatus.STARTED && (
-        !this.selectionParams()?.quizCompleted ||
+      quiz.status === QuizStatus.STARTED &&
+      (!this.selectionParams()?.quizCompleted ||
         quiz.quizId === this.selectionParams()?.startedQuizId ||
         quiz.quizId === this.selectionParams()?.continueQuizId ||
-        this.completedQuizIds().has(quiz.quizId)
-      )
+        this.completedQuizIds().has(quiz.quizId))
     ) {
       classes.push('link');
     }
@@ -576,17 +596,17 @@ export class QuizSelectionComponent implements OnInit {
   }
 
   shouldShowLink(quiz: Quiz): boolean {
-    const hasKnownStatus = quiz.status === QuizStatus.STARTED
-      || quiz.status === QuizStatus.CONTINUE
-      || quiz.status === QuizStatus.COMPLETED;
+    const hasKnownStatus =
+      quiz.status === QuizStatus.STARTED ||
+      quiz.status === QuizStatus.CONTINUE ||
+      quiz.status === QuizStatus.COMPLETED;
     const isCompletedQuiz = this.completedQuizIds().has(quiz.quizId);
     return hasKnownStatus || isCompletedQuiz;
   }
 
   getLinkRouterLink(quiz: Quiz): string[] {
     const quizId = quiz.quizId;
-    const isCompleted = quiz.status === QuizStatus.COMPLETED
-      || this.completedQuizIds().has(quizId);
+    const isCompleted = quiz.status === QuizStatus.COMPLETED || this.completedQuizIds().has(quizId);
     return isCompleted ? ['/results/', quizId] : ['/intro/', quizId];
   }
 
@@ -610,8 +630,10 @@ export class QuizSelectionComponent implements OnInit {
   }
 
   public isCompleted(quiz: any): boolean {
-    return (quiz?.status ?? '').toString().toLowerCase() === 'completed'
-      || this.completedQuizIds().has(quiz?.quizId);
+    return (
+      (quiz?.status ?? '').toString().toLowerCase() === 'completed' ||
+      this.completedQuizIds().has(quiz?.quizId)
+    );
   }
 
   // Case-insensitive match against the quiz's milestone/title ONLY (not the
@@ -622,7 +644,7 @@ export class QuizSelectionComponent implements OnInit {
     // Match at the START of any word in the title, so "ang" finds "Angular" but
     // NOT "chANGe detection". A plain substring includes() matched mid-word noise.
     const title = (quiz?.milestone ?? '').toString().toLowerCase();
-    return title.split(/[^a-z0-9]+/).some(word => word.startsWith(needle));
+    return title.split(/[^a-z0-9]+/).some((word) => word.startsWith(needle));
   }
 
   // 'all' keeps every quiz (including any with a missing/unknown difficulty);
@@ -635,14 +657,18 @@ export class QuizSelectionComponent implements OnInit {
   // Return a NEW sorted array (never mutates the input). Two-dimensional:
   // primary = difficulty rank (asc/desc), then alphabetical by milestone
   // (az/za) WITHIN each difficulty group.
-  private sortQuizzes(quizzes: Quiz[], difficultyDir: DifficultyDirection, alphaDir: AlphaDirection): Quiz[] {
+  private sortQuizzes(
+    quizzes: Quiz[],
+    difficultyDir: DifficultyDirection,
+    alphaDir: AlphaDirection
+  ): Quiz[] {
     const difficultyFactor = difficultyDir === 'asc' ? 1 : -1;
     const alphaFactor = alphaDir === 'az' ? 1 : -1;
 
     return [...quizzes].sort((a, b) => {
       const rankDiff = (this.difficultyRank(a) - this.difficultyRank(b)) * difficultyFactor;
       if (rankDiff !== 0) return rankDiff;
-      return this.titleOf(a).localeCompare(this.titleOf(b)) * alphaFactor;  // within group
+      return this.titleOf(a).localeCompare(this.titleOf(b)) * alphaFactor; // within group
     });
   }
 
@@ -670,14 +696,17 @@ export class QuizSelectionComponent implements OnInit {
   // by refreshAchievementsEffect above, not directly from init.
   private refreshAchievementsSummary(): void {
     try {
-      const catalog: AchievementCatalogEntry[] = [...this.metadataApi.difficultyByQuiz()]
-        .map(([quizId, difficulty]) => ({ quizId, difficulty }));
-      this.achievementService.evaluate(catalog);  // silent: return value ignored
+      const catalog: AchievementCatalogEntry[] = [...this.metadataApi.difficultyByQuiz()].map(
+        ([quizId, difficulty]) => ({ quizId, difficulty })
+      );
+      this.achievementService.evaluate(catalog); // silent: return value ignored
       const { earned, total } = this.achievementService.summary();
       this.achievementsEarned.set(earned);
       this.achievementsTotal.set(total);
       this.achievementsEarnedIds.set(this.achievementService.earnedIds());
-    } catch (err: unknown) { swallow('quiz-selection.component.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-selection.component.ts', err);
+    }
   }
 
   // Restore the sort dimensions (localStorage, cross-visit) and the search
@@ -719,7 +748,7 @@ export class QuizSelectionComponent implements OnInit {
     const completedIds = readSessionJson<string[]>(SK_COMPLETED_QUIZ_IDS, []);
 
     for (const id of completedIds) {
-      this.completedQuizIds.update(s => new Set(s).add(id));
+      this.completedQuizIds.update((s) => new Set(s).add(id));
     }
 
     if (completedIds.length > 0) {
@@ -735,7 +764,7 @@ export class QuizSelectionComponent implements OnInit {
     const startedIds = readSessionJson<string[]>(SK_STARTED_QUIZ_IDS, []);
 
     for (const id of startedIds) {
-      this.startedQuizIds.update(s => new Set(s).add(id));
+      this.startedQuizIds.update((s) => new Set(s).add(id));
     }
 
     return startedIds;
@@ -750,7 +779,7 @@ export class QuizSelectionComponent implements OnInit {
     if (!quizId) return;
     try {
       const completed = readSessionJson<string[]>(SK_COMPLETED_QUIZ_IDS, []);
-      if (completed.includes(quizId)) return;  // already counted
+      if (completed.includes(quizId)) return; // already counted
 
       const started = readSessionJson<string[]>(SK_STARTED_QUIZ_IDS, []);
       if (!started.includes(quizId)) {
@@ -762,7 +791,9 @@ export class QuizSelectionComponent implements OnInit {
       // needing a route round-trip back to the selection page.
       const accessedSet = new Set([...completed, ...started]);
       this.accessedCount.set(accessedSet.size);
-    } catch (err: unknown) { swallow('quiz-selection.component.ts', err); /* ignore storage failures */ }
+    } catch (err: unknown) {
+      swallow('quiz-selection.component.ts', err); /* ignore storage failures */
+    }
   }
 
   // S6o: load the metadata catalog once — replaces the previous bank-backed

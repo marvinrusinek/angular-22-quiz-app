@@ -3,7 +3,6 @@ import { BehaviorSubject, Observable } from 'rxjs';
 
 import { FormattedExplanation, Option, QuizQuestion } from '@shared/models';
 
-
 import { ExplanationDisplayStateService, FETPayload } from './explanation-display-state.service';
 import { ExplanationFormatterService } from './explanation-formatter.service';
 import { QuizService } from '@shared/services/data/quiz.service';
@@ -57,15 +56,16 @@ export class ExplanationTextService {
       try {
         const scoringSvc = this.quizService?.scoringService;
         if (scoringSvc?.questionCorrectness?.get(idx) === true) return true;
-      } catch (err: unknown) { swallow('explanation-text.service.ts scoring fast-path', err); }
+      } catch (err: unknown) {
+        swallow('explanation-text.service.ts scoring fast-path', err);
+      }
 
       const qs: any = this.quizService;
-      const isShuffled = qs?.isShuffleEnabled?.()
-        && Array.isArray(qs?.shuffledQuestions)
-        && qs.shuffledQuestions.length > 0;
-      const liveQ: any = isShuffled
-        ? qs?.shuffledQuestions?.[idx]
-        : qs?.questions?.[idx];
+      const isShuffled =
+        qs?.isShuffleEnabled?.() &&
+        Array.isArray(qs?.shuffledQuestions) &&
+        qs.shuffledQuestions.length > 0;
+      const liveQ: any = isShuffled ? qs?.shuffledQuestions?.[idx] : qs?.questions?.[idx];
       const qText = norm(liveQ?.questionText ?? '');
       if (!qText) return null;
 
@@ -78,7 +78,7 @@ export class ExplanationTextService {
       // simply declines to have an opinion.
       const declaredMulti =
         declaredIsMultiAnswer(liveQ) ?? this.typeRegistry?.isMultiAnswer?.(qText) ?? null;
-      if (declaredMulti !== true) return null;  // not multi-answer, or unknown
+      if (declaredMulti !== true) return null; // not multi-answer, or unknown
 
       // COMPLETION IS THE VERDICT'S ANSWER.
       //
@@ -281,10 +281,7 @@ export class ExplanationTextService {
   }
 
   initializeExplanationTexts(explanations: string[]): void {
-    this.formatter.initializeExplanationTexts(
-      this.displayState.explanationTexts,
-      explanations
-    );
+    this.formatter.initializeExplanationTexts(this.displayState.explanationTexts, explanations);
   }
 
   initializeFormattedExplanations(
@@ -317,11 +314,14 @@ export class ExplanationTextService {
     try {
       const entry = this.displayState.getOrCreate(index);
       entry.text$.next(this.formatter.formattedExplanations[index]?.explanation ?? '');
-      this.displayState._byIndex.get(index)?.next(
-        this.formatter.formattedExplanations[index]?.explanation ?? ''
-      );
+      this.displayState._byIndex
+        .get(index)
+        ?.next(this.formatter.formattedExplanations[index]?.explanation ?? '');
     } catch (err: unknown) {
-      console.error('ExplanationTextService.storeFormattedExplanation display state update failed:', err);
+      console.error(
+        'ExplanationTextService.storeFormattedExplanation display state update failed:',
+        err
+      );
     }
   }
 
@@ -339,7 +339,12 @@ export class ExplanationTextService {
     explanation: string,
     displayIndex?: number
   ): string {
-    return this.formatter.formatExplanation(question, correctOptionIndices, explanation, displayIndex);
+    return this.formatter.formatExplanation(
+      question,
+      correctOptionIndices,
+      explanation,
+      displayIndex
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -375,8 +380,10 @@ export class ExplanationTextService {
     options?: { force?: boolean; context?: string; index?: number }
   ): void {
     if (explanation && explanation.trim().length > 0 && !options?.force) {
-      const idx = options?.index ?? this.parseIndexFromContext(options?.context)
-        ?? this.quizService.currentQuestionIndex;
+      const idx =
+        options?.index ??
+        this.parseIndexFromContext(options?.context) ??
+        this.quizService.currentQuestionIndex;
       const pristine = this.isMultiAnswerPristineResolved(idx);
       if (pristine === false) return;
     }
@@ -387,9 +394,7 @@ export class ExplanationTextService {
     this.displayState.setExplanationTextForQuestionIndex(index, explanation);
   }
 
-  getFormattedExplanationTextForQuestion(
-    questionIndex: number
-  ): Observable<string | null> {
+  getFormattedExplanationTextForQuestion(questionIndex: number): Observable<string | null> {
     return this.displayState.getFormattedExplanationTextForQuestion(questionIndex);
   }
 

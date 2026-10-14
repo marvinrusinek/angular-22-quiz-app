@@ -46,9 +46,7 @@ beforeEach(() => {
 
 describe('a freshly built binding knows nothing about correctness', () => {
   it('reports unknown even when the option claims to be correct', () => {
-    const bindings = factory.createBindings(
-      cfg([{ text: 'map', correct: true } as Option])
-    );
+    const bindings = factory.createBindings(cfg([{ text: 'map', correct: true } as Option]));
 
     expect(bindings[0].isCorrect).toBeNull();
     // Not false — that would mean a verdict had said "wrong".
@@ -100,8 +98,7 @@ describe('radio vs checkbox follows the declared type, not the answer key', () =
   it('renders checkboxes for a multiple-answer question with no correct flags', () => {
     const bare = [{ text: 'map' }, { text: 'filter' }] as Option[];
 
-    expect(factory.createBindings(cfg(bare, 'multiple'))[0].appHighlightInputType)
-      .toBe('checkbox');
+    expect(factory.createBindings(cfg(bare, 'multiple'))[0].appHighlightInputType).toBe('checkbox');
   });
 
   it('renders radios for a single-answer question even with several correct flags', () => {
@@ -113,7 +110,6 @@ describe('radio vs checkbox follows the declared type, not the answer key', () =
       { text: 'filter', correct: true }
     ] as Option[];
 
-    expect(factory.createBindings(cfg(lying, 'single'))[0].appHighlightInputType)
-      .toBe('radio');
+    expect(factory.createBindings(cfg(lying, 'single'))[0].appHighlightInputType).toBe('radio');
   });
 });

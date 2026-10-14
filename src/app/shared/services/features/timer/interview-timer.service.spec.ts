@@ -44,13 +44,13 @@ describe('InterviewTimerService', () => {
     expect(service.remainingSeconds()).toBe(0);
     expect(count).toBe(1);
     advance(10000);
-    expect(count).toBe(1);   // no further emissions
+    expect(count).toBe(1); // no further emissions
   });
 
   it('flags low time at or below 5 minutes remaining', () => {
     service.start(6 * 60);
     expect(service.isLowTime()).toBe(false);
-    advance(61 * 1000);       // 299s remaining
+    advance(61 * 1000); // 299s remaining
     expect(service.isLowTime()).toBe(true);
   });
 
@@ -66,12 +66,12 @@ describe('InterviewTimerService', () => {
     expect(service.remainingSeconds()).toBe(25);
 
     service.pause();
-    advance(10000);                        // time passes while paused
-    expect(service.remainingSeconds()).toBe(25);   // frozen — no drain
+    advance(10000); // time passes while paused
+    expect(service.remainingSeconds()).toBe(25); // frozen — no drain
 
     service.resume();
     advance(5000);
-    expect(service.remainingSeconds()).toBe(20);   // continues from 25
+    expect(service.remainingSeconds()).toBe(20); // continues from 25
   });
 
   it('restores remaining time from a persisted expiry timestamp', () => {

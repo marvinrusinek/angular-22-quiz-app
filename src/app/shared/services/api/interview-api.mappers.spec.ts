@@ -27,18 +27,37 @@ const session: ActiveInterviewSessionDto = {
   config: { mode: 'preset', presetId: 'junior', topicIds: ['rxjs', 'signals'], questionCount: 3 },
   questions: [
     {
-      questionId: 'rxjs:q:2', sourceQuizId: 'rxjs', questionText: 'Q A', type: 'single',
-      options: [{ optionId: 304, text: 'd' }, { optionId: 301, text: 'a' }, { optionId: 303, text: 'c' }],
+      questionId: 'rxjs:q:2',
+      sourceQuizId: 'rxjs',
+      questionText: 'Q A',
+      type: 'single',
+      options: [
+        { optionId: 304, text: 'd' },
+        { optionId: 301, text: 'a' },
+        { optionId: 303, text: 'c' }
+      ],
       flagged: false
     },
     {
-      questionId: 'signals:q:0', sourceQuizId: 'signals', questionText: 'Q B', type: 'multiple',
-      options: [{ optionId: 101, text: 'x' }, { optionId: 102, text: 'y' }],
+      questionId: 'signals:q:0',
+      sourceQuizId: 'signals',
+      questionText: 'Q B',
+      type: 'multiple',
+      options: [
+        { optionId: 101, text: 'x' },
+        { optionId: 102, text: 'y' }
+      ],
       flagged: true
     },
     {
-      questionId: 'signals:q:4', sourceQuizId: 'signals', questionText: 'Q C', type: 'trueFalse',
-      options: [{ optionId: 501, text: 'True' }, { optionId: 502, text: 'False' }],
+      questionId: 'signals:q:4',
+      sourceQuizId: 'signals',
+      questionText: 'Q C',
+      type: 'trueFalse',
+      options: [
+        { optionId: 501, text: 'True' },
+        { optionId: 502, text: 'False' }
+      ],
       flagged: false
     }
   ],
@@ -119,7 +138,11 @@ describe('question mapping', () => {
 describe('session mapping', () => {
   it('preserves question order and parses server timestamps', () => {
     const vm = toSessionViewModel(session);
-    expect(vm.questions.map((q) => q.questionId)).toEqual(['rxjs:q:2', 'signals:q:0', 'signals:q:4']);
+    expect(vm.questions.map((q) => q.questionId)).toEqual([
+      'rxjs:q:2',
+      'signals:q:0',
+      'signals:q:4'
+    ]);
     expect(vm.createdAtMs).toBe(Date.parse('2026-08-02T10:00:00.000Z'));
     expect(vm.expiresAtMs).toBe(Date.parse('2026-08-02T10:15:00.000Z'));
     expect(vm.remainingSeconds).toBe(880);
@@ -152,11 +175,21 @@ describe('session mapping', () => {
 });
 
 describe('review mapping', () => {
-  const question = (overrides: Partial<InterviewReviewQuestionDto> = {}): InterviewReviewQuestionDto => ({
-    questionId: 'rxjs:q:0', sourceQuizId: 'rxjs', questionText: 'Which is correct?',
+  const question = (
+    overrides: Partial<InterviewReviewQuestionDto> = {}
+  ): InterviewReviewQuestionDto => ({
+    questionId: 'rxjs:q:0',
+    sourceQuizId: 'rxjs',
+    questionText: 'Which is correct?',
     type: 'multiple',
-    options: [{ optionId: 101, text: 'a' }, { optionId: 102, text: 'b' }, { optionId: 103, text: 'c' }],
-    selectedOptionIds: [101, 103], correctOptionIds: [101, 103], explanation: 'Because.',
+    options: [
+      { optionId: 101, text: 'a' },
+      { optionId: 102, text: 'b' },
+      { optionId: 103, text: 'c' }
+    ],
+    selectedOptionIds: [101, 103],
+    correctOptionIds: [101, 103],
+    explanation: 'Because.',
     flagged: false,
     ...overrides
   });
@@ -170,11 +203,15 @@ describe('review mapping', () => {
     expect(toReviewQuestionViewModel(question()).codeSnippet).toBeUndefined();
 
     const snippet = { language: 'typescript' as const, code: 'const x = 1;' };
-    expect(toReviewQuestionViewModel(question({ codeSnippet: snippet })).codeSnippet).toEqual(snippet);
+    expect(toReviewQuestionViewModel(question({ codeSnippet: snippet })).codeSnippet).toEqual(
+      snippet
+    );
   });
 
   it('derives isCorrect by EXACT SET equality, order-independent', () => {
-    expect(toReviewQuestionViewModel(question({ selectedOptionIds: [103, 101] })).isCorrect).toBe(true);
+    expect(toReviewQuestionViewModel(question({ selectedOptionIds: [103, 101] })).isCorrect).toBe(
+      true
+    );
   });
 
   it.each([
@@ -183,7 +220,9 @@ describe('review mapping', () => {
     ['unanswered', [], false],
     ['exact', [101, 103], true]
   ])('%s', (_label, selected, expected) => {
-    expect(toReviewQuestionViewModel(question({ selectedOptionIds: selected })).isCorrect).toBe(expected);
+    expect(toReviewQuestionViewModel(question({ selectedOptionIds: selected })).isCorrect).toBe(
+      expected
+    );
   });
 
   it('tracks answered separately from correct', () => {
@@ -204,14 +243,31 @@ describe('review mapping', () => {
 
 describe('result mapping', () => {
   const dto: InterviewResultDto = {
-    sessionId: 'is_x', status: 'submitted', submittedAt: '2026-08-02T10:05:00.000Z',
+    sessionId: 'is_x',
+    status: 'submitted',
+    submittedAt: '2026-08-02T10:05:00.000Z',
     submittedByExpiry: true,
-    total: 3, answered: 2, unanswered: 1, correct: 1, incorrect: 1, percentage: 33,
-    durationSeconds: 900, timeUsedSeconds: 900, timeRemainingSeconds: 0,
+    total: 3,
+    answered: 2,
+    unanswered: 1,
+    correct: 1,
+    incorrect: 1,
+    percentage: 33,
+    durationSeconds: 900,
+    timeUsedSeconds: 900,
+    timeRemainingSeconds: 0,
     config: { mode: 'preset', presetId: 'junior', topicIds: ['rxjs'], questionCount: 3 },
     performance: {
       byTopic: [
-        { topicId: 'rxjs', title: 'RxJS', correct: 1, incorrect: 1, unanswered: 1, total: 3, percentage: 33 }
+        {
+          topicId: 'rxjs',
+          title: 'RxJS',
+          correct: 1,
+          incorrect: 1,
+          unanswered: 1,
+          total: 3,
+          percentage: 33
+        }
       ]
     },
     review: []
@@ -220,7 +276,12 @@ describe('result mapping', () => {
   it('COPIES totals and percentage rather than recalculating', () => {
     const vm = toResultViewModel(dto);
     expect(vm).toMatchObject({
-      total: 3, answered: 2, unanswered: 1, correct: 1, incorrect: 1, percentage: 33
+      total: 3,
+      answered: 2,
+      unanswered: 1,
+      correct: 1,
+      incorrect: 1,
+      percentage: 33
     });
     // 1/3 would round to 33 anyway; the point is that it is copied, so a
     // backend rule change can never silently diverge here.

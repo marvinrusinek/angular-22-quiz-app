@@ -1,5 +1,10 @@
 import {
-  ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, input, signal,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  inject,
+  input,
+  signal,
   ViewEncapsulation
 } from '@angular/core';
 
@@ -41,7 +46,7 @@ export class QuizResourcesComponent {
   // default — starts with a ▼, and the first click reveals the resources.
   readonly resourcesExpanded = signal(false);
   toggleResources(): void {
-    this.resourcesExpanded.update(open => !open);
+    this.resourcesExpanded.update((open) => !open);
     this.cdRef.markForCheck();
   }
 }

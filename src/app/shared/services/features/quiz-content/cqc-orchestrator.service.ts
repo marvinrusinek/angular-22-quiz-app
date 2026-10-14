@@ -1,12 +1,26 @@
-﻿﻿import { inject, Service } from '@angular/core';
+﻿import { inject, Service } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ParamMap } from '@angular/router';
 import {
-  BehaviorSubject, combineLatest, firstValueFrom, forkJoin, Observable, of, Subject
+  BehaviorSubject,
+  combineLatest,
+  firstValueFrom,
+  forkJoin,
+  Observable,
+  of,
+  Subject
 } from 'rxjs';
 import {
-  catchError, distinctUntilChanged, filter, map, shareReplay, startWith,
-  switchMap, take, tap, withLatestFrom
+  catchError,
+  distinctUntilChanged,
+  filter,
+  map,
+  shareReplay,
+  startWith,
+  switchMap,
+  take,
+  tap,
+  withLatestFrom
 } from 'rxjs/operators';
 
 import {
@@ -16,7 +30,6 @@ import {
   QuestionType,
   QuizQuestion
 } from '@shared/models';
-
 
 import { CqcQuestionNavService } from './cqc-question-nav.service';
 import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
@@ -59,9 +72,13 @@ export class CqcOrchestratorService {
     // that and break FET display after refresh.
     let isPageRefresh = false;
     try {
-      const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+      const navEntries = performance.getEntriesByType(
+        'navigation'
+      ) as PerformanceNavigationTiming[];
       isPageRefresh = navEntries.length > 0 && navEntries[0].type === 'reload';
-    } catch (err: unknown) { swallow('cqc-orchestrator.service.ts page-refresh detect', err); }
+    } catch (err: unknown) {
+      swallow('cqc-orchestrator.service.ts page-refresh detect', err);
+    }
     if (!isPageRefresh) host.quizStateService._hasUserInteracted?.clear();
 
     host.quizStateService.resetInteraction();
@@ -85,7 +102,6 @@ export class CqcOrchestratorService {
       )
       .subscribe(() => {});
   }
-
 
   /**
    * On timer expiry, resolve the LIVE question index (signal-first to avoid
@@ -111,11 +127,12 @@ export class CqcOrchestratorService {
     // microtask. Reading it first prevents stale Q(N) timer expiry from
     // writing Q(N)'s FET into Q(N+1)'s heading after navigation.
     const sigIdx = host.questionIndex?.();
-    const idx = (typeof sigIdx === 'number' && sigIdx >= 0)
-      ? sigIdx
-      : (host.currentIndex >= 0
+    const idx =
+      typeof sigIdx === 'number' && sigIdx >= 0
+        ? sigIdx
+        : host.currentIndex >= 0
           ? host.currentIndex
-          : (host.quizService.getCurrentQuestionIndex?.() ?? host.currentQuestionIndexValue ?? 0));
+          : (host.quizService.getCurrentQuestionIndex?.() ?? host.currentQuestionIndexValue ?? 0);
 
     // A previously-answered question being revisited keeps its question text
     // even if its timer expires again — only a first-time (unanswered) expiry
@@ -123,8 +140,10 @@ export class CqcOrchestratorService {
     // ('correct'/'wrong'); skip the entire timeout-FET machinery (durable flag +
     // direct DOM write) so the heading stays the question text on revisit.
     const _dot = host.selectedOptionService?.clickConfirmedDotStatus?.get?.(idx);
-    const alreadyAnswered = _dot === 'correct' || _dot === 'wrong'
-      || host.quizService?.questionCorrectness?.get?.(idx) === true;
+    const alreadyAnswered =
+      _dot === 'correct' ||
+      _dot === 'wrong' ||
+      host.quizService?.questionCorrectness?.get?.(idx) === true;
     if (alreadyAnswered) {
       host.cdRef.markForCheck();
       return;
@@ -137,7 +156,10 @@ export class CqcOrchestratorService {
     this.dotStatusService.timedOutFetForced.add(idx);
     (window as any).__quizTimerExpired = true;
 
-    const isShuffled = host.quizService.isShuffleEnabled?.() && Array.isArray(host.quizService.shuffledQuestions) && host.quizService.shuffledQuestions.length > 0;
+    const isShuffled =
+      host.quizService.isShuffleEnabled?.() &&
+      Array.isArray(host.quizService.shuffledQuestions) &&
+      host.quizService.shuffledQuestions.length > 0;
     let q = isShuffled
       ? host.quizService.shuffledQuestions[idx]
       : host.quizService.questions?.[idx];
@@ -153,7 +175,6 @@ export class CqcOrchestratorService {
     // itself. storeFormattedExplanation (above) makes the FET text available to it.
     host.cdRef.markForCheck();
   }
-
 
   runOnDestroy(host: Host): void {
     host.combinedSub?.unsubscribe();
@@ -203,9 +224,17 @@ export class CqcOrchestratorService {
 
   runSetupContentAvailability(host: Host): void {
     host.isContentAvailable$ = host.combineCurrentQuestionAndOptions().pipe(
-      map(({ currentQuestion, currentOptions }: { currentQuestion: QuizQuestion | null; currentOptions: Option[] }) => {
-        return !!currentQuestion && currentOptions.length > 0;
-      }),
+      map(
+        ({
+          currentQuestion,
+          currentOptions
+        }: {
+          currentQuestion: QuizQuestion | null;
+          currentOptions: Option[];
+        }) => {
+          return !!currentQuestion && currentOptions.length > 0;
+        }
+      ),
       distinctUntilChanged(),
       catchError((_error: Error) => {
         return of(false);
@@ -213,9 +242,7 @@ export class CqcOrchestratorService {
       startWith(false)
     );
 
-    host.isContentAvailable$
-      .pipe(distinctUntilChanged())
-      .subscribe(() => {});
+    host.isContentAvailable$.pipe(distinctUntilChanged()).subscribe(() => {});
   }
 
   runEmitContentAvailableState(host: Host): void {
@@ -224,7 +251,7 @@ export class CqcOrchestratorService {
         host.isContentAvailableChange.emit(isAvailable);
         host.quizDataService.updateContentAvailableState(isAvailable);
       },
-      error: () => { }
+      error: () => {}
     });
   }
 
@@ -275,30 +302,30 @@ export class CqcOrchestratorService {
   runUpdateCorrectAnswersDisplay(host: Host, question: QuizQuestion | null): Observable<void> {
     if (!question) return of(void 0);
 
-    return host.quizQuestionManagerService
-      .isMultipleAnswerQuestion(question)
-      .pipe(
-        tap((isMultipleAnswer: boolean) => {
-          // DECLARED, not tallied — `question.options.filter(o => o.correct)`
-          // made this banner an answer-key read. Null omits it.
-          const bannerCount = bannerCorrectCount(
-            isMultipleAnswer, this.topicQuizTypeRegistry, question.questionText
-          );
-          const explanationDisplayed = host.explanationTextService.isExplanationTextDisplayedSig();
-          const newCorrectAnswersText =
-            bannerCount !== null && !explanationDisplayed
-              ? host.quizQuestionManagerService.getNumberOfCorrectAnswersText(
+    return host.quizQuestionManagerService.isMultipleAnswerQuestion(question).pipe(
+      tap((isMultipleAnswer: boolean) => {
+        // DECLARED, not tallied — `question.options.filter(o => o.correct)`
+        // made this banner an answer-key read. Null omits it.
+        const bannerCount = bannerCorrectCount(
+          isMultipleAnswer,
+          this.topicQuizTypeRegistry,
+          question.questionText
+        );
+        const explanationDisplayed = host.explanationTextService.isExplanationTextDisplayedSig();
+        const newCorrectAnswersText =
+          bannerCount !== null && !explanationDisplayed
+            ? host.quizQuestionManagerService.getNumberOfCorrectAnswersText(
                 bannerCount,
                 question.options?.length ?? 0
               )
-              : '';
+            : '';
 
-          if (host.correctAnswersTextSig() !== newCorrectAnswersText) {
-            host.correctAnswersTextSig.set(newCorrectAnswersText);
-          }
-        }),
-        map(() => void 0)
-      );
+        if (host.correctAnswersTextSig() !== newCorrectAnswersText) {
+          host.correctAnswersTextSig.set(newCorrectAnswersText);
+        }
+      }),
+      map(() => void 0)
+    );
   }
 
   runInitializeCombinedQuestionData(host: Host): void {
@@ -306,31 +333,42 @@ export class CqcOrchestratorService {
 
     currentQuizAndOptions$.pipe(takeUntilDestroyed(host.destroyRef)).subscribe({
       next: () => {},
-      error: () => { }
+      error: () => {}
     });
 
-    host.setCombinedQuestionData$(combineLatest([
-      currentQuizAndOptions$.pipe(
-        startWith<{
-          currentQuestion: QuizQuestion | null;
-          currentOptions: Option[];
-          explanation: string;
-          currentIndex: number;
-        } | null>(null)
-      ),
-      host.numberOfCorrectAnswers$.pipe(startWith(0)),
-      host.isExplanationTextDisplayed$.pipe(startWith(false)),
-      host.activeFetText$.pipe(startWith(''))
-    ]).pipe(
-      map((arr: any): CombinedQuestionDataType => this.mapToCombinedQuestionData(host, arr)),
-      filter((data: CombinedQuestionDataType | null): data is CombinedQuestionDataType => data !== null),
-      catchError((_error: Error) => of<CombinedQuestionDataType>(this.buildCombinedQuestionDataFallback())),
-    ));
+    host.setCombinedQuestionData$(
+      combineLatest([
+        currentQuizAndOptions$.pipe(
+          startWith<{
+            currentQuestion: QuizQuestion | null;
+            currentOptions: Option[];
+            explanation: string;
+            currentIndex: number;
+          } | null>(null)
+        ),
+        host.numberOfCorrectAnswers$.pipe(startWith(0)),
+        host.isExplanationTextDisplayed$.pipe(startWith(false)),
+        host.activeFetText$.pipe(startWith(''))
+      ]).pipe(
+        map((arr: any): CombinedQuestionDataType => this.mapToCombinedQuestionData(host, arr)),
+        filter(
+          (data: CombinedQuestionDataType | null): data is CombinedQuestionDataType => data !== null
+        ),
+        catchError((_error: Error) =>
+          of<CombinedQuestionDataType>(this.buildCombinedQuestionDataFallback())
+        )
+      )
+    );
   }
 
   /** Project the combineLatest tuple into combined question data. Extracted verbatim. */
   private mapToCombinedQuestionData(host: Host, arr: any): CombinedQuestionDataType {
-    const quiz: { currentQuestion: QuizQuestion | null; currentOptions: Option[]; explanation: string; currentIndex: number; } | null = arr[0];
+    const quiz: {
+      currentQuestion: QuizQuestion | null;
+      currentOptions: Option[];
+      explanation: string;
+      currentIndex: number;
+    } | null = arr[0];
     const numberOfCorrectAnswers: number | string = arr[1];
     const isExplanationDisplayed: boolean = arr[2];
     const formattedExplanation: string = arr[3];
@@ -349,11 +387,12 @@ export class CqcOrchestratorService {
   }
 
   /** Build the pre-calculation combined-question-data shape from the safe quiz data. */
-  private buildCurrentQuizData(safeQuizData: any, isExplanationDisplayed: boolean): CombinedQuestionDataType {
+  private buildCurrentQuizData(
+    safeQuizData: any,
+    isExplanationDisplayed: boolean
+  ): CombinedQuestionDataType {
     const selectionMessage =
-      'selectionMessage' in safeQuizData
-        ? (safeQuizData as any).selectionMessage || ''
-        : '';
+      'selectionMessage' in safeQuizData ? (safeQuizData as any).selectionMessage || '' : '';
     return {
       currentQuestion: safeQuizData.currentQuestion,
       currentOptions: safeQuizData.currentOptions ?? [],
@@ -399,31 +438,26 @@ export class CqcOrchestratorService {
   }> {
     return host.quizService.questionPayload$.pipe(
       withLatestFrom(host.quizService.currentQuestionIndex$),
-      filter(
-        (value: [QuestionPayload | null, number]): value is [QuestionPayload, number] => {
-          const [payload] = value;
-          return (
-            !!payload &&
-            !!payload.question &&
-            Array.isArray(payload.options) &&
-            payload.options.length > 0
-          );
-        }
-      ),
+      filter((value: [QuestionPayload | null, number]): value is [QuestionPayload, number] => {
+        const [payload] = value;
+        return (
+          !!payload &&
+          !!payload.question &&
+          Array.isArray(payload.options) &&
+          payload.options.length > 0
+        );
+      }),
       map(([payload, index]: [QuestionPayload, number]) => ({
         payload,
-        index: Number.isFinite(index)
-          ? index
-          : host.currentIndex >= 0
-            ? host.currentIndex
-            : 0
+        index: Number.isFinite(index) ? index : host.currentIndex >= 0 ? host.currentIndex : 0
       })),
       map(({ payload, index }: { payload: QuestionPayload; index: number }) => {
         const normalizedOptions = payload.options
           .map((option, optionIndex) => ({
             ...option,
             optionId: typeof option.optionId === 'number' ? option.optionId : optionIndex + 1,
-            displayOrder: typeof option.displayOrder === 'number' ? option.displayOrder : optionIndex
+            displayOrder:
+              typeof option.displayOrder === 'number' ? option.displayOrder : optionIndex
           }))
           .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 
@@ -435,16 +469,25 @@ export class CqcOrchestratorService {
         return {
           currentQuestion: normalizedQuestion,
           currentOptions: normalizedOptions,
-          explanation:
-            payload.explanation?.trim() ||
-            payload.question.explanation?.trim() ||
-            '',
+          explanation: payload.explanation?.trim() || payload.question.explanation?.trim() || '',
           currentIndex: index
         };
       }),
       distinctUntilChanged(
-        (prev: { currentQuestion: QuizQuestion; currentOptions: Option[]; explanation: string; currentIndex: number },
-          curr: { currentQuestion: QuizQuestion; currentOptions: Option[]; explanation: string; currentIndex: number }) => {
+        (
+          prev: {
+            currentQuestion: QuizQuestion;
+            currentOptions: Option[];
+            explanation: string;
+            currentIndex: number;
+          },
+          curr: {
+            currentQuestion: QuizQuestion;
+            currentOptions: Option[];
+            explanation: string;
+            currentIndex: number;
+          }
+        ) => {
           const norm = (s?: string) =>
             (s ?? '')
               .replace(/<[^>]*>/g, ' ')
@@ -466,7 +509,8 @@ export class CqcOrchestratorService {
           if (prev.explanation !== curr.explanation) return false;
 
           return host.haveSameOptionOrder(prev.currentOptions, curr.currentOptions);
-        }),
+        }
+      ),
       shareReplay({ bufferSize: 1, refCount: true }),
       catchError((_error: Error) => {
         return of({
@@ -507,12 +551,15 @@ export class CqcOrchestratorService {
       return this.emptyCombinedQuestionData();
     }
 
-    const normalizedCorrectCount = Number.isFinite(numberOfCorrectAnswers) ? numberOfCorrectAnswers : 0;
+    const normalizedCorrectCount = Number.isFinite(numberOfCorrectAnswers)
+      ? numberOfCorrectAnswers
+      : 0;
 
     const totalOptions = Array.isArray(currentOptions)
       ? currentOptions.length
       : Array.isArray(currentQuestion?.options)
-        ? currentQuestion.options.length : 0;
+        ? currentQuestion.options.length
+        : 0;
 
     const isMultipleAnswerQuestion =
       currentQuestion.type === QuestionType.MultipleAnswer ||
@@ -523,17 +570,20 @@ export class CqcOrchestratorService {
     // DECLARED, not tallied. `normalizedCorrectCount` is derived from the local
     // key upstream; the banner no longer consumes it.
     const bannerCount = bannerCorrectCount(
-      isMultipleAnswerQuestion, this.topicQuizTypeRegistry, currentQuestion.questionText
+      isMultipleAnswerQuestion,
+      this.topicQuizTypeRegistry,
+      currentQuestion.questionText
     );
     const correctAnswersText =
       bannerCount !== null
-        ? host.quizQuestionManagerService.getNumberOfCorrectAnswersText(
-          bannerCount, totalOptions
-        )
+        ? host.quizQuestionManagerService.getNumberOfCorrectAnswersText(bannerCount, totalOptions)
         : '';
 
     const explanationText = isExplanationDisplayed
-      ? formattedExplanation?.trim() || currentQuizData.explanation || currentQuestion.explanation || ''
+      ? formattedExplanation?.trim() ||
+        currentQuizData.explanation ||
+        currentQuestion.explanation ||
+        ''
       : '';
 
     return {

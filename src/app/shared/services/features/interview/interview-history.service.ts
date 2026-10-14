@@ -15,10 +15,7 @@ import {
   QuestionType,
   QuizQuestion
 } from '@shared/models';
-import {
-  SK_INTERVIEW_HISTORY,
-  SK_INTERVIEW_HISTORY_V1
-} from '@shared/constants/session-keys';
+import { SK_INTERVIEW_HISTORY, SK_INTERVIEW_HISTORY_V1 } from '@shared/constants/session-keys';
 import { readLocalJson, removeLocalKey, writeLocalJson } from '@shared/utils/local-storage';
 import type { SanitizedAttemptInput } from '@shared/services/interview/interview-result-history.adapter';
 
@@ -83,9 +80,9 @@ export class InterviewHistoryService {
     attemptId?: string,
     reviewSource?: InterviewReviewSource
   ): void {
-    void reviewSource;   // v2 never retains a review snapshot
+    void reviewSource; // v2 never retains a review snapshot
     if (!result) return;
-    if (result === this.lastRecorded) return;   // same in-memory result → no-op
+    if (result === this.lastRecorded) return; // same in-memory result → no-op
     // Durable guard: this attempt is already in the persisted history.
     if (attemptId && this._history().some((e) => e.id === attemptId)) {
       this.lastRecorded = result;
@@ -158,10 +155,7 @@ export class InterviewHistoryService {
   }
 
   // ── internals ───────────────────────────────────────────────────
-  private toEntry(
-    result: InterviewResult,
-    attemptId?: string
-  ): InterviewAttemptHistoryEntry {
+  private toEntry(result: InterviewResult, attemptId?: string): InterviewAttemptHistoryEntry {
     // Reuse Topic Performance analytics rather than re-deriving topic tallies.
     const topicPerformance: InterviewTopicHistoryEntry[] = this.analytics
       .analyze(result)
@@ -174,7 +168,7 @@ export class InterviewHistoryService {
       }));
 
     const total = Math.max(0, result.total);
-    const score = Math.max(0, Math.min(result.correct, total));   // never exceed total
+    const score = Math.max(0, Math.min(result.correct, total)); // never exceed total
 
     return {
       id: attemptId && attemptId.length > 0 ? attemptId : this.nextId(),
@@ -319,14 +313,15 @@ export function validateAttemptEntry(raw: unknown): InterviewAttemptHistoryEntry
   const e = raw as Record<string, unknown>;
 
   if (typeof e['id'] !== 'string' || e['id'].length === 0) return null;
-  if (typeof e['completedAt'] !== 'string' || Number.isNaN(Date.parse(e['completedAt']))) return null;
+  if (typeof e['completedAt'] !== 'string' || Number.isNaN(Date.parse(e['completedAt'])))
+    return null;
   if (!isFiniteNum(e['score']) || e['score'] < 0) return null;
   if (!isFiniteNum(e['totalQuestions']) || e['totalQuestions'] <= 0) return null;
   if (!isFiniteNum(e['percentage'])) return null;
 
   const totalQuestions = Math.round(e['totalQuestions']);
   const score = Math.round(e['score']);
-  if (score > totalQuestions) return null;   // internally inconsistent
+  if (score > totalQuestions) return null; // internally inconsistent
 
   const reason: InterviewCompletionReason =
     e['completionReason'] === 'time-expired' ? 'time-expired' : 'submitted';
@@ -360,14 +355,13 @@ export function validateAttemptEntry(raw: unknown): InterviewAttemptHistoryEntry
   return {
     id: e['id'],
     // Server-stable dedup key. Absent on migrated v1 records.
-    sessionId: typeof e['sessionId'] === 'string' && e['sessionId'].length > 0
-      ? e['sessionId']
-      : undefined,
+    sessionId:
+      typeof e['sessionId'] === 'string' && e['sessionId'].length > 0 ? e['sessionId'] : undefined,
     attemptNumber,
     completedAt: e['completedAt'],
     score,
     totalQuestions,
-    percentage: clampPct(e['percentage']),   // clamp impossible percentages
+    percentage: clampPct(e['percentage']), // clamp impossible percentages
     completionReason: reason,
     durationSeconds,
     configuredDifficulty:
@@ -415,11 +409,13 @@ export function migrateV1Attempts(raw: unknown): InterviewAttemptHistoryEntry[] 
   const seen = new Set<string>();
   const deduped = clean.filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)));
 
-  return deduped
-    .sort((a, b) => a.completedAt.localeCompare(b.completedAt))
-    .slice(-INTERVIEW_HISTORY_MAX)
-    // Numbering stays stable across the migration.
-    .map((e, i) => ({ ...e, attemptNumber: e.attemptNumber ?? i + 1 }));
+  return (
+    deduped
+      .sort((a, b) => a.completedAt.localeCompare(b.completedAt))
+      .slice(-INTERVIEW_HISTORY_MAX)
+      // Numbering stays stable across the migration.
+      .map((e, i) => ({ ...e, attemptNumber: e.attemptNumber ?? i + 1 }))
+  );
 }
 
 // ── v1 review snapshots: REMOVED ─────────────────────────────────────
@@ -475,8 +471,15 @@ export function summarizeTrends(
 
   if (n === 0) {
     return {
-      points, count: 0, latest: null, best: null, average: null,
-      change: null, direction: 'none', interpretation: '', isPersonalBest: false
+      points,
+      count: 0,
+      latest: null,
+      best: null,
+      average: null,
+      change: null,
+      direction: 'none',
+      interpretation: '',
+      isPersonalBest: false
     };
   }
 
@@ -499,12 +502,23 @@ export function summarizeTrends(
       interpretation = 'Your interview performance is improving.';
     } else if (change <= -TREND_THRESHOLD) {
       direction = 'declining';
-      interpretation = 'Your latest score was lower. Review the topics that need attention and try again.';
+      interpretation =
+        'Your latest score was lower. Review the topics that need attention and try again.';
     } else {
       direction = 'steady';
       interpretation = 'Your recent performance is holding steady.';
     }
   }
 
-  return { points, count: n, latest, best, average, change, direction, interpretation, isPersonalBest };
+  return {
+    points,
+    count: n,
+    latest,
+    best,
+    average,
+    change,
+    direction,
+    interpretation,
+    isPersonalBest
+  };
 }

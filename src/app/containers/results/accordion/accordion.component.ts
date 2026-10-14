@@ -7,7 +7,7 @@ import {
   inject,
   input,
   OnInit,
-  signal,
+  signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -35,10 +35,17 @@ export type ReviewFilter = 'all' | 'incorrect' | 'correct';
 @Component({
   selector: 'codelab-results-accordion',
   standalone: true,
-  imports: [MatExpansionModule, MatIconModule, Toolbar, ToolbarWidget, ToolbarWidgetGroup, CodeSnippetComponent],
+  imports: [
+    MatExpansionModule,
+    MatIconModule,
+    Toolbar,
+    ToolbarWidget,
+    ToolbarWidgetGroup,
+    CodeSnippetComponent
+  ],
   templateUrl: './accordion.component.html',
   styleUrls: ['./accordion.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AccordionComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
@@ -94,7 +101,8 @@ export class AccordionComponent implements OnInit {
 
   // Counts shown on the filter buttons (e.g. "Correct (7)").
   readonly correctCount = computed(
-    () => this.questions().filter((question, index) => this.isQuestionCorrect(question, index)).length
+    () =>
+      this.questions().filter((question, index) => this.isQuestionCorrect(question, index)).length
   );
   readonly incorrectCount = computed(() => this.questions().length - this.correctCount());
 
@@ -129,7 +137,7 @@ export class AccordionComponent implements OnInit {
 
   results: Result = {
     userAnswers: [],
-    elapsedTimes: [],
+    elapsedTimes: []
   };
 
   private hasRetried = false;
@@ -270,7 +278,7 @@ export class AccordionComponent implements OnInit {
               sel.text ||
               (visualIdx >= 0 ? question.options[visualIdx]?.text : '') ||
               `Option ${visualIdx + 1}`,
-            visualIndex: visualIdx >= 0 ? visualIdx + 1 : 0,
+            visualIndex: visualIdx >= 0 ? visualIdx + 1 : 0
           };
         })
         .filter((o: any) => o.visualIndex > 0);
@@ -288,7 +296,7 @@ export class AccordionComponent implements OnInit {
             sel.text ||
             (visualIdx >= 0 ? question.options[visualIdx]?.text : '') ||
             `Option ${visualIdx + 1}`,
-          visualIndex: visualIdx >= 0 ? visualIdx + 1 : 0,
+          visualIndex: visualIdx >= 0 ? visualIdx + 1 : 0
         };
       })
       .filter((o: any) => o.visualIndex > 0);
@@ -340,7 +348,7 @@ export class AccordionComponent implements OnInit {
   private initializeResults(userAnswersData: any[]): void {
     this.results = {
       userAnswers: userAnswersData,
-      elapsedTimes: this.timerService.elapsedTimes,
+      elapsedTimes: this.timerService.elapsedTimes
     };
   }
 

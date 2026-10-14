@@ -2,21 +2,25 @@ import { composeAnswerAnnouncement, htmlToAnnouncementText } from './compose-ans
 
 describe('composeAnswerAnnouncement', () => {
   it('returns empty when there is no feedback text at all (nothing to announce)', () => {
-    expect(composeAnswerAnnouncement({
-      feedbackText: '',
-      isCorrect: true,
-      fetDue: true,
-      fetText: 'Option 1 is correct because...',
-      progressGuidance: 'Select 1 more correct answer to continue...'
-    })).toBe('');
+    expect(
+      composeAnswerAnnouncement({
+        feedbackText: '',
+        isCorrect: true,
+        fetDue: true,
+        fetText: 'Option 1 is correct because...',
+        progressGuidance: 'Select 1 more correct answer to continue...'
+      })
+    ).toBe('');
 
-    expect(composeAnswerAnnouncement({
-      feedbackText: '   ',
-      isCorrect: false,
-      fetDue: false,
-      fetText: '',
-      progressGuidance: ''
-    })).toBe('');
+    expect(
+      composeAnswerAnnouncement({
+        feedbackText: '   ',
+        isCorrect: false,
+        fetDue: false,
+        fetText: '',
+        progressGuidance: ''
+      })
+    ).toBe('');
   });
 
   it('incorrect selection: feedback ONLY — never repeats unchanged selection guidance', () => {
@@ -90,7 +94,8 @@ describe('composeAnswerAnnouncement', () => {
       feedbackText: "You're right!",
       isCorrect: true,
       fetDue: true,
-      fetText: '<strong>Option 1</strong> is correct because &amp; it triggers the <code>lever</code>.',
+      fetText:
+        '<strong>Option 1</strong> is correct because &amp; it triggers the <code>lever</code>.',
       progressGuidance: ''
     });
     expect(result).toBe("You're right! Option 1 is correct because & it triggers the lever.");
@@ -125,13 +130,15 @@ describe('composeAnswerAnnouncement', () => {
 
 describe('htmlToAnnouncementText', () => {
   it('strips inline tags the heading sanitizer allows through', () => {
-    expect(htmlToAnnouncementText('<strong>Option 1</strong> is <em>correct</em>.'))
-      .toBe('Option 1 is correct.');
+    expect(htmlToAnnouncementText('<strong>Option 1</strong> is <em>correct</em>.')).toBe(
+      'Option 1 is correct.'
+    );
   });
 
   it('decodes the handful of entities the sanitizer can produce', () => {
-    expect(htmlToAnnouncementText('A &amp; B &lt;C&gt; &quot;D&quot; &#39;E&#39;&nbsp;F'))
-      .toBe('A & B <C> "D" \'E\' F');
+    expect(htmlToAnnouncementText('A &amp; B &lt;C&gt; &quot;D&quot; &#39;E&#39;&nbsp;F')).toBe(
+      'A & B <C> "D" \'E\' F'
+    );
   });
 
   it('collapses whitespace left behind by stripped tags', () => {

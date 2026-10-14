@@ -36,16 +36,13 @@ describe('PwaUpdateService', () => {
       isEnabled: true,
       versionUpdates: versionUpdates$,
       activateUpdate: jest.fn().mockResolvedValue(true),
-      checkForUpdate: jest.fn().mockResolvedValue(true),
+      checkForUpdate: jest.fn().mockResolvedValue(true)
     };
 
     confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
 
     TestBed.configureTestingModule({
-      providers: [
-        PwaUpdateService,
-        { provide: SwUpdate, useValue: swUpdateMock },
-      ],
+      providers: [PwaUpdateService, { provide: SwUpdate, useValue: swUpdateMock }]
     });
     service = TestBed.inject(PwaUpdateService);
   });

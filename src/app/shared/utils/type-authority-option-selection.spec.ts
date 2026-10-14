@@ -40,17 +40,18 @@ const q = (
   type: QuestionType | undefined,
   correctCount: number,
   questionText = 'Which of these apply?'
-): QuizQuestion => ({
-  questionText,
-  explanation: 'e',
-  type,
-  options: Array.from({ length: 4 }, (_, i) => ({
-    optionId: i + 1,
-    text: `opt${i + 1}`,
-    value: i + 1,
-    correct: i < correctCount
-  }))
-} as unknown as QuizQuestion);
+): QuizQuestion =>
+  ({
+    questionText,
+    explanation: 'e',
+    type,
+    options: Array.from({ length: 4 }, (_, i) => ({
+      optionId: i + 1,
+      text: `opt${i + 1}`,
+      value: i + 1,
+      correct: i < correctCount
+    }))
+  }) as unknown as QuizQuestion;
 
 describe('qqc option selection: FET emission branch follows the DECLARED type', () => {
   let service: QqcOptionSelectionService;
@@ -125,15 +126,22 @@ describe('qqc option selection: FET emission branch follows the DECLARED type', 
             overlaySelectedByIdentity: (_c: Option[], ui: Option[]) => ui
           }
         },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
       ]
     });
     service = TestBed.inject(QqcOptionSelectionService);
 
     // Capture FET emission without touching content supply.
     const ets: any = TestBed.inject(ExplanationTextService);
-    ets.setExplanationText = () => { explanationEmitted = true; };
-    ets.setIsExplanationTextDisplayed = () => { displayedFlagSet = true; };
+    ets.setExplanationText = () => {
+      explanationEmitted = true;
+    };
+    ets.setIsExplanationTextDisplayed = () => {
+      displayedFlagSet = true;
+    };
     ets.updateExplanationText = () => {};
   });
 
@@ -161,7 +169,10 @@ describe('qqc option selection: FET emission branch follows the DECLARED type', 
       questionText: 'No answer key at all',
       explanation: 'e',
       type: QuestionType.MultipleAnswer,
-      options: [{ optionId: 1, text: 'a', value: 1 }, { optionId: 2, text: 'b', value: 2 }]
+      options: [
+        { optionId: 1, text: 'a', value: 1 },
+        { optionId: 2, text: 'b', value: 2 }
+      ]
     } as unknown as QuizQuestion;
 
     expect(await select(bare)).toBe(false);
@@ -169,8 +180,8 @@ describe('qqc option selection: FET emission branch follows the DECLARED type', 
 
   it('UNDECLARED keeps the legacy count fallback', async () => {
     // REMOVE WITH THE /questions CONTENT CUTOVER. Unknown is not "single".
-    expect(await select(q(undefined, 3))).toBe(false);   // counted multi
-    expect(await select(q(undefined, 1))).toBe(true);    // counted single
+    expect(await select(q(undefined, 3))).toBe(false); // counted multi
+    expect(await select(q(undefined, 1))).toBe(true); // counted single
   });
 
   it('reads the DISPLAYED question, not a canonical stand-in, under shuffle', async () => {

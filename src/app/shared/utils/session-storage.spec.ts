@@ -16,12 +16,16 @@ import {
   readSessionString,
   removeSessionKey,
   writeSessionJson,
-  writeSessionString,
+  writeSessionString
 } from './session-storage';
 
 describe('session-storage helpers', () => {
   beforeEach(() => {
-    try { sessionStorage.clear(); } catch { /* ignore */ }
+    try {
+      sessionStorage.clear();
+    } catch {
+      /* ignore */
+    }
   });
 
   // ── readSessionJson ───────────────────────────────────────────────

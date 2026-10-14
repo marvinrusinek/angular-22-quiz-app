@@ -71,7 +71,9 @@ export class OptionUiSyncEffectsService {
         if (correctQ?.options?.length > 0 && v.length > 0) {
           const correctTexts = new Set(correctQ.options.map((o: Option) => norm(o?.text)));
           const actualTexts = new Set(v.map((o: Option) => norm(o?.text)));
-          const match = correctTexts.size === actualTexts.size && [...correctTexts].every(t => actualTexts.has(t));
+          const match =
+            correctTexts.size === actualTexts.size &&
+            [...correctTexts].every((t) => actualTexts.has(t));
           if (!match) {
             v = correctQ.options.map((o: Option) => ({ ...o }));
           }

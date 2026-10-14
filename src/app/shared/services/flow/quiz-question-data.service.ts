@@ -3,7 +3,6 @@ import { firstValueFrom } from 'rxjs';
 
 import { Option, QuestionType, QuizQuestion } from '@shared/models';
 
-
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuizDataService } from '@shared/services/data/quizdata.service';
 import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
@@ -39,21 +38,19 @@ export class QuizQuestionDataService {
 
       const trimmedText = resolvedQuestion.questionText.trim();
 
-      const options =
-        Array.isArray(resolvedQuestion.options)
-          ? resolvedQuestion.options.map((option, idx) => ({
+      const options = Array.isArray(resolvedQuestion.options)
+        ? resolvedQuestion.options.map((option, idx) => ({
             ...option,
             optionId: option.optionId ?? idx
-          })) : [];
+          }))
+        : [];
 
       if (!options.length) return null;
 
       let explanation = 'No explanation available';
       if (this.explanationTextService.explanationsInitialized) {
         const fetchedExplanation = await firstValueFrom(
-          this.explanationTextService.getFormattedExplanationTextForQuestion(
-            questionIndex
-          )
+          this.explanationTextService.getFormattedExplanationTextForQuestion(questionIndex)
         );
         explanation = fetchedExplanation?.trim() || 'No explanation available';
       }
@@ -61,7 +58,8 @@ export class QuizQuestionDataService {
       if (
         (!explanation || explanation === 'No explanation available') &&
         resolvedQuestion.explanation?.trim()
-      ) explanation = resolvedQuestion.explanation.trim();
+      )
+        explanation = resolvedQuestion.explanation.trim();
 
       // This builds a FRESH question object, so there is no stamped type to
       // read — ask the registry by text instead. Without this the manufactured
@@ -70,8 +68,7 @@ export class QuizQuestionDataService {
       const correctCount = options.filter((opt: Option) => opt.correct).length;
       const type =
         this.topicQuizTypeRegistry.questionTypeOf(trimmedText) ??
-        (correctCount > 1
-          ? QuestionType.MultipleAnswer : QuestionType.SingleAnswer);
+        (correctCount > 1 ? QuestionType.MultipleAnswer : QuestionType.SingleAnswer);
 
       const question: QuizQuestion = {
         questionText: trimmedText,
@@ -119,7 +116,6 @@ export class QuizQuestionDataService {
 
   forceRegenerateExplanation(question: QuizQuestion, index: number): void {
     if (question && question.options) {
-
       const correctIndices = this.explanationTextService.getCorrectOptionIndices(
         question,
         question.options,

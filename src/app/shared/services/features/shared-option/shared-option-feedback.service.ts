@@ -1,4 +1,4 @@
-﻿import { Service, inject } from '@angular/core';
+import { Service, inject } from '@angular/core';
 
 import {
   FeedbackProps,
@@ -8,7 +8,6 @@ import {
   QuizQuestion,
   SelectedOption
 } from '@shared/models';
-
 
 import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
 import { OptionClickHandlerService } from '@shared/services/options/engine/option-click-handler.service';
@@ -117,11 +116,14 @@ export class SharedOptionFeedbackService {
       ctx.timerExpiredForQuestion,
       ctx.activeQuestionIndex,
       ctx.optionsToDisplay,
-      option  // targetOption
+      option // targetOption
     );
 
     const validOptions = (ctx.optionsToDisplay || []).filter(isValidOption);
-    const correctMessage = this.feedbackService.setCorrectMessage(validOptions, ctx.currentQuestion!);
+    const correctMessage = this.feedbackService.setCorrectMessage(
+      validOptions,
+      ctx.currentQuestion!
+    );
 
     const finalFeedback = isMulti
       ? this.computeMultiAllCorrectOverride(ctx, selectedIndex, feedbackMessage, correctMessage)
@@ -145,12 +147,15 @@ export class SharedOptionFeedbackService {
   // Declared type first; counting correct answers is the fallback for
   // questions the API has not typed.
   // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
-  private detectMultiAnswer(ctx: FeedbackContext, question: QuizQuestion | null | undefined): boolean {
+  private detectMultiAnswer(
+    ctx: FeedbackContext,
+    question: QuizQuestion | null | undefined
+  ): boolean {
     return resolveIsMultiAnswer(
       question,
       ctx.type === 'multiple' ||
         (question as any)?.multipleAnswer ||
-        ((question?.options?.filter(o => isOptionCorrect(o)).length ?? 0) > 1)
+        (question?.options?.filter((o) => isOptionCorrect(o)).length ?? 0) > 1
     );
   }
 
@@ -181,7 +186,8 @@ export class SharedOptionFeedbackService {
     selectedIndex: number
   ): SelectedOption[] {
     const activeQIdx = ctx.activeQuestionIndex ?? 0;
-    const serviceSelections = this.selectedOptionService.getSelectedOptionsForQuestion(activeQIdx) ?? [];
+    const serviceSelections =
+      this.selectedOptionService.getSelectedOptionsForQuestion(activeQIdx) ?? [];
     const serviceSelectedIds = new Set<number | string>();
     for (const sel of serviceSelections) {
       const sId = (sel as any).optionId ?? (sel as any).index;
@@ -194,8 +200,9 @@ export class SharedOptionFeedbackService {
 
     const selectedModels = (ctx.optionsToDisplay || []).filter((opt, i) => {
       const id = opt.optionId;
-      const normIdForFilter = (id != null && !isNaN(Number(id))) ? Number(id) : null;
-      const currentEffectiveId = (normIdForFilter !== null && normIdForFilter > -1) ? normIdForFilter : i;
+      const normIdForFilter = id != null && !isNaN(Number(id)) ? Number(id) : null;
+      const currentEffectiveId =
+        normIdForFilter !== null && normIdForFilter > -1 ? normIdForFilter : i;
 
       // Check 1: ID is in local selectedOptions Set
       if (ctx.selectedOptions.has(currentEffectiveId)) return true;
@@ -214,9 +221,10 @@ export class SharedOptionFeedbackService {
     });
 
     // Map to include displayIndex for FeedbackService reconciliation
-    const optionsToCheck = selectedModels.map(m => {
-      const idx = (ctx.optionsToDisplay || []).findIndex(orig =>
-        orig === m || (m.optionId != null && m.optionId > -1 && orig.optionId === m.optionId)
+    const optionsToCheck = selectedModels.map((m) => {
+      const idx = (ctx.optionsToDisplay || []).findIndex(
+        (orig) =>
+          orig === m || (m.optionId != null && m.optionId > -1 && orig.optionId === m.optionId)
       );
       return {
         ...m,
@@ -225,9 +233,11 @@ export class SharedOptionFeedbackService {
     });
 
     // Safety: ensure the current option is included if not found above
-    if (!optionsToCheck.find(
-      o => o === option ||
-      (o.optionId != null && o.optionId > -1 && o.optionId === option.optionId))
+    if (
+      !optionsToCheck.find(
+        (o) =>
+          o === option || (o.optionId != null && o.optionId > -1 && o.optionId === option.optionId)
+      )
     ) {
       optionsToCheck.push(option);
     }
@@ -257,8 +267,8 @@ export class SharedOptionFeedbackService {
       if (opt.selected) return true;
       // Source 2: local selectedOptions Set (maintained by handleSelection)
       const oid = opt.optionId;
-      const normId = (oid != null && !isNaN(Number(oid))) ? Number(oid) : null;
-      const effId = (normId !== null && normId > -1) ? normId : idx;
+      const normId = oid != null && !isNaN(Number(oid)) ? Number(oid) : null;
+      const effId = normId !== null && normId > -1 ? normId : idx;
       if (ctx.selectedOptions.has(effId)) return true;
       // Source 3: optionBindings isSelected
       if (ctx.optionBindings?.[idx]?.isSelected) return true;
@@ -297,12 +307,17 @@ export class SharedOptionFeedbackService {
     // Confirm feedback function is triggered
     const currentQuestionIndex = ctx.activeQuestionIndex ?? 0;
 
-    const showFeedbackForOption: Record<string | number, boolean> = { ...ctx.showFeedbackForOption };
+    const showFeedbackForOption: Record<string | number, boolean> = {
+      ...ctx.showFeedbackForOption
+    };
     const feedbackConfigs: Record<string | number, FeedbackProps> = { ...ctx.feedbackConfigs };
     let lastFeedbackQuestionIndex = ctx.lastFeedbackQuestionIndex;
 
     lastFeedbackQuestionIndex = this.clearStaleFeedbackAnchors(
-      showFeedbackForOption, feedbackConfigs, lastFeedbackQuestionIndex, currentQuestionIndex
+      showFeedbackForOption,
+      feedbackConfigs,
+      lastFeedbackQuestionIndex,
+      currentQuestionIndex
     );
 
     // Set the last option selected (used to show only one feedback block)
@@ -327,7 +342,12 @@ export class SharedOptionFeedbackService {
 
     this.storeFeedbackConfigUnderKeys(feedbackConfigs, ctx, effectiveId, index, feedbackConfig);
     this.regenerateVisibleFeedbackConfigs(
-      ctx, updatedCtx, showFeedbackForOption, feedbackConfigs, effectiveId, currentQuestionIndex
+      ctx,
+      updatedCtx,
+      showFeedbackForOption,
+      feedbackConfigs,
+      effectiveId,
+      currentQuestionIndex
     );
 
     // Update the answered state in the service
@@ -366,9 +386,10 @@ export class SharedOptionFeedbackService {
   // Use consistent effective ID (matching shouldShowFeedbackAfter)
   private computeEffectiveAnchorId(optionId: number, index: number): number {
     const normalizedIdForAnchor =
-      (optionId != null && !isNaN(Number(optionId))) ? Number(optionId) : null;
-    return (normalizedIdForAnchor !== null && normalizedIdForAnchor > -1)
-      ? normalizedIdForAnchor : index;
+      optionId != null && !isNaN(Number(optionId)) ? Number(optionId) : null;
+    return normalizedIdForAnchor !== null && normalizedIdForAnchor > -1
+      ? normalizedIdForAnchor
+      : index;
   }
 
   // Ensure feedback visibility is set for JUST THIS option (clear others first).
@@ -408,9 +429,8 @@ export class SharedOptionFeedbackService {
 
     // Single-answer fallback for immediate UI click before persistence catches up.
     if (!isResolved) {
-      const correctCount = questionForResolution?.options?.filter(
-        (o: any) => isOptionCorrect(o)
-      ).length ?? 0;
+      const correctCount =
+        questionForResolution?.options?.filter((o: any) => isOptionCorrect(o)).length ?? 0;
       const isSingleAnswer = correctCount <= 1;
       if (isSingleAnswer && isOptionCorrect(option)) isResolved = true;
     }
@@ -456,8 +476,12 @@ export class SharedOptionFeedbackService {
   ): void {
     if (!ctx.optionBindings) return;
     for (const [i, b] of ctx.optionBindings.entries()) {
-      const id = (b.option?.optionId != null && b.option.optionId > -1) ? b.option.optionId : i;
-      if (showFeedbackForOption[id] === true && id !== effectiveId && String(id) !== String(effectiveId)) {
+      const id = b.option?.optionId != null && b.option.optionId > -1 ? b.option.optionId : i;
+      if (
+        showFeedbackForOption[id] === true &&
+        id !== effectiveId &&
+        String(id) !== String(effectiveId)
+      ) {
         const hydrated = ctx.optionsToDisplay?.[i];
         if (hydrated) {
           const selOpt: SelectedOption = {
@@ -497,7 +521,7 @@ export class SharedOptionFeedbackService {
     const targetId =
       typeof lastFeedbackOptionId === 'number' && lastFeedbackOptionId !== -1
         ? lastFeedbackOptionId
-        : (Array.isArray(selectedOptionHistory) && selectedOptionHistory.length > 0)
+        : Array.isArray(selectedOptionHistory) && selectedOptionHistory.length > 0
           ? selectedOptionHistory[selectedOptionHistory.length - 1]
           : undefined;
 
@@ -536,7 +560,7 @@ export class SharedOptionFeedbackService {
     // Only update the showFeedbackForOption map (which controls WHERE feedback shows).
     const showFeedbackForOption = { ...showMap };
 
-    const updatedBindings = (optionBindings ?? []).map(b => {
+    const updatedBindings = (optionBindings ?? []).map((b) => {
       const updated = { ...b, showFeedbackForOption };
       if (showFeedback) updated.showFeedback = true;
       return updated;
@@ -560,7 +584,10 @@ export class SharedOptionFeedbackService {
   ): FeedbackProps | null {
     // ONLY use _feedbackDisplay -- it is the single source of truth for
     // which option shows feedback and what that feedback content is.
-    if (feedbackAnchorMatches(ctx._feedbackDisplay, _b.option?.optionId, i) && ctx._feedbackDisplay?.config?.showFeedback) {
+    if (
+      feedbackAnchorMatches(ctx._feedbackDisplay, _b.option?.optionId, i) &&
+      ctx._feedbackDisplay?.config?.showFeedback
+    ) {
       let config = ctx._feedbackDisplay.config;
 
       // AUTHORITATIVE MULTI-ANSWER OVERRIDE using durable tracker.
@@ -573,7 +600,10 @@ export class SharedOptionFeedbackService {
       if (correctIndicesArr.length === 0) {
         const feedbackQ = ctx.currentQuestion ?? this.getQuestionAtDisplayIndex(qIdx);
         const result = this.clickHandler.resolveCorrectIndices(
-          feedbackQ, qIdx, ctx.isMultiMode, ctx.type
+          feedbackQ,
+          qIdx,
+          ctx.isMultiMode,
+          ctx.type
         );
         correctIndicesArr = result.correctIndices;
       }
@@ -586,9 +616,16 @@ export class SharedOptionFeedbackService {
       );
       const durableSelected = ctx._multiSelectByQuestion.get(qIdx);
 
-      if (effectiveMultiMode && durableSelected && durableSelected.size > 0 && correctIndicesArr.length > 0) {
+      if (
+        effectiveMultiMode &&
+        durableSelected &&
+        durableSelected.size > 0 &&
+        correctIndicesArr.length > 0
+      ) {
         const clickState = this.clickHandler.computeMultiAnswerClickState(
-          i, durableSelected, correctIndicesArr
+          i,
+          durableSelected,
+          correctIndicesArr
         );
         const newFeedback = this.clickHandler.generateMultiAnswerFeedbackText(clickState);
 
@@ -683,11 +720,7 @@ export class SharedOptionFeedbackService {
         return this.getDefaultFeedbackProps(idx, ctx);
       }
 
-      const feedbackBinding = this.getFeedbackBindings(
-        optionBinding.option,
-        idx,
-        ctx
-      );
+      const feedbackBinding = this.getFeedbackBindings(optionBinding.option, idx, ctx);
 
       return feedbackBinding;
     });
@@ -720,16 +753,11 @@ export class SharedOptionFeedbackService {
    * Gets feedback bindings for an option at a given index.
    * Mirrors SharedOptionComponent.getFeedbackBindings (lines ~2657-2697).
    */
-  getFeedbackBindings(
-    option: Option,
-    idx: number,
-    ctx: FeedbackContext
-  ): FeedbackProps {
+  getFeedbackBindings(option: Option, idx: number, ctx: FeedbackContext): FeedbackProps {
     // Check if the option is selected (fallback to false if undefined or null)
     const isSelected = ctx.selectedOptionId === option.optionId;
 
-    const feedbackMap: Record<string | number, boolean> =
-      ctx.showFeedbackForOption ?? {};
+    const feedbackMap: Record<string | number, boolean> = ctx.showFeedbackForOption ?? {};
     const optionKey = option?.optionId ?? idx;
     const fallbackKey = idx;
 
@@ -772,10 +800,11 @@ export class SharedOptionFeedbackService {
    * When shuffle is disabled, uses questions (original order).
    */
   private getQuestionAtDisplayIndex(displayIndex: number): QuizQuestion | null {
-    const isShuffled = this.quizService?.isShuffleEnabled?.() &&
-      this.quizService?.shuffledQuestions?.length > 0;
+    const isShuffled =
+      this.quizService?.isShuffleEnabled?.() && this.quizService?.shuffledQuestions?.length > 0;
     const questionSource = isShuffled
-      ? this.quizService.shuffledQuestions : this.quizService?.questions;
+      ? this.quizService.shuffledQuestions
+      : this.quizService?.questions;
     return questionSource?.[displayIndex] ?? null;
   }
 }

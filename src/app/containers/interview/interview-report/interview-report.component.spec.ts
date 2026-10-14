@@ -12,39 +12,100 @@ import { BackendInterviewResultService } from '@shared/services/interview/backen
 const SESSION_ID = 'is_SECRET_session_123';
 const QUESTION_ID = 'q_INTERNAL_question_777';
 const SOURCE_QUIZ_ID = 'source-quiz-internal-id';
-const SUBMITTED = new Date(2026, 8, 26, 12, 0, 0).getTime();   // local noon
+const SUBMITTED = new Date(2026, 8, 26, 12, 0, 0).getTime(); // local noon
 
 function makeResult(over: Partial<InterviewResultViewModel> = {}): InterviewResultViewModel {
   return {
     sessionId: SESSION_ID,
     submittedAtMs: SUBMITTED,
     submittedByExpiry: false,
-    total: 3, answered: 2, unanswered: 1, correct: 1, incorrect: 1, percentage: 33,
-    durationSeconds: 1800, timeUsedSeconds: 754,
-    config: { mode: 'preset', presetId: 'mid-level', topicIds: ['router', 'forms'], questionCount: 3 },
+    total: 3,
+    answered: 2,
+    unanswered: 1,
+    correct: 1,
+    incorrect: 1,
+    percentage: 33,
+    durationSeconds: 1800,
+    timeUsedSeconds: 754,
+    config: {
+      mode: 'preset',
+      presetId: 'mid-level',
+      topicIds: ['router', 'forms'],
+      questionCount: 3
+    },
     byTopic: [
-      { topicId: 'router', title: 'Angular Router', correct: 1, incorrect: 1, unanswered: 0, total: 2, percentage: 50 },
-      { topicId: 'forms', title: 'Angular Forms', correct: 0, incorrect: 0, unanswered: 1, total: 1, percentage: 0 }
+      {
+        topicId: 'router',
+        title: 'Angular Router',
+        correct: 1,
+        incorrect: 1,
+        unanswered: 0,
+        total: 2,
+        percentage: 50
+      },
+      {
+        topicId: 'forms',
+        title: 'Angular Forms',
+        correct: 0,
+        incorrect: 0,
+        unanswered: 1,
+        total: 1,
+        percentage: 0
+      }
     ],
     review: [
       {
-        questionId: QUESTION_ID, sourceQuizId: SOURCE_QUIZ_ID, questionText: 'Which <b>router</b> method navigates?',
-        type: 'single', options: [{ optionId: 1, text: 'navigate()' }, { optionId: 2, text: 'go()' }],
-        selectedOptionIds: [1], correctOptionIds: [1], explanation: 'navigate() is the Router API.',
-        isCorrect: true, isAnswered: true, flagged: true,
-        codeSnippet: { language: 'typescript', code: 'router.navigate([\'/home\']);', filename: 'nav.ts' }
+        questionId: QUESTION_ID,
+        sourceQuizId: SOURCE_QUIZ_ID,
+        questionText: 'Which <b>router</b> method navigates?',
+        type: 'single',
+        options: [
+          { optionId: 1, text: 'navigate()' },
+          { optionId: 2, text: 'go()' }
+        ],
+        selectedOptionIds: [1],
+        correctOptionIds: [1],
+        explanation: 'navigate() is the Router API.',
+        isCorrect: true,
+        isAnswered: true,
+        flagged: true,
+        codeSnippet: {
+          language: 'typescript',
+          code: "router.navigate(['/home']);",
+          filename: 'nav.ts'
+        }
       },
       {
-        questionId: 'q2', sourceQuizId: SOURCE_QUIZ_ID, questionText: 'Pick the guard type.',
-        type: 'single', options: [{ optionId: 1, text: 'CanActivate' }, { optionId: 2, text: 'CanRun' }],
-        selectedOptionIds: [2], correctOptionIds: [1], explanation: 'CanActivate guards routes.',
-        isCorrect: false, isAnswered: true, flagged: false
+        questionId: 'q2',
+        sourceQuizId: SOURCE_QUIZ_ID,
+        questionText: 'Pick the guard type.',
+        type: 'single',
+        options: [
+          { optionId: 1, text: 'CanActivate' },
+          { optionId: 2, text: 'CanRun' }
+        ],
+        selectedOptionIds: [2],
+        correctOptionIds: [1],
+        explanation: 'CanActivate guards routes.',
+        isCorrect: false,
+        isAnswered: true,
+        flagged: false
       },
       {
-        questionId: 'q3', sourceQuizId: 'forms', questionText: 'Name a form class.',
-        type: 'single', options: [{ optionId: 1, text: 'FormGroup' }, { optionId: 2, text: 'FormBox' }],
-        selectedOptionIds: [], correctOptionIds: [1], explanation: 'FormGroup groups controls.',
-        isCorrect: false, isAnswered: false, flagged: false
+        questionId: 'q3',
+        sourceQuizId: 'forms',
+        questionText: 'Name a form class.',
+        type: 'single',
+        options: [
+          { optionId: 1, text: 'FormGroup' },
+          { optionId: 2, text: 'FormBox' }
+        ],
+        selectedOptionIds: [],
+        correctOptionIds: [1],
+        explanation: 'FormGroup groups controls.',
+        isCorrect: false,
+        isAnswered: false,
+        flagged: false
       }
     ],
     ...over
@@ -59,7 +120,10 @@ describe('InterviewReportComponent', () => {
 
   async function open(sessionId = SESSION_ID): Promise<InterviewReportComponent> {
     const harness = await RouterTestingHarness.create();
-    const component = await harness.navigateByUrl(`/interview/report/${sessionId}`, InterviewReportComponent);
+    const component = await harness.navigateByUrl(
+      `/interview/report/${sessionId}`,
+      InterviewReportComponent
+    );
     harness.detectChanges();
     el = harness.routeNativeElement as HTMLElement;
     return component;
@@ -67,7 +131,8 @@ describe('InterviewReportComponent', () => {
 
   const q = (sel: string): HTMLElement | null => el.querySelector<HTMLElement>(sel);
   const qa = (sel: string): HTMLElement[] => Array.from(el.querySelectorAll<HTMLElement>(sel));
-  const text = (n: Element | null | undefined): string => (n?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const text = (n: Element | null | undefined): string =>
+    (n?.textContent ?? '').replace(/\s+/g, ' ').trim();
 
   beforeEach(() => {
     localStorage.clear();
@@ -75,11 +140,13 @@ describe('InterviewReportComponent', () => {
     document.title = 'Angular Quiz App';
     result = signal<InterviewResultViewModel | null>(makeResult());
     printSpy = jest.spyOn(window, 'print').mockImplementation(() => undefined);
-    scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => undefined);   // jsdom: not implemented
+    scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => undefined); // jsdom: not implemented
     TestBed.configureTestingModule({
       providers: [
         provideNoopAnimations(),
-        provideRouter([{ path: 'interview/report/:sessionId', component: InterviewReportComponent }]),
+        provideRouter([
+          { path: 'interview/report/:sessionId', component: InterviewReportComponent }
+        ]),
         { provide: BackendInterviewResultService, useValue: { result: result.asReadonly() } }
       ]
     });
@@ -99,34 +166,50 @@ describe('InterviewReportComponent', () => {
       expect(qa('h1').map(text)).toEqual(['Interview Report']);
       expect(qa('h2').map(text)).toEqual(['Summary', 'Performance by Topic', 'Question Review']);
       const levels = qa('h1, h2, h3, h4').map((h) => Number(h.tagName[1]));
-      levels.forEach((l, i) => { if (i > 0) expect(l).toBeLessThanOrEqual(levels[i - 1] + 1); });
+      levels.forEach((l, i) => {
+        if (i > 0) expect(l).toBeLessThanOrEqual(levels[i - 1] + 1);
+      });
       expect(qa('h3').length).toBeGreaterThanOrEqual(3);
     });
 
     it('shows the preset name and the completion date in the header', () => {
       expect(text(q('.rp__kind'))).toBe('Mid-Level Angular Developer');
       expect(text(q('.rp__date'))).toBe('September 26, 2026');
-      expect(q('.rp__difficulty')).toBeNull();          // a preset mixes difficulties
+      expect(q('.rp__difficulty')).toBeNull(); // a preset mixes difficulties
     });
 
     it('shows the finalized summary values as a description list', () => {
-      const rows = Object.fromEntries(qa('.rp-summary > div').map((d) => [text(d.querySelector('dt')), text(d.querySelector('dd'))]));
+      const rows = Object.fromEntries(
+        qa('.rp-summary > div').map((d) => [
+          text(d.querySelector('dt')),
+          text(d.querySelector('dd'))
+        ])
+      );
       expect(rows).toEqual({
-        Score: '1 / 3', Percentage: '33%', Correct: '1', Incorrect: '1', Unanswered: '1',
-        'Total duration': '30m 0s', 'Time used': '12m 34s'
+        Score: '1 / 3',
+        Percentage: '33%',
+        Correct: '1',
+        Incorrect: '1',
+        Unanswered: '1',
+        'Total duration': '30m 0s',
+        'Time used': '12m 34s'
       });
     });
 
     it('renders Performance by Topic as an accessible table', () => {
       const table = q('table.rp-topics')!;
-      expect(qa('table.rp-topics thead th').map((h) => h.getAttribute('scope'))).toEqual(Array(6).fill('col'));
+      expect(qa('table.rp-topics thead th').map((h) => h.getAttribute('scope'))).toEqual(
+        Array(6).fill('col')
+      );
       expect(text(table.querySelector('caption'))).toContain('for each topic');
       const rows = qa('table.rp-topics tbody tr').map((tr) => Array.from(tr.children).map(text));
       expect(rows).toEqual([
         ['Angular Router', '1', '1', '0', '2', '50%'],
         ['Angular Forms', '0', '0', '1', '1', '0%']
       ]);
-      expect(qa('table.rp-topics tbody th').every((th) => th.getAttribute('scope') === 'row')).toBe(true);
+      expect(qa('table.rp-topics tbody th').every((th) => th.getAttribute('scope') === 'row')).toBe(
+        true
+      );
     });
 
     it('renders EVERY reviewed question through the existing Review component', () => {
@@ -154,12 +237,12 @@ describe('InterviewReportComponent', () => {
       expect(text(q('app-code-snippet'))).toContain('router.navigate');
     });
 
-    it('the report\'s own controls are only Print and Back — it adds no filtering of its own', () => {
+    it("the report's own controls are only Print and Back — it adds no filtering of its own", () => {
       // The Review component's filter toolbar and summary are hidden by the report
       // stylesheet (jsdom applies no CSS): the browser E2E asserts they are not visible.
       expect(qa('.rp__actions button').map(text)).toEqual(['Print / Save as PDF']);
       expect(qa('.rp__actions a').map(text)).toEqual(['Back to Results']);
-      expect(qa('.rv-filters-toolbar').length).toBe(1);   // the element the hiding rule targets exists
+      expect(qa('.rv-filters-toolbar').length).toBe(1); // the element the hiding rule targets exists
     });
   });
 
@@ -174,14 +257,29 @@ describe('InterviewReportComponent', () => {
     });
 
     it('shows the chosen difficulty for a custom interview and calls it Custom Interview', async () => {
-      result.set(makeResult({ config: { mode: 'custom', difficulty: 'advanced', topicIds: ['router'], questionCount: 3 } }));
+      result.set(
+        makeResult({
+          config: { mode: 'custom', difficulty: 'advanced', topicIds: ['router'], questionCount: 3 }
+        })
+      );
       await open();
       expect(text(q('.rp__kind'))).toBe('Custom Interview');
       expect(text(q('.rp__difficulty'))).toBe('Advanced');
     });
 
     it('handles an attempt with no topic breakdown and no review without inventing data', async () => {
-      result.set(makeResult({ byTopic: [], review: [], total: 0, answered: 0, unanswered: 0, correct: 0, incorrect: 0, percentage: 0 }));
+      result.set(
+        makeResult({
+          byTopic: [],
+          review: [],
+          total: 0,
+          answered: 0,
+          unanswered: 0,
+          correct: 0,
+          incorrect: 0,
+          percentage: 0
+        })
+      );
       await open();
       expect(q('table.rp-topics')).toBeNull();
       expect(text(q('.rp__empty'))).toContain('No topic breakdown');
@@ -192,8 +290,18 @@ describe('InterviewReportComponent', () => {
   describe('privacy', () => {
     it('renders no session id, token, question id, source-quiz id, focus counter or API detail', async () => {
       await open();
-      const visible = (el.innerText ?? el.textContent ?? '');
-      for (const secret of [SESSION_ID, QUESTION_ID, SOURCE_QUIZ_ID, 'Bearer', 'token', 'localhost', '/api', 'Focus changes', 'focusChanges']) {
+      const visible = el.innerText ?? el.textContent ?? '';
+      for (const secret of [
+        SESSION_ID,
+        QUESTION_ID,
+        SOURCE_QUIZ_ID,
+        'Bearer',
+        'token',
+        'localhost',
+        '/api',
+        'Focus changes',
+        'focusChanges'
+      ]) {
         expect(visible).not.toContain(secret);
       }
     });
@@ -252,7 +360,9 @@ describe('InterviewReportComponent', () => {
       const title = TestBed.inject(Title);
       expect(title.getTitle()).toBe('Angular Quiz App');
 
-      printSpy.mockImplementation(() => { expect(document.title).toBe(EXPECTED); });   // in effect DURING print
+      printSpy.mockImplementation(() => {
+        expect(document.title).toBe(EXPECTED);
+      }); // in effect DURING print
       component.print();
       expect(document.title).toBe(EXPECTED);
 
@@ -272,7 +382,7 @@ describe('InterviewReportComponent', () => {
       const component = await open();
       component.print();
       window.dispatchEvent(new Event('afterprint'));
-      window.dispatchEvent(new Event('afterprint'));            // idempotent
+      window.dispatchEvent(new Event('afterprint')); // idempotent
       expect(document.title).toBe('Angular Quiz App');
     });
 
@@ -288,7 +398,7 @@ describe('InterviewReportComponent', () => {
       const component = await open();
       component.print();
       expect(document.title).toBe(EXPECTED);
-      TestBed.resetTestingModule();                              // destroys the component
+      TestBed.resetTestingModule(); // destroys the component
       expect(document.title).toBe('Angular Quiz App');
       expect(component).toBeTruthy();
     });
@@ -318,7 +428,7 @@ describe('InterviewReportComponent', () => {
       expect(qa('a').map((a) => a.getAttribute('href'))).toEqual(['/interview']);
     });
 
-    it('never shows a DIFFERENT session\'s result under this URL', async () => {
+    it("never shows a DIFFERENT session's result under this URL", async () => {
       await open('is_some_other_session');
       expect(q('.rp-summary')).toBeNull();
       expect(text(q('[role="alert"]'))).toContain('no longer available');

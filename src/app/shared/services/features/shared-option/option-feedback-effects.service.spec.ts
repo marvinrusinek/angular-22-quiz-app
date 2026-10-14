@@ -78,7 +78,10 @@ describe('OptionFeedbackEffectsService — repaint convergence', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        },
         { provide: API_BASE_URL, useValue: 'https://api.test/api' }
       ]
     });
@@ -123,7 +126,7 @@ describe('OptionFeedbackEffectsService — repaint convergence', () => {
 
     settle();
     const writesAfterFirstSettle = setSpy.mock.calls.length;
-    expect(writesAfterFirstSettle).toBeGreaterThan(0);   // first paint still happens
+    expect(writesAfterFirstSettle).toBeGreaterThan(0); // first paint still happens
 
     settle();
     settle();
@@ -153,10 +156,12 @@ describe('OptionFeedbackEffectsService — repaint convergence', () => {
 
     // A verdict round trip for a DIFFERENT question arrives. `verdicts.states()`
     // changes identity, but nothing about THIS question's bindings changed.
-    verdicts.checkAnswer(QUIZ, 'An unrelated question', ['whatever']).subscribe({ error: () => undefined });
+    verdicts
+      .checkAnswer(QUIZ, 'An unrelated question', ['whatever'])
+      .subscribe({ error: () => undefined });
     settle();
 
-    expect(setSpy.mock.calls.length).toBe(baseline);   // no-op write must not happen
+    expect(setSpy.mock.calls.length).toBe(baseline); // no-op write must not happen
   });
 
   it('still repaints once when a binding correctness value genuinely changes', () => {
@@ -185,7 +190,7 @@ describe('OptionFeedbackEffectsService — repaint convergence', () => {
     verdicts.checkAnswer(QUIZ, QTEXT, ['Alpha']).subscribe({ error: () => undefined });
     settle();
 
-    expect(setSpy.mock.calls.length).toBe(baseline + 1);   // genuine change still paints
+    expect(setSpy.mock.calls.length).toBe(baseline + 1); // genuine change still paints
 
     // And it must not keep repainting after that either.
     settle();

@@ -79,43 +79,43 @@ export class AchievementService {
   evaluate(quizzes: readonly AchievementCatalogEntry[]): AchievementDefinition[] {
     const best = this.bestScoreService.getBestScores();
     const earned = this.readEarned();
-    const earnedIds = new Set<AchievementId>(earned.map(e => e.id));
+    const earnedIds = new Set<AchievementId>(earned.map((e) => e.id));
 
     const newly: AchievementDefinition[] = [];
 
     // Data-driven achievements first (everything except the meta Explorer).
     for (const def of this.definitions) {
-      if (def.id === 'angular-explorer') continue;         // meta — handled below
-      if (earnedIds.has(def.id)) continue;                 // already earned → never twice
+      if (def.id === 'angular-explorer') continue; // meta — handled below
+      if (earnedIds.has(def.id)) continue; // already earned → never twice
       if (this.isSatisfied(def.id, quizzes, best)) newly.push(def);
     }
 
     // Angular Explorer is a META achievement: it unlocks once EVERY other
     // achievement is earned — including any earned in THIS same pass — so the
     // final milestone and Explorer can unlock together.
-    const explorer = this.definitions.find(d => d.id === 'angular-explorer');
+    const explorer = this.definitions.find((d) => d.id === 'angular-explorer');
     if (explorer && !earnedIds.has('angular-explorer')) {
-      const earnedAfter = new Set<AchievementId>([...earnedIds, ...newly.map(d => d.id)]);
-      const others = this.definitions.filter(d => d.id !== 'angular-explorer');
-      if (others.every(d => earnedAfter.has(d.id))) newly.push(explorer);
+      const earnedAfter = new Set<AchievementId>([...earnedIds, ...newly.map((d) => d.id)]);
+      const others = this.definitions.filter((d) => d.id !== 'angular-explorer');
+      if (others.every((d) => earnedAfter.has(d.id))) newly.push(explorer);
     }
 
     if (newly.length > 0) {
       const now = new Date().toISOString();
       const updated: EarnedAchievement[] = [
         ...earned,
-        ...newly.map(d => ({ id: d.id, earnedAt: now }))
+        ...newly.map((d) => ({ id: d.id, earnedAt: now }))
       ];
       writeLocalJson(SK_QUIZ_ACHIEVEMENTS, updated);
-      this._rev.update((n) => n + 1);   // publish reactively — see `_rev`
+      this._rev.update((n) => n + 1); // publish reactively — see `_rev`
     }
     return newly;
   }
 
   /** Ids of every achievement earned so far. Reactive (see `_rev`). */
   readonly earnedIds = computed(() => {
-    this._rev();   // reactive dependency — recompute after each new earn
-    return new Set<AchievementId>(this.readEarned().map(e => e.id));
+    this._rev(); // reactive dependency — recompute after each new earn
+    return new Set<AchievementId>(this.readEarned().map((e) => e.id));
   });
 
   /** Compact progress summary for the catalog UI (e.g. "3 / 6"). */
@@ -126,7 +126,7 @@ export class AchievementService {
   /** Every achievement paired with its earned/locked state, for catalog display. */
   catalog(): AchievementView[] {
     const earned = this.earnedIds();
-    return this.definitions.map(def => ({ ...def, earned: earned.has(def.id) }));
+    return this.definitions.map((def) => ({ ...def, earned: earned.has(def.id) }));
   }
 
   // ── rules ──────────────────────────────────────────────────────
@@ -135,10 +135,10 @@ export class AchievementService {
     quizzes: readonly AchievementCatalogEntry[],
     best: BestScores
   ): boolean {
-    const isCompleted = (q: AchievementCatalogEntry): boolean => best[q.quizId] != null;   // any score counts
+    const isCompleted = (q: AchievementCatalogEntry): boolean => best[q.quizId] != null; // any score counts
     const isPerfect = (q: AchievementCatalogEntry): boolean => best[q.quizId] === 100;
     const inDifficulty = (d: string): AchievementCatalogEntry[] =>
-      quizzes.filter(q => (q.difficulty ?? '').toLowerCase() === d);
+      quizzes.filter((q) => (q.difficulty ?? '').toLowerCase() === d);
 
     switch (id) {
       case 'perfect-score':
@@ -148,9 +148,9 @@ export class AchievementService {
       case 'beginner-complete':
       case 'intermediate-complete':
       case 'advanced-complete': {
-        const difficulty = id.replace('-complete', '');    // beginner | intermediate | advanced
+        const difficulty = id.replace('-complete', ''); // beginner | intermediate | advanced
         const group = inDifficulty(difficulty);
-        return group.length > 0 && group.every(isCompleted);  // zero quizzes → not awarded
+        return group.length > 0 && group.every(isCompleted); // zero quizzes → not awarded
       }
       // 'angular-explorer' is meta (handled in evaluate), never data-driven here.
       default:
@@ -188,10 +188,10 @@ export class AchievementService {
   private catalogRequest: Promise<void> | null = null;
 
   private reevaluateWhenCatalogLoads(): void {
-    if (this.catalogRequest) return;                 // one request in flight at a time
+    if (this.catalogRequest) return; // one request in flight at a time
     this.catalogRequest = this.readiness
       .ensureCatalog()
-      .catch(() => undefined)                        // a failed load simply stays unverified
+      .catch(() => undefined) // a failed load simply stays unverified
       .then(() => {
         this.catalogRequest = null;
         // `[]` is the same safe empty catalogue evaluateInterviewAchievements() uses.
@@ -203,7 +203,7 @@ export class AchievementService {
   private readEarned(): EarnedAchievement[] {
     const raw = readLocalJson<unknown>(SK_QUIZ_ACHIEVEMENTS, []);
     if (!Array.isArray(raw)) return [];
-    const valid = new Set(this.definitions.map(d => d.id));
+    const valid = new Set(this.definitions.map((d) => d.id));
     const seen = new Set<string>();
     const out: EarnedAchievement[] = [];
     for (const entry of raw) {

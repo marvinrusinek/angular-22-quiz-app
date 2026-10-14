@@ -41,7 +41,9 @@ export class InterviewCertificateStatusComponent implements OnInit {
   readonly cert = inject(InterviewCertificateService);
   private readonly claimService = inject(CertificateClaimService);
 
-  readonly hasCertificate = computed(() => this.claimService.status() === 'verified' || this.cert.unlocked());
+  readonly hasCertificate = computed(
+    () => this.claimService.status() === 'verified' || this.cert.unlocked()
+  );
   readonly progress = this.cert.progress;
   readonly awaitingClaim = computed(() => !this.hasCertificate() && this.progress().isEligible);
 
@@ -59,7 +61,9 @@ export class InterviewCertificateStatusComponent implements OnInit {
     const iso = this.progress().qualificationStartedAt;
     if (!iso) return '';
     const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    return Number.isNaN(d.getTime())
+      ? ''
+      : d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
   });
 
   ngOnInit(): void {

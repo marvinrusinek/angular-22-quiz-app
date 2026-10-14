@@ -64,7 +64,10 @@ describe('QqcSubscriptionWiringService — subscription lifecycle', () => {
         QqcSubscriptionWiringService,
         { provide: QuizService, useValue: quiz },
         { provide: QuizNavigationService, useValue: nav },
-        { provide: ResetStateService, useValue: { resetFeedback$: new Subject<void>(), resetState$: new Subject<void>() } },
+        {
+          provide: ResetStateService,
+          useValue: { resetFeedback$: new Subject<void>(), resetState$: new Subject<void>() }
+        },
         { provide: SharedVisibilityService, useValue: { pageVisibility$: new Subject<boolean>() } }
       ]
     });
@@ -75,8 +78,12 @@ describe('QqcSubscriptionWiringService — subscription lifecycle', () => {
 
   it('navigation-event subscriptions STOP after the host is destroyed', () => {
     const calls = {
-      onNavigationSuccess: 0, onNavigatingBack: 0, onNavigationToQuestion: 0,
-      onExplanationReset: 0, onRenderReset: 0, onResetUIForNewQuestion: 0
+      onNavigationSuccess: 0,
+      onNavigatingBack: 0,
+      onNavigationToQuestion: 0,
+      onExplanationReset: 0,
+      onRenderReset: 0,
+      onResetUIForNewQuestion: 0
     };
     service.createNavigationEventSubscriptions({
       destroyRef: ref(),
@@ -96,8 +103,12 @@ describe('QqcSubscriptionWiringService — subscription lifecycle', () => {
     nav.renderReset$.next();
     nav.resetUIForNewQuestion$.next();
     expect(calls).toEqual({
-      onNavigationSuccess: 1, onNavigatingBack: 1, onNavigationToQuestion: 1,
-      onExplanationReset: 1, onRenderReset: 1, onResetUIForNewQuestion: 1
+      onNavigationSuccess: 1,
+      onNavigatingBack: 1,
+      onNavigationToQuestion: 1,
+      onExplanationReset: 1,
+      onRenderReset: 1,
+      onResetUIForNewQuestion: 1
     });
 
     // Destroyed: nothing may fire again (these are long-lived root Subjects).
@@ -109,8 +120,12 @@ describe('QqcSubscriptionWiringService — subscription lifecycle', () => {
     nav.renderReset$.next();
     nav.resetUIForNewQuestion$.next();
     expect(calls).toEqual({
-      onNavigationSuccess: 1, onNavigatingBack: 1, onNavigationToQuestion: 1,
-      onExplanationReset: 1, onRenderReset: 1, onResetUIForNewQuestion: 1
+      onNavigationSuccess: 1,
+      onNavigatingBack: 1,
+      onNavigationToQuestion: 1,
+      onExplanationReset: 1,
+      onRenderReset: 1,
+      onResetUIForNewQuestion: 1
     });
   });
 

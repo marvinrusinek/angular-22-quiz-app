@@ -4,7 +4,6 @@ import { filter, take } from 'rxjs/operators';
 
 import { Option, QuestionType, QuizQuestion } from '@shared/models';
 
-
 import type { QuizQuestionComponent } from '../../../../components/question/quiz-question/quiz-question.component';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import type { QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
@@ -35,8 +34,14 @@ export class QqcOrchClickService {
     const { idx, q, evtIdx, evtOpt } = ctx;
 
     try {
-      const { selOptsSetImmediate, isMultiForSelection, allCorrect } =
-        this.runSyncClickFlow(host, q, idx, evtIdx, evtOpt, event.checked);
+      const { selOptsSetImmediate, isMultiForSelection, allCorrect } = this.runSyncClickFlow(
+        host,
+        q,
+        idx,
+        evtIdx,
+        evtOpt,
+        event.checked
+      );
 
       host.updateOptionHighlighting(selOptsSetImmediate);
       host.refreshFeedbackFor(evtOpt ?? undefined);
@@ -70,16 +75,13 @@ export class QqcOrchClickService {
     }
 
     if (!host.quizStateService.isInteractionReady()) {
-      await firstValueFrom(
-        host.quizStateService.interactionReady$.pipe(filter(Boolean), take(1))
-      );
+      await firstValueFrom(host.quizStateService.interactionReady$.pipe(filter(Boolean), take(1)));
     }
 
     if (!host.currentQuestion() || !host.currentOptions) return null;
 
     const idx = host.quizService.getCurrentQuestionIndex() ?? 0;
-    const q = host.quizService.getQuestionsInDisplayOrder?.()?.[idx]
-      ?? host.questions()?.[idx];
+    const q = host.quizService.getQuestionsInDisplayOrder?.()?.[idx] ?? host.questions()?.[idx];
     const evtIdx = event.index;
     const evtOpt = event.option;
 
@@ -94,8 +96,14 @@ export class QqcOrchClickService {
   }
 
   /** Run the synchronous click flow and stash msgTok/lastAllCorrect. Extracted verbatim. */
-  private runSyncClickFlow(host: Host, q: QuizQuestion | null, idx: number, evtIdx: number, evtOpt: any, checked: boolean):
-    { selOptsSetImmediate: any; isMultiForSelection: boolean; allCorrect: boolean } {
+  private runSyncClickFlow(
+    host: Host,
+    q: QuizQuestion | null,
+    idx: number,
+    evtIdx: number,
+    evtOpt: any,
+    checked: boolean
+  ): { selOptsSetImmediate: any; isMultiForSelection: boolean; allCorrect: boolean } {
     const clickResult = host.clickOrchestrator.performSynchronousClickFlow({
       question: q!,
       questionIndex: idx,
@@ -112,7 +120,7 @@ export class QqcOrchClickService {
     return {
       selOptsSetImmediate: clickResult.selectedKeysSet,
       isMultiForSelection: clickResult.isMultiForSelection,
-      allCorrect: clickResult.allCorrect,
+      allCorrect: clickResult.allCorrect
     };
   }
 
@@ -130,7 +138,14 @@ export class QqcOrchClickService {
   }
 
   /** Microtask: re-apply highlight/feedback/disable unless superseded. Extracted verbatim. */
-  private scheduleImmediateClickUpdate(host: Host, idx: number, q: QuizQuestion | null, evtOpt: any, evtIdx: number, selOptsSetImmediate: any): void {
+  private scheduleImmediateClickUpdate(
+    host: Host,
+    idx: number,
+    q: QuizQuestion | null,
+    evtOpt: any,
+    evtIdx: number,
+    selOptsSetImmediate: any
+  ): void {
     queueMicrotask(() => {
       if (host._skipNextAsyncUpdates) return;
       host.updateOptionHighlighting(selOptsSetImmediate);
@@ -141,7 +156,13 @@ export class QqcOrchClickService {
   }
 
   /** setTimeout(0): final single-answer disable pass after the click settles. Extracted verbatim. */
-  private scheduleDeferredDisable(host: Host, idx: number, q: QuizQuestion | null, evtOpt: any, evtIdx: number): void {
+  private scheduleDeferredDisable(
+    host: Host,
+    idx: number,
+    q: QuizQuestion | null,
+    evtOpt: any,
+    evtIdx: number
+  ): void {
     setTimeout(() => {
       this.applySingleAnswerDisable(host, idx, q, evtOpt, evtIdx);
       host.sharedOptionComponent?.()?.cdRef?.markForCheck?.();
@@ -165,7 +186,13 @@ export class QqcOrchClickService {
    * disable every other option and mark wrongly-selected ones incorrect. No-op
    * for multi-answer (incl. pristine-detected multi). Extracted verbatim.
    */
-  private applySingleAnswerDisable(host: Host, idx: number, q: QuizQuestion | null, evtOpt: any, evtIdx: number): void {
+  private applySingleAnswerDisable(
+    host: Host,
+    idx: number,
+    q: QuizQuestion | null,
+    evtOpt: any,
+    evtIdx: number
+  ): void {
     try {
       const { isSingleAnswer } = this.computeSingleAnswerDisableContext(host, idx, q);
       if (!isSingleAnswer) return;
@@ -199,11 +226,15 @@ export class QqcOrchClickService {
    * question is API-sourced) defaults to single, the same conservative
    * assumption the old bank-counting fallback made.
    */
-  private computeSingleAnswerDisableContext(host: Host, idx: number, q: QuizQuestion | null):
-    { isSingleAnswer: boolean } {
-    const rawQuestion: any = host.quizService.getQuestionsInDisplayOrder?.()?.[idx]
-      ?? host.quizService?.questions?.[idx]
-      ?? q;
+  private computeSingleAnswerDisableContext(
+    host: Host,
+    idx: number,
+    q: QuizQuestion | null
+  ): { isSingleAnswer: boolean } {
+    const rawQuestion: any =
+      host.quizService.getQuestionsInDisplayOrder?.()?.[idx] ??
+      host.quizService?.questions?.[idx] ??
+      q;
 
     const isSingleAnswer = declaredIsMultiAnswer(rawQuestion) !== true;
     return { isSingleAnswer };
@@ -254,54 +285,80 @@ export class QqcOrchClickService {
    * correct texts, then (once per index) stop the timer and trigger the FET.
    * Extracted verbatim.
    */
-  private maybeTriggerMultiAnswerFet(host: Host, idx: number, q: QuizQuestion | null, allCorrect: boolean, isMultiForSelection: boolean): void {
+  private maybeTriggerMultiAnswerFet(
+    host: Host,
+    idx: number,
+    q: QuizQuestion | null,
+    allCorrect: boolean,
+    isMultiForSelection: boolean
+  ): void {
     const lockedIndex = host.currentQuestionIndex() ?? idx;
 
-    const fetGatePassed = allCorrect && isMultiForSelection && this.isMultiFullySelected(host, idx, q);
+    const fetGatePassed =
+      allCorrect && isMultiForSelection && this.isMultiFullySelected(host, idx, q);
 
     if (fetGatePassed && !host._fetEarlyShown.has(lockedIndex)) {
-      if (host.timerEffect.safeStopTimer('completed', host._timerStoppedForQuestion, host._lastAllCorrect)) {
+      if (
+        host.timerEffect.safeStopTimer(
+          'completed',
+          host._timerStoppedForQuestion,
+          host._lastAllCorrect
+        )
+      ) {
         host._timerStoppedForQuestion = true;
       }
       host._fetEarlyShown.add(lockedIndex);
       const displayQForFet = host.quizService.getQuestionsInDisplayOrder?.()?.[lockedIndex] ?? q;
-      host.explanationFlow.triggerMultiAnswerFet({ lockedIndex, question: displayQForFet }).then((fetResult: any) => {
-        if (host.currentQuestionIndex() !== lockedIndex || !fetResult) return;
-        host.displayExplanation.set(true);
-        host.displayMode.set('explanation');
-        host.isAnswered.set(true);
-        host.showExplanationChange.emit(true);
-        host.explanationToDisplay.set(fetResult.formatted);
-        host.explanationToDisplayChange?.emit(fetResult.formatted);
-      }).catch(() => {});
+      host.explanationFlow
+        .triggerMultiAnswerFet({ lockedIndex, question: displayQForFet })
+        .then((fetResult: any) => {
+          if (host.currentQuestionIndex() !== lockedIndex || !fetResult) return;
+          host.displayExplanation.set(true);
+          host.displayMode.set('explanation');
+          host.isAnswered.set(true);
+          host.showExplanationChange.emit(true);
+          host.explanationToDisplay.set(fetResult.formatted);
+          host.explanationToDisplayChange?.emit(fetResult.formatted);
+        })
+        .catch(() => {});
     }
   }
 
   /** RAF-scheduled post-click tasks (feedback, core selection, binding marks). Extracted verbatim. */
-  private schedulePostClickRaf(host: Host, idx: number, q: QuizQuestion | null, evtOpt: any, evtIdx: number, event: any): void {
+  private schedulePostClickRaf(
+    host: Host,
+    idx: number,
+    q: QuizQuestion | null,
+    evtOpt: any,
+    evtIdx: number,
+    event: any
+  ): void {
     requestAnimationFrame(() => {
       if (host._skipNextAsyncUpdates || idx !== host.currentQuestionIndex()) return;
       const resolvedQuizId =
         host.quizService.quizId ||
         host.activatedRoute.snapshot.paramMap.get('quizId') ||
         'dependency-injection';
-      host.clickOrchestrator.performPostClickRafTasks({
-        idx,
-        evtOpt: evtOpt ?? undefined,
-        evtIdx,
-        question: q!,
-        event,
-        quizId: resolvedQuizId,
-        generateFeedbackText: (question: QuizQuestion) => host.generateFeedbackText(question),
-        postClickTasks: (opt: any, i: number, checked: boolean, wasPrev: boolean, qIdx: number) =>
-          host.postClickTasks(opt, i, checked, wasPrev, qIdx),
-        handleCoreSelection: (ev: any, i: number) => this.applyCoreSelection(host, ev, i),
-        markBindingSelected: (opt: any) => this.applyMarkBindingSelected(host, opt),
-        refreshFeedbackFor: (opt: Option) => host.refreshFeedbackFor(opt),
-      }).catch(() => {}).finally(() => {
-        this.applySingleAnswerDisable(host, idx, q, evtOpt, evtIdx);
-        host.cdRef?.markForCheck?.();
-      });
+      host.clickOrchestrator
+        .performPostClickRafTasks({
+          idx,
+          evtOpt: evtOpt ?? undefined,
+          evtIdx,
+          question: q!,
+          event,
+          quizId: resolvedQuizId,
+          generateFeedbackText: (question: QuizQuestion) => host.generateFeedbackText(question),
+          postClickTasks: (opt: any, i: number, checked: boolean, wasPrev: boolean, qIdx: number) =>
+            host.postClickTasks(opt, i, checked, wasPrev, qIdx),
+          handleCoreSelection: (ev: any, i: number) => this.applyCoreSelection(host, ev, i),
+          markBindingSelected: (opt: any) => this.applyMarkBindingSelected(host, opt),
+          refreshFeedbackFor: (opt: Option) => host.refreshFeedbackFor(opt)
+        })
+        .catch(() => {})
+        .finally(() => {
+          this.applySingleAnswerDisable(host, idx, q, evtOpt, evtIdx);
+          host.cdRef?.markForCheck?.();
+        });
     });
   }
 
@@ -314,7 +371,7 @@ export class QqcOrchClickService {
       currentQuestionIndex: host.currentQuestionIndex(),
       questionType: host.question()?.type,
       forceQuestionDisplay: host.forceQuestionDisplay(),
-      lastAllCorrect: host._lastAllCorrect,
+      lastAllCorrect: host._lastAllCorrect
     });
     if (coreResult.isAnswered) host.isAnswered.set(true);
     host.forceQuestionDisplay.set(coreResult.forceQuestionDisplay);
@@ -327,11 +384,15 @@ export class QqcOrchClickService {
 
   /** Mark a binding selected and re-emit the bindings signal. Extracted verbatim. */
   private applyMarkBindingSelected(host: Host, opt: any): void {
-    const b = host.feedbackManager.markBindingSelected(opt, host.currentQuestionIndex(), host.optionBindings());
+    const b = host.feedbackManager.markBindingSelected(
+      opt,
+      host.currentQuestionIndex(),
+      host.optionBindings()
+    );
     if (!b) return;
-    host.optionBindings.set(host.optionBindings().map((ob: any) =>
-      ob.option.optionId === b.option.optionId ? b : ob
-    ));
+    host.optionBindings.set(
+      host.optionBindings().map((ob: any) => (ob.option.optionId === b.option.optionId ? b : ob))
+    );
     b.directiveInstance?.updateHighlight();
   }
 

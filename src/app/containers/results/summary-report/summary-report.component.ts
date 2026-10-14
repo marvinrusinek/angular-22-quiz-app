@@ -1,6 +1,14 @@
 import {
-  ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef, effect,
-  inject, input, OnInit, signal
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  input,
+  OnInit,
+  signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
@@ -53,7 +61,7 @@ export class SummaryReportComponent implements OnInit {
   readonly elapsedSeconds = computed(() => this.completionTimeSig() % 60);
   readonly checkedShuffle = signal(false);
   readonly highScores = signal<QuizScore[]>([]);
-  readonly currentScore = signal<QuizScore | null>(null);  // current quiz attempt score
+  readonly currentScore = signal<QuizScore | null>(null); // current quiz attempt score
   readonly codelabUrl = 'https://www.codelab.fun';
 
   constructor() {
@@ -116,16 +124,18 @@ export class SummaryReportComponent implements OnInit {
         totalQuestions: this.quizService.totalQuestions(),
         totalQuestionsAttempted: this.quizService.totalQuestions(),
         correctAnswersCount: this.quizService.correctAnswersCountSig,
-        percentage:
-          this.quizService.calculatePercentageOfCorrectlyAnsweredQuestions(),
+        percentage: this.quizService.calculatePercentageOfCorrectlyAnsweredQuestions(),
         completionTime
       });
 
       // Populates milestoneFor()'s backing signal — shared, at-most-once-per-
       // page request. getMilestoneLabel() reads it directly per High-Scores row.
-      this.metadataApi.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-        this.cdRef.markForCheck();
-      });
+      this.metadataApi
+        .load()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => {
+          this.cdRef.markForCheck();
+        });
 
       this.checkedShuffle.set(this.quizService.isShuffleEnabled());
       this.calculateElapsedTime();

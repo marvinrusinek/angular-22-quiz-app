@@ -4,9 +4,24 @@ import { AchievementsCatalogComponent } from './achievements-catalog.component';
 import { AchievementView } from '@shared/models';
 
 const VIEW: AchievementView[] = [
-  { id: 'perfect-score', name: 'Perfect Score', description: 'Earn a 100% score on any quiz.', earned: true },
-  { id: 'angular-explorer', name: 'Angular Explorer', description: 'Complete every available quiz.', earned: false },
-  { id: 'beginner-complete', name: 'Beginner Complete', description: 'Complete every Beginner quiz.', earned: false }
+  {
+    id: 'perfect-score',
+    name: 'Perfect Score',
+    description: 'Earn a 100% score on any quiz.',
+    earned: true
+  },
+  {
+    id: 'angular-explorer',
+    name: 'Angular Explorer',
+    description: 'Complete every available quiz.',
+    earned: false
+  },
+  {
+    id: 'beginner-complete',
+    name: 'Beginner Complete',
+    description: 'Complete every Beginner quiz.',
+    earned: false
+  }
 ];
 
 describe('AchievementsCatalogComponent', () => {

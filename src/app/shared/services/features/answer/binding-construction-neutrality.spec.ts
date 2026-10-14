@@ -32,9 +32,9 @@ if (typeof (globalThis as any).structuredClone !== 'function') {
   (globalThis as any).structuredClone = (v: unknown) => JSON.parse(JSON.stringify(v));
 }
 
-const bare = (): Option => ({ optionId: 9, text: 'Bare option' } as Option);
-const lyingTrue = (): Option => ({ optionId: 1, text: 'Claims correct', correct: true } as Option);
-const lyingFalse = (): Option => ({ optionId: 2, text: 'Claims wrong', correct: false } as Option);
+const bare = (): Option => ({ optionId: 9, text: 'Bare option' }) as Option;
+const lyingTrue = (): Option => ({ optionId: 1, text: 'Claims correct', correct: true }) as Option;
+const lyingFalse = (): Option => ({ optionId: 2, text: 'Claims wrong', correct: false }) as Option;
 
 let answerBindings: AnswerBindingsService;
 let optionBuild: QqcQlOptionBuildService;
@@ -44,7 +44,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       AnswerBindingsService,
       AnswerOptionsService,
       QqcQlOptionBuildService
@@ -96,8 +99,7 @@ describe('answer-bindings.buildFallbackBinding', () => {
   it('still preserves feedback the option genuinely carries', () => {
     const withText = { ...lyingTrue(), feedback: '  Authored explanation.  ' } as Option;
 
-    expect(answerBindings.buildFallbackBinding(withText, 0).feedback)
-      .toBe('Authored explanation.');
+    expect(answerBindings.buildFallbackBinding(withText, 0).feedback).toBe('Authored explanation.');
   });
 
   it('rebuilds a whole array without consulting correctness', () => {
@@ -111,7 +113,10 @@ describe('answer-bindings.buildFallbackBinding', () => {
 
 describe('qqc-ql-option-build.buildOptionBindings', () => {
   it('reports unknown correctness for options with no `correct` property', () => {
-    const bindings = optionBuild.buildOptionBindings([bare(), { text: 'Another' } as Option], false);
+    const bindings = optionBuild.buildOptionBindings(
+      [bare(), { text: 'Another' } as Option],
+      false
+    );
 
     expect(bindings).toHaveLength(2);
     expect(bindings.every((b) => b.isCorrect === null)).toBe(true);
@@ -132,13 +137,15 @@ describe('qqc-ql-option-build.buildOptionBindings', () => {
   it('renders radio for a single-answer question even with several correct flags', () => {
     const lyingMulti = [lyingTrue(), { ...lyingFalse(), correct: true } as Option];
 
-    expect(optionBuild.buildOptionBindings(lyingMulti, false)[0].appHighlightInputType)
-      .toBe('radio');
+    expect(optionBuild.buildOptionBindings(lyingMulti, false)[0].appHighlightInputType).toBe(
+      'radio'
+    );
   });
 
   it('renders checkbox for a multiple-answer question with only one correct flag', () => {
-    expect(optionBuild.buildOptionBindings([lyingTrue(), lyingFalse()], true)[0].appHighlightInputType)
-      .toBe('checkbox');
+    expect(
+      optionBuild.buildOptionBindings([lyingTrue(), lyingFalse()], true)[0].appHighlightInputType
+    ).toBe('checkbox');
   });
 
   it('still carries selection state, which is not correctness', () => {

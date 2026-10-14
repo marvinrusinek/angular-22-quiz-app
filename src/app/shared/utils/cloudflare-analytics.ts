@@ -51,12 +51,12 @@ export function installCloudflareAnalytics(
   webdriver: boolean | undefined = globalThis.navigator?.webdriver
 ): boolean {
   try {
-    if (hostname !== CLOUDFLARE_ANALYTICS_HOST) return false;   // localhost, 127.0.0.1, StackBlitz, previews…
-    if (webdriver === true) return false;                        // automated browsers must not pollute analytics
-    if (doc.querySelector(`script[${BEACON_ATTRIBUTE}]`)) return false;   // already present
+    if (hostname !== CLOUDFLARE_ANALYTICS_HOST) return false; // localhost, 127.0.0.1, StackBlitz, previews…
+    if (webdriver === true) return false; // automated browsers must not pollute analytics
+    if (doc.querySelector(`script[${BEACON_ATTRIBUTE}]`)) return false; // already present
 
     const script = doc.createElement('script');
-    script.type = 'module';                                      // Cloudflare: required for the manual embed
+    script.type = 'module'; // Cloudflare: required for the manual embed
     script.src = CLOUDFLARE_BEACON_SRC;
     // The beacon reads its own configuration from this attribute (document.currentScript).
     script.setAttribute(BEACON_ATTRIBUTE, JSON.stringify({ token: CLOUDFLARE_ANALYTICS_TOKEN }));

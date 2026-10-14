@@ -37,7 +37,7 @@ function lenient<T extends object>(known: T): T {
       if (prop in target) return (target as Record<PropertyKey, unknown>)[prop];
       if (prop === 'then') return undefined;
       return jest.fn();
-    },
+    }
   }) as T;
 }
 
@@ -53,7 +53,7 @@ describe('ResultsComponent — finalResultStream constructor effect', () => {
     achievementService = {
       recordQuizResult: jest.fn(),
       evaluate: jest.fn().mockReturnValue([]),
-      catalog: jest.fn().mockReturnValue([]),
+      catalog: jest.fn().mockReturnValue([])
     };
 
     quizService = lenient({
@@ -69,7 +69,7 @@ describe('ResultsComponent — finalResultStream constructor effect', () => {
       // thing that could still act.
       hasValidResultFor: jest.fn().mockReturnValue(false),
       sendCorrectCountToResults: jest.fn(),
-      recordCompletedQuizScore: jest.fn(),
+      recordCompletedQuizScore: jest.fn()
     });
 
     const metadataApi = lenient({
@@ -77,7 +77,7 @@ describe('ResultsComponent — finalResultStream constructor effect', () => {
       difficultyByQuiz: jest.fn().mockReturnValue(new Map()),
       factsByQuiz: jest.fn().mockReturnValue(new Map()),
       factsFor: jest.fn().mockReturnValue([]),
-      milestoneFor: jest.fn().mockReturnValue(''),
+      milestoneFor: jest.fn().mockReturnValue('')
     });
 
     TestBed.resetTestingModule();
@@ -86,17 +86,26 @@ describe('ResultsComponent — finalResultStream constructor effect', () => {
         { provide: QuizDotStatusService, useValue: lenient({}) },
         { provide: QuizService, useValue: quizService },
         { provide: QuizStateService, useValue: lenient({}) },
-        { provide: SelectedOptionService, useValue: lenient({ recoverAnswersForResults: jest.fn() }) },
+        {
+          provide: SelectedOptionService,
+          useValue: lenient({ recoverAnswersForResults: jest.fn() })
+        },
         { provide: TimerService, useValue: lenient({ elapsedTimes: [], completionTime: 0 }) },
-        { provide: ScoreAnalysisService, useValue: lenient({ buildAnalysis: jest.fn().mockReturnValue([]) }) },
+        {
+          provide: ScoreAnalysisService,
+          useValue: lenient({ buildAnalysis: jest.fn().mockReturnValue([]) })
+        },
         { provide: AchievementService, useValue: achievementService },
         { provide: TopicPerformanceHistoryService, useValue: topicPerformanceHistory },
         { provide: ThemeService, useValue: lenient({}) },
-        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ quizId: routeQuizId })) } },
+        {
+          provide: ActivatedRoute,
+          useValue: { paramMap: of(convertToParamMap({ quizId: routeQuizId })) }
+        },
         { provide: Router, useValue: lenient({}) },
         { provide: ChangeDetectorRef, useValue: lenient({ markForCheck: jest.fn() }) },
-        { provide: TopicQuizMetadataService, useValue: metadataApi },
-      ],
+        { provide: TopicQuizMetadataService, useValue: metadataApi }
+      ]
     });
 
     // Constructed via runInInjectionContext (real constructor + effects, real
@@ -114,7 +123,7 @@ describe('ResultsComponent — finalResultStream constructor effect', () => {
     sessionStorage.clear();
   });
 
-  it("a result for a DIFFERENT quiz than the route must not persist, record topic performance, or evaluate achievements", () => {
+  it('a result for a DIFFERENT quiz than the route must not persist, record topic performance, or evaluate achievements', () => {
     setup('quizA');
     sessionStorage.removeItem('finalResult');
 
@@ -124,7 +133,7 @@ describe('ResultsComponent — finalResultStream constructor effect', () => {
       total: 3,
       percentage: 100,
       analysis: [],
-      completedAt: Date.now(),
+      completedAt: Date.now()
     });
     TestBed.flushEffects();
 
@@ -143,7 +152,7 @@ describe('ResultsComponent — finalResultStream constructor effect', () => {
       total: 2,
       percentage: 100,
       analysis: [],
-      completedAt: Date.now(),
+      completedAt: Date.now()
     });
     TestBed.flushEffects();
 
@@ -162,7 +171,7 @@ describe('ResultsComponent — finalResultStream constructor effect', () => {
       total: 1,
       percentage: 100,
       analysis: [],
-      completedAt: Date.now(),
+      completedAt: Date.now()
     } as FinalResult);
     TestBed.flushEffects();
 

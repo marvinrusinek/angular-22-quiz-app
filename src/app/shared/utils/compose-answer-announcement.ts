@@ -23,19 +23,21 @@ const SELECT_MORE_PATTERN = /select\s+\d+\s+more\s+correct\s+answers?\b/i;
  * markup; this is only for what gets spoken.
  */
 export function htmlToAnnouncementText(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, ' ')
-    // A closing tag directly before punctuation (e.g. "</strong>.") leaves
-    // "word .", an awkward pause for speech — collapse that one space.
-    .replace(/\s+([.,!?;:])/g, '$1')
-    .trim();
+  return (
+    html
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/\s+/g, ' ')
+      // A closing tag directly before punctuation (e.g. "</strong>.") leaves
+      // "word .", an awkward pause for speech — collapse that one space.
+      .replace(/\s+([.,!?;:])/g, '$1')
+      .trim()
+  );
 }
 
 export interface AnswerAnnouncementInputs {

@@ -17,9 +17,7 @@ export class OptionSelectionUiService {
     const _rawOb = optionBindings as any;
     optionBindings = typeof _rawOb === 'function' ? (_rawOb() ?? []) : (_rawOb ?? []);
     const parsedId =
-      typeof rawSelectedId === 'string'
-        ? Number.parseInt(rawSelectedId, 10)
-        : rawSelectedId;
+      typeof rawSelectedId === 'string' ? Number.parseInt(rawSelectedId, 10) : rawSelectedId;
 
     if (!Number.isFinite(parsedId)) return;
 
@@ -65,7 +63,7 @@ export class OptionSelectionUiService {
 
       // Feedback – only current row is true
       if (!b.showFeedbackForOption) b.showFeedbackForOption = {};
-      
+
       b.showFeedbackForOption[id] = isCurrent;
 
       // Repaint row

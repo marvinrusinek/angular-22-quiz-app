@@ -1,6 +1,5 @@
 import { Option, QuestionType, QuizQuestion } from '@shared/models';
 
-
 import { ArrayUtils } from '@shared/utils/array-utils';
 
 import { QuizShuffleService } from './quiz-shuffle.service';
@@ -40,29 +39,42 @@ describe('QuizShuffleService', () => {
         { text: 'Option A', correct: true, value: 1 },
         { text: 'Option C', correct: true, value: 3 }
       ]
-    },
+    }
   ];
 
   // Mock localStorage
   let store: Record<string, string> = {};
   beforeAll(() => {
     jest.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => store[key] ?? null);
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation((key, val) => { store[key] = val; });
-    jest.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => { delete store[key]; });
+    jest.spyOn(Storage.prototype, 'setItem').mockImplementation((key, val) => {
+      store[key] = val;
+    });
+    jest.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => {
+      delete store[key];
+    });
     // Object.keys(localStorage) is used by clearAll
     Object.defineProperty(window, 'localStorage', {
       value: new Proxy(Storage.prototype, {
         get(target, prop) {
           if (prop === 'getItem') return (key: string) => store[key] ?? null;
-          if (prop === 'setItem') return (key: string, val: string) => { store[key] = val; };
-          if (prop === 'removeItem') return (key: string) => { delete store[key]; };
+          if (prop === 'setItem')
+            return (key: string, val: string) => {
+              store[key] = val;
+            };
+          if (prop === 'removeItem')
+            return (key: string) => {
+              delete store[key];
+            };
           return Reflect.get(target, prop);
         },
-        ownKeys() { return Object.keys(store); },
-        getOwnPropertyDescriptor(_, key) {
-          if (key in store) return { configurable: true, enumerable: true, value: store[key as string] };
-          return undefined;
+        ownKeys() {
+          return Object.keys(store);
         },
+        getOwnPropertyDescriptor(_, key) {
+          if (key in store)
+            return { configurable: true, enumerable: true, value: store[key as string] };
+          return undefined;
+        }
       }),
       writable: true
     });
@@ -117,7 +129,7 @@ describe('QuizShuffleService', () => {
     it('should use identity option order when shuffleOptions is false', () => {
       service.prepareShuffle('quiz-1', mockQuestions, {
         shuffleQuestions: true,
-        shuffleOptions: false,
+        shuffleOptions: false
       });
       const state = service.getShuffleState('quiz-1');
       for (const [, order] of state!.optionOrder.entries()) {
@@ -188,9 +200,7 @@ describe('QuizShuffleService', () => {
     const fixedOrder = [2, 0, 1]; // display 0→orig 2, 1→orig 0, 2→orig 1
 
     beforeEach(() => {
-      jest
-        .spyOn(ArrayUtils, 'shuffleArray')
-        .mockImplementation(() => [...fixedOrder]);
+      jest.spyOn(ArrayUtils, 'shuffleArray').mockImplementation(() => [...fixedOrder]);
     });
 
     afterEach(() => {
@@ -207,9 +217,7 @@ describe('QuizShuffleService', () => {
     it('is a bijection — every display index maps to a distinct original index covering 0..n-1', () => {
       service.prepareShuffle('quiz-perm', mockQuestions);
       const n = mockQuestions.length;
-      const mapped = Array.from({ length: n }, (_, d) =>
-        service.toOriginalIndex('quiz-perm', d)
-      );
+      const mapped = Array.from({ length: n }, (_, d) => service.toOriginalIndex('quiz-perm', d));
       expect(mapped.every((v) => typeof v === 'number')).toBe(true);
       expect([...mapped].sort()).toEqual([0, 1, 2]); // permutation of 0..n-1
       expect(new Set(mapped).size).toBe(n); // all distinct
@@ -238,18 +246,14 @@ describe('QuizShuffleService', () => {
     ];
 
     it('should align answers by optionId', () => {
-      const answers: Option[] = [
-        { optionId: 1, text: 'Alpha', correct: true, value: 1 }
-      ];
+      const answers: Option[] = [{ optionId: 1, text: 'Alpha', correct: true, value: 1 }];
       const result = service.alignAnswersWithOptions(answers, opts);
       expect(result.length).toBe(1);
       expect(result[0].optionId).toBe(1);
     });
 
-    it('should align answers by text when IDs don\'t match', () => {
-      const answers: Option[] = [
-        { text: 'Beta', correct: false, value: 99 },
-      ];
+    it("should align answers by text when IDs don't match", () => {
+      const answers: Option[] = [{ text: 'Beta', correct: false, value: 99 }];
       const result = service.alignAnswersWithOptions(answers, opts);
       expect(result.length).toBe(1);
       expect(result[0].text).toBe('Beta');
@@ -263,19 +267,17 @@ describe('QuizShuffleService', () => {
     it('should deduplicate aligned answers', () => {
       const answers: Option[] = [
         { optionId: 1, text: 'Alpha', correct: true, value: 1 },
-        { optionId: 1, text: 'Alpha', correct: true, value: 1 },
+        { optionId: 1, text: 'Alpha', correct: true, value: 1 }
       ];
       const result = service.alignAnswersWithOptions(answers, opts);
       expect(result.length).toBe(1);
     });
 
     it('should fall back to correct options when no match', () => {
-      const answers: Option[] = [
-        { text: 'Nonexistent', value: 999 },
-      ];
+      const answers: Option[] = [{ text: 'Nonexistent', value: 999 }];
       const result = service.alignAnswersWithOptions(answers, opts);
       expect(result.length).toBe(2);
-      expect(result.every(o => o.correct)).toBe(true);
+      expect(result.every((o) => o.correct)).toBe(true);
     });
   });
 
@@ -294,7 +296,7 @@ describe('QuizShuffleService', () => {
     it('should normalize options with numeric IDs', () => {
       service.prepareShuffle('quiz-1', mockQuestions, {
         shuffleQuestions: false,
-        shuffleOptions: false,
+        shuffleOptions: false
       });
       const result = service.buildShuffledQuestions('quiz-1', mockQuestions);
       for (const q of result) {
@@ -359,7 +361,7 @@ describe('QuizShuffleService', () => {
         shuffleOptions: false
       });
       const result = service.getQuestionAtDisplayIndex('quiz-1', 0, mockQuestions);
-      expect(result!.options.every(o => typeof o.optionId === 'number')).toBe(true);
+      expect(result!.options.every((o) => typeof o.optionId === 'number')).toBe(true);
     });
   });
 });

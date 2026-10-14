@@ -1,4 +1,4 @@
-﻿import { TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
@@ -10,7 +10,10 @@ import { QuizService } from '@shared/services/data/quiz.service';
 import { QuestionType } from '@shared/models';
 import type { Option } from '@shared/models';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import {
+  IDLE_VERDICT_STATE,
+  type QuestionVerdictState
+} from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * The multi-answer selection message.
@@ -36,29 +39,35 @@ const NEXT_BTN = 'Please click the Next button to continue.';
 let service: SelectionMessageService;
 let verdictState: QuestionVerdictState;
 
-const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState =>
-  ({ ...IDLE_VERDICT_STATE, ...over });
+const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState => ({
+  ...IDLE_VERDICT_STATE,
+  ...over
+});
 
 /**
  * Options whose `correct` flags LIE â€” every one is inverted relative to truth
  * (map/filter are really the correct pair).
  */
 const lyingOptions = (selected: string[] = []): Option[] =>
-  ([
-    { optionId: 1, text: 'map', correct: false },
-    { optionId: 2, text: 'filter', correct: false },
-    { optionId: 3, text: 'Observable', correct: true },
-    { optionId: 4, text: 'Subject', correct: true }
-  ] as Option[]).map((o) => ({ ...o, selected: selected.includes(o.text) }));
+  (
+    [
+      { optionId: 1, text: 'map', correct: false },
+      { optionId: 2, text: 'filter', correct: false },
+      { optionId: 3, text: 'Observable', correct: true },
+      { optionId: 4, text: 'Subject', correct: true }
+    ] as Option[]
+  ).map((o) => ({ ...o, selected: selected.includes(o.text) }));
 
 /** Options with no `correct` property at all â€” the shape /questions returns. */
 const bareOptions = (selected: string[] = []): Option[] =>
-  ([
-    { optionId: 1, text: 'map' },
-    { optionId: 2, text: 'filter' },
-    { optionId: 3, text: 'Observable' },
-    { optionId: 4, text: 'Subject' }
-  ] as Option[]).map((o) => ({ ...o, selected: selected.includes(o.text) }));
+  (
+    [
+      { optionId: 1, text: 'map' },
+      { optionId: 2, text: 'filter' },
+      { optionId: 3, text: 'Observable' },
+      { optionId: 4, text: 'Subject' }
+    ] as Option[]
+  ).map((o) => ({ ...o, selected: selected.includes(o.text) }));
 
 beforeEach(() => {
   verdictState = IDLE_VERDICT_STATE;
@@ -67,7 +76,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       {
         provide: QuizService,
@@ -115,7 +127,10 @@ describe('the remaining count comes from the verdict, not the flags', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       remainingCorrectCount: 0,
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     // Not the last question (index 0 of 3) â†’ Next.
@@ -148,11 +163,14 @@ describe('the remaining count comes from the verdict, not the flags', () => {
     verdictState = state({
       phase: 'incomplete',
       remainingCorrectCount: 0,
-      selectedVerdicts: new Map([['map', true], ['filter', true], ['Observable', false]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true],
+        ['Observable', false]
+      ])
     });
 
-    expect(message(lyingOptions(['map', 'filter', 'Observable'])))
-      .toBe(NEXT_BTN);
+    expect(message(lyingOptions(['map', 'filter', 'Observable']))).toBe(NEXT_BTN);
   });
 });
 

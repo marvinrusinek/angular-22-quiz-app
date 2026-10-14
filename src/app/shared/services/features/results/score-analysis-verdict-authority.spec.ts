@@ -58,9 +58,7 @@ const QUESTIONS: QuizQuestion[] = [
   }
 ] as unknown as QuizQuestion[];
 
-const BANK = [
-  { quizId: QUIZ, milestone: 'RxJS', questions: QUESTIONS }
-] as unknown as Quiz[];
+const BANK = [{ quizId: QUIZ, milestone: 'RxJS', questions: QUESTIONS }] as unknown as Quiz[];
 
 if (typeof (globalThis as any).structuredClone !== 'function') {
   (globalThis as any).structuredClone = (value: unknown) => JSON.parse(JSON.stringify(value));
@@ -91,7 +89,8 @@ function stubAdapter(): TopicQuizVerdictAdapter {
       return of({
         status: 'incomplete' as const,
         selectedVerdicts: [...selected].map((text) => ({
-          text, correct: TRUE_CORRECT.some((t) => canon(t) === text)
+          text,
+          correct: TRUE_CORRECT.some((t) => canon(t) === text)
         })),
         remainingCorrectCount: missing.length
       });
@@ -124,7 +123,10 @@ beforeEach(() => {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: TOPIC_QUIZ_VERDICT_ADAPTER, useValue: stubAdapter() },
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
 
@@ -151,7 +153,7 @@ describe('Test 1 — the local flag lies TRUE', () => {
   });
 
   it('Review does not list the locally-flagged option as correct', () => {
-    selectAndRecord(['filter']);   // resolves, so a reveal is authorized
+    selectAndRecord(['filter']); // resolves, so a reveal is authorized
 
     const item = analyse();
     expect(item.correctOptionTexts).toEqual(['filter']);

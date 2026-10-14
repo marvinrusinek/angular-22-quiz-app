@@ -8,7 +8,10 @@ import {
   TopicRecordLike
 } from '@shared/utils/performance-insights';
 import { calculateWeakTopics, TopicAttemptLike } from '@shared/utils/weak-areas';
-import { PerformanceInsightsComponent, TOPICS_COLLAPSED_COUNT } from './performance-insights.component';
+import {
+  PerformanceInsightsComponent,
+  TOPICS_COLLAPSED_COUNT
+} from './performance-insights.component';
 
 // ── factories ───────────────────────────────────────────────────────
 
@@ -93,7 +96,9 @@ describe('PerformanceInsightsComponent', () => {
 
     it('shows a neutral empty state with no history', () => {
       show(insightsFrom());
-      expect(norm(q('.pi__empty'))).toBe('Complete quizzes or interviews to build your performance history.');
+      expect(norm(q('.pi__empty'))).toBe(
+        'Complete quizzes or interviews to build your performance history.'
+      );
       expect(qa('.pi__item')).toHaveLength(0);
       expect(q('.pi__note')).toBeNull();
     });
@@ -108,9 +113,11 @@ describe('PerformanceInsightsComponent', () => {
     });
 
     it('with ONLY Interview history, shows no Topic Quiz or Practice rows', () => {
-      show(insightsFrom({
-        interviewAttempts: [{ id: 'i1', completedAt: day(1), score: 7, totalQuestions: 10 }]
-      }));
+      show(
+        insightsFrom({
+          interviewAttempts: [{ id: 'i1', completedAt: day(1), score: 7, totalQuestions: 10 }]
+        })
+      );
       expect(overview('interview')).not.toBeNull();
       expect(overview('topic-quiz')).toBeNull();
       expect(overview('weak-areas-practice')).toBeNull();
@@ -135,9 +142,15 @@ describe('PerformanceInsightsComponent', () => {
 
     it('with insufficient comparison history, never displays a 0-point delta', () => {
       // 3 attempts: below the 4 needed for two windows of 2.
-      show(insightsFrom({
-        topicRecords: [rec('q1', 'topic-quiz', 1, 5, 10), rec('q2', 'topic-quiz', 2, 6, 10), rec('q3', 'topic-quiz', 3, 7, 10)]
-      }));
+      show(
+        insightsFrom({
+          topicRecords: [
+            rec('q1', 'topic-quiz', 1, 5, 10),
+            rec('q2', 'topic-quiz', 2, 6, 10),
+            rec('q3', 'topic-quiz', 3, 7, 10)
+          ]
+        })
+      );
       const text = norm(section('pi-recent-heading'));
       expect(text).toContain('Not enough history for a comparison yet.');
       expect(text).not.toMatch(/pts/);
@@ -150,10 +163,7 @@ describe('PerformanceInsightsComponent', () => {
   describe('performance overview', () => {
     const mixed = (): PerformanceInsights =>
       insightsFrom({
-        topicRecords: [
-          ...quizRecords(),
-          rec('p1', 'weak-areas-practice', 5, 1, 10)
-        ],
+        topicRecords: [...quizRecords(), rec('p1', 'weak-areas-practice', 5, 1, 10)],
         interviewAttempts: [
           { id: 'i1', completedAt: day(2), score: 6, totalQuestions: 10 },
           { id: 'i2', completedAt: day(6), score: 9, totalQuestions: 10 }
@@ -163,7 +173,11 @@ describe('PerformanceInsightsComponent', () => {
     it('lists Topic Quiz, Interview Mode and Weak Areas Practice separately, in that order', () => {
       show(mixed());
       const rows = qa('section[aria-labelledby="pi-overview-heading"] li');
-      expect(rows.map((r) => r.dataset['source'])).toEqual(['topic-quiz', 'interview', 'weak-areas-practice']);
+      expect(rows.map((r) => r.dataset['source'])).toEqual([
+        'topic-quiz',
+        'interview',
+        'weak-areas-practice'
+      ]);
       expect(norm(rows[0])).toContain('Topic Quiz');
       expect(norm(rows[1])).toContain('Interview Mode');
       expect(norm(rows[2])).toContain('Weak Areas Practice');
@@ -171,7 +185,7 @@ describe('PerformanceInsightsComponent', () => {
 
     it('gives each source its own accuracy, question counts and attempt count', () => {
       show(mixed());
-      expect(norm(overview('topic-quiz'))).toContain('81%');                 // (78+78+84+84)/400 = 324/400
+      expect(norm(overview('topic-quiz'))).toContain('81%'); // (78+78+84+84)/400 = 324/400
       expect(norm(overview('topic-quiz'))).toContain('324 / 400 questions · 4 attempts');
       expect(norm(overview('interview'))).toContain('75%');
       expect(norm(overview('interview'))).toContain('15 / 20 questions · 2 attempts');
@@ -217,7 +231,9 @@ describe('PerformanceInsightsComponent', () => {
       const row = recent('topic-quiz')!;
       expect(norm(row)).toContain('+6 pts');
       expect(norm(row)).toContain('Recent 84% · Previous 78%');
-      expect(norm(row)).toContain('Latest 2 attempts (168 / 200 questions) compared with the 2 before (156 / 200)');
+      expect(norm(row)).toContain(
+        'Latest 2 attempts (168 / 200 questions) compared with the 2 before (156 / 200)'
+      );
     });
 
     it('shows a decrease with a true minus sign', () => {
@@ -234,27 +250,37 @@ describe('PerformanceInsightsComponent', () => {
 
     it('exposes the change to assistive tech in words', () => {
       show(insightsFrom({ topicRecords: quizRecords(84, 78) }));
-      expect(recent('topic-quiz')!.querySelector('.pi__figure')!.getAttribute('aria-label')).toBe('up 6 percentage points');
+      expect(recent('topic-quiz')!.querySelector('.pi__figure')!.getAttribute('aria-label')).toBe(
+        'up 6 percentage points'
+      );
 
       show(insightsFrom({ topicRecords: quizRecords(60, 90) }));
-      expect(recent('topic-quiz')!.querySelector('.pi__figure')!.getAttribute('aria-label')).toBe('down 30 percentage points');
+      expect(recent('topic-quiz')!.querySelector('.pi__figure')!.getAttribute('aria-label')).toBe(
+        'down 30 percentage points'
+      );
 
       show(insightsFrom({ topicRecords: quizRecords(80, 80) }));
-      expect(recent('topic-quiz')!.querySelector('.pi__figure')!.getAttribute('aria-label')).toBe('no change, 0 percentage points');
+      expect(recent('topic-quiz')!.querySelector('.pi__figure')!.getAttribute('aria-label')).toBe(
+        'no change, 0 percentage points'
+      );
     });
 
     it('never labels a change good, bad, improving or declining', () => {
       for (const records of [quizRecords(90, 50), quizRecords(50, 90), quizRecords(70, 70)]) {
         show(insightsFrom({ topicRecords: records }));
-        expect(norm(section('pi-recent-heading'))).not.toMatch(/improv|declin|good|bad|better|worse|great|struggl/i);
+        expect(norm(section('pi-recent-heading'))).not.toMatch(
+          /improv|declin|good|bad|better|worse|great|struggl/i
+        );
       }
     });
 
     it('always lists Topic Quiz and Interview here, comparison or not', () => {
-      show(insightsFrom({
-        topicRecords: [rec('q1', 'topic-quiz', 1, 3, 4)],
-        interviewAttempts: [{ id: 'i1', completedAt: day(1), score: 5, totalQuestions: 10 }]
-      }));
+      show(
+        insightsFrom({
+          topicRecords: [rec('q1', 'topic-quiz', 1, 3, 4)],
+          interviewAttempts: [{ id: 'i1', completedAt: day(1), score: 5, totalQuestions: 10 }]
+        })
+      );
       expect(recent('topic-quiz')).not.toBeNull();
       expect(recent('interview')).not.toBeNull();
     });
@@ -263,12 +289,16 @@ describe('PerformanceInsightsComponent', () => {
       show(insightsFrom({ topicRecords: [rec('p1', 'weak-areas-practice', 1, 2, 4)] }));
       expect(recent('weak-areas-practice')).toBeNull();
 
-      show(insightsFrom({
-        topicRecords: [
-          rec('p1', 'weak-areas-practice', 1, 2, 10), rec('p2', 'weak-areas-practice', 2, 2, 10),
-          rec('p3', 'weak-areas-practice', 3, 6, 10), rec('p4', 'weak-areas-practice', 4, 6, 10)
-        ]
-      }));
+      show(
+        insightsFrom({
+          topicRecords: [
+            rec('p1', 'weak-areas-practice', 1, 2, 10),
+            rec('p2', 'weak-areas-practice', 2, 2, 10),
+            rec('p3', 'weak-areas-practice', 3, 6, 10),
+            rec('p4', 'weak-areas-practice', 4, 6, 10)
+          ]
+        })
+      );
       expect(norm(recent('weak-areas-practice'))).toContain('+40 pts');
     });
   });
@@ -293,7 +323,10 @@ describe('PerformanceInsightsComponent', () => {
     });
 
     it('collapses a long list and expands it on demand', () => {
-      const many: TopicSpec[] = Array.from({ length: 8 }, (_, i) => [`t${i + 1}`, 4, 5 + i] as TopicSpec);
+      const many: TopicSpec[] = Array.from(
+        { length: 8 },
+        (_, i) => [`t${i + 1}`, 4, 5 + i] as TopicSpec
+      );
       show(insightsFrom({ attempts: [att(1, many)] }));
 
       const items = (): HTMLElement[] => qa('section[aria-labelledby="pi-topics-heading"] li');
@@ -314,12 +347,21 @@ describe('PerformanceInsightsComponent', () => {
     });
 
     it('offers no toggle when the whole list already fits', () => {
-      show(insightsFrom({ attempts: [att(1, [['a', 4, 5], ['b', 4, 5]])] }));
+      show(
+        insightsFrom({
+          attempts: [
+            att(1, [
+              ['a', 4, 5],
+              ['b', 4, 5]
+            ])
+          ]
+        })
+      );
       expect(q('.pi__toggle')).toBeNull();
     });
 
     it('omits the topic sections when no topic has answers', () => {
-      show(insightsFrom({ topicRecords: [rec('q1', 'topic-quiz', 1, 3, 4)] }));   // records but no topic attempts
+      show(insightsFrom({ topicRecords: [rec('q1', 'topic-quiz', 1, 3, 4)] })); // records but no topic attempts
       expect(section('pi-topics-heading')).toBeNull();
       expect(section('pi-strongest-heading')).toBeNull();
     });
@@ -328,10 +370,19 @@ describe('PerformanceInsightsComponent', () => {
   // ── strongest / needs review ──────────────────────────────────────
 
   describe('Strongest Topics and Needs Review', () => {
-    const attempts = [att(1, [['weak', 5, 10], ['solid', 9, 10], ['great', 10, 10], ['tiny', 2, 2]])];
+    const attempts = [
+      att(1, [
+        ['weak', 5, 10],
+        ['solid', 9, 10],
+        ['great', 10, 10],
+        ['tiny', 2, 2]
+      ])
+    ];
 
     const topicIn = (headingId: string): string[] =>
-      qa(`section[aria-labelledby="${headingId}"] li[data-topic]`).map((li) => li.dataset['topic']!);
+      qa(`section[aria-labelledby="${headingId}"] li[data-topic]`).map(
+        (li) => li.dataset['topic']!
+      );
 
     it('lists Strongest best-first with counts', () => {
       show(insightsFrom({ attempts }));
@@ -357,18 +408,35 @@ describe('PerformanceInsightsComponent', () => {
 
     describe('several topics render as separate rows', () => {
       // 3 weak (33%, 67%, 72%) and 3 strong (95%, 91%, 100%) — the most each list shows.
-      const many = [att(1, [
-        ['signals', 3, 9], ['http', 2, 3], ['di', 18, 25],
-        ['router', 21, 22], ['forms', 10, 11], ['pipes', 10, 10]
-      ])];
+      const many = [
+        att(1, [
+          ['signals', 3, 9],
+          ['http', 2, 3],
+          ['di', 18, 25],
+          ['router', 21, 22],
+          ['forms', 10, 11],
+          ['pipes', 10, 10]
+        ])
+      ];
 
       const rows = (headingId: string): HTMLElement[] =>
         qa(`section[aria-labelledby="${headingId}"] ul > li`);
 
       it.each([
-        ['pi-review-heading', ['signals', 'http', 'di'], ['SIGNALS', 'HTTP', 'DI'], ['33%', '67%', '72%']],
-        ['pi-strongest-heading', ['pipes', 'router', 'forms'], ['PIPES', 'ROUTER', 'FORMS'], ['100%', '95%', '91%']]
-      ])('%s: one <li> per topic inside one <ul>, each holding only its own name and figure',
+        [
+          'pi-review-heading',
+          ['signals', 'http', 'di'],
+          ['SIGNALS', 'HTTP', 'DI'],
+          ['33%', '67%', '72%']
+        ],
+        [
+          'pi-strongest-heading',
+          ['pipes', 'router', 'forms'],
+          ['PIPES', 'ROUTER', 'FORMS'],
+          ['100%', '95%', '91%']
+        ]
+      ])(
+        '%s: one <li> per topic inside one <ul>, each holding only its own name and figure',
         (headingId, ids, names, figures) => {
           show(insightsFrom({ attempts: many }));
 
@@ -385,14 +453,17 @@ describe('PerformanceInsightsComponent', () => {
             expect(norm(li.querySelector('.pi__name'))).toBe(names[i]);
             expect(norm(li.querySelector('.pi__figure'))).toBe(figures[i]);
             // …and no other topic's name leaks into this row.
-            for (const other of names.filter((_, j) => j !== i)) expect(norm(li)).not.toContain(other);
+            for (const other of names.filter((_, j) => j !== i))
+              expect(norm(li)).not.toContain(other);
           });
-        });
+        }
+      );
 
       it('keeps every row of both lists apart from the other list', () => {
         show(insightsFrom({ attempts: many }));
         const review = new Set(rows('pi-review-heading').map((li) => li.dataset['topic']));
-        for (const li of rows('pi-strongest-heading')) expect(review.has(li.dataset['topic'])).toBe(false);
+        for (const li of rows('pi-strongest-heading'))
+          expect(review.has(li.dataset['topic'])).toBe(false);
       });
     });
 
@@ -418,9 +489,11 @@ describe('PerformanceInsightsComponent', () => {
 
   describe('interview trend reuse and retention disclosure', () => {
     it('links to the existing Interview History rather than rebuilding trends', () => {
-      show(insightsFrom({
-        interviewAttempts: [{ id: 'i1', completedAt: day(1), score: 7, totalQuestions: 10 }]
-      }));
+      show(
+        insightsFrom({
+          interviewAttempts: [{ id: 'i1', completedAt: day(1), score: 7, totalQuestions: 10 }]
+        })
+      );
       const link = q('a.pi__link')!;
       expect(link.getAttribute('href')).toBe('/interview/history');
       expect(norm(link)).toBe('View interview history');
@@ -430,10 +503,12 @@ describe('PerformanceInsightsComponent', () => {
     });
 
     it('discloses that only recent activity is counted, for the sources present', () => {
-      show(insightsFrom({
-        topicRecords: quizRecords(),
-        interviewAttempts: [{ id: 'i1', completedAt: day(1), score: 7, totalQuestions: 10 }]
-      }));
+      show(
+        insightsFrom({
+          topicRecords: quizRecords(),
+          interviewAttempts: [{ id: 'i1', completedAt: day(1), score: 7, totalQuestions: 10 }]
+        })
+      );
       const note = norm(q('.pi__note'));
       expect(note).toBe(
         'Based on your saved recent activity only: your 200 most recent topic results and 20 most recent interviews. Older results are not included.'
@@ -442,17 +517,24 @@ describe('PerformanceInsightsComponent', () => {
     });
 
     it('mentions only the retention that applies to what is shown', () => {
-      show(insightsFrom({
-        interviewAttempts: [{ id: 'i1', completedAt: day(1), score: 7, totalQuestions: 10 }]
-      }));
+      show(
+        insightsFrom({
+          interviewAttempts: [{ id: 'i1', completedAt: day(1), score: 7, totalQuestions: 10 }]
+        })
+      );
       expect(norm(q('.pi__note'))).toContain('20 most recent interviews');
       expect(norm(q('.pi__note'))).not.toContain('topic results');
     });
 
     it('states the topic-result window once even when Topic Quiz and Practice are both present', () => {
-      show(insightsFrom({
-        topicRecords: [rec('q1', 'topic-quiz', 1, 3, 4), rec('p1', 'weak-areas-practice', 2, 2, 4)]
-      }));
+      show(
+        insightsFrom({
+          topicRecords: [
+            rec('q1', 'topic-quiz', 1, 3, 4),
+            rec('p1', 'weak-areas-practice', 2, 2, 4)
+          ]
+        })
+      );
       expect(norm(q('.pi__note')).match(/200 most recent topic results/g)).toHaveLength(1);
     });
   });
@@ -464,7 +546,12 @@ describe('PerformanceInsightsComponent', () => {
       insightsFrom({
         topicRecords: quizRecords(),
         interviewAttempts: [{ id: 'i1', completedAt: day(1), score: 7, totalQuestions: 10 }],
-        attempts: [att(1, [['weak', 5, 10], ['solid', 9, 10]])]
+        attempts: [
+          att(1, [
+            ['weak', 5, 10],
+            ['solid', 9, 10]
+          ])
+        ]
       });
 
     it('labels every section by a heading that exists', () => {
@@ -482,7 +569,11 @@ describe('PerformanceInsightsComponent', () => {
       expect(qa('h2')).toHaveLength(1);
       expect(norm(q('h2'))).toBe('Performance Insights');
       expect(qa('h3').map((h) => norm(h))).toEqual([
-        'Performance Overview', 'Recent Performance', 'Performance by Topic', 'Strongest Topics', 'Needs Review'
+        'Performance Overview',
+        'Recent Performance',
+        'Performance by Topic',
+        'Strongest Topics',
+        'Needs Review'
       ]);
     });
 
@@ -505,7 +596,9 @@ describe('PerformanceInsightsComponent', () => {
     it('conveys every value as text, never by colour alone', () => {
       show(full());
       // Nothing is styled by a good/bad modifier class.
-      expect(qa('[class*="--up"], [class*="--down"], [class*="--good"], [class*="--bad"]')).toHaveLength(0);
+      expect(
+        qa('[class*="--up"], [class*="--down"], [class*="--good"], [class*="--bad"]')
+      ).toHaveLength(0);
     });
   });
 
@@ -521,14 +614,22 @@ describe('PerformanceInsightsComponent', () => {
     const everything = (): PerformanceInsights =>
       insightsFrom({
         topicRecords: quizRecords(),
-        attempts: [att(1, [['weak', 5, 10], ['solid', 9, 10]])]
+        attempts: [
+          att(1, [
+            ['weak', 5, 10],
+            ['solid', 9, 10]
+          ])
+        ]
       });
 
     it('puts one between each pair of categories: Overview→Recent→Topic→Strongest→Needs Review', () => {
       show(everything());
       expect(qa('section.pi__section')).toHaveLength(5);
       expect(opens()).toEqual([
-        'pi-recent-heading', 'pi-topics-heading', 'pi-strongest-heading', 'pi-review-heading'
+        'pi-recent-heading',
+        'pi-topics-heading',
+        'pi-strongest-heading',
+        'pi-review-heading'
       ]);
     });
 
@@ -583,9 +684,17 @@ describe('PerformanceInsightsComponent', () => {
     it('adds nothing to the heading structure or the accessible region labels', () => {
       show(everything());
       expect(qa('h3').map((h) => norm(h))).toEqual([
-        'Performance Overview', 'Recent Performance', 'Performance by Topic', 'Strongest Topics', 'Needs Review'
+        'Performance Overview',
+        'Recent Performance',
+        'Performance by Topic',
+        'Strongest Topics',
+        'Needs Review'
       ]);
-      expect(qa('section[aria-labelledby]').every((s) => !!el.querySelector(`#${s.getAttribute('aria-labelledby')}`))).toBe(true);
+      expect(
+        qa('section[aria-labelledby]').every(
+          (s) => !!el.querySelector(`#${s.getAttribute('aria-labelledby')}`)
+        )
+      ).toBe(true);
     });
   });
 });

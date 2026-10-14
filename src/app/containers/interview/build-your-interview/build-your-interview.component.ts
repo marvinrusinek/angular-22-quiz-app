@@ -36,7 +36,10 @@ import { AssessmentIntegrityService } from '@shared/services/features/interview/
 import { buildInterviewSessionRequest } from '@shared/services/interview/interview-builder-request.mapper';
 import { isInterviewApiConfigured } from '@shared/tokens/api-base-url.token';
 import type { CreateInterviewSessionRequest } from '@shared/models/api/interview-api.dto';
-import { QuizStartSpinnerHandle, QuizStartSpinnerService } from '@shared/services/ui/quiz-start-spinner.service';
+import {
+  QuizStartSpinnerHandle,
+  QuizStartSpinnerService
+} from '@shared/services/ui/quiz-start-spinner.service';
 import { swallow } from '@shared/utils/error-logging';
 import { calculateDifficultyQuota } from '@shared/utils/difficulty-quota';
 import {
@@ -87,7 +90,11 @@ function isStoredCreateRequest(value: unknown): value is CreateInterviewSessionR
     return typeof (value as { presetId?: unknown }).presetId === 'string';
   }
   if (mode === 'custom') {
-    const candidate = value as { difficulty?: unknown; topicIds?: unknown; questionCount?: unknown };
+    const candidate = value as {
+      difficulty?: unknown;
+      topicIds?: unknown;
+      questionCount?: unknown;
+    };
     return (
       typeof candidate.difficulty === 'string' &&
       Array.isArray(candidate.topicIds) &&
@@ -315,7 +322,7 @@ export class BuildYourInterviewComponent implements OnInit {
     minLength(path.selectedTopicIds, 1);
     validate(path.questionCount, ({ value }) => {
       const { selectedTopicIds } = this.model();
-      if (selectedTopicIds.length === 0) return null;   // topic rule reports this
+      if (selectedTopicIds.length === 0) return null; // topic rule reports this
       const available = this.catalog.availableQuestions(selectedTopicIds);
       return available >= value()
         ? null
@@ -455,12 +462,16 @@ export class BuildYourInterviewComponent implements OnInit {
     if (this.catalog.loading()) return '';
     const capacity = this.presetCapacity();
     if (!capacity || capacity.usable >= capacity.required) return '';
-    return `Only ${capacity.usable} of the ${capacity.required} questions this preset needs are available. ` +
-      'Choose another preset or build a Custom interview.';
+    return (
+      `Only ${capacity.usable} of the ${capacity.required} questions this preset needs are available. ` +
+      'Choose another preset or build a Custom interview.'
+    );
   });
 
   /** True while a preset is selected but its real capacity cannot be known yet — see presetInvalidReason's own doc comment. */
-  readonly presetCapacityUnknown = computed(() => this.selectedPreset() !== undefined && this.catalog.loading());
+  readonly presetCapacityUnknown = computed(
+    () => this.selectedPreset() !== undefined && this.catalog.loading()
+  );
 
   /**
    * Whether the Start button is disabled, for WHICHEVER mode is active. The
@@ -494,9 +505,7 @@ export class BuildYourInterviewComponent implements OnInit {
 
   // Duration is DERIVED from the question count, never chosen — which is why it
   // is not a field on the Signal Forms model.
-  readonly durationMinutes = computed(
-    () => DURATION_SECONDS_BY_COUNT[this.questionCount()] / 60
-  );
+  readonly durationMinutes = computed(() => DURATION_SECONDS_BY_COUNT[this.questionCount()] / 60);
 
   // Start validity now comes straight from the schema (required difficulty,
   // ≥1 topic, and the pool-capacity rule), so there is no second hand-rolled
@@ -511,8 +520,10 @@ export class BuildYourInterviewComponent implements OnInit {
     if (!this.difficulty() || this.selectedTopicIds().length === 0) return '';
     const total = this.eligiblePool().total;
     if (total < this.questionCount()) {
-      return `Only ${total} question${total === 1 ? '' : 's'} ${total === 1 ? 'is' : 'are'} available for this selection. ` +
-        'Select another topic or choose a shorter interview.';
+      return (
+        `Only ${total} question${total === 1 ? '' : 's'} ${total === 1 ? 'is' : 'are'} available for this selection. ` +
+        'Select another topic or choose a shorter interview.'
+      );
     }
     return '';
   });
@@ -606,9 +617,16 @@ export class BuildYourInterviewComponent implements OnInit {
     );
   }
 
-  private persistPendingCreate(idempotencyKey: string, request: CreateInterviewSessionRequest): void {
+  private persistPendingCreate(
+    idempotencyKey: string,
+    request: CreateInterviewSessionRequest
+  ): void {
     try {
-      const record: PendingCreateRecord = { idempotencyKey, request, expiresAtMs: Date.now() + PENDING_CREATE_TTL_MS };
+      const record: PendingCreateRecord = {
+        idempotencyKey,
+        request,
+        expiresAtMs: Date.now() + PENDING_CREATE_TTL_MS
+      };
       sessionStorage.setItem(PENDING_CREATE_STORAGE_KEY, JSON.stringify(record));
     } catch (err) {
       swallow('build-your-interview#persistPendingCreate', err);
@@ -636,7 +654,8 @@ export class BuildYourInterviewComponent implements OnInit {
       const parsed = JSON.parse(raw) as Partial<PendingCreateRecord> | null;
       if (
         !parsed ||
-        typeof parsed.idempotencyKey !== 'string' || parsed.idempotencyKey.length === 0 ||
+        typeof parsed.idempotencyKey !== 'string' ||
+        parsed.idempotencyKey.length === 0 ||
         typeof parsed.expiresAtMs !== 'number' ||
         !isStoredCreateRequest(parsed.request)
       ) {
@@ -647,7 +666,11 @@ export class BuildYourInterviewComponent implements OnInit {
         this.clearPersistedPendingCreate();
         return null;
       }
-      return { idempotencyKey: parsed.idempotencyKey, request: parsed.request, expiresAtMs: parsed.expiresAtMs };
+      return {
+        idempotencyKey: parsed.idempotencyKey,
+        request: parsed.request,
+        expiresAtMs: parsed.expiresAtMs
+      };
     } catch (err) {
       swallow('build-your-interview#loadPersistedPendingCreate', err);
       this.clearPersistedPendingCreate();
@@ -674,9 +697,7 @@ export class BuildYourInterviewComponent implements OnInit {
   }
 
   selectAllTopics(): void {
-    this.builderForm.selectedTopicIds().value.set(
-      this.availableTopics().map((t) => t.id)
-    );
+    this.builderForm.selectedTopicIds().value.set(this.availableTopics().map((t) => t.id));
   }
 
   clearTopics(): void {
@@ -783,7 +804,11 @@ export class BuildYourInterviewComponent implements OnInit {
     let spinnerHandle: QuizStartSpinnerHandle | null = null;
 
     try {
-      const created = await this.createWithAutomaticRetries(request, idempotencyKey, allowAutomaticRetry);
+      const created = await this.createWithAutomaticRetries(
+        request,
+        idempotencyKey,
+        allowAutomaticRetry
+      );
 
       // This attempt is now resolved — nothing left to retry. Explicit even
       // though navigation (below) will normally unmount this component
@@ -928,7 +953,9 @@ export class BuildYourInterviewComponent implements OnInit {
     idempotencyKey: string
   ): Promise<CreatedInterviewSession> {
     return firstValueFrom(
-      this.api.createSession(request, idempotencyKey).pipe(timeout(BuildYourInterviewComponent.SESSION_CREATE_TIMEOUT_MS))
+      this.api
+        .createSession(request, idempotencyKey)
+        .pipe(timeout(BuildYourInterviewComponent.SESSION_CREATE_TIMEOUT_MS))
     );
   }
 

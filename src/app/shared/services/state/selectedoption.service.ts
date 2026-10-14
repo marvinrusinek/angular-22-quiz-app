@@ -1,4 +1,4 @@
-﻿import { Service, inject, signal, Injector } from '@angular/core';
+import { Service, inject, signal, Injector } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, Subject } from 'rxjs';
 import { distinctUntilChanged, map, startWith } from 'rxjs/operators';
@@ -7,7 +7,14 @@ import { Option, QuestionType, QuizQuestion, SelectedOption } from '@shared/mode
 
 import { norm } from '@shared/utils/text-norm';
 
-import { SK_DISPLAY_MODE, SK_IS_ANSWERED, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_USER_ANSWERS } from '@shared/constants/session-keys';
+import {
+  SK_DISPLAY_MODE,
+  SK_IS_ANSWERED,
+  SK_SAVED_QUESTION_INDEX,
+  SK_SEL_Q,
+  SK_SELECTED_OPTIONS_MAP,
+  SK_USER_ANSWERS
+} from '@shared/constants/session-keys';
 import { shallowArrayEqual } from '@shared/utils/shallow-equal';
 
 import { AnswerEvaluationService } from './answer-evaluation.service';
@@ -65,9 +72,8 @@ export class SelectedOptionService {
   addToSelectionHistory(questionIndex: number, entries: SelectedOption[]): void {
     const history = this._selectionHistory.get(questionIndex) ?? [];
     for (const entry of entries) {
-      const already = history.some(h =>
-        h.optionId === entry.optionId
-        && h.displayIndex === entry.displayIndex
+      const already = history.some(
+        (h) => h.optionId === entry.optionId && h.displayIndex === entry.displayIndex
       );
       if (!already) history.push(entry);
     }
@@ -243,38 +249,37 @@ export class SelectedOptionService {
       // consumers read. Errors are swallowed deliberately — a failed check must
       // leave the LAST CONFIRMED verdict in place rather than clearing it, and
       // the service already records an `error` phase for callers that care.
-      this.verdicts
-        .checkAnswer(quizId, questionText, [...texts])
-        .subscribe({
-          next: (result) => {
-            // CREDIT ON ARRIVAL. Click-time scoring cannot decide a
-            // multi-answer question under the API adapter — the check is still
-            // in flight — so it defers and the point is applied here, where the
-            // authorized verdict actually lands.
-            //
-            // This subscription is used rather than an Angular effect because
-            // it provably runs: an effect in QuizScoringService was tried and
-            // silently never scheduled in this zoneless app.
-            //
-            // Only resolved-CORRECT credits: `resolved` alone is not enough
-            // (a single-answer question resolves on a wrong click too), and
-            // the credit itself is idempotent per question.
-            if (result?.status === 'resolved' && result.correct === true) {
-              this.quizService?.scoringService?.creditResolvedQuestion(quizId, questionText);
-            }
+      this.verdicts.checkAnswer(quizId, questionText, [...texts]).subscribe({
+        next: (result) => {
+          // CREDIT ON ARRIVAL. Click-time scoring cannot decide a
+          // multi-answer question under the API adapter — the check is still
+          // in flight — so it defers and the point is applied here, where the
+          // authorized verdict actually lands.
+          //
+          // This subscription is used rather than an Angular effect because
+          // it provably runs: an effect in QuizScoringService was tried and
+          // silently never scheduled in this zoneless app.
+          //
+          // Only resolved-CORRECT credits: `resolved` alone is not enough
+          // (a single-answer question resolves on a wrong click too), and
+          // the credit itself is idempotent per question.
+          if (result?.status === 'resolved' && result.correct === true) {
+            this.quizService?.scoringService?.creditResolvedQuestion(quizId, questionText);
+          }
 
-            this.applyAuthorizedMultiCompletion(questionText, texts, result);
+          this.applyAuthorizedMultiCompletion(questionText, texts, result);
 
-            // The cue the click deliberately did not play.
-            this.playAuthorizedSelectionSounds(quizId, questionText);
-          },
-          error: () => { /* last confirmed state is retained */ }
-        });
+          // The cue the click deliberately did not play.
+          this.playAuthorizedSelectionSounds(quizId, questionText);
+        },
+        error: () => {
+          /* last confirmed state is retained */
+        }
+      });
     } catch (err: unknown) {
       swallow('selectedoption.service#submitToVerdictService', err);
     }
   }
-
 
   /**
    * Play the correct/incorrect cue for selections the verdict just authorized.
@@ -311,17 +316,14 @@ export class SelectedOptionService {
     }
   }
 
-  private playAuthorizedSelectionSounds(
-    quizId: string,
-    questionText: string
-  ): void {
+  private playAuthorizedSelectionSounds(quizId: string, questionText: string): void {
     try {
       const state = this.verdicts.verdictFor(quizId, questionText);
       // `checking` carries no judgement yet; only sound what was judged.
       if (state.phase === 'idle' || state.phase === 'checking') return;
 
       for (const [text, isCorrect] of state.selectedVerdicts ?? []) {
-        if (typeof isCorrect !== 'boolean') continue;   // unknown stays silent
+        if (typeof isCorrect !== 'boolean') continue; // unknown stays silent
         this.soundOrNull()?.playAuthorizedVerdict(
           `${quizId}::${norm(questionText)}::${norm(text)}`,
           isCorrect
@@ -372,7 +374,7 @@ export class SelectedOptionService {
       if (result?.status !== 'resolved') return;
 
       const correctTexts = result.correctOptionTexts ?? [];
-      if (correctTexts.length <= 1) return;   // single-answer: not a multi fact
+      if (correctTexts.length <= 1) return; // single-answer: not a multi fact
 
       const displayIdx = this.resolveDisplayIndexByText(questionText);
       if (displayIdx < 0) return;
@@ -501,10 +503,7 @@ export class SelectedOptionService {
 
   // ── public methods ──────────────────────────────────────────────
   isSelectedOption(option: Option): boolean {
-    return (
-      this.selectedOption?.some((sel) => sel.optionId === option.optionId) ??
-      false
-    );
+    return this.selectedOption?.some((sel) => sel.optionId === option.optionId) ?? false;
   }
 
   // Helper to sync state from external components (like SharedOptionComponent)
@@ -512,7 +511,10 @@ export class SelectedOptionService {
     this.selectionCrud.syncSelectionState(this, questionIndex, options);
   }
 
-  persistAnswerForResults(questionIndex: number, selections: { optionId: number; text: string }[]): void {
+  persistAnswerForResults(
+    questionIndex: number,
+    selections: { optionId: number; text: string }[]
+  ): void {
     this.persistence.persistAnswerForResults(questionIndex, selections);
   }
 
@@ -540,18 +542,18 @@ export class SelectedOptionService {
   }
 
   setNextButtonEnabled(enabled: boolean): void {
-    this.isNextButtonEnabledSig.set(enabled);  // update the button's enabled state
+    this.isNextButtonEnabledSig.set(enabled); // update the button's enabled state
   }
 
   clearSelection(): void {
-    this.isOptionSelectedSig.set(false);  // no option selected
+    this.isOptionSelectedSig.set(false); // no option selected
   }
 
   clearOtherSelections(questionIndex: number, keepOptionId: number): void {
     const current = this.selectedOptionsMap.get(questionIndex) || [];
     this.selectedOptionsMap.set(
       questionIndex,
-      current.filter(o => o.optionId === keepOptionId)
+      current.filter((o) => o.optionId === keepOptionId)
     );
   }
 
@@ -565,17 +567,20 @@ export class SelectedOptionService {
     optionsSnapshot?: Option[],
     isMultipleAnswer?: boolean
   ): void {
-    this.selectionCrud.setSelectedOption(this, option, questionIndex, optionsSnapshot, isMultipleAnswer);
+    this.selectionCrud.setSelectedOption(
+      this,
+      option,
+      questionIndex,
+      optionsSnapshot,
+      isMultipleAnswer
+    );
   }
 
   setSelectedOptions(options: SelectedOption[]): void {
     this.selectionCrud.setSelectedOptions(this, options);
   }
 
-  setSelectedOptionsForQuestion(
-    questionIndex: number,
-    newSelections: SelectedOption[]
-  ): void {
+  setSelectedOptionsForQuestion(questionIndex: number, newSelections: SelectedOption[]): void {
     this.selectionCrud.setSelectedOptionsForQuestion(this, questionIndex, newSelections);
   }
 
@@ -593,15 +598,12 @@ export class SelectedOptionService {
     return combined;
   }
 
-  public getSelectedOptionsForQuestion(
-    questionIndex: number
-  ): SelectedOption[] {
+  public getSelectedOptionsForQuestion(questionIndex: number): SelectedOption[] {
     const options = this.selectedOptionsMap.get(questionIndex) || [];
     const backup = this._refreshBackup.get(questionIndex) || [];
 
     const merged = new Map<string, SelectedOption>();
-    const keyOf = (o: any) =>
-      `${o?.optionId ?? '?'}|${o?.displayIndex ?? o?.index ?? -1}`;
+    const keyOf = (o: any) => `${o?.optionId ?? '?'}|${o?.displayIndex ?? o?.index ?? -1}`;
 
     // 1. Durable sessionStorage FIRST â€” the cleanest source of truth.
     try {
@@ -627,7 +629,9 @@ export class SelectedOptionService {
           }
         }
       }
-    } catch (err: unknown) { swallow('selectedoption.service.ts', err); /* ignore */ }
+    } catch (err: unknown) {
+      swallow('selectedoption.service.ts', err); /* ignore */
+    }
 
     // 2. Fall back to in-memory maps only if sel_Q* had nothing.
     //    During live interaction sel_Q* may not be written yet, so
@@ -721,7 +725,14 @@ export class SelectedOptionService {
     isMultiSelect: boolean,
     optionsSnapshot?: Option[]
   ): Promise<void> {
-    return this.selectionCrud.selectOption(this, optionId, questionIndex, text, isMultiSelect, optionsSnapshot);
+    return this.selectionCrud.selectOption(
+      this,
+      optionId,
+      questionIndex,
+      text,
+      isMultiSelect,
+      optionsSnapshot
+    );
   }
 
   isOptionCurrentlySelected(option: Option): boolean {
@@ -729,8 +740,7 @@ export class SelectedOptionService {
 
     const currentIndex = this.quizService?.currentQuestionIndex ?? null;
     const indices =
-      currentIndex != null
-        ? [currentIndex] : Array.from(this.selectedOptionsMap.keys());
+      currentIndex != null ? [currentIndex] : Array.from(this.selectedOptionsMap.keys());
 
     const normId = this.idResolver.normalizeOptionId(option.optionId);
     const normText = this.idResolver.normalizeStr(option.text);
@@ -774,9 +784,7 @@ export class SelectedOptionService {
       this.selectedOption = [];
       this.selectedOptionSig.set([]);
 
-      const activeIndex = Number.isInteger(
-        this.quizService?.currentQuestionIndex,
-      )
+      const activeIndex = Number.isInteger(this.quizService?.currentQuestionIndex)
         ? (this.quizService.currentQuestionIndex as number)
         : null;
 
@@ -788,7 +796,6 @@ export class SelectedOptionService {
         this.optionSnapshotByQuestion.clear();
       }
     }
-
   }
 
   clearOptions(): void {
@@ -800,9 +807,9 @@ export class SelectedOptionService {
   // Observable to get the current option selected state
   isOptionSelected$(): Observable<boolean> {
     return this.selectedOption$.pipe(
-      startWith(this.selectedOptionSig()),  // emit the current state immediately when subscribed
-      map((option) => option !== null),  // determine if an option is selected
-      distinctUntilChanged()  // emit only when the selection state changes
+      startWith(this.selectedOptionSig()), // emit the current state immediately when subscribed
+      map((option) => option !== null), // determine if an option is selected
+      distinctUntilChanged() // emit only when the selection state changes
     );
   }
 
@@ -850,24 +857,15 @@ export class SelectedOptionService {
     this.selectionCrud.updateSelectedOptions(this, questionIndex, optionIndex, action);
   }
 
-  updateAnsweredState(
-    questionOptions: Option[] = [],
-    questionIndex: number = -1
-  ): void {
+  updateAnsweredState(questionOptions: Option[] = [], questionIndex: number = -1): void {
     try {
-      const resolvedIndex = this.resolveEffectiveQuestionIndex(
-        questionIndex,
-        questionOptions
-      );
+      const resolvedIndex = this.resolveEffectiveQuestionIndex(questionIndex, questionOptions);
 
       if (resolvedIndex == null || resolvedIndex < 0) {
-        return;  // unable to resolve a valid question index
+        return; // unable to resolve a valid question index
       }
 
-      const snapshot = this.buildCanonicalSelectionSnapshot(
-        resolvedIndex,
-        questionOptions
-      );
+      const snapshot = this.buildCanonicalSelectionSnapshot(resolvedIndex, questionOptions);
 
       if (!Array.isArray(snapshot) || snapshot.length === 0) return;
 
@@ -890,8 +888,8 @@ export class SelectedOptionService {
 
     const optionIndexFromPayload = Array.isArray(questionOptions)
       ? questionOptions
-        .map((opt) => (opt as SelectedOption)?.questionIndex)
-        .find((idx) => typeof idx === 'number' && idx >= 0)
+          .map((opt) => (opt as SelectedOption)?.questionIndex)
+          .find((idx) => typeof idx === 'number' && idx >= 0)
       : undefined;
     if (typeof optionIndexFromPayload === 'number') {
       return optionIndexFromPayload;
@@ -906,10 +904,7 @@ export class SelectedOptionService {
     return fallbackIndex >= 0 ? fallbackIndex : null;
   }
 
-  private buildCanonicalSelectionSnapshot(
-    questionIndex: number,
-    _overrides: Option[]
-  ): Option[] {
+  private buildCanonicalSelectionSnapshot(questionIndex: number, _overrides: Option[]): Option[] {
     return this.idResolver.buildCanonicalSelectionSnapshot(
       questionIndex,
       this.selectedOptionsMap,
@@ -921,19 +916,15 @@ export class SelectedOptionService {
     return this.answerEval.isMultiAnswerQuestion(questionIndex);
   }
 
-  commitSelections(
-    questionIndex: number,
-    selections: SelectedOption[]
-  ): SelectedOption[] {
+  commitSelections(questionIndex: number, selections: SelectedOption[]): SelectedOption[] {
     // Always normalize to numeric key
     const idx = Number(questionIndex);
     if (!Number.isFinite(idx) || idx < 0) return [];
 
     // Canonicalize and deep clone the selections
-    const canonicalSelections = this.idResolver.canonicalizeSelectionsForQuestion(
-      idx,
-      selections
-    ).map((sel) => ({ ...sel }));  // ensure new object identity
+    const canonicalSelections = this.idResolver
+      .canonicalizeSelectionsForQuestion(idx, selections)
+      .map((sel) => ({ ...sel })); // ensure new object identity
 
     // Do NOT force highlight/showIcon here â€” let calling logic or sync methods decide
     // based on multi-answer rules (e.g. only highlight the last selection).
@@ -959,7 +950,7 @@ export class SelectedOptionService {
     const ids = canonicalSelections
       .map((o) => o.optionId)
       .filter((id) => id !== null && id !== undefined)
-      .map(id => typeof id === 'string' ? parseInt(id, 10) : id as number);
+      .map((id) => (typeof id === 'string' ? parseInt(id, 10) : (id as number)));
 
     this.quizService.updateUserAnswer(idx, ids);
 
@@ -967,12 +958,12 @@ export class SelectedOptionService {
     // Use canonicalSelections (the processed final state), not the input
     if (canonicalSelections.length > 0) {
       const rawSelections = canonicalSelections
-        .filter(s => s)
-        .map(s => ({
+        .filter((s) => s)
+        .map((s) => ({
           optionId: typeof s.optionId === 'number' ? s.optionId : -1,
           text: s.text || ''
         }))
-        .filter(s => s.optionId >= 0 || s.text);
+        .filter((s) => s.optionId >= 0 || s.text);
 
       this.rawSelectionsMap.set(idx, rawSelections);
     } else {
@@ -983,10 +974,7 @@ export class SelectedOptionService {
     return canonicalSelections;
   }
 
-  private syncFeedbackForQuestion(
-    questionIndex: number,
-    selections: SelectedOption[]
-  ): void {
+  private syncFeedbackForQuestion(questionIndex: number, selections: SelectedOption[]): void {
     this.feedbackState.syncFeedbackForQuestion(
       questionIndex,
       selections,
@@ -996,8 +984,10 @@ export class SelectedOptionService {
   }
 
   public isQuestionAnswered(questionIndex: number): boolean {
-    return !!this.selectedOptionsMap.get(questionIndex)?.length
-      || !!this._refreshBackup.get(questionIndex)?.length;
+    return (
+      !!this.selectedOptionsMap.get(questionIndex)?.length ||
+      !!this._refreshBackup.get(questionIndex)?.length
+    );
   }
 
   setAnswered(isAnswered: boolean, force = false): void {
@@ -1080,10 +1070,7 @@ export class SelectedOptionService {
     this.isOptionSelectedSig.set(false);
   }
 
-  public resetOptionState(
-    questionIndex?: number,
-    optionsToDisplay?: Option[]
-  ): void {
+  public resetOptionState(questionIndex?: number, optionsToDisplay?: Option[]): void {
     try {
       if (typeof questionIndex === 'number') {
         const opts = this.selectedOptionsMap.get(questionIndex) ?? [];
@@ -1149,7 +1136,7 @@ export class SelectedOptionService {
 
       if (!isMultiSelect) {
         // Single â†’ deterministic on first selection
-        this.setAnswered(true);  // stream sees answered=true
+        this.setAnswered(true); // stream sees answered=true
         this.isOptionSelectedSig.set(true);
         this.nextButtonStateService.setNextButtonState(true);
         return;
@@ -1213,18 +1200,15 @@ export class SelectedOptionService {
   }
 
   public reapplySelectionForQuestion(option: Option, _index: number): void {
-    option.selected = true;  // mark as selected again
-    this.setAnswered(true);  // mark question as answered
+    option.selected = true; // mark as selected again
+    this.setAnswered(true); // mark question as answered
   }
 
   public storeQuestion(index: number, question: QuizQuestion): void {
     if (question) this._questionCache.set(index, question);
   }
 
-  public isQuestionComplete(
-    question: QuizQuestion,
-    selected: SelectedOption[]
-  ): boolean {
+  public isQuestionComplete(question: QuizQuestion, selected: SelectedOption[]): boolean {
     return this.answerEval.isQuestionComplete(question, selected);
   }
 
@@ -1235,11 +1219,7 @@ export class SelectedOptionService {
     return this.answerEval.isQuestionResolvedCorrectly(question, selected);
   }
 
-  public getResolutionStatus(
-    question: QuizQuestion,
-    selected: Option[],
-    strict: boolean = false
-  ) {
+  public getResolutionStatus(question: QuizQuestion, selected: Option[], strict: boolean = false) {
     return this.answerEval.getResolutionStatus(question, selected, strict);
   }
 
@@ -1277,7 +1257,10 @@ export class SelectedOptionService {
       localStorage.removeItem(`quizState_${quizId}`);
       localStorage.removeItem(`selectedOptions_${quizId}`);
     } catch (err: unknown) {
-      console.error('SelectedOptionService.clearAllSelectionsForQuiz localStorage cleanup failed:', err);
+      console.error(
+        'SelectedOptionService.clearAllSelectionsForQuiz localStorage cleanup failed:',
+        err
+      );
     }
   }
 }

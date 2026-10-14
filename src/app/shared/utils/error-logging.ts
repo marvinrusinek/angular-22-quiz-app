@@ -22,7 +22,9 @@ export class GlobalErrorHandler implements ErrorHandler {
   handleError(error: unknown): void {
     try {
       console.error('[GlobalError]', error);
-    } catch { /* a handler must never throw */ }
+    } catch {
+      /* a handler must never throw */
+    }
   }
 }
 
@@ -31,19 +33,31 @@ export function installGlobalErrorLogging(): void {
   if (typeof window === 'undefined') return;
   try {
     window.addEventListener('unhandledrejection', (e: PromiseRejectionEvent) => {
-      try { console.error('[unhandledrejection]', e?.reason); } catch { /* never throw */ }
+      try {
+        console.error('[unhandledrejection]', e?.reason);
+      } catch {
+        /* never throw */
+      }
     });
     window.addEventListener('error', (e: ErrorEvent) => {
-      try { console.error('[window.error]', e?.error ?? e?.message); } catch { /* never throw */ }
+      try {
+        console.error('[window.error]', e?.error ?? e?.message);
+      } catch {
+        /* never throw */
+      }
     });
-  } catch { /* never throw from install */ }
+  } catch {
+    /* never throw from install */
+  }
 }
 
 /** Log a caught-but-recovered error that matters in production too. Never throws. */
 export function reportError(context: string, err: unknown): void {
   try {
     console.error(`[recovered] ${context}`, err);
-  } catch { /* never throw from the logger */ }
+  } catch {
+    /* never throw from the logger */
+  }
 }
 
 /**
@@ -56,5 +70,7 @@ export function swallow(context: string, err: unknown): void {
     if (isDevMode() || (globalThis as any).__swallowVerbose) {
       console.debug(`[swallowed] ${context}`, err);
     }
-  } catch { /* never throw from the logger */ }
+  } catch {
+    /* never throw from the logger */
+  }
 }

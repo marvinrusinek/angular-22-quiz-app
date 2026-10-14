@@ -1,7 +1,6 @@
-﻿import { forwardRef, inject, Service, Injector } from '@angular/core';
+import { forwardRef, inject, Service, Injector } from '@angular/core';
 
 import { Option, QuestionType, QuizQuestion, SelectedOption } from '@shared/models';
-
 
 import { QUESTION_ROUTE_REGEX } from '@shared/constants/route-patterns';
 import { pinAllOfTheAboveLast, pinnedIndex1Based } from '@shared/utils/all-of-the-above';
@@ -12,7 +11,10 @@ import { ExplanationTextService } from '@shared/services/features/explanation/ex
 import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
-import { selectedVerdictFor, verdictStateForDisplayIndex } from '@shared/services/features/verdict/authorized-correctness';
+import {
+  selectedVerdictFor,
+  verdictStateForDisplayIndex
+} from '@shared/services/features/verdict/authorized-correctness';
 
 @Service()
 export class FeedbackService {
@@ -26,11 +28,10 @@ export class FeedbackService {
   private readonly injector = inject(Injector);
   private readonly selectedOptionService = inject(SelectedOptionService);
 
-  public generateFeedbackForOptions(
-    _correctOptions: Option[],
-    optionsToDisplay: Option[]
-  ): string {
-    const validOptionsToDisplay = (optionsToDisplay || []).filter(opt => opt && typeof opt === 'object');
+  public generateFeedbackForOptions(_correctOptions: Option[], optionsToDisplay: Option[]): string {
+    const validOptionsToDisplay = (optionsToDisplay || []).filter(
+      (opt) => opt && typeof opt === 'object'
+    );
 
     if (validOptionsToDisplay.length === 0) return 'Feedback unavailable.';
 
@@ -61,23 +62,35 @@ export class FeedbackService {
 
     // Resolve the canonical question the user is actually on (callers may pass a
     // stale `question` object) so feedback option numbers reflect it.
-    const { resolvedQuestion, resolvedIdx } = this.resolveCanonicalQuestion(question, optionsToDisplay, quizSvc);
+    const { resolvedQuestion, resolvedIdx } = this.resolveCanonicalQuestion(
+      question,
+      optionsToDisplay,
+      quizSvc
+    );
 
-    const idxForLookup = resolvedIdx >= 0
-      ? resolvedIdx
-      : (typeof displayIndex === 'number' && displayIndex >= 0
-        ? displayIndex
-        : (typeof currentIndex === 'number' ? currentIndex : undefined));
+    const idxForLookup =
+      resolvedIdx >= 0
+        ? resolvedIdx
+        : typeof displayIndex === 'number' && displayIndex >= 0
+          ? displayIndex
+          : typeof currentIndex === 'number'
+            ? currentIndex
+            : undefined;
 
-    let correctIndices = this.computeCorrectIndices(question, resolvedQuestion, idxForLookup, quizSvc);
+    let correctIndices = this.computeCorrectIndices(
+      question,
+      resolvedQuestion,
+      idxForLookup,
+      quizSvc
+    );
 
-    const optionsRaw = optionsToDisplay || (question.options || []);
+    const optionsRaw = optionsToDisplay || question.options || [];
 
     // Prefer the resolved question's options as the truth source (optionsToDisplay
     // can carry stale `correct` flags from a prior render), then cross-validate.
-    const truthOptions: Option[] = (resolvedQuestion?.options?.length
-      ? resolvedQuestion.options
-      : optionsRaw) as Option[];
+    const truthOptions: Option[] = (
+      resolvedQuestion?.options?.length ? resolvedQuestion.options : optionsRaw
+    ) as Option[];
     correctIndices = this.crossValidateCorrectIndices(correctIndices, truthOptions);
 
     // ── UNKNOWN IS NOT WRONG ─────────────────────────────────────────
@@ -109,7 +122,13 @@ export class FeedbackService {
       // question — it fell through to this same blank return.
       const isMultiForPartial =
         question.type === QuestionType.MultipleAnswer || (question as any).multipleAnswer === true;
-      if (isMultiForPartial && selected && selected.length > 0 && typeof idxForLookup === 'number' && quizSvc) {
+      if (
+        isMultiForPartial &&
+        selected &&
+        selected.length > 0 &&
+        typeof idxForLookup === 'number' &&
+        quizSvc
+      ) {
         const verdicts = this.injector.get(QuestionVerdictService, null);
         const state = verdictStateForDisplayIndex(quizSvc, idxForLookup, verdicts);
         if (
@@ -129,13 +148,13 @@ export class FeedbackService {
           // actually about; ask the verdict for THAT option specifically, via
           // the same per-option lookup `selection-message.service.ts` already
           // uses for its own (correct) single-answer lock decision.
-          const targetVerdict = targetOption?.text != null
-            ? selectedVerdictFor(state, targetOption.text)
-            : undefined;
+          const targetVerdict =
+            targetOption?.text != null ? selectedVerdictFor(state, targetOption.text) : undefined;
           if (targetVerdict === false) return 'Not this one, try again!';
-          const remainingText = state.remainingCorrectCount === 1
-            ? '1 more correct answer'
-            : `${state.remainingCorrectCount} more correct answers`;
+          const remainingText =
+            state.remainingCorrectCount === 1
+              ? '1 more correct answer'
+              : `${state.remainingCorrectCount} more correct answers`;
           return `That's correct! Please select ${remainingText}.`;
         }
       }
@@ -167,24 +186,36 @@ export class FeedbackService {
     }
 
     const { numCorrectSelected, numIncorrectSelected, dedupedSelected } =
-      this.countSelectedCorrectness(selected, optionsRaw, correctIndices, resolvedQuestion, quizSvc, isMultiMode, targetOption, idxForLookup);
+      this.countSelectedCorrectness(
+        selected,
+        optionsRaw,
+        correctIndices,
+        resolvedQuestion,
+        quizSvc,
+        isMultiMode,
+        targetOption,
+        idxForLookup
+      );
 
     const totalCorrectRequired = correctIndices.length > 0 ? correctIndices.length : 1;
     // Resolved ONLY when every correct option is selected AND no incorrect option
     // is selected. Selecting any wrong option must yield "Not this one, try
     // again!", never the win — even if all correct options are also selected (or
     // a transient all-selected render inflates the correct count).
-    const isMultiResolved = isMultiMode
-      && numCorrectSelected >= totalCorrectRequired
-      && numIncorrectSelected === 0;
+    const isMultiResolved =
+      isMultiMode && numCorrectSelected >= totalCorrectRequired && numIncorrectSelected === 0;
     if (isMultiResolved) return this.buildCorrectFeedback(correctIndices);
 
     if (!selected || dedupedSelected.length === 0) return '';
 
     if (isMultiMode) {
       return this.buildMultipleAnswerFeedback(
-        targetOption, optionsRaw, correctIndices,
-        numCorrectSelected, numIncorrectSelected, totalCorrectRequired
+        targetOption,
+        optionsRaw,
+        correctIndices,
+        numCorrectSelected,
+        numIncorrectSelected,
+        totalCorrectRequired
       );
     }
     return this.buildSingleAnswerFeedback(numCorrectSelected, numIncorrectSelected, correctIndices);
@@ -211,14 +242,20 @@ export class FeedbackService {
         // mode, so the correct/incorrect text sets below would be for a different
         // question — making an incorrect pick go unrecognized and firing a
         // premature "You're right!". Resolve the displayed question instead.
-        const urlQ: any = quizSvcEarly?.getDisplayedQuestion?.(urlIdx)
-          ?? (quizSvcEarly?.questions ?? [])[urlIdx];
+        const urlQ: any =
+          quizSvcEarly?.getDisplayedQuestion?.(urlIdx) ?? (quizSvcEarly?.questions ?? [])[urlIdx];
         const urlOpts: any[] = urlQ?.options ?? [];
         if (urlOpts.length > 0) {
-          const { correctIdxsURL, correctTextsURL, allTextsURL } = this.buildUrlCorrectSets(urlOpts);
+          const { correctIdxsURL, correctTextsURL, allTextsURL } =
+            this.buildUrlCorrectSets(urlOpts);
 
           if (correctTextsURL.size > 0) {
-            const candidateTexts = this.gatherUrlCandidateTexts(selected, targetOption, urlIdx, quizSvcEarly);
+            const candidateTexts = this.gatherUrlCandidateTexts(
+              selected,
+              targetOption,
+              urlIdx,
+              quizSvcEarly
+            );
 
             const isMultiURL = correctTextsURL.size > 1;
             let candidateCorrect = 0;
@@ -232,8 +269,8 @@ export class FeedbackService {
             const noIncorrectChosen = candidateIncorrect === 0;
 
             const shouldShortCircuit = isMultiURL
-              ? (allCorrectChosen && noIncorrectChosen)
-              : (candidateCorrect >= 1);
+              ? allCorrectChosen && noIncorrectChosen
+              : candidateCorrect >= 1;
 
             if (shouldShortCircuit) {
               return this.buildCorrectFeedback(correctIdxsURL);
@@ -241,12 +278,18 @@ export class FeedbackService {
           }
         }
       }
-    } catch { /* non-browser env */ }
+    } catch {
+      /* non-browser env */
+    }
     return null;
   }
 
   /** Build the URL question's correct-index set, correct-text set, and all-text set. Extracted verbatim. */
-  private buildUrlCorrectSets(urlOpts: any[]): { correctIdxsURL: number[]; correctTextsURL: Set<string>; allTextsURL: Set<string> } {
+  private buildUrlCorrectSets(urlOpts: any[]): {
+    correctIdxsURL: number[];
+    correctTextsURL: Set<string>;
+    allTextsURL: Set<string>;
+  } {
     const correctIdxsURL: number[] = [];
     const correctTextsURL = new Set<string>();
     const allTextsURL = new Set<string>();
@@ -282,11 +325,14 @@ export class FeedbackService {
     try {
       const liveSelections =
         quizSvcEarly?.selectedOptionService?.getSelectedOptionsForQuestion?.(urlIdx) ??
-        this.selectedOptionService?.getSelectedOptionsForQuestion?.(urlIdx) ?? [];
+        this.selectedOptionService?.getSelectedOptionsForQuestion?.(urlIdx) ??
+        [];
       for (const s of liveSelections) {
         if (s?.text) candidateTexts.add(norm(s.text));
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     // Cross-visit union (live bindings ∪ first-visit snapshot): the live
     // selection service resets on navigation, so on a COMPLETING click made on
     // REVISIT it would miss the first-visit correct pick and the win message
@@ -294,7 +340,9 @@ export class FeedbackService {
     try {
       const uiTexts = this.selectedOptionService?.uiSelectedTextsForQuestion?.(urlIdx);
       if (uiTexts) for (const t of uiTexts) candidateTexts.add(norm(t));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return candidateTexts;
   }
 
@@ -309,7 +357,9 @@ export class FeedbackService {
     quizSvc: any
   ): { resolvedQuestion: QuizQuestion; resolvedIdx: number } {
     let resolvedQuestion: QuizQuestion = question ?? {
-      questionText: '', options: optionsToDisplay ?? [], explanation: '',
+      questionText: '',
+      options: optionsToDisplay ?? [],
+      explanation: '',
       type: QuestionType.SingleAnswer
     };
     let resolvedIdx = -1;
@@ -330,15 +380,15 @@ export class FeedbackService {
             resolvedQuestion = displayedQ;
           }
         }
-      } catch { /* non-browser env */ }
+      } catch {
+        /* non-browser env */
+      }
 
       // Fallback: text-match the passed question (legacy behaviour).
       if (resolvedIdx < 0) {
         const passedText = norm(question?.questionText);
         if (passedText && allQs.length) {
-          resolvedIdx = allQs.findIndex(
-            (q) => norm(q?.questionText) === passedText
-          );
+          resolvedIdx = allQs.findIndex((q) => norm(q?.questionText) === passedText);
           if (resolvedIdx >= 0 && allQs[resolvedIdx]?.options?.length) {
             resolvedQuestion = allQs[resolvedIdx];
           }
@@ -376,14 +426,10 @@ export class FeedbackService {
       const qText = norm(question.questionText);
       if (qText) {
         const allQuestions = (quizSvc as any)._questions || quizSvc.questions || [];
-        const sourceQ = allQuestions.find(
-          (q: QuizQuestion) => norm(q.questionText) === qText
-        );
+        const sourceQ = allQuestions.find((q: QuizQuestion) => norm(q.questionText) === qText);
         if (sourceQ?.options) {
           const foundIndices = sourceQ.options
-            .map((o: Option, i: number) =>
-              isOptionCorrect(o) ? i + 1 : null
-            )
+            .map((o: Option, i: number) => (isOptionCorrect(o) ? i + 1 : null))
             .filter((n: number | null): n is number => n !== null);
           if (foundIndices.length > 0) correctIndices = foundIndices;
         }
@@ -400,13 +446,14 @@ export class FeedbackService {
   private crossValidateCorrectIndices(correctIndices: number[], truthOptions: Option[]): number[] {
     if (truthOptions.length > 0) {
       const visualCorrect = truthOptions
-        .map((o: Option, i: number) => isOptionCorrect(o) ? i + 1 : null)
+        .map((o: Option, i: number) => (isOptionCorrect(o) ? i + 1 : null))
         .filter((n: number | null): n is number => n !== null);
 
       if (visualCorrect.length > 0) {
         const sortedCalc = [...correctIndices].sort((a, b) => a - b);
         const sortedVisual = [...visualCorrect].sort((a, b) => a - b);
-        const match = sortedCalc.length === sortedVisual.length &&
+        const match =
+          sortedCalc.length === sortedVisual.length &&
           sortedCalc.every((n, i) => n === sortedVisual[i]);
 
         if (!match) return visualCorrect;
@@ -431,14 +478,25 @@ export class FeedbackService {
     displayIndex?: number
   ): { numCorrectSelected: number; numIncorrectSelected: number; dedupedSelected: any[] } {
     const dedupedSelected = this.dedupeSelected(selected);
-    const canonicalOptionsForMatch = this.resolveCanonicalOptionsForMatch(quizSvc, resolvedQuestion);
-    let { numCorrectSelected, numIncorrectSelected } =
-      this.evaluateSelectionCounts(dedupedSelected, optionsRaw, correctIndices, canonicalOptionsForMatch);
+    const canonicalOptionsForMatch = this.resolveCanonicalOptionsForMatch(
+      quizSvc,
+      resolvedQuestion
+    );
+    let { numCorrectSelected, numIncorrectSelected } = this.evaluateSelectionCounts(
+      dedupedSelected,
+      optionsRaw,
+      correctIndices,
+      canonicalOptionsForMatch
+    );
     if (isMultiMode && optionsRaw.length > 0) {
-      ({ numCorrectSelected, numIncorrectSelected } =
-        this.crossCheckMultiCounts(
-          optionsRaw, targetOption, numCorrectSelected, numIncorrectSelected, correctIndices, displayIndex
-        ));
+      ({ numCorrectSelected, numIncorrectSelected } = this.crossCheckMultiCounts(
+        optionsRaw,
+        targetOption,
+        numCorrectSelected,
+        numIncorrectSelected,
+        correctIndices,
+        displayIndex
+      ));
     }
 
     // ── THE AUTHORITATIVE COUNT, LAST WORD ───────────────────────────
@@ -474,7 +532,9 @@ export class FeedbackService {
     // unavailable `authoritativeSelectionCounts` returns null and they stand
     // unchanged.
     const authoritative = this.authoritativeSelectionCounts(
-      optionsRaw, correctIndices, displayIndex
+      optionsRaw,
+      correctIndices,
+      displayIndex
     );
     if (authoritative) {
       numCorrectSelected = authoritative.correct;
@@ -552,12 +612,15 @@ export class FeedbackService {
         // wrong (or a correct pick reads as incorrect).
         const displayedQ: any = quizSvc?.getDisplayedQuestion?.(urlIdx);
         const allQs: any[] = quizSvc?.questions ?? [];
-        const srcOpts: any[] = (displayedQ?.options?.length ? displayedQ.options : allQs[urlIdx]?.options) ?? [];
+        const srcOpts: any[] =
+          (displayedQ?.options?.length ? displayedQ.options : allQs[urlIdx]?.options) ?? [];
         if (urlIdx >= 0 && srcOpts.length) {
           canonicalOptionsForMatch = srcOpts as Option[];
         }
       }
-    } catch { /* non-browser env */ }
+    } catch {
+      /* non-browser env */
+    }
     if (canonicalOptionsForMatch.length === 0) {
       canonicalOptionsForMatch = (resolvedQuestion?.options ?? []) as Option[];
     }
@@ -580,10 +643,13 @@ export class FeedbackService {
     for (const sel of dedupedSelected) {
       let visualIdx = sel.displayIndex;
       if (visualIdx === undefined || visualIdx < 0) {
-        visualIdx = optionsRaw.findIndex((o: Option) =>
-          o === sel ||
-          (o.optionId != null && sel.optionId != null && String(o.optionId) === String(sel.optionId)) ||
-          (o.text && sel.text && String(o.text).trim() === String(sel.text).trim())
+        visualIdx = optionsRaw.findIndex(
+          (o: Option) =>
+            o === sel ||
+            (o.optionId != null &&
+              sel.optionId != null &&
+              String(o.optionId) === String(sel.optionId)) ||
+            (o.text && sel.text && String(o.text).trim() === String(sel.text).trim())
         );
       }
 
@@ -598,7 +664,8 @@ export class FeedbackService {
         if (match) canonicalCorrect = isOptionCorrect(match);
       }
 
-      const isCorrect = isOptionCorrect(sel) ||
+      const isCorrect =
+        isOptionCorrect(sel) ||
         (visualIdx >= 0 && correctIndices.includes(visualIdx + 1)) ||
         canonicalCorrect;
 
@@ -654,13 +721,14 @@ export class FeedbackService {
     // already relies on (bindings ∪ first-visit snapshot), and it is used a few
     // methods below for exactly this reason. Selection is the USER'S OWN
     // history, not answer-key material.
-    const uiSelected = displayIndex != null
-      ? (this.selectedOptionService?.uiSelectedTextsForQuestion?.(displayIndex) ?? null)
-      : null;
+    const uiSelected =
+      displayIndex != null
+        ? (this.selectedOptionService?.uiSelectedTextsForQuestion?.(displayIndex) ?? null)
+        : null;
 
     const isSelected = (option: Option): boolean =>
-      option.selected === true
-      || (!!uiSelected && !!option?.text && uiSelected.has(norm(option.text)));
+      option.selected === true ||
+      (!!uiSelected && !!option?.text && uiSelected.has(norm(option.text)));
 
     let rawCorrectSelected = 0;
     let rawIncorrectSelected = 0;
@@ -675,20 +743,33 @@ export class FeedbackService {
     }
 
     const targetIdx = targetOption
-      ? optionsRaw.findIndex(o =>
-          o === targetOption ||
-          (o.optionId != null && targetOption.optionId != null
-            && String(o.optionId) === String(targetOption.optionId)) ||
-          (o.text && targetOption.text
-            && String(o.text).trim() === String(targetOption.text).trim()))
+      ? optionsRaw.findIndex(
+          (o) =>
+            o === targetOption ||
+            (o.optionId != null &&
+              targetOption.optionId != null &&
+              String(o.optionId) === String(targetOption.optionId)) ||
+            (o.text &&
+              targetOption.text &&
+              String(o.text).trim() === String(targetOption.text).trim())
+        )
       : -1;
 
-    if (targetOption && targetOption.selected
-        && (targetIdx >= 0 ? isCorrectAt(targetOption, targetIdx) : isOptionCorrect(targetOption))) {
-      const alreadyCounted = optionsRaw.some((o, i) =>
-        o.selected && isCorrectAt(o, i) &&
-        ((o.text && targetOption.text && String(o.text).trim() === String(targetOption.text).trim()) ||
-          (o.optionId != null && targetOption.optionId != null && String(o.optionId) === String(targetOption.optionId)))
+    if (
+      targetOption &&
+      targetOption.selected &&
+      (targetIdx >= 0 ? isCorrectAt(targetOption, targetIdx) : isOptionCorrect(targetOption))
+    ) {
+      const alreadyCounted = optionsRaw.some(
+        (o, i) =>
+          o.selected &&
+          isCorrectAt(o, i) &&
+          ((o.text &&
+            targetOption.text &&
+            String(o.text).trim() === String(targetOption.text).trim()) ||
+            (o.optionId != null &&
+              targetOption.optionId != null &&
+              String(o.optionId) === String(targetOption.optionId)))
       );
       if (!alreadyCounted) rawCorrectSelected++;
     }
@@ -718,8 +799,7 @@ export class FeedbackService {
     try {
       const quizSvc: any = this.injector.get(QuizService, null);
       const idx = quizSvc?.currentQuestionIndex;
-      const displayOpts: Option[] =
-        (quizSvc?.getDisplayedQuestion?.(idx)?.options) ?? [];
+      const displayOpts: Option[] = quizSvc?.getDisplayedQuestion?.(idx)?.options ?? [];
       if (!displayOpts.length) return indices;
       return indices.map((n) => pinnedIndex1Based(displayOpts, n, (o: any) => o?.text));
     } catch {
@@ -735,21 +815,28 @@ export class FeedbackService {
   /** "That's correct! Please select N more correct answer(s)." Extracted verbatim. */
   private buildPartialFeedback(totalCorrectRequired: number, numCorrectSelected: number): string {
     const remainingTotal = Math.max(totalCorrectRequired - numCorrectSelected, 0);
-    const remainingText = remainingTotal === 1
-      ? '1 more correct answer'
-      : `${remainingTotal} more correct answers`;
+    const remainingText =
+      remainingTotal === 1 ? '1 more correct answer' : `${remainingTotal} more correct answers`;
     return `That's correct! Please select ${remainingText}.`;
   }
 
   /** Is the just-clicked target option correct (by flag or by matched position)? Extracted verbatim. */
-  private isTargetOptionCorrect(targetOption: Option, optionsRaw: Option[], correctIndices: number[]): boolean {
-    const matchIdx = optionsRaw.findIndex(o =>
-      o === targetOption ||
-      (o.optionId != null && targetOption.optionId != null && String(o.optionId) === String(targetOption.optionId)) ||
-      (o.text && targetOption.text && String(o.text).trim() === String(targetOption.text).trim())
+  private isTargetOptionCorrect(
+    targetOption: Option,
+    optionsRaw: Option[],
+    correctIndices: number[]
+  ): boolean {
+    const matchIdx = optionsRaw.findIndex(
+      (o) =>
+        o === targetOption ||
+        (o.optionId != null &&
+          targetOption.optionId != null &&
+          String(o.optionId) === String(targetOption.optionId)) ||
+        (o.text && targetOption.text && String(o.text).trim() === String(targetOption.text).trim())
     );
-    return isOptionCorrect(targetOption) ||
-      (matchIdx >= 0 && correctIndices.includes(matchIdx + 1));
+    return (
+      isOptionCorrect(targetOption) || (matchIdx >= 0 && correctIndices.includes(matchIdx + 1))
+    );
   }
 
   /**
@@ -787,17 +874,18 @@ export class FeedbackService {
   }
 
   /** Single-answer message: one correct with no incorrect → correct, else "not this one". Extracted verbatim. */
-  private buildSingleAnswerFeedback(numCorrectSelected: number, numIncorrectSelected: number, correctIndices: number[]): string {
+  private buildSingleAnswerFeedback(
+    numCorrectSelected: number,
+    numIncorrectSelected: number,
+    correctIndices: number[]
+  ): string {
     if (numCorrectSelected >= 1 && numIncorrectSelected === 0) {
       return this.buildCorrectFeedback(correctIndices);
     }
     return 'Not this one, try again!';
   }
 
-  public setCorrectMessage(
-    optionsToDisplay?: Option[],
-    question?: QuizQuestion
-  ): string {
+  public setCorrectMessage(optionsToDisplay?: Option[], question?: QuizQuestion): string {
     if (!optionsToDisplay || optionsToDisplay.length === 0) {
       return 'Feedback unavailable.';
     }
@@ -810,7 +898,7 @@ export class FeedbackService {
       const allQs: QuizQuestion[] = quizSvc?.questions ?? [];
       const passedText = norm(question?.questionText);
       if (passedText && allQs.length) {
-        const idx = allQs.findIndex(q => norm(q?.questionText) === passedText);
+        const idx = allQs.findIndex((q) => norm(q?.questionText) === passedText);
         if (idx >= 0 && allQs[idx]?.options?.length) canonicalQ = allQs[idx];
       }
     } catch {}
@@ -818,19 +906,28 @@ export class FeedbackService {
     // message matches what the user sees. pinAllOfTheAboveLast is a no-op when
     // there's no AOTA, so non-AOTA questions are unaffected.
     const directFromCanonical: number[] = [];
-    for (const [i, o] of pinAllOfTheAboveLast(canonicalQ?.options ?? [], (o) => o?.text).entries()) {
+    for (const [i, o] of pinAllOfTheAboveLast(
+      canonicalQ?.options ?? [],
+      (o) => o?.text
+    ).entries()) {
       if (isOptionCorrect(o)) directFromCanonical.push(i + 1);
     }
-    const indices = directFromCanonical.length > 0
-      ? directFromCanonical
-      : this.explanationTextService.getCorrectOptionIndices(question!, pinAllOfTheAboveLast(optionsToDisplay ?? [], (o) => o?.text), typeof currentIndex === 'number' ? currentIndex : undefined);
+    const indices =
+      directFromCanonical.length > 0
+        ? directFromCanonical
+        : this.explanationTextService.getCorrectOptionIndices(
+            question!,
+            pinAllOfTheAboveLast(optionsToDisplay ?? [], (o) => o?.text),
+            typeof currentIndex === 'number' ? currentIndex : undefined
+          );
     const deduped = Array.from(new Set(indices)).sort((a, b) => a - b);
     if (deduped.length === 0) return 'No correct options found.';
 
     const optionsText = deduped.length === 1 ? 'answer is Option' : 'answers are Options';
-    const optionStrings = deduped.length > 1
-      ? `${deduped.slice(0, -1).join(', ')}${deduped.length > 2 ? ',' : ''} and ${deduped.slice(-1)}`
-      : `${deduped[0]}`;
+    const optionStrings =
+      deduped.length > 1
+        ? `${deduped.slice(0, -1).join(', ')}${deduped.length > 2 ? ',' : ''} and ${deduped.slice(-1)}`
+        : `${deduped[0]}`;
 
     return `The correct ${optionsText} ${optionStrings}.`;
   }

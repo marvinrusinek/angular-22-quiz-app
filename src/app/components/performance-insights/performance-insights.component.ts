@@ -10,7 +10,7 @@ const SOURCE_META: Record<InsightSource, { name: string; basis: string }> = {
     name: 'Topic Quiz',
     basis: 'Instant feedback, retries allowed.'
   },
-  'interview': {
+  interview: {
     name: 'Interview Mode',
     basis: 'One submission, no feedback until the end.'
   },
@@ -85,13 +85,18 @@ export class PerformanceInsightsComponent {
       : all.slice(0, TOPICS_COLLAPSED_COUNT);
   });
 
-  protected readonly canToggleTopics = computed(() => this.topics().length > TOPICS_COLLAPSED_COUNT);
+  protected readonly canToggleTopics = computed(
+    () => this.topics().length > TOPICS_COLLAPSED_COUNT
+  );
 
   protected readonly strongest = computed(() => this.insights()?.strongest ?? []);
 
   /** Needs Review as WeakAreasService returned it; percentage rounded for display only. */
   protected readonly needsReview = computed(() =>
-    (this.insights()?.needsReview ?? []).map((t) => ({ ...t, percentage: Math.round(t.percentage) }))
+    (this.insights()?.needsReview ?? []).map((t) => ({
+      ...t,
+      percentage: Math.round(t.percentage)
+    }))
   );
 
   protected readonly hasInterview = computed(() => this.insights()?.interview != null);

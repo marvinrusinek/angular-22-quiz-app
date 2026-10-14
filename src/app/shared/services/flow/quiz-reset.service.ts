@@ -1,6 +1,12 @@
 import { Service, inject } from '@angular/core';
 
-import { SK_CORRECT_ANSWERS_COUNT, SK_SAVED_QUESTION_INDEX, SK_SELECTED_OPTIONS_MAP, SK_SHUFFLED_QUESTIONS, SK_USER_ANSWERS } from '@shared/constants/session-keys';
+import {
+  SK_CORRECT_ANSWERS_COUNT,
+  SK_SAVED_QUESTION_INDEX,
+  SK_SELECTED_OPTIONS_MAP,
+  SK_SHUFFLED_QUESTIONS,
+  SK_USER_ANSWERS
+} from '@shared/constants/session-keys';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
@@ -54,10 +60,7 @@ export class QuizResetService {
    * Applies post-navigation restart state. Caller passes totalQuestions
    * and a callback to invoke after the second microtask (for ViewChild work).
    */
-  applyPostRestartState(
-    totalQuestions: number,
-    postBindingCallback: () => void
-  ): void {
+  applyPostRestartState(totalQuestions: number, postBindingCallback: () => void): void {
     this.quizService.setCurrentQuestionIndex(0);
     this.quizService.updateBadgeText(1, totalQuestions);
 
@@ -86,7 +89,6 @@ export class QuizResetService {
     }, 0);
   }
 
-
   // ═══════════════════════════════════════════════════════════════
   // RESET QUIZ STATE (service-level resets for quiz start)
   // ═══════════════════════════════════════════════════════════════
@@ -105,7 +107,9 @@ export class QuizResetService {
       localStorage.removeItem('questionCorrectness');
       localStorage.removeItem(SK_SELECTED_OPTIONS_MAP);
       localStorage.removeItem(SK_USER_ANSWERS);
-    } catch (err: unknown) { swallow('quiz-reset.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-reset.service.ts', err);
+    }
 
     localStorage.removeItem(SK_SAVED_QUESTION_INDEX);
   }
@@ -178,7 +182,9 @@ export class QuizResetService {
       sessionStorage.removeItem('quizProgress');
       sessionStorage.removeItem('quizProgressQuizId');
       sessionStorage.removeItem('answeredQuestionIndices');
-    } catch (err: unknown) { swallow('quiz-reset.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-reset.service.ts', err);
+    }
 
     return true;
   }
@@ -201,7 +207,9 @@ export class QuizResetService {
 
     try {
       localStorage.setItem('lastQuizId', routeQuizId);
-    } catch (err: unknown) { swallow('quiz-reset.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-reset.service.ts', err);
+    }
   }
 
   resetForQuizSwitch(routeQuizId: string): void {
@@ -225,7 +233,9 @@ export class QuizResetService {
       localStorage.removeItem('quiz_progress_default');
       localStorage.setItem(SK_SAVED_QUESTION_INDEX, '0');
       sessionStorage.clear();
-    } catch (err: unknown) { swallow('quiz-reset.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-reset.service.ts', err);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -236,10 +246,7 @@ export class QuizResetService {
    * Performs all service-level resets for a quiz restart.
    * Returns navigation target and post-nav config for the component.
    */
-  performRestartServiceResets(
-    quizId: string,
-    totalQuestions: number
-  ): void {
+  performRestartServiceResets(quizId: string, totalQuestions: number): void {
     this.quizService.resetAll();
     this.quizService.resetScore();
 
@@ -301,7 +308,9 @@ export class QuizResetService {
 
     try {
       this.quizQuestionLoaderService?.questionToDisplaySig.set('');
-    } catch (err: unknown) { swallow('quiz-reset.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-reset.service.ts', err);
+    }
 
     this.quizStateService.setDisplayState({ mode: 'question', answered: false });
     this.quizStateService.setExplanationReady(false);
@@ -319,7 +328,11 @@ export class QuizResetService {
     // sessionStorage `sel_Q*` keys. Without this, an incorrectly-answered
     // Q2 leaves a feedback overlay that suppresses highlight on revisit
     // after Restart.
-    try { this.selectedOptionService.clearState(); } catch (err: unknown) { swallow('quiz-reset.service.ts', err); }
+    try {
+      this.selectedOptionService.clearState();
+    } catch (err: unknown) {
+      swallow('quiz-reset.service.ts', err);
+    }
 
     this.explanationTextService.resetExplanationState();
     this.explanationTextService.unlockExplanation();

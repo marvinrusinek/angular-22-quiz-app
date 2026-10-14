@@ -56,7 +56,7 @@ export class InterviewSessionReferenceStorage {
     try {
       present = sessionStorage.getItem(SK_INTERVIEW_SESSION_REF);
     } catch {
-      return null;   // storage unavailable
+      return null; // storage unavailable
     }
     if (present === null) return null;
 

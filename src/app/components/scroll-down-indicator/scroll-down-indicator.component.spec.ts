@@ -26,13 +26,15 @@ describe('ScrollDownIndicatorComponent', () => {
   const icon = () => btn()?.querySelector('i')?.textContent?.trim();
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [ScrollDownIndicatorComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [ScrollDownIndicatorComponent]
+    }).compileComponents();
     fixture = TestBed.createComponent(ScrollDownIndicatorComponent);
     component = fixture.componentInstance;
   });
 
   it('is hidden when the page does not scroll', () => {
-    setScroll(0, 700, 800);           // content shorter than viewport
+    setScroll(0, 700, 800); // content shorter than viewport
     component.onWindowScroll();
     fixture.detectChanges();
     expect(btn()).toBeNull();
@@ -50,7 +52,7 @@ describe('ScrollDownIndicatorComponent', () => {
   });
 
   it('flips to an up chevron with a back-to-top label at the bottom', () => {
-    setScroll(1200, 2000, 800);       // scrollY (1200) === scrollHeight-innerHeight
+    setScroll(1200, 2000, 800); // scrollY (1200) === scrollHeight-innerHeight
     component.onWindowScroll();
     fixture.detectChanges();
     expect(icon()).toBe('keyboard_arrow_up');
@@ -86,7 +88,7 @@ describe('ScrollDownIndicatorComponent', () => {
     fixture.detectChanges();
     expect(btn()!.classList.contains('scroll-indicator--bounce')).toBe(true);
 
-    component.onWindowScroll();        // a scroll counts as interaction
+    component.onWindowScroll(); // a scroll counts as interaction
     fixture.detectChanges();
     expect(btn()!.classList.contains('scroll-indicator--bounce')).toBe(false);
   });
@@ -97,7 +99,7 @@ describe('ScrollDownIndicatorComponent', () => {
     fixture.detectChanges();
     component.onWindowResize();
     fixture.detectChanges();
-    expect(component.hasInteracted()).toBe(false);   // bounce still eligible
+    expect(component.hasInteracted()).toBe(false); // bounce still eligible
     expect(btn()!.classList.contains('scroll-indicator--bounce')).toBe(true);
   });
 
@@ -109,13 +111,13 @@ describe('ScrollDownIndicatorComponent', () => {
     expect(spy).toHaveBeenCalledTimes(1);
     const arg = spy.mock.calls[0][0] as any;
     expect(arg.behavior).toBe('smooth');
-    expect(arg.top).toBeGreaterThan(0);            // downward
-    expect(arg.top).toBe(Math.round(800 * 0.85));  // ~a screenful
+    expect(arg.top).toBeGreaterThan(0); // downward
+    expect(arg.top).toBe(Math.round(800 * 0.85)); // ~a screenful
     spy.mockRestore();
   });
 
   it('click pages UP by a screenful when travelling up (symmetric)', () => {
-    setScroll(1200, 2000, 800);                    // at the bottom → up
+    setScroll(1200, 2000, 800); // at the bottom → up
     component.onWindowScroll();
     const spy = jest.spyOn(window, 'scrollBy').mockImplementation(() => {});
     component.onClick();

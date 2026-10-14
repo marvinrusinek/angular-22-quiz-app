@@ -13,7 +13,6 @@ type Host = QuizQuestionComponent;
  */
 @Service()
 export class QqcOrchResetService {
-
   async runResetQuestionStateBeforeNavigation(
     host: Host,
     options?: { preserveVisualState?: boolean; preserveExplanation?: boolean }
@@ -62,7 +61,8 @@ export class QqcOrchResetService {
       index,
       normalizeIndex: (idx: number) => host.normalizeIndex(idx),
       formattedByIndex: host._formattedByIndex,
-      clearSharedOptionForceDisable: () => host.sharedOptionComponent?.()?.clearForceDisableAllOptions?.(),
+      clearSharedOptionForceDisable: () =>
+        host.sharedOptionComponent?.()?.clearForceDisableAllOptions?.(),
       resolveFormatted: (idx: number, opts: any) => host.resolveFormatted(idx, opts)
     });
 
@@ -73,9 +73,7 @@ export class QqcOrchResetService {
 
     if (result.hasSelections) {
       host.optionsToDisplay.set(
-        host.resetManager.restoreSelectionsAndIcons(
-          result.i0, host.optionsToDisplay()
-        )
+        host.resetManager.restoreSelectionsAndIcons(result.i0, host.optionsToDisplay())
       );
       host.cdRef.markForCheck();
     }
@@ -98,7 +96,9 @@ export class QqcOrchResetService {
 
     try {
       host.questionForm?.enable({ emitEvent: false });
-    } catch (err: unknown) { swallow('qqc-orch-reset.service.ts questionForm.enable', err); }
+    } catch (err: unknown) {
+      swallow('qqc-orch-reset.service.ts questionForm.enable', err);
+    }
     queueMicrotask(() => host.emitPassiveNow(index));
     host.cdRef.markForCheck();
   }

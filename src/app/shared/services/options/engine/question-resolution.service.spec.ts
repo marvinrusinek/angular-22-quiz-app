@@ -35,11 +35,17 @@ describe('QuestionResolutionService — multiPerfect authority (over-highlight r
       isQuestionResolved: jest.fn().mockReturnValue(false),
       isMultiAnswerPerfect: jest.fn().mockReturnValue(false),
       questionCorrectness: new Map<number, boolean>(),
-      getQuestionsInDisplayOrder: jest.fn().mockReturnValue([
-        { questionText: 'Q0' }, { questionText: 'Q1' },
-        { questionText: 'Which of the following statements are true? Select all that apply.', type: 'multiple' },
-      ]),
-      questions: [],
+      getQuestionsInDisplayOrder: jest
+        .fn()
+        .mockReturnValue([
+          { questionText: 'Q0' },
+          { questionText: 'Q1' },
+          {
+            questionText: 'Which of the following statements are true? Select all that apply.',
+            type: 'multiple'
+          }
+        ]),
+      questions: []
     };
 
     TestBed.configureTestingModule({
@@ -48,16 +54,19 @@ describe('QuestionResolutionService — multiPerfect authority (over-highlight r
         { provide: QuizService, useValue: quizService },
         {
           provide: SelectedOptionService,
-          useValue: { getSelectedOptionsForQuestion: jest.fn().mockReturnValue([]) },
+          useValue: { getSelectedOptionsForQuestion: jest.fn().mockReturnValue([]) }
         },
         {
           provide: QuestionVerdictService,
           useValue: {
-            verdictFor: jest.fn().mockReturnValue(null),
-          },
+            verdictFor: jest.fn().mockReturnValue(null)
+          }
         },
-        { provide: TopicQuizTypeRegistry, useValue: { isMultiAnswer: jest.fn().mockReturnValue(true) } },
-      ],
+        {
+          provide: TopicQuizTypeRegistry,
+          useValue: { isMultiAnswer: jest.fn().mockReturnValue(true) }
+        }
+      ]
     });
 
     service = TestBed.inject(QuestionResolutionService);

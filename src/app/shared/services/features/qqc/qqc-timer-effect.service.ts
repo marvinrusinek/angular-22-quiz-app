@@ -4,7 +4,6 @@ import { filter, map, take, timeout } from 'rxjs/operators';
 
 import { Option, OptionBindings, QuestionType, QuizQuestion } from '@shared/models';
 
-
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { NextButtonStateService } from '@shared/services/state/next-button-state.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
@@ -82,7 +81,7 @@ export class QqcTimerEffectService {
       try {
         const stable = this.selectionMessageService.stableKey(opt, idx);
         addKeyVariant(stable);
-      } catch { }
+      } catch {}
     };
 
     const resolvedQuestion =
@@ -158,24 +157,28 @@ export class QqcTimerEffectService {
     }
   ): void {
     if (opts.revealFeedback) {
-      try { callbacks.revealFeedbackForAllOptions(canonicalOpts); } catch { }
+      try {
+        callbacks.revealFeedbackForAllOptions(canonicalOpts);
+      } catch {}
     }
 
-    try { this.selectedOptionService.lockQuestion(i0); } catch { }
+    try {
+      this.selectedOptionService.lockQuestion(i0);
+    } catch {}
 
     if (lockKeys.size) {
       try {
         this.selectedOptionService.lockMany(i0, Array.from(lockKeys));
-      } catch { }
+      } catch {}
     }
 
     try {
       callbacks.forceDisableSharedOption();
-    } catch { }
+    } catch {}
 
     try {
       callbacks.updateBindingsAndOptions(true);
-    } catch { }
+    } catch {}
   }
 
   /**
@@ -208,7 +211,8 @@ export class QqcTimerEffectService {
   } {
     const activeIndex = params.targetIndex ?? params.currentQuestionIndex ?? 0;
     const i0 = params.normalizeIndex(activeIndex);
-    const q = params.questions?.[i0] ??
+    const q =
+      params.questions?.[i0] ??
       (params.currentQuestionIndex === i0 ? params.currentQuestion : undefined);
 
     // Collect canonical snapshot and robust lock keys
@@ -222,13 +226,19 @@ export class QqcTimerEffectService {
     });
 
     // Reveal feedback, lock, and disable options
-    this.applyLocksAndDisableForQuestion(i0, canonicalOpts, lockKeys, {
-      revealFeedback: true
-    }, {
-      revealFeedbackForAllOptions: params.revealFeedbackForAllOptions,
-      forceDisableSharedOption: params.forceDisableSharedOption,
-      updateBindingsAndOptions: params.updateBindingsAndOptions
-    });
+    this.applyLocksAndDisableForQuestion(
+      i0,
+      canonicalOpts,
+      lockKeys,
+      {
+        revealFeedback: true
+      },
+      {
+        revealFeedbackForAllOptions: params.revealFeedbackForAllOptions,
+        forceDisableSharedOption: params.forceDisableSharedOption,
+        updateBindingsAndOptions: params.updateBindingsAndOptions
+      }
+    );
 
     // Announce completion to listeners
     try {
@@ -240,17 +250,18 @@ export class QqcTimerEffectService {
       this.selectionMessageService.forceNextButtonMessage(i0, {
         isLastQuestion
       });
-    } catch { }
+    } catch {}
 
     // Show explanation regardless of correctness
     let explanationToDisplay = '';
     try {
       this.explanationTextService.setShouldDisplayExplanation(true, { force: true });
 
-      const cached = params.formattedByIndex.get(i0)
-        ?? this.explanationTextService.fetByIndex?.get(i0)
-        ?? this.explanationTextService.formattedExplanations?.[i0]?.explanation
-        ?? '';
+      const cached =
+        params.formattedByIndex.get(i0) ??
+        this.explanationTextService.fetByIndex?.get(i0) ??
+        this.explanationTextService.formattedExplanations?.[i0]?.explanation ??
+        '';
 
       // ── TIMEOUT FET BODY IS AUTHORIZED, NOT LOCAL ────────────────
       //
@@ -286,13 +297,20 @@ export class QqcTimerEffectService {
 
       // If no cached FET, resolve asynchronously
       if (!hasFet) {
-        const compose = () => params.resolveFormatted(i0).then(formatted => {
-          if (formatted) {
-            params.setExplanationFor(i0, formatted);
-            this.explanationTextService.setExplanationText(formatted, { index: i0, force: true });
-            params.markForCheck();
-          }
-        }).catch(() => {});
+        const compose = () =>
+          params
+            .resolveFormatted(i0)
+            .then((formatted) => {
+              if (formatted) {
+                params.setExplanationFor(i0, formatted);
+                this.explanationTextService.setExplanationText(formatted, {
+                  index: i0,
+                  force: true
+                });
+                params.markForCheck();
+              }
+            })
+            .catch(() => {});
 
         compose();
 
@@ -308,20 +326,22 @@ export class QqcTimerEffectService {
         // One shot, per question, dropped when it fires. Recomposing after the
         // verdict is idempotent when the first attempt already succeeded.
         const quizId = (this.quizService as any)?.quizId as string | undefined;
-        const questionText = (this.quizService as any)
-          ?.getQuestionsInDisplayOrder?.()?.[i0]?.questionText as string | undefined;
+        const questionText = (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[i0]
+          ?.questionText as string | undefined;
 
         if (quizId && questionText) {
           this.verdicts.terminalVerdicts$
             .pipe(
-              filter((arrival) => arrival.quizId === quizId
-                && norm(arrival.questionText) === norm(questionText)),
+              filter(
+                (arrival) =>
+                  arrival.quizId === quizId && norm(arrival.questionText) === norm(questionText)
+              ),
               take(1)
             )
             .subscribe(() => compose());
         }
       }
-    } catch { }
+    } catch {}
 
     // Allow navigation to proceed
     this.nextButtonStateService.setNextButtonState(true);
@@ -329,7 +349,9 @@ export class QqcTimerEffectService {
     this.quizStateService.setAnswerSelected(true);
 
     // Defensive stop
-    try { this.timerService.stopTimer(undefined, { force: true }); } catch { }
+    try {
+      this.timerService.stopTimer(undefined, { force: true });
+    } catch {}
 
     params.markForCheck();
 
@@ -374,23 +396,29 @@ export class QqcTimerEffectService {
       currentQuestion: params.currentQuestion
     });
 
-    this.applyLocksAndDisableForQuestion(i0, canonicalOpts, lockKeys, {
-      revealFeedback: params.reason === 'timeout'
-    }, {
-      revealFeedbackForAllOptions: params.revealFeedbackForAllOptions,
-      forceDisableSharedOption: params.forceDisableSharedOption,
-      updateBindingsAndOptions: params.updateBindingsAndOptions
-    });
+    this.applyLocksAndDisableForQuestion(
+      i0,
+      canonicalOpts,
+      lockKeys,
+      {
+        revealFeedback: params.reason === 'timeout'
+      },
+      {
+        revealFeedbackForAllOptions: params.revealFeedbackForAllOptions,
+        forceDisableSharedOption: params.forceDisableSharedOption,
+        updateBindingsAndOptions: params.updateBindingsAndOptions
+      }
+    );
 
     if (params.reason !== 'timeout') {
       try {
         this.selectionMessageService.releaseBaseline(params.currentQuestionIndex);
-      } catch { }
+      } catch {}
     }
 
     params.markForCheck();
 
-    return true;  // timerStoppedForQuestion = true
+    return true; // timerStoppedForQuestion = true
   }
 
   /**
@@ -404,7 +432,9 @@ export class QqcTimerEffectService {
     const idx = this.quizService.getCurrentQuestionIndex();
 
     // Canonical (truth for `correct`)
-    const canonical = (this.quizService.questions?.[idx]?.options ?? []).map((o: Option) => ({ ...o }));
+    const canonical = (this.quizService.questions?.[idx]?.options ?? []).map((o: Option) => ({
+      ...o
+    }));
     // UI (truth for `selected`, possibly a different array)
     const ui = (params.optionsToDisplay ?? []).map((o: Option) => ({ ...o }));
 
@@ -413,11 +443,15 @@ export class QqcTimerEffectService {
 
     // Defer one macrotask so any async CD/pipes settle
     setTimeout(() => {
-      const totalCorrect = snapshot.filter(o => !!(o as any).correct).length;
-      const selectedCorrect = snapshot.filter(o => !!(o as any).correct && !!(o as any).selected).length;
+      const totalCorrect = snapshot.filter((o) => !!(o as any).correct).length;
+      const selectedCorrect = snapshot.filter(
+        (o) => !!(o as any).correct && !!(o as any).selected
+      ).length;
 
       if (totalCorrect > 0 && selectedCorrect === totalCorrect) {
-        try { this.soundService?.play('correct'); } catch { }
+        try {
+          this.soundService?.play('correct');
+        } catch {}
 
         this.timerService.attemptStopTimerForQuestion({
           questionIndex: idx,
@@ -444,7 +478,9 @@ export class QqcTimerEffectService {
     // Only "completed" may stop due to correctness
     if (reason === 'completed' && !lastAllCorrect) return false;
 
-    try { this.timerService.stopTimer?.(undefined, { force: true }); } catch { }
+    try {
+      this.timerService.stopTimer?.(undefined, { force: true });
+    } catch {}
     return true; // timerStoppedForQuestion = true
   }
 
@@ -476,14 +512,17 @@ export class QqcTimerEffectService {
       const out = await params.updateExplanationText(i0);
       let text = (out ?? '').toString().trim();
 
-      if ((!text || text === 'No explanation available for this question.') &&
-        this.explanationTextService.formattedExplanation$) {
-
-        const src$ = this.explanationTextService.formattedExplanation$ as Observable<string | null | undefined>;
+      if (
+        (!text || text === 'No explanation available for this question.') &&
+        this.explanationTextService.formattedExplanation$
+      ) {
+        const src$ = this.explanationTextService.formattedExplanation$ as Observable<
+          string | null | undefined
+        >;
 
         const formatted$: Observable<string> = src$.pipe(
           filter((s: unknown): s is string => typeof s === 'string' && s.trim().length > 0),
-          map(s => s.trim()),
+          map((s) => s.trim()),
           timeout(timeoutMs),
           take(1)
         );
@@ -533,10 +572,11 @@ export class QqcTimerEffectService {
     if (ets._fetLocked) await delay(60);
 
     // PREFER cached FET
-    const cachedFet = params.formattedByIndex.get(i0)
-      ?? ets.fetByIndex?.get(i0)
-      ?? ets.formattedExplanations?.[i0]?.explanation
-      ?? '';
+    const cachedFet =
+      params.formattedByIndex.get(i0) ??
+      ets.fetByIndex?.get(i0) ??
+      ets.formattedExplanations?.[i0]?.explanation ??
+      '';
 
     let formattedNow = '';
     if (cachedFet && cachedFet.toLowerCase().includes('correct because')) {
@@ -572,7 +612,8 @@ export class QqcTimerEffectService {
     ets.setExplanationText(rawBest, { force: true });
 
     // Needs async repair if no proper FET was found
-    const needsAsyncRepair = !formattedNow ||
+    const needsAsyncRepair =
+      !formattedNow ||
       formattedNow === 'No explanation available for this question.' ||
       !formattedNow.toLowerCase().includes('correct because');
 
@@ -611,7 +652,8 @@ export class QqcTimerEffectService {
 
       const active =
         params.normalizeIndex?.(params.fixedQuestionIndex ?? params.currentQuestionIndex ?? 0) ??
-        (params.currentQuestionIndex ?? 0);
+        params.currentQuestionIndex ??
+        0;
       if (active !== i0) return null;
       this.explanationTextService.setExplanationText(out, { force: true });
       return out;
@@ -643,14 +685,14 @@ export class QqcTimerEffectService {
           ...opt,
           feedback: isSelected && !opt.correct ? 'x' : opt.feedback,
           showIcon: isSelected,
-          active: true  // keep all options active
+          active: true // keep all options active
         };
       });
 
       // Stop the timer if all correct options are selected
       this.timerService.allowAuthoritativeStop();
       const stopped = await this.timerService.attemptStopTimerForQuestion({
-        questionIndex: params.currentQuestionIndex,
+        questionIndex: params.currentQuestionIndex
       });
 
       return { optionsToDisplay: updatedOptions, stopped: !!stopped };
@@ -682,15 +724,15 @@ export class QqcTimerEffectService {
     const qType = params.questions?.[params.i0]?.type ?? params.currentQuestionType;
     if (qType === QuestionType.MultipleAnswer) {
       try {
-        this.selectedOptionService.evaluateNextButtonStateForQuestion(
-          params.i0,
-          true,
-          true
-        );
-      } catch { }
+        this.selectedOptionService.evaluateNextButtonStateForQuestion(params.i0, true, true);
+      } catch {}
     } else {
-      try { this.selectedOptionService.setAnswered(true); } catch { }
-      try { this.nextButtonStateService.setNextButtonState(true); } catch { }
+      try {
+        this.selectedOptionService.setAnswered(true);
+      } catch {}
+      try {
+        this.nextButtonStateService.setNextButtonState(true);
+      } catch {}
     }
 
     return {

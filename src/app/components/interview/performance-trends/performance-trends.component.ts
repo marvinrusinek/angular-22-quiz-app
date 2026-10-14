@@ -74,7 +74,8 @@ export class PerformanceTrendsComponent {
 
   readonly changeAria = computed(() => {
     const c = this.trends()?.change;
-    if (c === null || c === undefined) return $localize`No previous interview to compare against yet`;
+    if (c === null || c === undefined)
+      return $localize`No previous interview to compare against yet`;
     if (c > 0) return $localize`Up ${c} percentage points since the previous interview`;
     if (c < 0) return $localize`Down ${Math.abs(c)} percentage points since the previous interview`;
     return $localize`No change since the previous interview`;
@@ -103,13 +104,12 @@ export class PerformanceTrendsComponent {
 
     const baselineY = r1(y(0));
     const area =
-      `${line} L${points[points.length - 1].cx} ${baselineY} ` +
-      `L${points[0].cx} ${baselineY} Z`;
+      `${line} L${points[points.length - 1].cx} ${baselineY} ` + `L${points[0].cx} ${baselineY} Z`;
 
     const grid = [0, 25, 50, 75, 100].map((value) => ({
       value,
       y: r1(y(value)),
-      label: value % 50 === 0   // label only 0 / 50 / 100 to avoid clutter
+      label: value % 50 === 0 // label only 0 / 50 / 100 to avoid clutter
     }));
 
     return {

@@ -28,18 +28,14 @@ import type { Quiz, QuizQuestion } from '@shared/models';
  * verdict exists yet (Stage 10 removes it along with the local bank).
  */
 
-const SINGLE = 'Which operator maps values?';   // correct: map
-const MULTI = 'Select every operator';          // correct: map, filter
+const SINGLE = 'Which operator maps values?'; // correct: map
+const MULTI = 'Select every operator'; // correct: map, filter
 
 const QUESTIONS = [
   {
     questionText: SINGLE,
     explanation: 'map transforms each emitted value.',
-    options: [
-      { text: 'map', correct: true },
-      { text: 'Observable' },
-      { text: 'Subject' }
-    ]
+    options: [{ text: 'map', correct: true }, { text: 'Observable' }, { text: 'Subject' }]
   },
   {
     questionText: MULTI,
@@ -117,7 +113,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
 
@@ -133,7 +132,9 @@ beforeEach(() => {
   service = TestBed.inject(OptionInteractionService);
   selectedOptionService = TestBed.inject(SelectedOptionService);
   verdicts = TestBed.inject(QuestionVerdictService);
-  stopSpy = jest.spyOn(TestBed.inject(TimerService), 'stopTimer').mockImplementation(() => undefined as never);
+  stopSpy = jest
+    .spyOn(TestBed.inject(TimerService), 'stopTimer')
+    .mockImplementation(() => undefined as never);
 });
 
 afterEach(() => {
@@ -146,7 +147,12 @@ describe('single-answer', () => {
     const question = questionAt(0);
     selectOnQuestion(0, ['map']);
 
-    runTimerStop({ question, clicked: optionNamed(question, 'map'), isMultipleMode: false, allCorrectFound: true });
+    runTimerStop({
+      question,
+      clicked: optionNamed(question, 'map'),
+      isMultipleMode: false,
+      allCorrectFound: true
+    });
 
     expect(stopSpy).toHaveBeenCalledTimes(1);
   });

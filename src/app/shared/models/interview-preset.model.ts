@@ -56,9 +56,17 @@ export const INTERVIEW_PRESETS: readonly InterviewPreset[] = Object.freeze([
     difficultyDistribution: Object.freeze({ beginner: 60, intermediate: 40, advanced: 0 }),
     topicIds: Object.freeze([
       // beginner
-      'typescript', 'create-first-app', 'templates', 'directives', 'pipes', 'angular-cli',
+      'typescript',
+      'create-first-app',
+      'templates',
+      'directives',
+      'pipes',
+      'angular-cli',
       // intermediate
-      'component-tree', 'dependency-injection', 'router', 'forms'
+      'component-tree',
+      'dependency-injection',
+      'router',
+      'forms'
     ])
   }),
   Object.freeze({
@@ -71,11 +79,20 @@ export const INTERVIEW_PRESETS: readonly InterviewPreset[] = Object.freeze([
     difficultyDistribution: Object.freeze({ beginner: 20, intermediate: 60, advanced: 20 }),
     topicIds: Object.freeze([
       // beginner
-      'typescript', 'templates',
+      'typescript',
+      'templates',
       // intermediate
-      'component-tree', 'forms', 'router', 'http', 'testing', 'dependency-injection', 'material',
+      'component-tree',
+      'forms',
+      'router',
+      'http',
+      'testing',
+      'dependency-injection',
+      'material',
       // advanced
-      'change-detection', 'rxjs', 'signals'
+      'change-detection',
+      'rxjs',
+      'signals'
     ])
   }),
   Object.freeze({
@@ -89,10 +106,16 @@ export const INTERVIEW_PRESETS: readonly InterviewPreset[] = Object.freeze([
     difficultyDistribution: Object.freeze({ beginner: 10, intermediate: 40, advanced: 50 }),
     topicIds: Object.freeze([
       // intermediate
-      'performance', 'testing', 'http',
+      'performance',
+      'testing',
+      'http',
       // advanced
-      'rxjs', 'signals', 'change-detection', 'component-architecture',
-      'dependency-injection-advanced', 'design-patterns'
+      'rxjs',
+      'signals',
+      'change-detection',
+      'component-architecture',
+      'dependency-injection-advanced',
+      'design-patterns'
     ])
   })
 ] as const);
@@ -142,7 +165,10 @@ export function validateInterviewPresets(
     seen.add(preset.id);
 
     if (!isValidDistribution(preset.difficultyDistribution)) {
-      issues.push({ presetId: preset.id, problem: 'difficulty distribution must be nonnegative and total 100' });
+      issues.push({
+        presetId: preset.id,
+        problem: 'difficulty distribution must be nonnegative and total 100'
+      });
     }
     if (!Number.isInteger(preset.questionCount) || preset.questionCount <= 0) {
       issues.push({ presetId: preset.id, problem: 'questionCount must be a positive integer' });

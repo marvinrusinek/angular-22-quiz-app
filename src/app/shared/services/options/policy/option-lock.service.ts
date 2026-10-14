@@ -10,11 +10,7 @@ export class OptionLockService {
   private selectedOptionService = inject(SelectedOptionService);
 
   // ── public methods ──────────────────────────────────────────────
-  isLocked(
-    binding: OptionBindings,
-    displayIndex: number,
-    questionIndex: number
-  ): boolean {
+  isLocked(binding: OptionBindings, displayIndex: number, questionIndex: number): boolean {
     try {
       // Prefer stable optionId; fallback to display index
       const id = binding.option.optionId ?? displayIndex;

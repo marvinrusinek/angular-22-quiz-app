@@ -30,7 +30,9 @@ export function readSessionJson<T>(key: string, fallback: T): T {
 export function writeSessionJson(key: string, value: unknown): void {
   try {
     sessionStorage.setItem(key, JSON.stringify(value));
-  } catch (err: unknown) { swallow('session-storage.ts', err); /* ignore */ }
+  } catch (err: unknown) {
+    swallow('session-storage.ts', err); /* ignore */
+  }
 }
 
 /** Read a raw string from sessionStorage. Returns `fallback` on miss / error. */
@@ -46,12 +48,16 @@ export function readSessionString(key: string, fallback = ''): string {
 export function writeSessionString(key: string, value: string): void {
   try {
     sessionStorage.setItem(key, value);
-  } catch (err: unknown) { swallow('session-storage.ts', err); /* ignore */ }
+  } catch (err: unknown) {
+    swallow('session-storage.ts', err); /* ignore */
+  }
 }
 
 /** Remove a key from sessionStorage. Errors are swallowed. */
 export function removeSessionKey(key: string): void {
   try {
     sessionStorage.removeItem(key);
-  } catch (err: unknown) { swallow('session-storage.ts', err); /* ignore */ }
+  } catch (err: unknown) {
+    swallow('session-storage.ts', err); /* ignore */
+  }
 }

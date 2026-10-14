@@ -1,4 +1,4 @@
-﻿import { Service, inject } from '@angular/core';
+import { Service, inject } from '@angular/core';
 import { firstValueFrom, Observable, of } from 'rxjs';
 import { catchError, map, take } from 'rxjs/operators';
 
@@ -6,10 +6,12 @@ import { SK_SAVED_QUESTION_INDEX } from '@shared/constants/session-keys';
 
 import { Option, QuestionPayload, QuestionType, Quiz, QuizQuestion } from '@shared/models';
 
-
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
-import { FetchQuestionResult, RouteChangeQuestionResult, RouteQuestionResult } 
-  from './quiz-content-loader.service';
+import {
+  FetchQuestionResult,
+  RouteChangeQuestionResult,
+  RouteQuestionResult
+} from './quiz-content-loader.service';
 import { QqcQuestionLoaderService } from '@shared/services/features/qqc/qqc-question-loader.service';
 import { QuizDataService } from '@shared/services/data/quizdata.service';
 import { QuizDotStatusService } from './quiz-dot-status.service';
@@ -69,8 +71,8 @@ export class QclQuestionFetchService {
     // quiz's question) is the only case requiring a fresh, safe fetch —
     // prepareQuizSession is the same API-backed path Introduction/quiz start
     // already use, so this introduces no new data source.
-    const isSameQuiz = this.quizService.quizId === quizId
-      || this.quizService.getCurrentQuizId() === quizId;
+    const isSameQuiz =
+      this.quizService.quizId === quizId || this.quizService.getCurrentQuizId() === quizId;
 
     let baseQuestions: QuizQuestion[] = isSameQuiz ? (this.quizService.questions ?? []) : [];
     if (baseQuestions.length === 0) {
@@ -85,21 +87,25 @@ export class QclQuestionFetchService {
     this.quizQuestionLoaderService.totalQuestions = totalQ;
 
     const shuffledSnapshot = this.quizService.isShuffleEnabled()
-      ? [...(this.quizService.shuffledQuestions ?? [])] : null;
+      ? [...(this.quizService.shuffledQuestions ?? [])]
+      : null;
 
     await this.quizQuestionLoaderService.loadQuestionAndOptions(index);
     await this.quizQuestionLoaderService.loadQA(index);
 
-    if (shuffledSnapshot && shuffledSnapshot.length > 0
-        && (!this.quizService.shuffledQuestions || this.quizService.shuffledQuestions.length === 0)) {
+    if (
+      shuffledSnapshot &&
+      shuffledSnapshot.length > 0 &&
+      (!this.quizService.shuffledQuestions || this.quizService.shuffledQuestions.length === 0)
+    ) {
       this.quizService.shuffledQuestions = shuffledSnapshot;
     }
 
     const shouldUseShuffled =
-      this.quizService.isShuffleEnabled() &&
-      this.quizService.shuffledQuestions?.length > 0;
+      this.quizService.isShuffleEnabled() && this.quizService.shuffledQuestions?.length > 0;
     const effectiveQuestions = shouldUseShuffled
-      ? this.quizService.shuffledQuestions : baseQuestions;
+      ? this.quizService.shuffledQuestions
+      : baseQuestions;
     const question = effectiveQuestions?.[index] ?? null;
     if (!question) return empty;
 
@@ -112,9 +118,9 @@ export class QclQuestionFetchService {
     const optionIdSet = new Set(
       options.map((opt) => opt.optionId).filter((id): id is number => typeof id === 'number')
     );
-    const validSelections =
-      (this.selectedOptionService.getSelectedOptionsForQuestion(index) ?? [])
-        .filter((opt) => optionIdSet.has(opt.optionId ?? -1));
+    const validSelections = (
+      this.selectedOptionService.getSelectedOptionsForQuestion(index) ?? []
+    ).filter((opt) => optionIdSet.has(opt.optionId ?? -1));
 
     return {
       success: true,
@@ -138,14 +144,20 @@ export class QclQuestionFetchService {
     const empty = this.emptyFetchResult();
 
     try {
-      if (isNaN(questionIndex) || questionIndex < 0 || questionIndex >= totalQuestions) return empty;
+      if (isNaN(questionIndex) || questionIndex < 0 || questionIndex >= totalQuestions)
+        return empty;
 
       restoreSessionSelections(questionIndex);
 
       const fetched = await this.fetchQuestionAndOptions(questionIndex);
       if (!fetched) return empty;
 
-      return await this.prepareQuestion(quizId, questionIndex, fetched.fetchedQuestion, fetched.fetchedOptions);
+      return await this.prepareQuestion(
+        quizId,
+        questionIndex,
+        fetched.fetchedQuestion,
+        fetched.fetchedOptions
+      );
     } catch {
       return empty;
     }
@@ -157,7 +169,12 @@ export class QclQuestionFetchService {
    * set it current, re-check answeredness, and assemble the success result.
    * Extracted verbatim.
    */
-  private async prepareQuestion(quizId: string, questionIndex: number, fetchedQuestion: any, fetchedOptions: any[]): Promise<FetchQuestionResult> {
+  private async prepareQuestion(
+    quizId: string,
+    questionIndex: number,
+    fetchedQuestion: any,
+    fetchedOptions: any[]
+  ): Promise<FetchQuestionResult> {
     this.explanationTextService.setResetComplete(false);
     this.explanationTextService.setShouldDisplayExplanation(false);
 
@@ -174,7 +191,12 @@ export class QclQuestionFetchService {
     const currentQuestion = { ...question };
     this.emitPreparedQuestion(currentQuestion, clonedOptions, questionIndex);
 
-    const explanationText = await this.resolvePreparedExplanation(isAnswered, fetchedQuestion, finalOptions, questionIndex);
+    const explanationText = await this.resolvePreparedExplanation(
+      isAnswered,
+      fetchedQuestion,
+      finalOptions,
+      questionIndex
+    );
 
     this.quizService.setCurrentQuestion(currentQuestion);
     this.quizService.setCurrentQuestionIndex(questionIndex);
@@ -182,16 +204,30 @@ export class QclQuestionFetchService {
 
     await this.applyAnswerednessCheck(questionIndex);
 
-    const questionPayload: QuestionPayload = { question: currentQuestion, options: clonedOptions, explanation: explanationText };
+    const questionPayload: QuestionPayload = {
+      question: currentQuestion,
+      options: clonedOptions,
+      explanation: explanationText
+    };
 
     return {
-      success: true, question, currentQuestion, trimmedText, clonedOptions,
-      finalOptions, explanationText, isAnswered, questionPayload, shouldStartTimer: !isAnswered
+      success: true,
+      question,
+      currentQuestion,
+      trimmedText,
+      clonedOptions,
+      finalOptions,
+      explanationText,
+      isAnswered,
+      questionPayload,
+      shouldStartTimer: !isAnswered
     };
   }
 
   /** Fetch the question details + current options in parallel; null if either is missing/empty. */
-  private async fetchQuestionAndOptions(questionIndex: number): Promise<{ fetchedQuestion: any; fetchedOptions: any[] } | null> {
+  private async fetchQuestionAndOptions(
+    questionIndex: number
+  ): Promise<{ fetchedQuestion: any; fetchedOptions: any[] } | null> {
     const [fetchedQuestion, fetchedOptions] = await Promise.all([
       this.quizQuestionDataService.fetchQuestionDetails(questionIndex),
       firstValueFrom(this.quizService.getCurrentOptions(questionIndex).pipe(take(1)))
@@ -201,7 +237,8 @@ export class QclQuestionFetchService {
       !fetchedQuestion.questionText?.trim() ||
       !Array.isArray(fetchedOptions) ||
       fetchedOptions.length === 0
-    ) return null;
+    )
+      return null;
     return { fetchedQuestion, fetchedOptions };
   }
 
@@ -222,15 +259,22 @@ export class QclQuestionFetchService {
   }
 
   /** Hydrate fetched options (ids/correct/feedback), assign active states, and clone. Extracted verbatim. */
-  private buildPreparedOptions(fetchedOptions: any[]): { finalOptions: any[]; clonedOptions: any[] } {
+  private buildPreparedOptions(fetchedOptions: any[]): {
+    finalOptions: any[];
+    clonedOptions: any[];
+  } {
     const hydratedOptions = fetchedOptions.map((opt, idx) => ({
       ...opt,
       optionId: opt.optionId ?? idx,
       correct: opt.correct ?? false,
       feedback: opt.feedback ?? `The correct options are: ${opt.text}`
     }));
-    const finalOptions = this.quizService.quizOptions.assignOptionActiveStates(hydratedOptions, false);
-    const clonedOptions = structuredClone?.(finalOptions) ?? JSON.parse(JSON.stringify(finalOptions));
+    const finalOptions = this.quizService.quizOptions.assignOptionActiveStates(
+      hydratedOptions,
+      false
+    );
+    const clonedOptions =
+      structuredClone?.(finalOptions) ?? JSON.parse(JSON.stringify(finalOptions));
     return { finalOptions, clonedOptions };
   }
 
@@ -247,7 +291,9 @@ export class QclQuestionFetchService {
         .filter((id: any): id is number => typeof id === 'number')
     );
     const selectedOptions = this.selectedOptionService.getSelectedOptionsForQuestion(questionIndex);
-    const validSelections = (selectedOptions ?? []).filter((opt) => optionIdSet.has(opt.optionId ?? -1));
+    const validSelections = (selectedOptions ?? []).filter((opt) =>
+      optionIdSet.has(opt.optionId ?? -1)
+    );
 
     // A timed-out question counts as answered even when no selection survives,
     // so the Next button stays enabled and its FET persists on tab return.
@@ -291,7 +337,11 @@ export class QclQuestionFetchService {
   }
 
   /** Emit the prepared question + options to the quiz service and payload signal. */
-  private emitPreparedQuestion(currentQuestion: QuizQuestion, clonedOptions: any[], questionIndex: number): void {
+  private emitPreparedQuestion(
+    currentQuestion: QuizQuestion,
+    clonedOptions: any[],
+    questionIndex: number
+  ): void {
     this.quizService.emitQuestionAndOptions(currentQuestion, clonedOptions, questionIndex);
     this.quizService.questionPayloadSig.set({
       question: currentQuestion,
@@ -304,16 +354,35 @@ export class QclQuestionFetchService {
    * When answered: format + store the FET and set explanation display state.
    * When not: force the baseline and push the selection message. Extracted verbatim.
    */
-  private async resolvePreparedExplanation(isAnswered: boolean, fetchedQuestion: any, finalOptions: any[], questionIndex: number): Promise<string> {
+  private async resolvePreparedExplanation(
+    isAnswered: boolean,
+    fetchedQuestion: any,
+    finalOptions: any[],
+    questionIndex: number
+  ): Promise<string> {
     if (!isAnswered) {
       this.selectionMessageService.forceBaseline(questionIndex);
       await this.selectionMessageService.setSelectionMessage(false);
       return '';
     }
-    const correctIndices = this.explanationTextService.getCorrectOptionIndices(fetchedQuestion, finalOptions, questionIndex);
+    const correctIndices = this.explanationTextService.getCorrectOptionIndices(
+      fetchedQuestion,
+      finalOptions,
+      questionIndex
+    );
     const rawExplanation = fetchedQuestion.explanation?.trim() || 'No explanation available';
-    const explanationText = this.explanationTextService.formatExplanation(fetchedQuestion, correctIndices, rawExplanation);
-    this.explanationTextService.storeFormattedExplanation(questionIndex, explanationText, fetchedQuestion, finalOptions, true);
+    const explanationText = this.explanationTextService.formatExplanation(
+      fetchedQuestion,
+      correctIndices,
+      rawExplanation
+    );
+    this.explanationTextService.storeFormattedExplanation(
+      questionIndex,
+      explanationText,
+      fetchedQuestion,
+      finalOptions,
+      true
+    );
     this.quizStateService.setDisplayState({ mode: 'explanation', answered: true });
     return explanationText;
   }
@@ -323,7 +392,8 @@ export class QclQuestionFetchService {
    * re-check whether the question was answered correctly. Extracted verbatim.
    */
   private async applyAnswerednessCheck(questionIndex: number): Promise<void> {
-    const liveSelections = this.selectedOptionService.getSelectedOptionsForQuestion(questionIndex) ?? [];
+    const liveSelections =
+      this.selectedOptionService.getSelectedOptionsForQuestion(questionIndex) ?? [];
     const hasUserAnswersForQuestion =
       Array.isArray(this.quizService.userAnswers?.[questionIndex]) &&
       this.quizService.userAnswers[questionIndex].length > 0;
@@ -371,7 +441,7 @@ export class QclQuestionFetchService {
 
     this.quizService.setCurrentQuestionIndex(questionIndex);
 
-    const totalCount = totalQuestions > 0 ? totalQuestions : (quiz.questions?.length || 0);
+    const totalCount = totalQuestions > 0 ? totalQuestions : quiz.questions?.length || 0;
     if (totalCount > 0 && questionIndex >= 0) {
       this.quizService.updateBadgeText(questionIndex + 1, totalCount);
     }
@@ -383,21 +453,20 @@ export class QclQuestionFetchService {
 
     const questionText = question.questionText?.trim() ?? 'No question available';
 
-    const optionsWithIds = this.quizService.quizOptions.assignOptionIds(
-      question.options || [],
-      questionIndex
-    ).map((option, index) => ({
-      ...option,
-      feedback: 'Loading feedback...',
-      showIcon: option.showIcon ?? false,
-      active: option.active ?? true,
-      selected: option.selected ?? false,
-      correct: !!option.correct,
-      optionId:
-        typeof option.optionId === 'number' && !isNaN(option.optionId)
-          ? option.optionId
-          : index + 1
-    }));
+    const optionsWithIds = this.quizService.quizOptions
+      .assignOptionIds(question.options || [], questionIndex)
+      .map((option, index) => ({
+        ...option,
+        feedback: 'Loading feedback...',
+        showIcon: option.showIcon ?? false,
+        active: option.active ?? true,
+        selected: option.selected ?? false,
+        correct: !!option.correct,
+        optionId:
+          typeof option.optionId === 'number' && !isNaN(option.optionId)
+            ? option.optionId
+            : index + 1
+      }));
 
     return {
       success: true,
@@ -409,20 +478,12 @@ export class QclQuestionFetchService {
     };
   }
 
-  async fetchQuestionFromAPI(
-    quizId: string,
-    questionIndex: number
-  ): Promise<QuizQuestion | null> {
+  async fetchQuestionFromAPI(quizId: string, questionIndex: number): Promise<QuizQuestion | null> {
     if (!quizId || quizId.trim() === '') return null;
 
     try {
       const result = await firstValueFrom(
-        of(
-          this.quizDataService.fetchQuestionAndOptionsFromAPI(
-            quizId,
-            questionIndex
-          )
-        )
+        of(this.quizDataService.fetchQuestionAndOptionsFromAPI(quizId, questionIndex))
       );
 
       if (!result) return null;
@@ -432,10 +493,11 @@ export class QclQuestionFetchService {
 
       return {
         ...question,
-        options: options?.map((option: Option) => ({
-          ...option,
-          correct: option.correct ?? false
-        })) ?? question.options
+        options:
+          options?.map((option: Option) => ({
+            ...option,
+            correct: option.correct ?? false
+          })) ?? question.options
       };
     } catch {
       return null;
@@ -472,18 +534,17 @@ export class QclQuestionFetchService {
     if (!quizId || quizId.trim() === '') return;
     if (questionIndex < 0) return;
 
-    this.quizDataService.getQuestionAndOptions(quizId, questionIndex)
+    this.quizDataService
+      .getQuestionAndOptions(quizId, questionIndex)
       .pipe(
         map((data: any): [QuizQuestion | null, Option[] | null] => {
           return Array.isArray(data)
             ? (data as [QuizQuestion | null, Option[] | null])
             : [null, null];
         }),
-        catchError(
-          (): Observable<[QuizQuestion | null, Option[] | null]> => {
-            return of<[QuizQuestion | null, Option[] | null]>([null, null]);
-          }
-        )
+        catchError((): Observable<[QuizQuestion | null, Option[] | null]> => {
+          return of<[QuizQuestion | null, Option[] | null]>([null, null]);
+        })
       )
       .subscribe({
         next: ([question, options]: [QuizQuestion | null, Option[] | null]) => {
@@ -491,7 +552,7 @@ export class QclQuestionFetchService {
             this.quizStateService.updateCurrentQuizState(of(question));
           }
         },
-        error: () => { }
+        error: () => {}
       });
   }
 }

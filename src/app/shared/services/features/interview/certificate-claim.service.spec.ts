@@ -35,7 +35,9 @@ const progressSig = signal({
   interviewMasterEarned: true
 });
 const legacyCertStub = { progress: progressSig } as unknown as InterviewCertificateService;
-const achievementsStub = { earnedIds: () => new Set(['angular-explorer']) } as unknown as AchievementService;
+const achievementsStub = {
+  earnedIds: () => new Set(['angular-explorer'])
+} as unknown as AchievementService;
 
 function freshService(): CertificateClaimService {
   TestBed.resetTestingModule();
@@ -89,12 +91,14 @@ describe('CertificateClaimService — confirm + refresh', () => {
   });
 
   it('confirming persists the VERIFIED certificate + retrieval token', async () => {
-    confirmToken.mockReturnValue(of({
-      certificateId: 'AQ-2026-000128-K',
-      recipientName: 'Ada Lovelace',
-      issuedAt: Date.parse('2026-08-01T00:00:00.000Z'),
-      retrievalToken: 'retr_abc'
-    }));
+    confirmToken.mockReturnValue(
+      of({
+        certificateId: 'AQ-2026-000128-K',
+        recipientName: 'Ada Lovelace',
+        issuedAt: Date.parse('2026-08-01T00:00:00.000Z'),
+        retrievalToken: 'retr_abc'
+      })
+    );
     const svc = freshService();
     const cert = await svc.confirmToken('raw-token');
     expect(cert.certificateId).toBe('AQ-2026-000128-K');
@@ -105,16 +109,24 @@ describe('CertificateClaimService — confirm + refresh', () => {
   });
 
   it('refresh() re-fetches via the stored retrieval token on a later load (survives refresh)', async () => {
-    confirmToken.mockReturnValue(of({
-      certificateId: 'AQ-2026-000128-K', recipientName: 'Ada Lovelace',
-      issuedAt: Date.parse('2026-08-01T00:00:00.000Z'), retrievalToken: 'retr_abc'
-    }));
+    confirmToken.mockReturnValue(
+      of({
+        certificateId: 'AQ-2026-000128-K',
+        recipientName: 'Ada Lovelace',
+        issuedAt: Date.parse('2026-08-01T00:00:00.000Z'),
+        retrievalToken: 'retr_abc'
+      })
+    );
     const first = freshService();
     await first.confirmToken('raw-token');
 
-    getCertificateByRetrievalToken.mockReturnValue(of({
-      certificateId: 'AQ-2026-000128-K', recipientName: 'Ada Lovelace', issuedAt: '2026-08-01T00:00:00.000Z'
-    }));
+    getCertificateByRetrievalToken.mockReturnValue(
+      of({
+        certificateId: 'AQ-2026-000128-K',
+        recipientName: 'Ada Lovelace',
+        issuedAt: '2026-08-01T00:00:00.000Z'
+      })
+    );
     const reloaded = freshService(); // simulates a fresh page load reading localStorage
     expect(reloaded.status()).toBe('verified'); // loaded from storage before refresh() even runs
     await reloaded.refresh();
@@ -129,14 +141,20 @@ describe('CertificateClaimService — confirm + refresh', () => {
   });
 
   it('refresh() keeps the last-known state on a transient failure (e.g. a revoked/expired retrieval credential)', async () => {
-    confirmToken.mockReturnValue(of({
-      certificateId: 'AQ-2026-000128-K', recipientName: 'Ada Lovelace',
-      issuedAt: Date.parse('2026-08-01T00:00:00.000Z'), retrievalToken: 'retr_abc'
-    }));
+    confirmToken.mockReturnValue(
+      of({
+        certificateId: 'AQ-2026-000128-K',
+        recipientName: 'Ada Lovelace',
+        issuedAt: Date.parse('2026-08-01T00:00:00.000Z'),
+        retrievalToken: 'retr_abc'
+      })
+    );
     const svc = freshService();
     await svc.confirmToken('raw-token');
 
-    getCertificateByRetrievalToken.mockReturnValue(throwError(() => new CertificateClaimApiError('RETRIEVAL_INVALID', 404)));
+    getCertificateByRetrievalToken.mockReturnValue(
+      throwError(() => new CertificateClaimApiError('RETRIEVAL_INVALID', 404))
+    );
     await svc.refresh();
     expect(svc.status()).toBe('verified'); // unchanged — not downgraded by a transient/edge failure
     expect(svc.certificate()?.certificateId).toBe('AQ-2026-000128-K');

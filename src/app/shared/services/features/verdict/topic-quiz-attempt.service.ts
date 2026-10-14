@@ -172,9 +172,7 @@ export class TopicQuizAttemptService {
    * buy more time.
    */
   startQuestion(quizId: string, questionText: string): Observable<QuestionTiming> {
-    return this.activation(quizId, questionText).pipe(
-      map(({ deadlineMs }) => ({ deadlineMs }))
-    );
+    return this.activation(quizId, questionText).pipe(map(({ deadlineMs }) => ({ deadlineMs })));
   }
 
   /** True when this question already has a receipt. Used by tests and guards. */
@@ -277,7 +275,9 @@ export class TopicQuizAttemptService {
           // A failed attempt must not poison the map — practice may retry.
           this.untimedPracticeAttempts.delete(quizId);
           return throwError(() =>
-            err instanceof QuestionVerdictError ? err : new QuestionVerdictError('Invalid submission')
+            err instanceof QuestionVerdictError
+              ? err
+              : new QuestionVerdictError('Invalid submission')
           );
         }),
         shareReplay({ bufferSize: 1, refCount: false })

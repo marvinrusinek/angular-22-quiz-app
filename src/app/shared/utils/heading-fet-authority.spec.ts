@@ -1,7 +1,9 @@
 import { buildHeadingInputs } from './heading-inputs';
 import { deriveHeadingHtml, shouldShowFet } from './heading-model';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState }
-  from '@shared/services/features/verdict/question-verdict.types';
+import {
+  IDLE_VERDICT_STATE,
+  type QuestionVerdictState
+} from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * Who is allowed to decide the user may read the explanation.
@@ -23,8 +25,10 @@ const QUESTION = 'Select every operator';
 const LOCAL_LEAK = 'LOCAL LEAK — map and filter are correct because they are operators.';
 const AUTHORIZED = 'map and filter are correct because they are operators.';
 
-const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState =>
-  ({ ...IDLE_VERDICT_STATE, ...over });
+const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState => ({
+  ...IDLE_VERDICT_STATE,
+  ...over
+});
 
 /**
  * Deps for a 2-correct-of-4 multi-answer question, with the local explanation
@@ -40,10 +44,17 @@ function deps(opts: {
     idx: 0,
     quizService: {
       quizId: 'rxjs',
-      getQuestionsInDisplayOrder: () => [{
-        questionText: QUESTION,
-        options: [{ text: 'map' }, { text: 'filter' }, { text: 'Observable' }, { text: 'Subject' }]
-      }],
+      getQuestionsInDisplayOrder: () => [
+        {
+          questionText: QUESTION,
+          options: [
+            { text: 'map' },
+            { text: 'filter' },
+            { text: 'Observable' },
+            { text: 'Subject' }
+          ]
+        }
+      ],
       questions: [{ questionText: QUESTION }],
       isShuffleEnabled: () => false,
       shuffledQuestions: [],
@@ -64,9 +75,8 @@ function deps(opts: {
     },
     quizNavigationService: { isNavigatingToPreviousSig: () => false },
     quizQuestionManagerService: { getNumberOfCorrectAnswersText: () => '(2 answers are correct)' },
-    questionVerdictService: opts.verdict === null
-      ? undefined
-      : { verdictFor: () => opts.verdict ?? IDLE_VERDICT_STATE }
+    questionVerdictService:
+      opts.verdict === null ? undefined : { verdictFor: () => opts.verdict ?? IDLE_VERDICT_STATE }
   } as any;
 }
 
@@ -77,14 +87,16 @@ beforeAll(() => {
 
 describe('a partial multi-answer earns nothing', () => {
   it('does not show the FET when only one of two correct options is selected', () => {
-    const i = buildHeadingInputs(deps({
-      selected: ['map'],
-      verdict: state({
-        phase: 'incomplete',
-        selectedVerdicts: new Map([['map', true]]),
-        remainingCorrectCount: 1
+    const i = buildHeadingInputs(
+      deps({
+        selected: ['map'],
+        verdict: state({
+          phase: 'incomplete',
+          selectedVerdicts: new Map([['map', true]]),
+          remainingCorrectCount: 1
+        })
       })
-    }))!;
+    )!;
 
     expect(i.isMultiAnswerComplete).toBe(false);
     expect(shouldShowFet(i)).toBe(false);
@@ -93,14 +105,19 @@ describe('a partial multi-answer earns nothing', () => {
   });
 
   it('does not show the FET when the user has picked a WRONG option too', () => {
-    const i = buildHeadingInputs(deps({
-      selected: ['map', 'Observable'],
-      verdict: state({
-        phase: 'incomplete',
-        selectedVerdicts: new Map([['map', true], ['Observable', false]]),
-        remainingCorrectCount: 1
+    const i = buildHeadingInputs(
+      deps({
+        selected: ['map', 'Observable'],
+        verdict: state({
+          phase: 'incomplete',
+          selectedVerdicts: new Map([
+            ['map', true],
+            ['Observable', false]
+          ]),
+          remainingCorrectCount: 1
+        })
       })
-    }))!;
+    )!;
 
     expect(shouldShowFet(i)).toBe(false);
     expect(deriveHeadingHtml(i)).not.toContain('LOCAL LEAK');
@@ -112,17 +129,22 @@ describe('a verdict that SAYS not-yet withholds the explanation', () => {
     // THE PROOF that matters. Every correct option is selected and the bank is
     // holding the explanation, but the verdict says the question is not done —
     // so the local text is present and still never reaches the heading.
-    const i = buildHeadingInputs(deps({
-      selected: ['map', 'filter'],
-      verdict: state({
-        phase: 'incomplete',
-        selectedVerdicts: new Map([['map', true], ['filter', true]]),
-        remainingCorrectCount: 1
+    const i = buildHeadingInputs(
+      deps({
+        selected: ['map', 'filter'],
+        verdict: state({
+          phase: 'incomplete',
+          selectedVerdicts: new Map([
+            ['map', true],
+            ['filter', true]
+          ]),
+          remainingCorrectCount: 1
+        })
       })
-    }))!;
+    )!;
 
-    expect(i.fetHtml).toContain('LOCAL LEAK');   // the text exists locally...
-    expect(shouldShowFet(i)).toBe(false);        // ...and is still not shown
+    expect(i.fetHtml).toContain('LOCAL LEAK'); // the text exists locally...
+    expect(shouldShowFet(i)).toBe(false); // ...and is still not shown
     expect(deriveHeadingHtml(i)).toBe(i.questionHtml);
   });
 });
@@ -156,7 +178,9 @@ describe('with no verdict at all, nothing is disclosed', () => {
   it.each([['idle'], ['checking'], ['error']] as const)(
     'withholds the FET while %s, whatever the local options claim',
     (phase) => {
-      const i = buildHeadingInputs(deps({ selected: ['map', 'filter'], verdict: state({ phase }) }))!;
+      const i = buildHeadingInputs(
+        deps({ selected: ['map', 'filter'], verdict: state({ phase }) })
+      )!;
 
       expect(i.isMultiAnswerComplete).toBe(false);
       expect(shouldShowFet(i)).toBe(false);
@@ -174,15 +198,17 @@ describe('with no verdict at all, nothing is disclosed', () => {
 
 describe('a resolved question is authorized, and the verdict supplies the words', () => {
   it('shows the FET once every correct option is selected', () => {
-    const i = buildHeadingInputs(deps({
-      selected: ['map', 'filter'],
-      verdict: state({
-        phase: 'resolved',
-        isResolvedCorrect: true,
-        correctOptionTexts: ['map', 'filter'],
-        explanation: AUTHORIZED
+    const i = buildHeadingInputs(
+      deps({
+        selected: ['map', 'filter'],
+        verdict: state({
+          phase: 'resolved',
+          isResolvedCorrect: true,
+          correctOptionTexts: ['map', 'filter'],
+          explanation: AUTHORIZED
+        })
       })
-    }))!;
+    )!;
 
     expect(i.isMultiAnswerComplete).toBe(true);
     expect(shouldShowFet(i)).toBe(true);
@@ -194,16 +220,18 @@ describe('a resolved question is authorized, and the verdict supplies the words'
     // correct because ..."); the verdict carries only the bank's raw sentence.
     // Swapping one for the other would change the copy, so the verdict's text
     // is a last resort — used only so an authorized reveal is never blank.
-    const i = buildHeadingInputs(deps({
-      selected: ['map', 'filter'],
-      localFet: '',
-      verdict: state({
-        phase: 'resolved',
-        isResolvedCorrect: true,
-        correctOptionTexts: ['map', 'filter'],
-        explanation: AUTHORIZED
+    const i = buildHeadingInputs(
+      deps({
+        selected: ['map', 'filter'],
+        localFet: '',
+        verdict: state({
+          phase: 'resolved',
+          isResolvedCorrect: true,
+          correctOptionTexts: ['map', 'filter'],
+          explanation: AUTHORIZED
+        })
       })
-    }))!;
+    )!;
 
     expect(i.fetHtml).toContain(AUTHORIZED);
   });

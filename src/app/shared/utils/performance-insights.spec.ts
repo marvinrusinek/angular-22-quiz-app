@@ -66,7 +66,15 @@ describe('accuracyPercent', () => {
   });
 
   it('never returns NaN or Infinity for a zero or invalid denominator', () => {
-    for (const [c, t] of [[0, 0], [5, 0], [1, -3], [NaN, 4], [3, NaN], [Infinity, 4], [3, Infinity]] as const) {
+    for (const [c, t] of [
+      [0, 0],
+      [5, 0],
+      [1, -3],
+      [NaN, 4],
+      [3, NaN],
+      [Infinity, 4],
+      [3, Infinity]
+    ] as const) {
       const pct = accuracyPercent(c, t);
       expect(Number.isFinite(pct)).toBe(true);
       expect(pct).toBe(0);
@@ -94,10 +102,7 @@ describe('groupIntoLogicalAttempts', () => {
   });
 
   it('separates attempts by attemptId', () => {
-    const rows = [
-      rec('a', 'topic-quiz', day(1), 1, 2),
-      rec('b', 'topic-quiz', day(2), 2, 2)
-    ];
+    const rows = [rec('a', 'topic-quiz', day(1), 1, 2), rec('b', 'topic-quiz', day(2), 2, 2)];
     expect(groupIntoLogicalAttempts(rows, 'topic-quiz').map((t) => t.id)).toEqual(['a', 'b']);
   });
 
@@ -145,7 +150,9 @@ describe('groupIntoLogicalAttempts', () => {
     ] as unknown as TopicRecordLike[];
     expect(() => groupIntoLogicalAttempts(junk, 'topic-quiz')).not.toThrow();
     expect(groupIntoLogicalAttempts(junk, 'topic-quiz').map((t) => t.id)).toEqual(['good']);
-    expect(groupIntoLogicalAttempts(null as unknown as TopicRecordLike[], 'topic-quiz')).toEqual([]);
+    expect(groupIntoLogicalAttempts(null as unknown as TopicRecordLike[], 'topic-quiz')).toEqual(
+      []
+    );
   });
 
   it('returns nothing for no history', () => {
@@ -186,7 +193,13 @@ describe('summarizeSource', () => {
   it('reports one attempt with its sample size and NO comparison', () => {
     const s = summarizeSource('topic-quiz', [tally('a', 3, 7, 10)])!;
     expect(s).toMatchObject({
-      source: 'topic-quiz', attempts: 1, correct: 7, total: 10, accuracyPct: 70, latestAt: day(3), comparison: null
+      source: 'topic-quiz',
+      attempts: 1,
+      correct: 7,
+      total: 10,
+      accuracyPct: 70,
+      latestAt: day(3),
+      comparison: null
     });
   });
 
@@ -200,23 +213,44 @@ describe('summarizeSource', () => {
   });
 
   it('reports the newest attempt as latestAt and counts every attempt', () => {
-    const s = summarizeSource('interview', [tally('b', 9, 5, 10), tally('a', 2, 5, 10), tally('c', 4, 5, 10)])!;
+    const s = summarizeSource('interview', [
+      tally('b', 9, 5, 10),
+      tally('a', 2, 5, 10),
+      tally('c', 4, 5, 10)
+    ])!;
     expect(s.attempts).toBe(3);
     expect(s.latestAt).toBe(day(9));
   });
 
   it('is unaffected by the order tallies arrive in', () => {
     const forward = run(8, 6, 10);
-    const shuffled = [forward[5], forward[1], forward[7], forward[0], forward[3], forward[6], forward[2], forward[4]] as AttemptTally[];
+    const shuffled = [
+      forward[5],
+      forward[1],
+      forward[7],
+      forward[0],
+      forward[3],
+      forward[6],
+      forward[2],
+      forward[4]
+    ] as AttemptTally[];
     expect(summarizeSource('topic-quiz', shuffled)).toEqual(summarizeSource('topic-quiz', forward));
   });
 
   it('discloses the retention window per source, never "lifetime"', () => {
-    expect(summarizeSource('interview', [tally('a', 1, 1, 2)])!.retentionLabel).toBe('20 most recent interviews');
-    expect(summarizeSource('topic-quiz', [tally('a', 1, 1, 2)])!.retentionLabel).toBe('200 most recent topic results');
-    expect(summarizeSource('weak-areas-practice', [tally('a', 1, 1, 2)])!.retentionLabel).toBe('200 most recent topic results');
+    expect(summarizeSource('interview', [tally('a', 1, 1, 2)])!.retentionLabel).toBe(
+      '20 most recent interviews'
+    );
+    expect(summarizeSource('topic-quiz', [tally('a', 1, 1, 2)])!.retentionLabel).toBe(
+      '200 most recent topic results'
+    );
+    expect(summarizeSource('weak-areas-practice', [tally('a', 1, 1, 2)])!.retentionLabel).toBe(
+      '200 most recent topic results'
+    );
     for (const source of ['interview', 'topic-quiz', 'weak-areas-practice'] as const) {
-      expect(summarizeSource(source, [tally('a', 1, 1, 2)])!.retentionLabel).not.toMatch(/lifetime|all.?time/i);
+      expect(summarizeSource(source, [tally('a', 1, 1, 2)])!.retentionLabel).not.toMatch(
+        /lifetime|all.?time/i
+      );
     }
   });
 
@@ -247,7 +281,15 @@ describe('compareWindows — minimum-data rule', () => {
   });
 
   it.each([
-    [4, 2], [5, 2], [6, 3], [7, 3], [8, 4], [9, 4], [10, 5], [11, 5], [25, 5]
+    [4, 2],
+    [5, 2],
+    [6, 3],
+    [7, 3],
+    [8, 4],
+    [9, 4],
+    [10, 5],
+    [11, 5],
+    [25, 5]
   ])('with %i attempts each window holds %i (equal-sized, capped at 5)', (n, size) => {
     const c = compareWindows(run(n, 6, 10))!;
     expect(c.recent.attempts).toBe(size);
@@ -276,7 +318,11 @@ describe('compareWindows — minimum-data rule', () => {
   it('odd counts drop the OLDEST attempt, never the newest', () => {
     // 5 attempts → w=2 → recent = t4,t5 ; previous = t2,t3 ; t1 ignored.
     const c = compareWindows([
-      tally('t1', 1, 0, 10), tally('t2', 2, 5, 10), tally('t3', 3, 5, 10), tally('t4', 4, 9, 10), tally('t5', 5, 9, 10)
+      tally('t1', 1, 0, 10),
+      tally('t2', 2, 5, 10),
+      tally('t3', 3, 5, 10),
+      tally('t4', 4, 9, 10),
+      tally('t5', 5, 9, 10)
     ])!;
     expect(c.previous.accuracyPct).toBe(50);
     expect(c.recent.accuracyPct).toBe(90);
@@ -286,10 +332,7 @@ describe('compareWindows — minimum-data rule', () => {
 describe('compareWindows — arithmetic', () => {
   it('reports plain percentages and a signed point delta', () => {
     // previous 78%, recent 84%  →  +6
-    const c = compareWindows([
-      ...run(2, 78, 100, 1),
-      ...run(2, 84, 100, 3)
-    ])!;
+    const c = compareWindows([...run(2, 78, 100, 1), ...run(2, 84, 100, 3)])!;
     expect(c.previous.accuracyPct).toBe(78);
     expect(c.recent.accuracyPct).toBe(84);
     expect(c.deltaPts).toBe(6);
@@ -310,8 +353,10 @@ describe('compareWindows — arithmetic', () => {
     // recent 422/500 = 84.4% → 84 ; previous 388/500 = 77.6% → 78.
     // An unrounded delta (6.8 → 7) would contradict the 84 and 78 on screen.
     const c = compareWindows([
-      tally('p1', 1, 194, 250), tally('p2', 2, 194, 250),
-      tally('r1', 3, 211, 250), tally('r2', 4, 211, 250)
+      tally('p1', 1, 194, 250),
+      tally('p2', 2, 194, 250),
+      tally('r1', 3, 211, 250),
+      tally('r2', 4, 211, 250)
     ])!;
     expect(c.previous.accuracyPct).toBe(78);
     expect(c.recent.accuracyPct).toBe(84);
@@ -322,8 +367,10 @@ describe('compareWindows — arithmetic', () => {
   it('weights each window by QUESTIONS, not by attempts', () => {
     // recent: 1/1 (100%) and 1/9 (11%) → 2/10 = 20%, not the 56% mean.
     const c = compareWindows([
-      tally('p1', 1, 5, 10), tally('p2', 2, 5, 10),
-      tally('r1', 3, 1, 1), tally('r2', 4, 1, 9)
+      tally('p1', 1, 5, 10),
+      tally('p2', 2, 5, 10),
+      tally('r1', 3, 1, 1),
+      tally('r2', 4, 1, 9)
     ])!;
     expect(c.recent).toMatchObject({ correct: 2, total: 10, accuracyPct: 20 });
   });
@@ -338,16 +385,20 @@ describe('compareWindows — minimum sample', () => {
 
   it('is available once BOTH windows reach the minimum', () => {
     const c = compareWindows([
-      tally('p1', 1, 1, 1), tally('p2', 2, 1, 2),   // previous: 3 questions
-      tally('r1', 3, 1, 2), tally('r2', 4, 1, 1)    // recent:   3 questions
+      tally('p1', 1, 1, 1),
+      tally('p2', 2, 1, 2), // previous: 3 questions
+      tally('r1', 3, 1, 2),
+      tally('r2', 4, 1, 1) // recent:   3 questions
     ]);
     expect(c).not.toBeNull();
   });
 
   it('is unavailable when only ONE window is too small', () => {
     const c = compareWindows([
-      tally('p1', 1, 1, 1), tally('p2', 2, 1, 1),   // previous: 2 questions
-      tally('r1', 3, 5, 10), tally('r2', 4, 5, 10)
+      tally('p1', 1, 1, 1),
+      tally('p2', 2, 1, 1), // previous: 2 questions
+      tally('r1', 3, 5, 10),
+      tally('r2', 4, 5, 10)
     ]);
     expect(c).toBeNull();
   });
@@ -375,8 +426,14 @@ describe('summarizeTopics', () => {
 
   it('agrees exactly with the shared aggregation — same counts, no second algorithm', () => {
     const attempts = [
-      att(day(1), [['rxjs', 3, 5], ['forms', 8, 10]]),
-      att(day(2), [['rxjs', 4, 4], ['signals', 1, 6]]),
+      att(day(1), [
+        ['rxjs', 3, 5],
+        ['forms', 8, 10]
+      ]),
+      att(day(2), [
+        ['rxjs', 4, 4],
+        ['signals', 1, 6]
+      ]),
       att(day(3), [['forms', 1, 2]])
     ];
     const shared = aggregateTopicPercentages(attempts as never);
@@ -385,7 +442,12 @@ describe('summarizeTopics', () => {
     expect(mine).toHaveLength(shared.length);
     for (const s of shared) {
       const m = mine.find((t) => t.topicId === s.topicId)!;
-      expect(m).toMatchObject({ topicId: s.topicId, topicName: s.topicName, correct: s.correct, total: s.total });
+      expect(m).toMatchObject({
+        topicId: s.topicId,
+        topicName: s.topicName,
+        correct: s.correct,
+        total: s.total
+      });
       expect(m.percentage).toBe(Math.round(s.percentage));
     }
   });
@@ -396,8 +458,13 @@ describe('summarizeTopics', () => {
       att(day(4), [['signals', 2, 2]])
     ]);
     expect(t).toEqual({
-      topicId: 'signals', topicName: 'SIGNALS', correct: 22, total: 26,
-      percentage: 85, lastActivityAt: day(4), hasEnoughData: true
+      topicId: 'signals',
+      topicName: 'SIGNALS',
+      correct: 22,
+      total: 26,
+      percentage: 85,
+      lastActivityAt: day(4),
+      hasEnoughData: true
     });
   });
 
@@ -407,18 +474,34 @@ describe('summarizeTopics', () => {
   });
 
   it('orders by most evidence first, then topicId', () => {
-    const out = summarizeTopics([att(day(1), [['b', 1, 4], ['a', 1, 4], ['big', 5, 20]])]);
+    const out = summarizeTopics([
+      att(day(1), [
+        ['b', 1, 4],
+        ['a', 1, 4],
+        ['big', 5, 20]
+      ])
+    ]);
     expect(ids(out)).toEqual(['big', 'a', 'b']);
   });
 
   it('skips zero-total samples and never yields NaN', () => {
-    const out = summarizeTopics([att(day(1), [['empty', 0, 0], ['real', 1, 4]])]);
+    const out = summarizeTopics([
+      att(day(1), [
+        ['empty', 0, 0],
+        ['real', 1, 4]
+      ])
+    ]);
     expect(ids(out)).toEqual(['real']);
     expect(out.every((t) => Number.isFinite(t.percentage))).toBe(true);
   });
 
   it('survives malformed attempts', () => {
-    const junk = [null, {}, { completedAt: 5 }, att(day(1), [['rxjs', 1, 4]])] as unknown as TopicAttemptLike[];
+    const junk = [
+      null,
+      {},
+      { completedAt: 5 },
+      att(day(1), [['rxjs', 1, 4]])
+    ] as unknown as TopicAttemptLike[];
     expect(() => summarizeTopics(junk)).not.toThrow();
     expect(ids(summarizeTopics(junk))).toEqual(['rxjs']);
   });
@@ -432,7 +515,12 @@ describe('selectStrongestTopics', () => {
   });
 
   it('excludes a topic below the minimum sample, however perfect', () => {
-    const attempts = [att(day(1), [['tiny', 2, 2], ['solid', 9, 10]])];
+    const attempts = [
+      att(day(1), [
+        ['tiny', 2, 2],
+        ['solid', 9, 10]
+      ])
+    ];
     expect(ids(selectStrongestTopics(attempts, []))).toEqual(['solid']);
   });
 
@@ -441,7 +529,12 @@ describe('selectStrongestTopics', () => {
   });
 
   it('excludes every topic Weak Areas would call weak', () => {
-    const attempts = [att(day(1), [['weak', 5, 10], ['strong', 9, 10]])];
+    const attempts = [
+      att(day(1), [
+        ['weak', 5, 10],
+        ['strong', 9, 10]
+      ])
+    ];
     const needsReview = calculateWeakTopics(attempts);
     expect(ids(needsReview)).toEqual(['weak']);
     expect(ids(selectStrongestTopics(attempts, needsReview))).toEqual(['strong']);
@@ -456,27 +549,50 @@ describe('selectStrongestTopics', () => {
   it('never promotes a weak topic that Needs Review omitted only because of its 3-topic cap', () => {
     // Five weak topics; Needs Review shows just the weakest three. The other two
     // are STILL weak and must not become "strongest".
-    const attempts = [att(day(1), [
-      ['w1', 1, 10], ['w2', 2, 10], ['w3', 3, 10], ['w4', 4, 10], ['w5', 5, 10], ['ok', 9, 10]
-    ])];
+    const attempts = [
+      att(day(1), [
+        ['w1', 1, 10],
+        ['w2', 2, 10],
+        ['w3', 3, 10],
+        ['w4', 4, 10],
+        ['w5', 5, 10],
+        ['ok', 9, 10]
+      ])
+    ];
     const needsReview = calculateWeakTopics(attempts);
     expect(ids(needsReview)).toEqual(['w1', 'w2', 'w3']);
     expect(ids(selectStrongestTopics(attempts, needsReview))).toEqual(['ok']);
   });
 
   it('also honours a caller-supplied Needs Review list', () => {
-    const attempts = [att(day(1), [['a', 9, 10], ['b', 9, 10]])];
-    const forced = calculateWeakTopics([att(day(1), [['a', 0, 10]])]);   // says "a" is weak
+    const attempts = [
+      att(day(1), [
+        ['a', 9, 10],
+        ['b', 9, 10]
+      ])
+    ];
+    const forced = calculateWeakTopics([att(day(1), [['a', 0, 10]])]); // says "a" is weak
     expect(ids(selectStrongestTopics(attempts, forced))).toEqual(['b']);
   });
 
   it('ranks by accuracy, best first', () => {
-    const attempts = [att(day(1), [['c', 8, 10], ['a', 10, 10], ['b', 9, 10]])];
+    const attempts = [
+      att(day(1), [
+        ['c', 8, 10],
+        ['a', 10, 10],
+        ['b', 9, 10]
+      ])
+    ];
     expect(ids(selectStrongestTopics(attempts, []))).toEqual(['a', 'b', 'c']);
   });
 
   it('breaks an accuracy tie by the LARGER sample', () => {
-    const attempts = [att(day(1), [['small', 9, 10], ['large', 18, 20]])];
+    const attempts = [
+      att(day(1), [
+        ['small', 9, 10],
+        ['large', 18, 20]
+      ])
+    ];
     expect(ids(selectStrongestTopics(attempts, []))).toEqual(['large', 'small']);
   });
 
@@ -484,23 +600,47 @@ describe('selectStrongestTopics', () => {
     const recency = [att(day(1), [['older', 9, 10]]), att(day(9), [['newer', 9, 10]])];
     expect(ids(selectStrongestTopics(recency, []))).toEqual(['newer', 'older']);
 
-    const same = [att(day(1), [['bbb', 9, 10], ['aaa', 9, 10]])];
+    const same = [
+      att(day(1), [
+        ['bbb', 9, 10],
+        ['aaa', 9, 10]
+      ])
+    ];
     expect(ids(selectStrongestTopics(same, []))).toEqual(['aaa', 'bbb']);
   });
 
   it('is deterministic across repeated calls', () => {
-    const attempts = [att(day(1), [['x', 9, 10], ['y', 9, 10], ['z', 9, 10]])];
+    const attempts = [
+      att(day(1), [
+        ['x', 9, 10],
+        ['y', 9, 10],
+        ['z', 9, 10]
+      ])
+    ];
     expect(selectStrongestTopics(attempts, [])).toEqual(selectStrongestTopics(attempts, []));
   });
 
   it('lists at most three', () => {
-    const attempts = [att(day(1), [['a', 10, 10], ['b', 10, 10], ['c', 10, 10], ['d', 10, 10], ['e', 10, 10]])];
+    const attempts = [
+      att(day(1), [
+        ['a', 10, 10],
+        ['b', 10, 10],
+        ['c', 10, 10],
+        ['d', 10, 10],
+        ['e', 10, 10]
+      ])
+    ];
     expect(STRONGEST_MAX_TOPICS).toBe(3);
     expect(selectStrongestTopics(attempts, [])).toHaveLength(3);
   });
 
   it('does not mutate its inputs', () => {
-    const attempts = [att(day(1), [['a', 9, 10], ['b', 2, 10]])];
+    const attempts = [
+      att(day(1), [
+        ['a', 9, 10],
+        ['b', 2, 10]
+      ])
+    ];
     const needsReview = calculateWeakTopics(attempts);
     const snapshot = JSON.stringify({ attempts, needsReview });
     selectStrongestTopics(attempts, needsReview);
@@ -509,7 +649,8 @@ describe('selectStrongestTopics', () => {
 
   describe('INVARIANT: Strongest ∩ Needs Review = ∅', () => {
     // A small deterministic generator, so a failure reproduces exactly.
-    const lcg = (seed: number) => () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+    const lcg = (seed: number) => () =>
+      (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
 
     it('holds across many generated histories, using the real Weak Areas calculation', () => {
       const rnd = lcg(20260921);
@@ -530,7 +671,9 @@ describe('selectStrongestTopics', () => {
         const needsReview = calculateWeakTopics(attempts);
         const strongest = selectStrongestTopics(attempts, needsReview);
 
-        const weakIds = new Set(calculateWeakTopics(attempts, { max: Infinity }).map((t) => t.topicId));
+        const weakIds = new Set(
+          calculateWeakTopics(attempts, { max: Infinity }).map((t) => t.topicId)
+        );
         for (const s of strongest) {
           expect(needsReview.map((t) => t.topicId)).not.toContain(s.topicId);
           expect(weakIds.has(s.topicId)).toBe(false);
@@ -548,7 +691,13 @@ describe('buildPerformanceInsights', () => {
 
   it('reports no data at all for empty history', () => {
     expect(buildPerformanceInsights(empty)).toEqual({
-      hasData: false, topicQuiz: null, interview: null, practice: null, topics: [], strongest: [], needsReview: []
+      hasData: false,
+      topicQuiz: null,
+      interview: null,
+      practice: null,
+      topics: [],
+      strongest: [],
+      needsReview: []
     });
   });
 
@@ -576,7 +725,12 @@ describe('buildPerformanceInsights', () => {
       ...empty,
       topicRecords: [rec('p1', 'weak-areas-practice', day(1), 2, 4)]
     });
-    expect(out.practice).toMatchObject({ source: 'weak-areas-practice', attempts: 1, correct: 2, total: 4 });
+    expect(out.practice).toMatchObject({
+      source: 'weak-areas-practice',
+      attempts: 1,
+      correct: 2,
+      total: 4
+    });
     expect(out.topicQuiz).toBeNull();
     expect(out.interview).toBeNull();
   });
@@ -596,9 +750,15 @@ describe('buildPerformanceInsights', () => {
     expect(out.interview!.accuracyPct).toBe(50);
     // 16/30 = 53% would be the meaningless blend. It must not exist anywhere.
     expect(JSON.stringify(out)).not.toContain('"accuracyPct":53');
-    expect(Object.keys(out).sort()).toEqual(
-      ['hasData', 'interview', 'needsReview', 'practice', 'strongest', 'topicQuiz', 'topics']
-    );
+    expect(Object.keys(out).sort()).toEqual([
+      'hasData',
+      'interview',
+      'needsReview',
+      'practice',
+      'strongest',
+      'topicQuiz',
+      'topics'
+    ]);
     for (const banned of ['overall', 'combined', 'total', 'accuracyPct', 'skill', 'score']) {
       expect(Object.keys(out)).not.toContain(banned);
     }
@@ -620,7 +780,12 @@ describe('buildPerformanceInsights', () => {
   });
 
   it('passes Needs Review through untouched', () => {
-    const attempts = [att(day(1), [['rxjs', 1, 10], ['forms', 9, 10]])];
+    const attempts = [
+      att(day(1), [
+        ['rxjs', 1, 10],
+        ['forms', 9, 10]
+      ])
+    ];
     const needsReview = calculateWeakTopics(attempts);
     const out = buildPerformanceInsights({ ...empty, attempts, needsReview });
     expect(out.needsReview).toEqual(needsReview);
@@ -663,7 +828,12 @@ describe('buildPerformanceInsights', () => {
     const input = {
       topicRecords: [rec('q1', 'topic-quiz', day(1), 1, 2), rec('q2', 'topic-quiz', day(2), 2, 2)],
       interviewAttempts: [{ id: 'i1', completedAt: day(2), score: 1, totalQuestions: 2 }],
-      attempts: [att(day(1), [['rxjs', 1, 4], ['forms', 4, 4]])],
+      attempts: [
+        att(day(1), [
+          ['rxjs', 1, 4],
+          ['forms', 4, 4]
+        ])
+      ],
       needsReview: []
     };
     expect(buildPerformanceInsights(input)).toEqual(buildPerformanceInsights(input));

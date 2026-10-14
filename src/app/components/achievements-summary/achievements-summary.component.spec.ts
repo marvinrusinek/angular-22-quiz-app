@@ -15,7 +15,8 @@ describe('AchievementsSummaryComponent', () => {
     fixture.componentRef.setInput('total', total);
     fixture.detectChanges();
   };
-  const root = (): HTMLElement | null => fixture.nativeElement.querySelector('.achievements-summary');
+  const root = (): HTMLElement | null =>
+    fixture.nativeElement.querySelector('.achievements-summary');
 
   it('renders the "X / N" progress when there is a positive total', () => {
     setCounts(3, 6);

@@ -38,7 +38,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' }
     ]
   });
@@ -141,14 +144,24 @@ describe('resolveCorrectIndices — no quizInitialState dependency', () => {
       quizSvc._questions = [];
       // Only quizInitialState knows the answer. The old Source 3 would have
       // found it here; the fix must not.
-      quizSvc.quizInitialState = [{
-        quizId: 'q1',
-        milestone: '', summary: '', image: '',
-        questions: [{
-          questionText,
-          options: [{ text: 'A', correct: false }, { text: 'B', correct: true }, { text: 'C', correct: false }]
-        }]
-      }];
+      quizSvc.quizInitialState = [
+        {
+          quizId: 'q1',
+          milestone: '',
+          summary: '',
+          image: '',
+          questions: [
+            {
+              questionText,
+              options: [
+                { text: 'A', correct: false },
+                { text: 'B', correct: true },
+                { text: 'C', correct: false }
+              ]
+            }
+          ]
+        }
+      ];
     });
 
     const result = service.resolveCorrectIndices(question, 0, false, 'single');

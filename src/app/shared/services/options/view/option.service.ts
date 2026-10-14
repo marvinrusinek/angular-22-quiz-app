@@ -1,4 +1,4 @@
-﻿import { Service } from '@angular/core';
+import { Service } from '@angular/core';
 
 import { Option, OptionBindings } from '@shared/models';
 
@@ -10,8 +10,7 @@ export class OptionService {
    * Stable per-row key: prefer numeric optionId; fallback to stableKey + index
    */
   keyOf(o: Option, i: number): string {
-    const idPart = 
-      (o && o.optionId != null && o.optionId !== -1) ? String(o.optionId) : 'opt';
+    const idPart = o && o.optionId != null && o.optionId !== -1 ? String(o.optionId) : 'opt';
     return `${idPart}-${i}`;
   }
 
@@ -43,11 +42,7 @@ export class OptionService {
    * `undefined` is also the default, so a caller that cannot establish
    * correctness gets the neutral render rather than a fabricated verdict.
    */
-  getOptionIcon(
-    binding: OptionBindings,
-    _i: number,
-    correctness?: boolean | undefined
-  ): string {
+  getOptionIcon(binding: OptionBindings, _i: number, correctness?: boolean | undefined): string {
     if (binding.option.showIcon === false) return '';
 
     if (correctness === true) return 'check';
@@ -93,7 +88,7 @@ export class OptionService {
     const showCorrectOnTimeout = timerExpiredForQuestion && verdictCorrect;
 
     return {
-      'selected': isSelected,
+      selected: isSelected,
       'selected-option': isSelected,
       // Correct MAY be revealed on an option the user never picked — that is
       // the point of the terminal/timeout reveal.
@@ -108,10 +103,10 @@ export class OptionService {
       // disclosed the correctness of options they never chose, which is the
       // same leak unselected-disclosure.spec.ts forbids for disabled state.
       'incorrect-option': !!(isSelected && verdictIncorrect),
-      'highlighted': isHighlighted || highlightedOptionIds.has(idx),
-      'flash-red': flashDisabledSet.has(optId),  // match original 'flash-red'
-      'disabled-option': !!binding.disabled,     // match original 'disabled-option'
-      'locked-option': isLocked && !binding.disabled  // match original 'locked-option'
+      highlighted: isHighlighted || highlightedOptionIds.has(idx),
+      'flash-red': flashDisabledSet.has(optId), // match original 'flash-red'
+      'disabled-option': !!binding.disabled, // match original 'disabled-option'
+      'locked-option': isLocked && !binding.disabled // match original 'locked-option'
     };
   }
 

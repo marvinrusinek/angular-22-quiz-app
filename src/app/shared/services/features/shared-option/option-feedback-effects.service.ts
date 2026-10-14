@@ -94,7 +94,7 @@ export class OptionFeedbackEffectsService {
         })
         .join('|');
 
-      if (this.lastRepainted.get(h) === fingerprint) return;   // nothing paintable changed
+      if (this.lastRepainted.get(h) === fingerprint) return; // nothing paintable changed
       this.lastRepainted.set(h, fingerprint);
 
       h.optionBindings.set(bindings.map((b: OptionBindings) => ({ ...b })));
@@ -159,8 +159,9 @@ export class OptionFeedbackEffectsService {
     // completion is terminal, so the authorized texts exist by the time they
     // are read — nothing here can reveal them earlier.
     const qIdx = h.currentQuestionIndex ?? h.quizService.currentQuestionIndex ?? 0;
-    const qText = (h.quizService as any)?.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText
-      ?? (h.quizService as any)?.questions?.[qIdx]?.questionText;
+    const qText =
+      (h.quizService as any)?.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText ??
+      (h.quizService as any)?.questions?.[qIdx]?.questionText;
 
     if (h.quizService.isDeclaredMultiAnswer?.(qText) !== true) return;
     if (!h.quizService.isMultiAnswerComplete?.(qIdx)) return;
@@ -189,10 +190,12 @@ export class OptionFeedbackEffectsService {
         ...b,
         disabled: targetDisabled,
         isCorrect,
-        option: b.option ? {
-          ...b.option,
-          active: isCorrect
-        } : b.option
+        option: b.option
+          ? {
+              ...b.option,
+              active: isCorrect
+            }
+          : b.option
       };
     });
     if (mutated) {
@@ -251,11 +254,13 @@ export class OptionFeedbackEffectsService {
       h.timerExpiredForQuestion.set(true);
     }
 
-    const question = h.quizService.getQuestionsInDisplayOrder?.()?.[qIdx]
-      ?? h.quizService.questions?.[qIdx]
-      ?? h.currentQuestion();
+    const question =
+      h.quizService.getQuestionsInDisplayOrder?.()?.[qIdx] ??
+      h.quizService.questions?.[qIdx] ??
+      h.currentQuestion();
     const correctTexts: Set<string> =
-      h.quizService.getAuthorizedCorrectTextsForQuestion?.(question?.questionText) ?? new Set<string>();
+      h.quizService.getAuthorizedCorrectTextsForQuestion?.(question?.questionText) ??
+      new Set<string>();
 
     // Not authorized yet — wait for the next verdicts.states() change rather
     // than paint from data that no longer exists.

@@ -98,10 +98,7 @@ function revealOf(question: QuizQuestion): {
  * options — the same validation the backend performs, so a submission accepted
  * locally will be accepted remotely.
  */
-function resolveSelected(
-  question: QuizQuestion,
-  selectedOptionTexts: unknown
-): readonly Option[] {
+function resolveSelected(question: QuizQuestion, selectedOptionTexts: unknown): readonly Option[] {
   if (!Array.isArray(selectedOptionTexts)) reject();
   const texts = selectedOptionTexts as readonly unknown[];
   if (texts.length > question.options.length) reject();
@@ -142,7 +139,11 @@ export function evaluateLocally(
 
   if (isSingleSelect(question)) {
     if (selected.length === 0) {
-      return { status: 'incomplete', selectedVerdicts: [], remainingCorrectCount: correctOptions.length };
+      return {
+        status: 'incomplete',
+        selectedVerdicts: [],
+        remainingCorrectCount: correctOptions.length
+      };
     }
     return {
       status: 'resolved',
@@ -153,9 +154,7 @@ export function evaluateLocally(
 
   // ── multiple: the audited SUPERSET rule ──────────────────────────
   const selectedKeys = new Set(selected.map((option) => canonicalize(option.text)));
-  const missing = correctOptions.filter(
-    (option) => !selectedKeys.has(canonicalize(option.text))
-  );
+  const missing = correctOptions.filter((option) => !selectedKeys.has(canonicalize(option.text)));
 
   if (missing.length === 0 && selected.length > 0) {
     // correctSet ⊆ selectedSet. Extra incorrect picks are tolerated and the
@@ -180,9 +179,6 @@ export function evaluateLocally(
  * server-authoritative version arrives with the API flip, where the signed
  * receipt's deadline decides instead of anything the client asserts.
  */
-export function revealExpiredLocally(
-  quizId: string,
-  questionText: string
-): QuestionExpiredResult {
+export function revealExpiredLocally(quizId: string, questionText: string): QuestionExpiredResult {
   return { status: 'expired', ...revealOf(findQuestion(quizId, questionText)) };
 }

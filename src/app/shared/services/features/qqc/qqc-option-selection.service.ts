@@ -1,7 +1,6 @@
-﻿import { inject, Service } from '@angular/core';
+import { inject, Service } from '@angular/core';
 
 import { Option, QuestionType, QuizQuestion, SelectedOption } from '@shared/models';
-
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
@@ -36,7 +35,7 @@ export class QqcOptionSelectionService {
     option: SelectedOption,
     currentQuestionIndex: number
   ): void {
-    if (!option) return;  // option is undefined, cannot update
+    if (!option) return; // option is undefined, cannot update
 
     if (option.optionId === undefined) {
       // option.optionId is undefined, assigning fallback
@@ -52,10 +51,7 @@ export class QqcOptionSelectionService {
     if (event.checked) {
       this.selectedOptionService.addOption(currentQuestionIndex, option);
     } else {
-      this.selectedOptionService.removeOption(
-        currentQuestionIndex,
-        option.optionId
-      );
+      this.selectedOptionService.removeOption(currentQuestionIndex, option.optionId);
     }
   }
 
@@ -84,11 +80,7 @@ export class QqcOptionSelectionService {
   /**
    * Marks a question as answered in the quiz state.
    */
-  markQuestionAsAnswered(
-    quizId: string,
-    questionIndex: number,
-    lastAllCorrect: boolean
-  ): void {
+  markQuestionAsAnswered(quizId: string, questionIndex: number, lastAllCorrect: boolean): void {
     const questionState = this.quizStateService.getQuestionState(quizId, questionIndex);
 
     if (questionState) {
@@ -153,7 +145,7 @@ export class QqcOptionSelectionService {
     if (isCorrect) {
       this.timerService.attemptStopTimerForQuestion({
         questionIndex: currentQuestionIndex,
-        onStop: () => { }
+        onStop: () => {}
       });
     }
   }
@@ -205,7 +197,8 @@ export class QqcOptionSelectionService {
 
       // Ensure optionId is assigned to all options in the current question
       currentQuestion.options = this.quizService.quizOptions.assignOptionIds(
-        currentQuestion.options, currentQuestionIndex
+        currentQuestion.options,
+        currentQuestionIndex
       );
 
       // Get selected options, but only include those with a valid optionId
@@ -221,23 +214,14 @@ export class QqcOptionSelectionService {
 
       // Add or remove the option based on its current state
       if (!isOptionSelected) {
-        this.selectedOptionService.addSelectedOptionIndex(
-          currentQuestionIndex,
-          optionIndex
-        );
+        this.selectedOptionService.addSelectedOptionIndex(currentQuestionIndex, optionIndex);
       } else {
-        this.selectedOptionService.removeSelectedOptionIndex(
-          currentQuestionIndex,
-          optionIndex
-        );
+        this.selectedOptionService.removeSelectedOptionIndex(currentQuestionIndex, optionIndex);
       }
 
       // Check if all correct answers are selected
       // Update answered state
-      this.selectedOptionService.updateAnsweredState(
-        currentQuestion.options,
-        currentQuestionIndex
-      );
+      this.selectedOptionService.updateAnsweredState(currentQuestion.options, currentQuestionIndex);
 
       // Handle multiple-answer logic
       const timerStopped = this.timerService.attemptStopTimerForQuestion({
@@ -246,11 +230,14 @@ export class QqcOptionSelectionService {
 
       return {
         selectedOptions,
-        isOptionSelected: !isOptionSelected,  // toggled
+        isOptionSelected: !isOptionSelected, // toggled
         timerStopped: !!timerStopped
       };
     } catch (err: unknown) {
-      console.error('QqcOptionSelectionService.handleOptionClicked option click handling failed:', err);
+      console.error(
+        'QqcOptionSelectionService.handleOptionClicked option click handling failed:',
+        err
+      );
       return null;
     }
   }
@@ -260,10 +247,9 @@ export class QqcOptionSelectionService {
    */
   setCorrectMessage(optionsToDisplay: Option[], _question: QuizQuestion): string {
     const correctAnswers = optionsToDisplay.filter((opt) => opt.correct);
-    return this.feedbackService.setCorrectMessage(
-      correctAnswers,
-      { options: optionsToDisplay } as any as QuizQuestion
-    );
+    return this.feedbackService.setCorrectMessage(correctAnswers, {
+      options: optionsToDisplay
+    } as any as QuizQuestion);
   }
 
   /**
@@ -289,11 +275,17 @@ export class QqcOptionSelectionService {
     correctMessage: string;
   } | null> {
     const {
-      currentQuestion, option, optionIndex, currentQuestionIndex,
-      isMultipleAnswer, optionsToDisplay, selectedOptionsCount, getExplanationText
+      currentQuestion,
+      option,
+      optionIndex,
+      currentQuestionIndex,
+      isMultipleAnswer,
+      optionsToDisplay,
+      selectedOptionsCount,
+      getExplanationText
     } = params;
 
-    if (optionIndex < 0) return null;  // invalid optionIndex
+    if (optionIndex < 0) return null; // invalid optionIndex
 
     const resolvedOptionId = this.resolveStableOptionId(option, optionIndex);
 
@@ -305,12 +297,17 @@ export class QqcOptionSelectionService {
 
     const showFeedbackForOption: Record<number, boolean> = { [resolvedOptionId]: true };
     this.selectedOptionService.setSelectedOption(
-      selectedOption, currentQuestionIndex, undefined, isMultipleAnswer
+      selectedOption,
+      currentQuestionIndex,
+      undefined,
+      isMultipleAnswer
     );
 
     // Build a snapshot that mirrors what the user sees (UI order + flags)
     const qIdx = this.quizService.getCurrentQuestionIndex();
-    const canonical = (this.quizService.questions?.[qIdx]?.options ?? []).map((o: Option) => ({ ...o }));
+    const canonical = (this.quizService.questions?.[qIdx]?.options ?? []).map((o: Option) => ({
+      ...o
+    }));
     const ui = (optionsToDisplay ?? []).map((o: Option) => ({ ...o }));
     const snapshot: Option[] =
       this.selectedOptionService.overlaySelectedByIdentity?.(canonical, ui) ?? ui ?? canonical;
@@ -327,9 +324,7 @@ export class QqcOptionSelectionService {
     // multi-answer questions. Check RAW question data for correct count.
     const rawQ = this.quizService?.questions?.[currentQuestionIndex] ?? currentQuestion;
     const rawOpts: any[] = rawQ?.options ?? [];
-    const maCorrectCount = rawOpts.filter(
-      (o: any) => isOptionCorrect(o)
-    ).length;
+    const maCorrectCount = rawOpts.filter((o: any) => isOptionCorrect(o)).length;
     // TYPE ONLY — whether this question is answered with one pick or several.
     // The count is the fallback, not the authority: a declared single-answer
     // question the bank happened to flag twice used to be treated as multi and
@@ -350,16 +345,11 @@ export class QqcOptionSelectionService {
     }
     this.quizService.setCurrentQuestion(currentQuestion);
 
-    this.selectedOptionService.updateSelectedOptions(
-      currentQuestionIndex,
-      resolvedOptionId,
-      'add'
-    );
+    this.selectedOptionService.updateSelectedOptions(currentQuestionIndex, resolvedOptionId, 'add');
 
     // Get explanation text
     const explanationText =
-      (await getExplanationText(currentQuestionIndex)) ||
-      'No explanation available';
+      (await getExplanationText(currentQuestionIndex)) || 'No explanation available';
 
     // Only emit explanation text to reactive pipeline for single-answer
     // or fully-resolved multi-answer questions.
@@ -413,7 +403,7 @@ export class QqcOptionSelectionService {
     const { option, optionIndex, currentQuestion, currentQuestionIndex, quizId } = params;
 
     // Ensure that the option and optionIndex are valid
-    if (!option || optionIndex < 0) return null;  // invalid option/optionIndex
+    if (!option || optionIndex < 0) return null; // invalid option/optionIndex
 
     // Ensure the question index is valid
     if (typeof currentQuestionIndex !== 'number' || currentQuestionIndex < 0) {
@@ -444,7 +434,11 @@ export class QqcOptionSelectionService {
 
       // Update selected option service
       this.selectedOptionService.setAnsweredState(true);
-      this.selectedOptionService.updateSelectedOptions(currentQuestionIndex, resolvedOptionId, 'add');
+      this.selectedOptionService.updateSelectedOptions(
+        currentQuestionIndex,
+        resolvedOptionId,
+        'add'
+      );
 
       // Immediate state synchronization
       const selectedOption: SelectedOption = { ...option, correct: option.correct };
@@ -461,7 +455,8 @@ export class QqcOptionSelectionService {
       this.quizService.updateAnswersForOption(option);
       await this.checkAndHandleCorrectAnswer(currentQuestionIndex);
 
-      const totalCorrectAnswers = this.quizService.quizOptions.getTotalCorrectAnswers(currentQuestion);
+      const totalCorrectAnswers =
+        this.quizService.quizOptions.getTotalCorrectAnswers(currentQuestion);
 
       // Update the question state in the QuizStateService
       this.quizStateService.updateQuestionState(
@@ -469,7 +464,7 @@ export class QqcOptionSelectionService {
         currentQuestionIndex,
         {
           selectedOptions: [option],
-          isCorrect: option.correct ?? false,
+          isCorrect: option.correct ?? false
         },
         totalCorrectAnswers
       );
@@ -486,7 +481,10 @@ export class QqcOptionSelectionService {
         isFeedbackApplied: true
       };
     } catch (err: unknown) {
-      console.error('QqcOptionSelectionService.selectOptionAndApplyFeedback option selection failed:', err);
+      console.error(
+        'QqcOptionSelectionService.selectOptionAndApplyFeedback option selection failed:',
+        err
+      );
       return null;
     }
   }
@@ -535,7 +533,10 @@ export class QqcOptionSelectionService {
 
       return { currentQuestion, optionsToDisplay, data };
     } catch (err: unknown) {
-      console.error('QqcOptionSelectionService.fetchAndProcessCurrentQuestion question fetch failed:', err);
+      console.error(
+        'QqcOptionSelectionService.fetchAndProcessCurrentQuestion question fetch failed:',
+        err
+      );
       return null;
     }
   }
@@ -582,7 +583,11 @@ export class QqcOptionSelectionService {
     lastAllCorrect: boolean;
     explanationToDisplay: string;
     correctAnswersLength: number;
-    handleOptionProcessingAndFeedback: (option: SelectedOption, index: number, checked: boolean) => Promise<void>;
+    handleOptionProcessingAndFeedback: (
+      option: SelectedOption,
+      index: number,
+      checked: boolean
+    ) => Promise<void>;
     getCorrectAnswers: () => Promise<number[]>;
   }): Promise<{
     correctAnswers: number[];
@@ -609,9 +614,7 @@ export class QqcOptionSelectionService {
    * Handles correctness check and timer stop after option selection.
    * Extracted from handleCorrectnessAndTimer().
    */
-  async handleCorrectnessAndTimer(params: {
-    currentQuestionIndex: number;
-  }): Promise<boolean> {
+  async handleCorrectnessAndTimer(params: { currentQuestionIndex: number }): Promise<boolean> {
     const isCorrect = await this.quizService.checkIfAnsweredCorrectly();
     if (isCorrect) {
       this.timerService.attemptStopTimerForQuestion({
@@ -655,9 +658,10 @@ export class QqcOptionSelectionService {
     queueMicrotask(() => {
       // Then wait a frame to ensure the rendered list reflects the latest flags
       requestAnimationFrame(async () => {
-        const optionsNow = (params.optionsToDisplay?.length
-          ? params.optionsToDisplay
-          : params.currentQuestionOptions) as Option[] || [];
+        const optionsNow =
+          ((params.optionsToDisplay?.length
+            ? params.optionsToDisplay
+            : params.currentQuestionOptions) as Option[]) || [];
 
         // Notify the service that selection just changed (starts hold-off window)
         this.selectionMessageService.notifySelectionMutated(optionsNow);
@@ -724,7 +728,10 @@ export class QqcOptionSelectionService {
 
     if (params.option) {
       this.selectedOptionService.setSelectedOption(
-        params.option, params.questionIndex, undefined, isMultiSelect
+        params.option,
+        params.questionIndex,
+        undefined,
+        isMultiSelect
       );
     }
 
@@ -818,7 +825,7 @@ export class QqcOptionSelectionService {
     );
 
     await this.handleCorrectnessAndTimer({
-      currentQuestionIndex: params.currentQuestionIndex,
+      currentQuestionIndex: params.currentQuestionIndex
     });
 
     return {
@@ -846,8 +853,14 @@ export class QqcOptionSelectionService {
     isAnswered: boolean;
   }): void {
     if (params.transition.becameDeselected) {
-      const optsNow = (params.optionsToDisplay?.length ? params.optionsToDisplay : params.currentQuestionOptions) as Option[] || [];
-      this.selectionMessageService['reconcileObservedWithCurrentSelection']?.(params.currentQuestionIndex, optsNow);
+      const optsNow =
+        ((params.optionsToDisplay?.length
+          ? params.optionsToDisplay
+          : params.currentQuestionOptions) as Option[]) || [];
+      this.selectionMessageService['reconcileObservedWithCurrentSelection']?.(
+        params.currentQuestionIndex,
+        optsNow
+      );
     }
 
     this.handleSelectionMessageUpdate({

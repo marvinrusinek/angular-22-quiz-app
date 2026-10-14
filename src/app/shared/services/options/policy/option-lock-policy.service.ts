@@ -2,7 +2,6 @@ import { Service, Injector, inject } from '@angular/core';
 
 import { OptionBindings, QuestionType } from '@shared/models';
 
-
 import { QuizService } from '@shared/services/data/quiz.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import type { QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
@@ -60,15 +59,27 @@ export class OptionLockPolicyService {
     if (!shouldLockIncorrect && !isPerfect) {
       this.unlockAllBindings(bindings);
       return this.buildLockResult(
-        false, new Set<number>(), params.resolvedType, hasCorrectSelection, allCorrectSelected
+        false,
+        new Set<number>(),
+        params.resolvedType,
+        hasCorrectSelection,
+        allCorrectSelected
       );
     }
 
     const locked = this.applyGranularLocking(
-      bindings, isPerfect, allCorrectSelected, hasCorrectSelection, params.resolvedType
+      bindings,
+      isPerfect,
+      allCorrectSelected,
+      hasCorrectSelection,
+      params.resolvedType
     );
     return this.buildLockResult(
-      true, locked, params.resolvedType, hasCorrectSelection, allCorrectSelected
+      true,
+      locked,
+      params.resolvedType,
+      hasCorrectSelection,
+      allCorrectSelected
     );
   }
 
@@ -95,9 +106,7 @@ export class OptionLockPolicyService {
       if (b.option) b.option.active = false;
     }
     return new Set(
-      bindings
-        .map(b => b.option?.optionId)
-        .filter((id): id is number => typeof id === 'number')
+      bindings.map((b) => b.option?.optionId).filter((id): id is number => typeof id === 'number')
     );
   }
 
@@ -142,9 +151,7 @@ export class OptionLockPolicyService {
     // the verdict lands, which is the conservative direction: a lock that
     // arrives a round trip late is recoverable, a lock applied to a question
     // the server never called complete is not.
-    const hasCorrectSelection = bindings.some(
-      (b) => b.isSelected && b.isCorrect === true
-    );
+    const hasCorrectSelection = bindings.some((b) => b.isSelected && b.isCorrect === true);
 
     return { hasCorrectSelection, allCorrectSelected: false, isPerfect: false };
   }
@@ -185,12 +192,13 @@ export class OptionLockPolicyService {
     // it — the deadline passing says nothing about whether the user had picked
     // everything. So the REVEAL is decided here, before that null check, or a
     // timed-out question would surface no correct answers at all.
-    const revealed = state.phase === 'resolved' || state.phase === 'expired'
-      ? new Set(state.correctOptionTexts.map((text) => norm(text)))
-      : null;
+    const revealed =
+      state.phase === 'resolved' || state.phase === 'expired'
+        ? new Set(state.correctOptionTexts.map((text) => norm(text)))
+        : null;
 
     const allCorrectSelected = allCorrectSelectedFromVerdict(state);
-    if (allCorrectSelected === null && !revealed) return null;   // idle | checking | error
+    if (allCorrectSelected === null && !revealed) return null; // idle | checking | error
 
     for (const b of bindings) {
       const text = b?.option?.text;
@@ -260,5 +268,4 @@ export class OptionLockPolicyService {
     }
     return locked;
   }
-
 }

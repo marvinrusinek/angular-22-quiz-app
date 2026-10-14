@@ -2,31 +2,20 @@ import { Routes } from '@angular/router';
 
 import { QuizResolverService } from '@shared/services/flow/quiz-resolver.service';
 
-import { IntroductionComponent } from
-    '../containers/introduction/introduction.component';
+import { IntroductionComponent } from '../containers/introduction/introduction.component';
 import { QuizComponent } from '../containers/quiz/quiz.component';
-import { QuizSelectionComponent } from
-    '../containers/quiz-selection/quiz-selection.component';
+import { QuizSelectionComponent } from '../containers/quiz-selection/quiz-selection.component';
 import { ResultsComponent } from '../containers/results/results.component';
-import { BuildYourInterviewComponent } from
-    '../containers/interview/build-your-interview/build-your-interview.component';
-import { InterviewSessionComponent } from
-    '../containers/interview/interview-session/interview-session.component';
+import { BuildYourInterviewComponent } from '../containers/interview/build-your-interview/build-your-interview.component';
+import { InterviewSessionComponent } from '../containers/interview/interview-session/interview-session.component';
 import { BackendInterviewSessionGuard } from './guards/backend-interview-session-guard';
-import { InterviewResultsComponent } from
-    '../containers/interview/interview-results/interview-results.component';
-import { InterviewReportComponent } from
-    '../containers/interview/interview-report/interview-report.component';
-import { InterviewHistoryComponent } from
-    '../containers/interview/interview-history/interview-history.component';
-import { InterviewHistoryDetailComponent } from
-    '../containers/interview/interview-history-detail/interview-history-detail.component';
-import { InterviewCertificateComponent } from
-    '../containers/interview/interview-certificate/interview-certificate.component';
-import { InterviewCertificateClaimComponent } from
-    '../containers/interview/interview-certificate-claim/interview-certificate-claim.component';
-import { InterviewCertificateVerifyComponent } from
-    '../containers/interview/interview-certificate-verify/interview-certificate-verify.component';
+import { InterviewResultsComponent } from '../containers/interview/interview-results/interview-results.component';
+import { InterviewReportComponent } from '../containers/interview/interview-report/interview-report.component';
+import { InterviewHistoryComponent } from '../containers/interview/interview-history/interview-history.component';
+import { InterviewHistoryDetailComponent } from '../containers/interview/interview-history-detail/interview-history-detail.component';
+import { InterviewCertificateComponent } from '../containers/interview/interview-certificate/interview-certificate.component';
+import { InterviewCertificateClaimComponent } from '../containers/interview/interview-certificate-claim/interview-certificate-claim.component';
+import { InterviewCertificateVerifyComponent } from '../containers/interview/interview-certificate-verify/interview-certificate-verify.component';
 
 import { QuizGuard } from './guards/quiz-guard';
 import { QuizResultGuard } from './guards/quiz-result-guard';
@@ -164,6 +153,10 @@ export const routes: Routes = [
   // Backward compatibility redirects
   { path: 'select', redirectTo: 'quiz', pathMatch: 'full' },
   { path: 'intro/:quizId', redirectTo: 'quiz/intro/:quizId', pathMatch: 'full' },
-  { path: 'question/:quizId/:questionIndex', redirectTo: 'quiz/question/:quizId/:questionIndex', pathMatch: 'full' },
+  {
+    path: 'question/:quizId/:questionIndex',
+    redirectTo: 'quiz/question/:quizId/:questionIndex',
+    pathMatch: 'full'
+  },
   { path: 'results/:quizId', redirectTo: 'quiz/results/:quizId', pathMatch: 'full' }
 ];

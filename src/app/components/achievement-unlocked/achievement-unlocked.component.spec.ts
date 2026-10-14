@@ -4,10 +4,14 @@ import { AchievementUnlockedComponent } from './achievement-unlocked.component';
 import { AchievementDefinition } from '@shared/models';
 
 const PERFECT: AchievementDefinition = {
-  id: 'perfect-score', name: 'Perfect Score', description: 'Earn a 100% score on any quiz.'
+  id: 'perfect-score',
+  name: 'Perfect Score',
+  description: 'Earn a 100% score on any quiz.'
 };
 const EXPLORER: AchievementDefinition = {
-  id: 'angular-explorer', name: 'Angular Explorer', description: 'Complete every available quiz.'
+  id: 'angular-explorer',
+  name: 'Angular Explorer',
+  description: 'Complete every available quiz.'
 };
 
 describe('AchievementUnlockedComponent', () => {
@@ -22,7 +26,8 @@ describe('AchievementUnlockedComponent', () => {
     fixture.componentRef.setInput('achievements', list);
     fixture.detectChanges();
   };
-  const root = (): HTMLElement | null => fixture.nativeElement.querySelector('.achievement-unlocked');
+  const root = (): HTMLElement | null =>
+    fixture.nativeElement.querySelector('.achievement-unlocked');
   const items = (): NodeListOf<HTMLElement> =>
     fixture.nativeElement.querySelectorAll('.achievement-unlocked__item');
 

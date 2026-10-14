@@ -31,20 +31,22 @@ export class SocOptionUiService {
   // ── public methods ──────────────────────────────────────────────
 
   handleSelection(comp: any, option: SelectedOption, index: number, optionId: number): void {
-    const normalizedId = (optionId != null && !isNaN(Number(optionId))) ? Number(optionId) : null;
-    const effectiveId = (normalizedId !== null && normalizedId > -1) ? normalizedId : index;
+    const normalizedId = optionId != null && !isNaN(Number(optionId)) ? Number(optionId) : null;
+    const effectiveId = normalizedId !== null && normalizedId > -1 ? normalizedId : index;
 
     const currentQuestion = comp.currentQuestion();
-    const correctCount = (currentQuestion?.options?.filter((o: any) => isOptionCorrect(o)).length ?? 0);
+    const correctCount =
+      currentQuestion?.options?.filter((o: any) => isOptionCorrect(o)).length ?? 0;
     // DECLARED TYPE FIRST. This decides whether a click CLEARS the other
     // options or toggles just this one, so a declared single-answer question
     // the local bank happened to flag twice used to behave as a checkbox group.
     // The type is read from the same question object the count came from.
     // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
     // MODE INPUTS STILL PROMOTE — declared type replaces the COUNT only.
-    const isMultiMode = comp.type === 'multiple'
-      || comp.config()?.type === 'multiple'
-      || resolveIsMultiAnswer(currentQuestion, correctCount > 1);
+    const isMultiMode =
+      comp.type === 'multiple' ||
+      comp.config()?.type === 'multiple' ||
+      resolveIsMultiAnswer(currentQuestion, correctCount > 1);
 
     if (!isMultiMode) {
       for (const opt of comp.optionsToDisplay || []) opt.selected = false;
@@ -79,7 +81,7 @@ export class SocOptionUiService {
 
       const selOpt: SelectedOption = {
         ...option,
-        optionId: (option.optionId != null && option.optionId !== -1) ? option.optionId : effectiveId,
+        optionId: option.optionId != null && option.optionId !== -1 ? option.optionId : effectiveId,
         displayIndex: index,
         questionIndex: qIdx,
         selected: option.selected
@@ -110,7 +112,7 @@ export class SocOptionUiService {
       optionBinding.isSelected = !optionBinding.isSelected;
       optionBinding.option.showIcon = optionBinding.isSelected;
       const id = option.optionId;
-      const effectiveId = (id != null && id !== -1) ? id : index;
+      const effectiveId = id != null && id !== -1 ? id : index;
       if (optionBinding.isSelected) {
         comp.selectedOptions.add(Number(effectiveId));
       } else {
@@ -204,9 +206,13 @@ export class SocOptionUiService {
           if (comp.selectedOptionHistory?.length > 0) {
             for (let j = comp.selectedOptionHistory.length - 1; j >= 0; j--) {
               const histId = comp.selectedOptionHistory[j];
-              let hIdx = comp.optionsToDisplay.findIndex((_: any, oIdx: number) => oIdx === histId || String(oIdx) === String(histId));
+              let hIdx = comp.optionsToDisplay.findIndex(
+                (_: any, oIdx: number) => oIdx === histId || String(oIdx) === String(histId)
+              );
               if (hIdx === -1) {
-                hIdx = comp.optionsToDisplay.findIndex((o: any) => (o.optionId != null && o.optionId !== -1 && o.optionId == histId));
+                hIdx = comp.optionsToDisplay.findIndex(
+                  (o: any) => o.optionId != null && o.optionId !== -1 && o.optionId == histId
+                );
               }
 
               if (hIdx !== -1) {
@@ -218,7 +224,7 @@ export class SocOptionUiService {
               }
             }
           }
-          const _v = (comp.optionsToDisplay.indexOf(option) === lastCorrectIdx);
+          const _v = comp.optionsToDisplay.indexOf(option) === lastCorrectIdx;
           option.highlight = _v;
         } else {
           option.highlight = true;
@@ -233,14 +239,11 @@ export class SocOptionUiService {
   ensureOptionsToDisplay(comp: any): void {
     const activeIdx = comp.getActiveQuestionIndex();
     const displayQuestion = comp.getQuestionAtDisplayIndex(activeIdx);
-    const fallbackOptions =
-      displayQuestion?.options?.length
-        ? displayQuestion.options : comp.currentQuestion()?.options;
+    const fallbackOptions = displayQuestion?.options?.length
+      ? displayQuestion.options
+      : comp.currentQuestion()?.options;
 
-    if (
-      Array.isArray(comp.optionsToDisplay) &&
-      comp.optionsToDisplay.length > 0
-    ) return;
+    if (Array.isArray(comp.optionsToDisplay) && comp.optionsToDisplay.length > 0) return;
 
     if (Array.isArray(fallbackOptions) && fallbackOptions.length > 0) {
       comp.optionsToDisplay = fallbackOptions.map((option: any) => ({
@@ -268,5 +271,4 @@ export class SocOptionUiService {
       }
     });
   }
-
 }

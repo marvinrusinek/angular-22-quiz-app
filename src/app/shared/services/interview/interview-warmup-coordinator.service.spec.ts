@@ -86,13 +86,17 @@ describe('InterviewWarmupCoordinatorService', () => {
       },
       error: () => done(new Error('warmUp() must never error'))
     });
-    http.expectOne(`${BASE}/health`).error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' });
+    http
+      .expectOne(`${BASE}/health`)
+      .error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' });
   });
 
   it('failure: clears in-flight state so exactly ONE later caller can retry', () => {
     setup();
     service.warmUp().subscribe();
-    http.expectOne(`${BASE}/health`).error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' });
+    http
+      .expectOne(`${BASE}/health`)
+      .error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' });
 
     // A later call after the failure gets a FRESH request, not a cached one.
     service.warmUp().subscribe();
@@ -104,7 +108,9 @@ describe('InterviewWarmupCoordinatorService', () => {
   it('failure: does not permanently poison the coordinator — a later SUCCESS is still cached as complete afterward', () => {
     setup();
     service.warmUp().subscribe();
-    http.expectOne(`${BASE}/health`).error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' });
+    http
+      .expectOne(`${BASE}/health`)
+      .error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' });
 
     service.warmUp().subscribe();
     http.expectOne(`${BASE}/health`).flush({ status: 'UP' });
@@ -200,7 +206,9 @@ describe('InterviewWarmupCoordinatorService', () => {
     try {
       setup();
       service.warmUp().subscribe();
-      http.expectOne(`${BASE}/health`).error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' });
+      http
+        .expectOne(`${BASE}/health`)
+        .error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' });
 
       // Advance time well past any plausible polling interval — no automatic
       // second request may appear on its own; only an explicit caller can

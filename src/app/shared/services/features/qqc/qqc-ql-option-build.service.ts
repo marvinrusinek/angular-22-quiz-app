@@ -19,12 +19,10 @@ export class QqcQlOptionBuildService {
    * Builds fresh options from a question's raw options.
    * Returns deep-cloned, enriched options with unique IDs.
    */
-  buildFreshOptions(
-    question: QuizQuestion,
-    currentQuestionIndex: number
-  ): Option[] {
+  buildFreshOptions(question: QuizQuestion, currentQuestionIndex: number): Option[] {
     const rawOpts = Array.isArray(question.options)
-      ? JSON.parse(JSON.stringify(question.options)) : [];
+      ? JSON.parse(JSON.stringify(question.options))
+      : [];
 
     return rawOpts.map((opt: Option, i: number) => ({
       ...opt,
@@ -45,7 +43,7 @@ export class QqcQlOptionBuildService {
   enrichOptionsForDisplay(question: QuizQuestion): Option[] {
     if (!question || !question.options?.length) return [];
 
-    return [...question.options].map(option => ({
+    return [...question.options].map((option) => ({
       ...option,
       feedback: option.feedback ?? 'No feedback available.',
       showIcon: option.showIcon ?? false,
@@ -81,9 +79,7 @@ export class QqcQlOptionBuildService {
   ): { options: Option[]; signature: string | null } {
     if (!currentQuestion) return { options: [], signature: lastSignature };
 
-    if (!Array.isArray(currentQuestion.options) || 
-      currentQuestion.options.length === 0
-    ) {
+    if (!Array.isArray(currentQuestion.options) || currentQuestion.options.length === 0) {
       return { options: [], signature: lastSignature };
     }
 
@@ -109,10 +105,7 @@ export class QqcQlOptionBuildService {
   /**
    * Builds option bindings array for a dynamic component instance.
    */
-  buildOptionBindings(
-    clonedOptions: Option[],
-    isMultipleAnswer: boolean
-  ): OptionBindings[] {
+  buildOptionBindings(clonedOptions: Option[], isMultipleAnswer: boolean): OptionBindings[] {
     return clonedOptions.map((opt, idx) => ({
       appHighlightOption: false,
       option: opt,
@@ -135,7 +128,7 @@ export class QqcQlOptionBuildService {
       isSelected: opt.selected ?? false,
       active: opt.active ?? true,
       checked: false,
-      change: (_: any) => { },
+      change: (_: any) => {},
       index: idx,
       highlightIncorrect: false,
       highlightCorrect: false,
@@ -180,20 +173,16 @@ export class QqcQlOptionBuildService {
    * Prepares enriched options for a question and determines if the option list
    * needs clearing due to length mismatch.
    */
-  prepareOptionsForQuestion(params: {
-    question: QuizQuestion;
-    currentOptionsLength: number;
-  }): {
+  prepareOptionsForQuestion(params: { question: QuizQuestion; currentOptionsLength: number }): {
     enrichedOptions: Option[];
     shouldClearFirst: boolean;
   } {
     const enrichedOptions = this.enrichOptionsForDisplay(params.question);
-  
+
     // If incoming list length differs, caller can clear current list to avoid stale bleed-through
     const shouldClearFirst =
-      enrichedOptions.length > 0 &&
-      params.currentOptionsLength !== params.question.options.length;
-  
+      enrichedOptions.length > 0 && params.currentOptionsLength !== params.question.options.length;
+
     return { enrichedOptions, shouldClearFirst };
   }
 
@@ -216,33 +205,72 @@ export class QqcQlOptionBuildService {
     questionData: any;
     sharedOptionConfig: SharedOptionConfig | null;
   } {
-    const { instance, componentRef, question, options, isMultipleAnswer, currentQuestionIndex } = params;
+    const { instance, componentRef, question, options, isMultipleAnswer, currentQuestionIndex } =
+      params;
 
     // Configure instance with cloned options and bindings
-    const clonedOptions =
-      structuredClone?.(options) ?? JSON.parse(JSON.stringify(options));
+    const clonedOptions = structuredClone?.(options) ?? JSON.parse(JSON.stringify(options));
 
     const builtBindings = this.buildOptionBindings(clonedOptions, isMultipleAnswer);
 
     try {
       if (componentRef?.setInput) {
-        try { componentRef.setInput('question', { ...question }); } catch (err: unknown) { swallow('qqc-ql-option-build.service.ts setInput question', err); }
-        try { componentRef.setInput('optionsToDisplay', clonedOptions); } catch (err: unknown) { swallow('qqc-ql-option-build.service.ts setInput optionsToDisplay', err); }
-        try { componentRef.setInput('questionData', { ...question, options: clonedOptions }); } catch (err: unknown) { swallow('qqc-ql-option-build.service.ts setInput questionData', err); }
-        try { componentRef.setInput('optionBindings', builtBindings); } catch (err: unknown) { swallow('qqc-ql-option-build.service.ts setInput optionBindings', err); }
+        try {
+          componentRef.setInput('question', { ...question });
+        } catch (err: unknown) {
+          swallow('qqc-ql-option-build.service.ts setInput question', err);
+        }
+        try {
+          componentRef.setInput('optionsToDisplay', clonedOptions);
+        } catch (err: unknown) {
+          swallow('qqc-ql-option-build.service.ts setInput optionsToDisplay', err);
+        }
+        try {
+          componentRef.setInput('questionData', { ...question, options: clonedOptions });
+        } catch (err: unknown) {
+          swallow('qqc-ql-option-build.service.ts setInput questionData', err);
+        }
+        try {
+          componentRef.setInput('optionBindings', builtBindings);
+        } catch (err: unknown) {
+          swallow('qqc-ql-option-build.service.ts setInput optionBindings', err);
+        }
       }
       // Also set directly via signal API as a guaranteed write path.
-      try { instance.question.set({ ...question }); } catch (err: unknown) { swallow('qqc-ql-option-build.service.ts set question', err); }
-      try { instance.optionsToDisplay.set(clonedOptions); } catch (err: unknown) { swallow('qqc-ql-option-build.service.ts set optionsToDisplay', err); }
-      try { instance.optionBindings.set(builtBindings); } catch (err: unknown) { swallow('qqc-ql-option-build.service.ts set optionBindings', err); }
-      try { if (instance.questionData?.set) instance.questionData.set({ ...question, options: clonedOptions }); } catch (err: unknown) { swallow('qqc-ql-option-build.service.ts set questionData', err); }
-      try { componentRef?.changeDetectorRef?.markForCheck(); } catch (err: unknown) { swallow('qqc-ql-option-build.service.ts markForCheck', err); }
+      try {
+        instance.question.set({ ...question });
+      } catch (err: unknown) {
+        swallow('qqc-ql-option-build.service.ts set question', err);
+      }
+      try {
+        instance.optionsToDisplay.set(clonedOptions);
+      } catch (err: unknown) {
+        swallow('qqc-ql-option-build.service.ts set optionsToDisplay', err);
+      }
+      try {
+        instance.optionBindings.set(builtBindings);
+      } catch (err: unknown) {
+        swallow('qqc-ql-option-build.service.ts set optionBindings', err);
+      }
+      try {
+        if (instance.questionData?.set)
+          instance.questionData.set({ ...question, options: clonedOptions });
+      } catch (err: unknown) {
+        swallow('qqc-ql-option-build.service.ts set questionData', err);
+      }
+      try {
+        componentRef?.changeDetectorRef?.markForCheck();
+      } catch (err: unknown) {
+        swallow('qqc-ql-option-build.service.ts markForCheck', err);
+      }
     } catch {
       try {
         instance.question.set({ ...question });
         instance.optionsToDisplay.set(clonedOptions);
         instance.optionBindings.set(builtBindings);
-      } catch (err: unknown) { swallow('qqc-ql-option-build.service.ts fallback set', err); }
+      } catch (err: unknown) {
+        swallow('qqc-ql-option-build.service.ts fallback set', err);
+      }
     }
 
     instance.sharedOptionConfig = this.buildSharedOptionConfig({

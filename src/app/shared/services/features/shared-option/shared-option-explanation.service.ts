@@ -1,4 +1,4 @@
-﻿import { Service, inject } from '@angular/core';
+import { Service, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { filter, take } from 'rxjs/operators';
 
@@ -8,7 +8,10 @@ import { Option, OptionBindings, QuizQuestion } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
-import { authorizedCorrectTexts, authorizedExplanation } from '@shared/services/features/verdict/authorized-correctness';
+import {
+  authorizedCorrectTexts,
+  authorizedExplanation
+} from '@shared/services/features/verdict/authorized-correctness';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { QuizStateService } from '@shared/services/state/quizstate.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
@@ -54,17 +57,21 @@ export class SharedOptionExplanationService {
    * Resolves the question index, applies stale-call guard, builds context,
    * and delegates to emitExplanation. Called from the component's thin wrapper.
    */
-  resolveAndEmitExplanation(params: {
-    questionIndex: number;
-    activeQuestionIndex: number;
-    currentQuestion: QuizQuestion | null;
-    quizId: string;
-    optionBindings: OptionBindings[];
-    optionsToDisplay: Option[];
-    isMultiMode: boolean;
-    getQuestionAtDisplayIndex: (idx: number) => QuizQuestion | null;
-  }, skipGuard = false): void {
-    const { questionIndex, activeQuestionIndex, currentQuestion, getQuestionAtDisplayIndex } = params;
+  resolveAndEmitExplanation(
+    params: {
+      questionIndex: number;
+      activeQuestionIndex: number;
+      currentQuestion: QuizQuestion | null;
+      quizId: string;
+      optionBindings: OptionBindings[];
+      optionsToDisplay: Option[];
+      isMultiMode: boolean;
+      getQuestionAtDisplayIndex: (idx: number) => QuizQuestion | null;
+    },
+    skipGuard = false
+  ): void {
+    const { questionIndex, activeQuestionIndex, currentQuestion, getQuestionAtDisplayIndex } =
+      params;
 
     const resolvedIndex = Number.isFinite(activeQuestionIndex)
       ? Math.max(0, Math.trunc(activeQuestionIndex))
@@ -73,16 +80,17 @@ export class SharedOptionExplanationService {
         : this.resolveExplanationQuestionIndex(questionIndex, activeQuestionIndex);
 
     const question =
-      getQuestionAtDisplayIndex(resolvedIndex)
-      ?? currentQuestion
-      ?? this.quizService.questions?.[resolvedIndex]
-      ?? null;
+      getQuestionAtDisplayIndex(resolvedIndex) ??
+      currentQuestion ??
+      this.quizService.questions?.[resolvedIndex] ??
+      null;
 
     // Guard: Prevent stale deferred calls from emitting for the wrong question.
     if (currentQuestion && resolvedIndex !== questionIndex) {
-      const questionAtIndex = getQuestionAtDisplayIndex(resolvedIndex)
-        ?? this.quizService.getQuestionsInDisplayOrder?.()?.[resolvedIndex]
-        ?? this.quizService.questions?.[resolvedIndex];
+      const questionAtIndex =
+        getQuestionAtDisplayIndex(resolvedIndex) ??
+        this.quizService.getQuestionsInDisplayOrder?.()?.[resolvedIndex] ??
+        this.quizService.questions?.[resolvedIndex];
       if (questionAtIndex && questionAtIndex.questionText !== currentQuestion.questionText) {
         return;
       }
@@ -110,8 +118,10 @@ export class SharedOptionExplanationService {
 
     // Guard: Emit FET only when the question is resolved correctly.
     // Use display-order question source to handle shuffled mode correctly.
-    const authQ = this.quizService.getQuestionsInDisplayOrder?.()?.[resolvedIndex]
-      ?? this.quizService.questions?.[resolvedIndex] ?? question;
+    const authQ =
+      this.quizService.getQuestionsInDisplayOrder?.()?.[resolvedIndex] ??
+      this.quizService.questions?.[resolvedIndex] ??
+      question;
 
     if (!skipGuard) {
       if (authQ && Array.isArray(authQ.options)) {
@@ -216,10 +226,15 @@ export class SharedOptionExplanationService {
     const selectedFromUi = this.collectSelectedFromUi(ctx);
 
     const uiResolved = this.computeUiResolved(
-      selectedFromUi, status, isMultiAnswer, correctCount, pristineCorrectTexts, question!
+      selectedFromUi,
+      status,
+      isMultiAnswer,
+      correctCount,
+      pristineCorrectTexts,
+      question!
     );
 
-    let resolved = (selectedFromUi.length > 0) ? uiResolved : status.resolved;
+    let resolved = selectedFromUi.length > 0 ? uiResolved : status.resolved;
 
     // PRISTINE GATE — COMPATIBILITY ONLY, while nothing is authorized.
     //
@@ -237,7 +252,11 @@ export class SharedOptionExplanationService {
     // what keeps the question text on screen.
     if (!status.evaluated && isMultiAnswer && pristineCorrectTexts.size > 0) {
       resolved = this.applyMultiAnswerPristineGate(
-        ctx, selectedFromUi, selectedFromService, pristineCorrectTexts, resolved
+        ctx,
+        selectedFromUi,
+        selectedFromService,
+        pristineCorrectTexts,
+        resolved
       );
     }
 
@@ -250,13 +269,17 @@ export class SharedOptionExplanationService {
 
   // Resolve correct count/texts from pristine quizInitialState — live options
   // can have stale correct flags (e.g. after Restart Quiz) that inflate the count.
-  private resolveCorrectCountAndTexts(
-    ctx: ExplanationContext
-  ): { correctCount: number; pristineCorrectTexts: Set<string>; authQuestion: QuizQuestion | null } {
+  private resolveCorrectCountAndTexts(ctx: ExplanationContext): {
+    correctCount: number;
+    pristineCorrectTexts: Set<string>;
+    authQuestion: QuizQuestion | null;
+  } {
     const { resolvedIndex, question } = ctx;
 
-    const authQuestion = this.quizService.getQuestionsInDisplayOrder?.()?.[resolvedIndex]
-      ?? this.quizService.questions?.[resolvedIndex] ?? question;
+    const authQuestion =
+      this.quizService.getQuestionsInDisplayOrder?.()?.[resolvedIndex] ??
+      this.quizService.questions?.[resolvedIndex] ??
+      question;
     let correctCount = 0;
     const pristineCorrectTexts = new Set<string>();
     const qText = this.normalize(authQuestion?.questionText ?? question?.questionText);
@@ -264,9 +287,7 @@ export class SharedOptionExplanationService {
       for (const quiz of this.quizService?.quizInitialState ?? []) {
         for (const pq of quiz?.questions ?? []) {
           if (this.normalize(pq?.questionText) !== qText) continue;
-          const correctOpts = (pq?.options ?? []).filter(
-            (o: any) => isOptionCorrect(o)
-          );
+          const correctOpts = (pq?.options ?? []).filter((o: any) => isOptionCorrect(o));
           if (correctOpts.length === 0) continue;
           correctCount = correctOpts.length;
           for (const o of correctOpts) {
@@ -277,10 +298,12 @@ export class SharedOptionExplanationService {
         }
         if (correctCount > 0) break;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     if (correctCount === 0) {
-      correctCount = (authQuestion?.options ?? question!.options).filter(
-        (o: any) => isOptionCorrect(o)
+      correctCount = (authQuestion?.options ?? question!.options).filter((o: any) =>
+        isOptionCorrect(o)
       ).length;
     }
     // The question is returned alongside the counts so the caller can ask it
@@ -295,9 +318,10 @@ export class SharedOptionExplanationService {
     const { optionBindings, optionsToDisplay } = ctx;
     const _rawOb1 = optionBindings as any;
     const _ob1: any[] = typeof _rawOb1 === 'function' ? (_rawOb1() ?? []) : (_rawOb1 ?? []);
-    const visualOptions = (Array.isArray(_ob1) && _ob1.length > 0)
-      ? _ob1.map((b: OptionBindings) => b.option)
-      : (optionsToDisplay ?? []);
+    const visualOptions =
+      Array.isArray(_ob1) && _ob1.length > 0
+        ? _ob1.map((b: OptionBindings) => b.option)
+        : (optionsToDisplay ?? []);
 
     return visualOptions
       .map((opt: any, idx: number) => {
@@ -305,11 +329,11 @@ export class SharedOptionExplanationService {
         const optionSelected = opt?.selected === true || bindingSelected;
         return optionSelected
           ? ({
-            optionId: opt?.optionId,
-            text: opt?.text,
-            correct: opt?.correct,
-            displayIndex: idx
-          } as any)
+              optionId: opt?.optionId,
+              text: opt?.text,
+              correct: opt?.correct,
+              displayIndex: idx
+            } as any)
           : null;
       })
       .filter((opt: any) => opt != null);
@@ -328,14 +352,14 @@ export class SharedOptionExplanationService {
 
     const selId = sel?.optionId;
 
-    const byId = question!.options.find((o: any) =>
-      o?.optionId !== undefined && o?.optionId !== null &&
-      String(o.optionId) === String(selId)
+    const byId = question!.options.find(
+      (o: any) =>
+        o?.optionId !== undefined && o?.optionId !== null && String(o.optionId) === String(selId)
     );
     if (byId) return isOptionCorrect(byId);
 
-    const byText = question!.options.find((o: any) =>
-      this.normalize(o?.text) !== '' && this.normalize(o?.text) === selText
+    const byText = question!.options.find(
+      (o: any) => this.normalize(o?.text) !== '' && this.normalize(o?.text) === selText
     );
     if (byText) return isOptionCorrect(byText);
 
@@ -377,8 +401,8 @@ export class SharedOptionExplanationService {
     if (status.evaluated) return status.resolved;
 
     // ── TEMPORARY: NO AUTHORIZED VERDICT YET ──────────────────────────
-    const correctSelected = selectedFromUi.filter(
-      (sel: any) => this.isResolutionSelectionCorrect(sel, pristineCorrectTexts, question)
+    const correctSelected = selectedFromUi.filter((sel: any) =>
+      this.isResolutionSelectionCorrect(sel, pristineCorrectTexts, question)
     ).length;
 
     // The RULE is still chosen by the declared type — only the comparison is
@@ -407,7 +431,8 @@ export class SharedOptionExplanationService {
     }
     try {
       const idx = resolvedIndex;
-      const raw = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(SK_SEL_Q + idx) : null;
+      const raw =
+        typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(SK_SEL_Q + idx) : null;
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
@@ -418,10 +443,15 @@ export class SharedOptionExplanationService {
           }
         }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     let allPresent = true;
     for (const t of pristineCorrectTexts) {
-      if (!selectedTexts.has(t)) { allPresent = false; break; }
+      if (!selectedTexts.has(t)) {
+        allPresent = false;
+        break;
+      }
     }
     if (!allPresent) resolved = false;
     return resolved;
@@ -431,10 +461,7 @@ export class SharedOptionExplanationService {
   // Apply & Verify
   // ═══════════════════════════════════════════════════════════════════════
 
-  applyExplanationText(
-    explanationText: string,
-    displayIndex: number
-  ): void {
+  applyExplanationText(explanationText: string, displayIndex: number): void {
     // NOT VISIT-SCOPED. Writing the explanation is a render, not a click.
     //
     // On a revisit this method runs again — the question already carries a
@@ -461,14 +488,8 @@ export class SharedOptionExplanationService {
     });
 
     const displayOptions = { context: contextKey, force: true } as const;
-    this.explanationTextService.setShouldDisplayExplanation(
-      true,
-      displayOptions
-    );
-    this.explanationTextService.setIsExplanationTextDisplayed(
-      true,
-      displayOptions
-    );
+    this.explanationTextService.setShouldDisplayExplanation(true, displayOptions);
+    this.explanationTextService.setIsExplanationTextDisplayed(true, displayOptions);
     this.explanationTextService.setResetComplete(true);
 
     this.explanationTextService.lockExplanation();
@@ -480,17 +501,12 @@ export class SharedOptionExplanationService {
   }
 
   buildExplanationContext(questionIndex: number): string {
-    const normalized = Number.isFinite(questionIndex)
-      ? Math.max(0, Math.floor(questionIndex))
-      : 0;
+    const normalized = Number.isFinite(questionIndex) ? Math.max(0, Math.floor(questionIndex)) : 0;
 
     return `question:${normalized}`;
   }
 
-  scheduleExplanationVerification(
-    displayIndex: number,
-    explanationText: string
-  ): void {
+  scheduleExplanationVerification(displayIndex: number, explanationText: string): void {
     requestAnimationFrame(() => {
       let latest: string | null = null;
       try {
@@ -518,15 +534,10 @@ export class SharedOptionExplanationService {
     currentQuestionIndex: number,
     resolvedQuestionIndex: number | null
   ): number {
-    const explicit = Number.isFinite(questionIndex)
-      ? Math.max(0, Math.floor(questionIndex))
-      : null;
+    const explicit = Number.isFinite(questionIndex) ? Math.max(0, Math.floor(questionIndex)) : null;
 
     const resolved =
-      explicit ??
-      getActiveQuestionIndex() ??
-      currentQuestionIndex ??
-      resolvedQuestionIndex;
+      explicit ?? getActiveQuestionIndex() ?? currentQuestionIndex ?? resolvedQuestionIndex;
     return Number.isFinite(resolved) ? Math.max(0, Math.floor(resolved!)) : 0;
   }
 
@@ -541,10 +552,7 @@ export class SharedOptionExplanationService {
    *   3. The service-level current question index
    *   4. Emergency fallback: 0
    */
-  resolveExplanationQuestionIndex(
-    questionIndex: number,
-    activeQuestionIndex: number
-  ): number {
+  resolveExplanationQuestionIndex(questionIndex: number, activeQuestionIndex: number): number {
     if (Number.isFinite(questionIndex)) {
       return Math.max(0, Math.trunc(questionIndex));
     }
@@ -553,7 +561,8 @@ export class SharedOptionExplanationService {
       return Math.max(0, Math.trunc(activeQuestionIndex));
     }
 
-    const svcIndex = this.quizService?.getCurrentQuestionIndex?.() ?? this.quizService?.currentQuestionIndex;
+    const svcIndex =
+      this.quizService?.getCurrentQuestionIndex?.() ?? this.quizService?.currentQuestionIndex;
     if (typeof svcIndex === 'number' && Number.isFinite(svcIndex)) {
       return Math.max(0, Math.trunc(svcIndex));
     }
@@ -599,8 +608,8 @@ export class SharedOptionExplanationService {
   private emitWhenVerdictArrives(ctx: ExplanationContext, skipGuard: boolean): void {
     const quizId = (this.quizService as any)?.quizId as string | undefined;
     const questionText =
-      this.quizService.getQuestionsInDisplayOrder?.()?.[ctx.resolvedIndex]?.questionText
-      ?? ctx.question?.questionText;
+      this.quizService.getQuestionsInDisplayOrder?.()?.[ctx.resolvedIndex]?.questionText ??
+      ctx.question?.questionText;
     if (!quizId || !questionText) return;
 
     const key = `${quizId} ${this.normalize(questionText)}`;
@@ -608,9 +617,11 @@ export class SharedOptionExplanationService {
 
     const sub = this.verdicts.terminalVerdicts$
       .pipe(
-        filter((arrival) =>
-          arrival.quizId === quizId
-          && this.normalize(arrival.questionText) === this.normalize(questionText)),
+        filter(
+          (arrival) =>
+            arrival.quizId === quizId &&
+            this.normalize(arrival.questionText) === this.normalize(questionText)
+        ),
         take(1)
       )
       .subscribe(() => {
@@ -650,18 +661,27 @@ export class SharedOptionExplanationService {
   }
 
   resolveExplanationText(ctx: ExplanationContext): string {
-    const { resolvedIndex: displayIndex, question, optionsToDisplay, currentQuestion, quizId } = ctx;
+    const {
+      resolvedIndex: displayIndex,
+      question,
+      optionsToDisplay,
+      currentQuestion,
+      quizId
+    } = ctx;
     // RESOLVE: ctx.optionBindings may be a signal (-clean) or array (-main)
     const _rawOb2 = (ctx as any).optionBindings;
-    const optionBindings: any[] = typeof _rawOb2 === 'function' ? (_rawOb2() ?? []) : (_rawOb2 ?? []);
+    const optionBindings: any[] =
+      typeof _rawOb2 === 'function' ? (_rawOb2() ?? []) : (_rawOb2 ?? []);
     // Use ctx.question (resolved from display index) over currentQuestion (can be null)
     const effectiveQuestion = question ?? currentQuestion;
 
     // 1. Determine which options are ACTUALLY displayed right now
-    const displayOptions = (Array.isArray(optionBindings) && optionBindings.length > 0)
-      ? optionBindings.map(b => b.option)
-      : (Array.isArray(optionsToDisplay) && optionsToDisplay.length > 0)
-        ? optionsToDisplay : [];
+    const displayOptions =
+      Array.isArray(optionBindings) && optionBindings.length > 0
+        ? optionBindings.map((b) => b.option)
+        : Array.isArray(optionsToDisplay) && optionsToDisplay.length > 0
+          ? optionsToDisplay
+          : [];
 
     // Both early exits below used to return `effectiveQuestion.explanation`.
     // They are unauthorized reveals by any other name, so they now answer with
@@ -674,7 +694,7 @@ export class SharedOptionExplanationService {
     const allCanonical = this.quizService.quizDataLoader.getCanonicalQuestions(quizId) || [];
     const currentQText = this.normalize(effectiveQuestion?.questionText);
 
-    let authQ = allCanonical.find(q => this.normalize(q.questionText) === currentQText);
+    let authQ = allCanonical.find((q) => this.normalize(q.questionText) === currentQText);
     authQ = authQ || (effectiveQuestion as QuizQuestion);
 
     if (!authQ) return this.resolveAuthorizedExplanation(displayIndex);
@@ -715,9 +735,7 @@ export class SharedOptionExplanationService {
     // against the options AS DISPLAYED so shuffle numbers what is on screen.
     // Same helper and same rule the formatter uses; the local sets remain only
     // for as long as a bank-sourced quiz still populates them.
-    const authorizedTexts = authorizedCorrectTexts(
-      this.quizService, displayIndex, this.verdicts
-    );
+    const authorizedTexts = authorizedCorrectTexts(this.quizService, displayIndex, this.verdicts);
 
     const correctIndices = displayOptions
       .map((opt, i) => {
@@ -728,9 +746,8 @@ export class SharedOptionExplanationService {
         }
 
         const id = Number(opt.optionId);
-        const isCorrect = (!isNaN(id) && correctIds.has(id)) ||
-          (text && correctTexts.has(text)) ||
-          !!opt.correct;
+        const isCorrect =
+          (!isNaN(id) && correctIds.has(id)) || (text && correctTexts.has(text)) || !!opt.correct;
 
         return isCorrect ? i + 1 : null;
       })

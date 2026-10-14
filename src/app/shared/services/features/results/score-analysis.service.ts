@@ -62,15 +62,13 @@ export class ScoreAnalysisService {
       // The bank scan that used to sit here is gone. It was the last place
       // Results could rebuild the answer key at exactly the moment it is meant
       // to be unnecessary.
-      const correctTexts = authorized
-        ? authorized.correctOptionTexts.map((t) => norm(t))
-        : [];
+      const correctTexts = authorized ? authorized.correctOptionTexts.map((t) => norm(t)) : [];
 
       // Mirror the accordion exactly: ALL correct answers must be selected.
       // With no authorized reveal `correctTexts` is empty, so this is false —
       // an unanswered question contributes zero rather than being judged.
-      const wasCorrect = correctTexts.length > 0
-        && correctTexts.every((ct) => selectedTexts.includes(ct));
+      const wasCorrect =
+        correctTexts.length > 0 && correctTexts.every((ct) => selectedTexts.includes(ct));
 
       // Ids are resolved FROM the authorized texts, not by re-reading
       // correctness — kept only so snapshots persisted by earlier builds and
@@ -152,10 +150,15 @@ export class ScoreAnalysisService {
   }
 
   // ── selection reading (mirrors AccordionComponent.getSelectedOptionsForQuestion) ──
-  private getSelectedOptions(options: Option[], index: number): { text: string; optionId: string }[] {
+  private getSelectedOptions(
+    options: Option[],
+    index: number
+  ): { text: string; optionId: string }[] {
     const raw = this.selectedOptionService.rawSelectionsMap.get(index);
     const source: { optionId?: number; text?: string }[] =
-      raw && raw.length > 0 ? raw : (this.selectedOptionService.selectedOptionsMap.get(index) ?? []);
+      raw && raw.length > 0
+        ? raw
+        : (this.selectedOptionService.selectedOptionsMap.get(index) ?? []);
 
     return source
       .map((sel) => {
@@ -175,13 +178,20 @@ export class ScoreAnalysisService {
   private matchOption(options: Option[], sel: { optionId?: number; text?: string }): number {
     let idx = options.findIndex(
       (o) =>
-        o.optionId != null && sel.optionId != null && sel.optionId !== -1 &&
+        o.optionId != null &&
+        sel.optionId != null &&
+        sel.optionId !== -1 &&
         String(o.optionId) === String(sel.optionId)
     );
     if (idx === -1 && sel.text) {
       idx = options.findIndex((o) => o.text === sel.text);
     }
-    if (idx === -1 && typeof sel.optionId === 'number' && sel.optionId >= 0 && sel.optionId < options.length) {
+    if (
+      idx === -1 &&
+      typeof sel.optionId === 'number' &&
+      sel.optionId >= 0 &&
+      sel.optionId < options.length
+    ) {
       idx = sel.optionId;
     }
     return idx;

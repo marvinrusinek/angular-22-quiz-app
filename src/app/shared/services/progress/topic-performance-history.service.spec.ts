@@ -19,11 +19,17 @@ describe('TopicPerformanceHistoryService — recording', () => {
 
   it('records an attempt once and exposes it for aggregation', () => {
     const svc = service();
-    svc.record('att-1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 2, total: 10 }]);
+    svc.record('att-1', 'topic-quiz', [
+      { topicId: 'rxjs', topicName: 'RxJS', correct: 2, total: 10 }
+    ]);
 
     expect(svc.records()).toHaveLength(1);
     expect(svc.records()[0]).toMatchObject({
-      attemptId: 'att-1', source: 'topic-quiz', topicId: 'rxjs', correct: 2, total: 10
+      attemptId: 'att-1',
+      source: 'topic-quiz',
+      topicId: 'rxjs',
+      correct: 2,
+      total: 10
     });
     expect(svc.asAttempts()[0].topicPerformance[0]).toMatchObject({ correct: 2, total: 10 });
   });
@@ -33,8 +39,8 @@ describe('TopicPerformanceHistoryService — recording', () => {
     const topics = [{ topicId: 'rxjs', correct: 2, total: 10 }];
 
     svc.record('att-1', 'topic-quiz', topics);
-    svc.record('att-1', 'topic-quiz', topics);   // Results remount
-    svc.record('att-1', 'topic-quiz', topics);   // revisit
+    svc.record('att-1', 'topic-quiz', topics); // Results remount
+    svc.record('att-1', 'topic-quiz', topics); // revisit
     expect(svc.records()).toHaveLength(1);
     expect(svc.hasRecorded('att-1')).toBe(true);
 
@@ -65,12 +71,12 @@ describe('TopicPerformanceHistoryService — recording', () => {
 
   it('ignores empty, zero-total and malformed inputs', () => {
     const svc = service();
-    svc.record('', 'topic-quiz', [{ topicId: 'rxjs', correct: 1, total: 5 }]);      // no id
-    svc.record('att-1', 'topic-quiz', []);                                          // no topics
-    svc.record('att-2', 'topic-quiz', [{ topicId: 'rxjs', correct: 0, total: 0 }]);  // empty sample
-    svc.record('att-3', 'topic-quiz', [{ topicId: '', correct: 1, total: 5 }]);      // no topic id
+    svc.record('', 'topic-quiz', [{ topicId: 'rxjs', correct: 1, total: 5 }]); // no id
+    svc.record('att-1', 'topic-quiz', []); // no topics
+    svc.record('att-2', 'topic-quiz', [{ topicId: 'rxjs', correct: 0, total: 0 }]); // empty sample
+    svc.record('att-3', 'topic-quiz', [{ topicId: '', correct: 1, total: 5 }]); // no topic id
     expect(svc.records()).toEqual([]);
-    expect(stored()).toBeNull();   // nothing was written at all
+    expect(stored()).toBeNull(); // nothing was written at all
   });
 
   it('clamps a nonsensical correct > total rather than discarding the record', () => {
@@ -99,24 +105,67 @@ describe('TopicPerformanceHistoryService — read-only records() accessor', () =
   it('exposes source, attemptId, completedAt and raw counts for both sources', () => {
     jest.useFakeTimers({ now: new Date('2026-09-01T10:00:00.000Z') });
     const svc = service();
-    svc.record('quiz:rxjs:1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5 }]);
-    svc.record('practice:p1', 'weak-areas-practice', [{ topicId: 'signals', topicName: 'Signals', correct: 1, total: 3 }]);
+    svc.record('quiz:rxjs:1', 'topic-quiz', [
+      { topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5 }
+    ]);
+    svc.record('practice:p1', 'weak-areas-practice', [
+      { topicId: 'signals', topicName: 'Signals', correct: 1, total: 3 }
+    ]);
 
     expect(svc.records()).toEqual([
-      { attemptId: 'quiz:rxjs:1', source: 'topic-quiz', completedAt: '2026-09-01T10:00:00.000Z', topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5 },
-      { attemptId: 'practice:p1', source: 'weak-areas-practice', completedAt: '2026-09-01T10:00:00.000Z', topicId: 'signals', topicName: 'Signals', correct: 1, total: 3 }
+      {
+        attemptId: 'quiz:rxjs:1',
+        source: 'topic-quiz',
+        completedAt: '2026-09-01T10:00:00.000Z',
+        topicId: 'rxjs',
+        topicName: 'RxJS',
+        correct: 4,
+        total: 5
+      },
+      {
+        attemptId: 'practice:p1',
+        source: 'weak-areas-practice',
+        completedAt: '2026-09-01T10:00:00.000Z',
+        topicId: 'signals',
+        topicName: 'Signals',
+        correct: 1,
+        total: 3
+      }
     ]);
   });
 
   it('keeps `source` on records loaded from storage', () => {
-    localStorage.setItem(SK_TOPIC_PERFORMANCE_HISTORY, JSON.stringify({
-      version: 1,
-      records: [
-        { attemptId: 'a', source: 'topic-quiz', completedAt: '2026-07-01T10:00:00.000Z', topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 5 },
-        { attemptId: 'b', source: 'weak-areas-practice', completedAt: '2026-07-02T10:00:00.000Z', topicId: 'rxjs', topicName: 'RxJS', correct: 2, total: 5 }
-      ]
-    }));
-    expect(service().records().map((r) => [r.attemptId, r.source])).toEqual([
+    localStorage.setItem(
+      SK_TOPIC_PERFORMANCE_HISTORY,
+      JSON.stringify({
+        version: 1,
+        records: [
+          {
+            attemptId: 'a',
+            source: 'topic-quiz',
+            completedAt: '2026-07-01T10:00:00.000Z',
+            topicId: 'rxjs',
+            topicName: 'RxJS',
+            correct: 1,
+            total: 5
+          },
+          {
+            attemptId: 'b',
+            source: 'weak-areas-practice',
+            completedAt: '2026-07-02T10:00:00.000Z',
+            topicId: 'rxjs',
+            topicName: 'RxJS',
+            correct: 2,
+            total: 5
+          }
+        ]
+      })
+    );
+    expect(
+      service()
+        .records()
+        .map((r) => [r.attemptId, r.source])
+    ).toEqual([
       ['a', 'topic-quiz'],
       ['b', 'weak-areas-practice']
     ]);
@@ -127,32 +176,70 @@ describe('TopicPerformanceHistoryService — read-only records() accessor', () =
     svc.record('a1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 4 }]);
 
     const rows = svc.records() as unknown as Record<string, unknown>[];
-    attempt(() => rows.push({ attemptId: 'INJECTED', source: 'topic-quiz', completedAt: '2026-07-01T10:00:00.000Z', topicId: 't', topicName: 't', correct: 9, total: 9 }));
-    attempt(() => { rows[0]!['correct'] = 4; });
-    attempt(() => { rows[0]!['source'] = 'weak-areas-practice'; });
-    attempt(() => { rows.length = 0; });
+    attempt(() =>
+      rows.push({
+        attemptId: 'INJECTED',
+        source: 'topic-quiz',
+        completedAt: '2026-07-01T10:00:00.000Z',
+        topicId: 't',
+        topicName: 't',
+        correct: 9,
+        total: 9
+      })
+    );
+    attempt(() => {
+      rows[0]!['correct'] = 4;
+    });
+    attempt(() => {
+      rows[0]!['source'] = 'weak-areas-practice';
+    });
+    attempt(() => {
+      rows.length = 0;
+    });
     attempt(() => rows.splice(0, 1));
 
     expect(Object.isFrozen(svc.records())).toBe(true);
     expect(Object.isFrozen(svc.records()[0])).toBe(true);
     expect(svc.records()).toHaveLength(1);
-    expect(svc.records()[0]).toMatchObject({ attemptId: 'a1', source: 'topic-quiz', correct: 1, total: 4 });
+    expect(svc.records()[0]).toMatchObject({
+      attemptId: 'a1',
+      source: 'topic-quiz',
+      correct: 1,
+      total: 4
+    });
 
     // The decisive check: the NEXT write persists a clean store.
     svc.record('a2', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 2, total: 4 }]);
-    const persisted = stored() as { records: { attemptId: string; correct: number; source: string }[] };
+    const persisted = stored() as {
+      records: { attemptId: string; correct: number; source: string }[];
+    };
     expect(persisted.records.map((r) => r.attemptId)).toEqual(['a1', 'a2']);
     expect(persisted.records[0]).toMatchObject({ correct: 1, source: 'topic-quiz' });
   });
 
   it('protects records that were LOADED from storage, not just freshly recorded ones', () => {
-    localStorage.setItem(SK_TOPIC_PERFORMANCE_HISTORY, JSON.stringify({
-      version: 1,
-      records: [{ attemptId: 'a', source: 'topic-quiz', completedAt: '2026-07-01T10:00:00.000Z', topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 5 }]
-    }));
+    localStorage.setItem(
+      SK_TOPIC_PERFORMANCE_HISTORY,
+      JSON.stringify({
+        version: 1,
+        records: [
+          {
+            attemptId: 'a',
+            source: 'topic-quiz',
+            completedAt: '2026-07-01T10:00:00.000Z',
+            topicId: 'rxjs',
+            topicName: 'RxJS',
+            correct: 1,
+            total: 5
+          }
+        ]
+      })
+    );
     const svc = service();
     const rows = svc.records() as unknown as Record<string, unknown>[];
-    attempt(() => { rows[0]!['correct'] = 5; });
+    attempt(() => {
+      rows[0]!['correct'] = 5;
+    });
     attempt(() => rows.push({}));
 
     expect(Object.isFrozen(svc.records())).toBe(true);
@@ -164,14 +251,21 @@ describe('TopicPerformanceHistoryService — read-only records() accessor', () =
     const svc = service();
     svc.record('a1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 3, total: 4 }]);
     const attempts = svc.asAttempts();
-    expect(attempts[0]!.topicPerformance[0]).toMatchObject({ topicId: 'rxjs', correct: 3, total: 4, percentage: 75 });
+    expect(attempts[0]!.topicPerformance[0]).toMatchObject({
+      topicId: 'rxjs',
+      correct: 3,
+      total: 4,
+      percentage: 75
+    });
     expect(Object.isFrozen(attempts[0])).toBe(false);
   });
 
   it('persists byte-for-byte the same JSON as before — freezing changes nothing on disk', () => {
     jest.useFakeTimers({ now: new Date('2026-09-01T10:00:00.000Z') });
     const svc = service();
-    svc.record('quiz:rxjs:1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5 }]);
+    svc.record('quiz:rxjs:1', 'topic-quiz', [
+      { topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5 }
+    ]);
     svc.record('practice:p1', 'weak-areas-practice', [
       { topicId: 'signals', topicName: 'Signals', correct: 1, total: 3 },
       { topicId: 'forms', topicName: 'Forms', correct: 2, total: 2 }
@@ -180,9 +274,33 @@ describe('TopicPerformanceHistoryService — read-only records() accessor', () =
     const expected = JSON.stringify({
       version: 1,
       records: [
-        { attemptId: 'quiz:rxjs:1', source: 'topic-quiz', completedAt: '2026-09-01T10:00:00.000Z', topicId: 'rxjs', topicName: 'RxJS', correct: 4, total: 5 },
-        { attemptId: 'practice:p1', source: 'weak-areas-practice', completedAt: '2026-09-01T10:00:00.000Z', topicId: 'signals', topicName: 'Signals', correct: 1, total: 3 },
-        { attemptId: 'practice:p1', source: 'weak-areas-practice', completedAt: '2026-09-01T10:00:00.000Z', topicId: 'forms', topicName: 'Forms', correct: 2, total: 2 }
+        {
+          attemptId: 'quiz:rxjs:1',
+          source: 'topic-quiz',
+          completedAt: '2026-09-01T10:00:00.000Z',
+          topicId: 'rxjs',
+          topicName: 'RxJS',
+          correct: 4,
+          total: 5
+        },
+        {
+          attemptId: 'practice:p1',
+          source: 'weak-areas-practice',
+          completedAt: '2026-09-01T10:00:00.000Z',
+          topicId: 'signals',
+          topicName: 'Signals',
+          correct: 1,
+          total: 3
+        },
+        {
+          attemptId: 'practice:p1',
+          source: 'weak-areas-practice',
+          completedAt: '2026-09-01T10:00:00.000Z',
+          topicId: 'forms',
+          topicName: 'Forms',
+          correct: 2,
+          total: 2
+        }
       ]
     });
     expect(localStorage.getItem(SK_TOPIC_PERFORMANCE_HISTORY)).toBe(expected);
@@ -210,30 +328,86 @@ describe('TopicPerformanceHistoryService — resilient loading', () => {
   });
 
   it('keeps the GOOD records when some stored entries are malformed', () => {
-    localStorage.setItem(SK_TOPIC_PERFORMANCE_HISTORY, JSON.stringify({
-      version: 1,
-      records: [
-        null,
-        { attemptId: 'good', source: 'topic-quiz', completedAt: '2026-07-01T10:00:00.000Z', topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 5 },
-        { attemptId: 'bad-source', source: 'interview', completedAt: '2026-07-01T10:00:00.000Z', topicId: 'x', correct: 1, total: 5 },
-        { attemptId: 'no-date', source: 'topic-quiz', completedAt: 'nope', topicId: 'x', correct: 1, total: 5 },
-        { attemptId: 'zero', source: 'topic-quiz', completedAt: '2026-07-01T10:00:00.000Z', topicId: 'x', correct: 0, total: 0 }
-      ]
-    }));
+    localStorage.setItem(
+      SK_TOPIC_PERFORMANCE_HISTORY,
+      JSON.stringify({
+        version: 1,
+        records: [
+          null,
+          {
+            attemptId: 'good',
+            source: 'topic-quiz',
+            completedAt: '2026-07-01T10:00:00.000Z',
+            topicId: 'rxjs',
+            topicName: 'RxJS',
+            correct: 1,
+            total: 5
+          },
+          {
+            attemptId: 'bad-source',
+            source: 'interview',
+            completedAt: '2026-07-01T10:00:00.000Z',
+            topicId: 'x',
+            correct: 1,
+            total: 5
+          },
+          {
+            attemptId: 'no-date',
+            source: 'topic-quiz',
+            completedAt: 'nope',
+            topicId: 'x',
+            correct: 1,
+            total: 5
+          },
+          {
+            attemptId: 'zero',
+            source: 'topic-quiz',
+            completedAt: '2026-07-01T10:00:00.000Z',
+            topicId: 'x',
+            correct: 0,
+            total: 0
+          }
+        ]
+      })
+    );
     const svc = service();
     expect(svc.records().map((r) => r.attemptId)).toEqual(['good']);
   });
 
   it('accepts a bare array (legacy shape) as well as the versioned envelope', () => {
-    localStorage.setItem(SK_TOPIC_PERFORMANCE_HISTORY, JSON.stringify([
-      { attemptId: 'legacy', source: 'topic-quiz', completedAt: '2026-07-01T10:00:00.000Z', topicId: 'rxjs', correct: 1, total: 5 }
-    ]));
-    expect(service().records().map((r) => r.attemptId)).toEqual(['legacy']);
+    localStorage.setItem(
+      SK_TOPIC_PERFORMANCE_HISTORY,
+      JSON.stringify([
+        {
+          attemptId: 'legacy',
+          source: 'topic-quiz',
+          completedAt: '2026-07-01T10:00:00.000Z',
+          topicId: 'rxjs',
+          correct: 1,
+          total: 5
+        }
+      ])
+    );
+    expect(
+      service()
+        .records()
+        .map((r) => r.attemptId)
+    ).toEqual(['legacy']);
   });
 
   it('de-duplicates hand-edited storage on load', () => {
-    const row = { attemptId: 'dup', source: 'topic-quiz', completedAt: '2026-07-01T10:00:00.000Z', topicId: 'rxjs', correct: 1, total: 5 };
-    localStorage.setItem(SK_TOPIC_PERFORMANCE_HISTORY, JSON.stringify({ version: 1, records: [row, row, row] }));
+    const row = {
+      attemptId: 'dup',
+      source: 'topic-quiz',
+      completedAt: '2026-07-01T10:00:00.000Z',
+      topicId: 'rxjs',
+      correct: 1,
+      total: 5
+    };
+    localStorage.setItem(
+      SK_TOPIC_PERFORMANCE_HISTORY,
+      JSON.stringify({ version: 1, records: [row, row, row] })
+    );
     expect(service().records()).toHaveLength(1);
   });
 });
@@ -242,9 +416,15 @@ describe('Weak areas — merging sources without double-counting', () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
 
-  const interviewAttempt = (completedAt: string, correct: number, total: number): TopicAttemptLike => ({
+  const interviewAttempt = (
+    completedAt: string,
+    correct: number,
+    total: number
+  ): TopicAttemptLike => ({
     completedAt,
-    topicPerformance: [{ topicId: 'rxjs', topicName: 'RxJS', correct, total, percentage: (correct / total) * 100 }]
+    topicPerformance: [
+      { topicId: 'rxjs', topicName: 'RxJS', correct, total, percentage: (correct / total) * 100 }
+    ]
   });
 
   it('merges interview + topic-quiz + practice through ONE accuracy formula', () => {
@@ -266,7 +446,7 @@ describe('Weak areas — merging sources without double-counting', () => {
     svc.record('quiz-1', 'topic-quiz', [{ topicId: 'rxjs', correct: 1, total: 5 }]);
     const before = calculateWeakTopics(svc.asAttempts())[0];
 
-    svc.record('quiz-1', 'topic-quiz', [{ topicId: 'rxjs', correct: 1, total: 5 }]);   // duplicate
+    svc.record('quiz-1', 'topic-quiz', [{ topicId: 'rxjs', correct: 1, total: 5 }]); // duplicate
     const after = calculateWeakTopics(svc.asAttempts())[0];
 
     expect(after).toEqual(before);

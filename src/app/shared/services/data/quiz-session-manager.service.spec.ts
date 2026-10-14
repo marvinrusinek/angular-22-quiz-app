@@ -55,7 +55,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
   service = TestBed.inject(QuizSessionManagerService);
@@ -88,11 +91,15 @@ describe('resetQuestions — content sourced from the canonical API cache, not q
     );
 
     const state = makeState({
-      quizInitialState: [{
-        quizId: 'dependency-injection',
-        milestone: '', summary: '', image: '',
-        questions: [{ questionText: 'FROM PRISTINE BANK', options: [] }]
-      } as any]
+      quizInitialState: [
+        {
+          quizId: 'dependency-injection',
+          milestone: '',
+          summary: '',
+          image: '',
+          questions: [{ questionText: 'FROM PRISTINE BANK', options: [] }]
+        } as any
+      ]
     });
     service.resetQuestions(state);
 
@@ -118,7 +125,10 @@ describe('resetQuestions — content sourced from the canonical API cache, not q
 
     const state = makeState({
       activeQuiz: {
-        quizId: 'dependency-injection', milestone: 'DI', summary: 'Dependency Injection', image: 'di.png'
+        quizId: 'dependency-injection',
+        milestone: 'DI',
+        summary: 'Dependency Injection',
+        image: 'di.png'
       } as any
     });
     service.resetQuestions(state);

@@ -46,7 +46,7 @@ function deps(expiredIdx: number, expiredOnArrivalIdx: number) {
     },
     selectedOptionService: { selectedOptionsMap: new Map() },
     quizStateService: {
-      hasUserInteracted: () => true,      // they answered it on the first visit
+      hasUserInteracted: () => true, // they answered it on the first visit
       wasInteractedThisVisit: () => false // …but not on this one
     },
     quizNavigationService: { isNavigatingToPreviousSig: () => true },

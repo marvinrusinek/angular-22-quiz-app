@@ -76,8 +76,7 @@ describe('InterviewHistoryDetailComponent', () => {
     const el = render('a1').nativeElement as HTMLElement;
     // No durable pointer for this attempt, so the server is never asked and
     // the page says so rather than implying the answers were kept locally.
-    expect(el.querySelector('.ihd-note')?.textContent)
-      .toContain('no longer available');
+    expect(el.querySelector('.ihd-note')?.textContent).toContain('no longer available');
     expect(el.querySelector('app-interview-review')).toBeNull();
   });
 

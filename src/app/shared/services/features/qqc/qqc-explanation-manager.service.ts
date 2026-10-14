@@ -33,9 +33,7 @@ export class QqcExplanationManagerService {
       }
 
       const explanation$ =
-        this.explanationTextService.getFormattedExplanationTextForQuestion(
-          questionIndex
-        );
+        this.explanationTextService.getFormattedExplanationTextForQuestion(questionIndex);
       const explanationText = await firstValueFrom(explanation$);
 
       const trimmed = explanationText?.trim();
@@ -64,10 +62,7 @@ export class QqcExplanationManagerService {
     const explanation = questionData.explanation || 'No explanation available';
 
     try {
-      const formattedExplanation = await this.getFormattedExplanation(
-        questionData,
-        questionIndex
-      );
+      const formattedExplanation = await this.getFormattedExplanation(questionData, questionIndex);
 
       if (formattedExplanation) {
         const explanationText =
@@ -100,11 +95,10 @@ export class QqcExplanationManagerService {
     questionData: QuizQuestion,
     questionIndex: number
   ): Promise<{ questionIndex: number; explanation: string }> {
-    const formattedExplanationObservable =
-      this.explanationTextService.formatExplanationText(
-        questionData,
-        questionIndex
-      );
+    const formattedExplanationObservable = this.explanationTextService.formatExplanationText(
+      questionData,
+      questionIndex
+    );
     const result = await firstValueFrom(formattedExplanationObservable);
 
     // COMPOSE AGAIN WHEN THE VERDICT ARRIVES.
@@ -173,9 +167,7 @@ export class QqcExplanationManagerService {
       // rather than by a remembered index is what keeps this correct under
       // shuffle, where the same index shows different questions over time.
       const displayed = this.quizService.getQuestionsInDisplayOrder?.() ?? [];
-      const index = displayed.findIndex(
-        (q) => this.canonical(q?.questionText) === wanted
-      );
+      const index = displayed.findIndex((q) => this.canonical(q?.questionText) === wanted);
       if (index < 0) return;
 
       const question = displayed[index];
@@ -256,8 +248,9 @@ export class QqcExplanationManagerService {
     }
 
     const activeQuizId =
-      [params.quizId, this.quizService.getCurrentQuizId(), this.quizService.quizId]
-        .find((id) => typeof id === 'string' && id.trim().length > 0) ?? null;
+      [params.quizId, this.quizService.getCurrentQuizId(), this.quizService.quizId].find(
+        (id) => typeof id === 'string' && id.trim().length > 0
+      ) ?? null;
 
     const questionState = activeQuizId
       ? this.quizStateService.getQuestionState(activeQuizId, params.index)

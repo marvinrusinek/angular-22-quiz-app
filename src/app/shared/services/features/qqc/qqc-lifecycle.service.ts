@@ -2,9 +2,7 @@ import { DestroyRef, Service } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
-import {
-  distinctUntilChanged, filter, map, skipWhile, switchMap, take, tap
-} from 'rxjs/operators';
+import { distinctUntilChanged, filter, map, skipWhile, switchMap, take, tap } from 'rxjs/operators';
 
 import { Option, QuestionPayload, QuizQuestion } from '@shared/models';
 
@@ -21,7 +19,6 @@ import { shallowObjectEqual } from '@shared/utils/shallow-equal';
  */
 @Service()
 export class QqcLifecycleService {
-
   // ═══════════════════════════════════════════════════════════════
   // ngOnInit HELPERS
   // ═══════════════════════════════════════════════════════════════
@@ -43,42 +40,43 @@ export class QqcLifecycleService {
     prewarmResolveFormatted: (i0: number) => void;
     onTimerExpiredFor: (i0: number) => void;
   }): void {
-    params.currentQuestionIndex$.pipe(
-      map((i: number) => params.normalizeIndex(i)),
-      distinctUntilChanged(),
+    params.currentQuestionIndex$
+      .pipe(
+        map((i: number) => params.normalizeIndex(i)),
+        distinctUntilChanged(),
 
-      // On every question: hard reset view and restart visible countdown
-      tap((i0: number) => {
-        // DO NOT overwrite @Input currentQuestionIndex here.
-        // We use i0 for the local reaction.
-        params.resetPerQuestionState(i0);   // this must NOT arm any expiry
-        params.deleteHandledOnExpiry(i0);  // clear any one-shot guards
-        requestAnimationFrame(() => params.emitPassiveNow(i0));
+        // On every question: hard reset view and restart visible countdown
+        tap((i0: number) => {
+          // DO NOT overwrite @Input currentQuestionIndex here.
+          // We use i0 for the local reaction.
+          params.resetPerQuestionState(i0); // this must NOT arm any expiry
+          params.deleteHandledOnExpiry(i0); // clear any one-shot guards
+          requestAnimationFrame(() => params.emitPassiveNow(i0));
 
-        // Prewarm formatted text for THIS question (non-blocking; no UI writes)
-        // Cache hit → no-op; miss → compute & store for first-click
-        params.prewarmResolveFormatted(i0);
-      }),
+          // Prewarm formatted text for THIS question (non-blocking; no UI writes)
+          // Cache hit → no-op; miss → compute & store for first-click
+          params.prewarmResolveFormatted(i0);
+        }),
 
-      // Wait for the SAME clock the UI renders: elapsedTime$
-      // When it reaches the duration once, expire this question.
-      switchMap((i0: number) =>
-        params.elapsedTime$.pipe(
-          // `elapsedTime$` (toObservable of the elapsed signal) replays its
-          // CURRENT value on subscribe. When we arrive from a question that just
-          // timed out, that value is still the previous question's max elapsed,
-          // so the filter below would fire IMMEDIATELY and expire this fresh
-          // question on arrival (FET shown before the question). Skip the stale
-          // high value(s) until the timer resets below the duration, then arm.
-          skipWhile((elapsed: number) => elapsed >= params.timePerQuestion),
-          filter((elapsed: number) => elapsed >= params.timePerQuestion),
-          take(1),
-          map((): number => i0)
-        )
-      ),
-      takeUntilDestroyed(params.destroyRef)
-    )
-    .subscribe((i0: number) => params.onTimerExpiredFor(i0));
+        // Wait for the SAME clock the UI renders: elapsedTime$
+        // When it reaches the duration once, expire this question.
+        switchMap((i0: number) =>
+          params.elapsedTime$.pipe(
+            // `elapsedTime$` (toObservable of the elapsed signal) replays its
+            // CURRENT value on subscribe. When we arrive from a question that just
+            // timed out, that value is still the previous question's max elapsed,
+            // so the filter below would fire IMMEDIATELY and expire this fresh
+            // question on arrival (FET shown before the question). Skip the stale
+            // high value(s) until the timer resets below the duration, then arm.
+            skipWhile((elapsed: number) => elapsed >= params.timePerQuestion),
+            filter((elapsed: number) => elapsed >= params.timePerQuestion),
+            take(1),
+            map((): number => i0)
+          )
+        ),
+        takeUntilDestroyed(params.destroyRef)
+      )
+      .subscribe((i0: number) => params.onTimerExpiredFor(i0));
   }
 
   /**
@@ -91,7 +89,7 @@ export class QqcLifecycleService {
   } {
     const questionIndexParam = activatedRoute.snapshot.paramMap.get('questionIndex');
     const routeIndex = questionIndexParam !== null ? +questionIndexParam : 1;
-    const idx = Math.max(0, routeIndex - 1);  // Normalize to 0-based
+    const idx = Math.max(0, routeIndex - 1); // Normalize to 0-based
     return { currentQuestionIndex: idx, fixedQuestionIndex: idx };
   }
 
@@ -143,10 +141,10 @@ export class QqcLifecycleService {
   }): Subscription {
     return params.options$
       .pipe(
-        filter((opts) => opts.length > 0)  // skip empties
+        filter((opts) => opts.length > 0) // skip empties
       )
       .subscribe((opts) => {
-        params.setCurrentOptions([...opts]);  // parent's public field
+        params.setCurrentOptions([...opts]); // parent's public field
       });
   }
 

@@ -27,7 +27,8 @@ export class SoundService {
     };
 
     // Use jsDelivr CDN to serve proper MIME types (audio/mpeg) and CORS headers for GitHub files
-    const baseUrl = 'https://cdn.jsdelivr.net/gh/marvinrusinek/angular-22-quiz-app@main/src/assets/sounds';
+    const baseUrl =
+      'https://cdn.jsdelivr.net/gh/marvinrusinek/angular-22-quiz-app@main/src/assets/sounds';
 
     this.sounds['correct'] = new Howl({
       src: [`${baseUrl}/correct.mp3`],

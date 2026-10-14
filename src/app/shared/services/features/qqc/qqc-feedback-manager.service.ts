@@ -1,4 +1,4 @@
-﻿import { inject, Service } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import {
@@ -10,7 +10,6 @@ import {
   QuizQuestion,
   SelectedOption
 } from '@shared/models';
-
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { FeedbackService } from '@shared/services/features/feedback/feedback.service';
@@ -200,8 +199,11 @@ export class QqcFeedbackManagerService {
       const qIdx = currentQuestionIndex ?? 0;
       const selections = this.selectedOptionService.getSelectedOptionsForQuestion(qIdx) ?? [];
       const isMulti = questionType === QuestionType.MultipleAnswer;
-      const isLastSelection = isSelected && selections.length > 0 &&
-        (selections[selections.length - 1].optionId === opt.optionId || (selections[selections.length - 1] as any).index === idx);
+      const isLastSelection =
+        isSelected &&
+        selections.length > 0 &&
+        (selections[selections.length - 1].optionId === opt.optionId ||
+          (selections[selections.length - 1] as any).index === idx);
 
       let shouldHighlight = isSelected;
       if (isMulti && opt.correct) shouldHighlight = isLastSelection;
@@ -269,9 +271,9 @@ export class QqcFeedbackManagerService {
   ): OptionBindings | null {
     const currentSelected =
       this.selectedOptionService.selectedOptionsMap.get(currentQuestionIndex) ?? [];
-    const selectedKeys = new Set(currentSelected.map(o => o.optionId));
+    const selectedKeys = new Set(currentSelected.map((o) => o.optionId));
 
-    const b = optionBindings.find(x => x.option.optionId === opt.optionId);
+    const b = optionBindings.find((x) => x.option.optionId === opt.optionId);
     if (!b) return null;
 
     b.isSelected = selectedKeys.has(opt.optionId!);
@@ -296,9 +298,7 @@ export class QqcFeedbackManagerService {
       options: optionBindings.map((b) => b.option),
       question: currentQuestion,
       feedback: opt.feedback ?? '',
-      idx:
-        optionBindings.find((b) => b.option.optionId === opt.optionId)
-          ?.index ?? 0,
+      idx: optionBindings.find((b) => b.option.optionId === opt.optionId)?.index ?? 0,
       correctMessage: ''
     } as FeedbackProps;
   }
@@ -409,7 +409,11 @@ export class QqcFeedbackManagerService {
     currentQuestionIndex: number;
     lastAllCorrect: boolean;
     optionsToDisplay: Option[];
-    callParentOnOptionClicked: (event: { option: SelectedOption; index: number; checked: boolean }) => Promise<void>;
+    callParentOnOptionClicked: (event: {
+      option: SelectedOption;
+      index: number;
+      checked: boolean;
+    }) => Promise<void>;
     fetchAndSetExplanationText: (idx: number) => Promise<void>;
   }): Promise<{
     selectedOptions: SelectedOption[];
@@ -484,10 +488,7 @@ export class QqcFeedbackManagerService {
    * Returns the feedback string, or a fallback/error message.
    * Extracted from QuizQuestionComponent.generateFeedbackText().
    */
-  generateFeedbackText(
-    question: QuizQuestion,
-    optionsToDisplay: Option[]
-  ): string {
+  generateFeedbackText(question: QuizQuestion, optionsToDisplay: Option[]): string {
     try {
       // Validate the question and its options
       if (!question || !question.options || question.options.length === 0) {
@@ -506,10 +507,7 @@ export class QqcFeedbackManagerService {
       }
 
       // Generate feedback using the feedback service
-      const feedbackText = this.feedbackService.setCorrectMessage(
-        optionsToDisplay,
-        question
-      );
+      const feedbackText = this.feedbackService.setCorrectMessage(optionsToDisplay, question);
 
       return feedbackText || 'No feedback generated for the current question.';
     } catch {
@@ -577,9 +575,12 @@ export class QqcFeedbackManagerService {
     try {
       const q = params.currentQuestion;
       if (q?.options?.length) {
-        const numCorrect = q.options.filter(o => o.correct).length;
+        const numCorrect = q.options.filter((o) => o.correct).length;
         const totalOpts = q.options.length;
-        const msg = this.quizQuestionManagerService.getNumberOfCorrectAnswersText(numCorrect, totalOpts);
+        const msg = this.quizQuestionManagerService.getNumberOfCorrectAnswersText(
+          numCorrect,
+          totalOpts
+        );
 
         if (numCorrect > 1) {
           return { bannerText: msg, numCorrect };
@@ -588,7 +589,10 @@ export class QqcFeedbackManagerService {
         }
       }
     } catch (err: unknown) {
-      console.error('QqcFeedbackManagerService.computeCorrectBanner banner computation failed:', err);
+      console.error(
+        'QqcFeedbackManagerService.computeCorrectBanner banner computation failed:',
+        err
+      );
     }
 
     return { bannerText: '', numCorrect: 0 };

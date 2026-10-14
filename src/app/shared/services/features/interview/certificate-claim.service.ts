@@ -113,7 +113,12 @@ export class CertificateClaimService {
         recipientName: confirmed.recipientName,
         issuedAt: new Date(confirmed.issuedAt).toISOString()
       };
-      this.setState({ version: 1, status: 'verified', certificate, retrievalToken: confirmed.retrievalToken });
+      this.setState({
+        version: 1,
+        status: 'verified',
+        certificate,
+        retrievalToken: confirmed.retrievalToken
+      });
       return certificate;
     } finally {
       this._busy.set(false);
@@ -139,9 +144,15 @@ export class CertificateClaimService {
   }
 
   /** The snapshot sent with a claim submission — audit-only server-side, never re-derived into an authorization decision there or here. */
-  private eligibilitySnapshot(): { achievementIds: readonly string[]; qualifyingInterviewCount: number; qualificationStartedAt: number | null } {
+  private eligibilitySnapshot(): {
+    achievementIds: readonly string[];
+    qualifyingInterviewCount: number;
+    qualificationStartedAt: number | null;
+  } {
     const progress = this.legacyCert.progress();
-    const qualStartMs = progress.qualificationStartedAt ? Date.parse(progress.qualificationStartedAt) : NaN;
+    const qualStartMs = progress.qualificationStartedAt
+      ? Date.parse(progress.qualificationStartedAt)
+      : NaN;
     return {
       achievementIds: [...this.achievements.earnedIds()],
       qualifyingInterviewCount: progress.qualifyingInterviewsCompleted,
@@ -150,7 +161,9 @@ export class CertificateClaimService {
   }
 
   private messageFor(err: unknown): string {
-    return err instanceof CertificateClaimApiError ? err.userMessage : 'Something went wrong. Please try again.';
+    return err instanceof CertificateClaimApiError
+      ? err.userMessage
+      : 'Something went wrong. Please try again.';
   }
 
   private setState(state: CertificateClaimState): void {
@@ -159,6 +172,8 @@ export class CertificateClaimService {
   }
 
   private load(): CertificateClaimState {
-    return validateCertificateClaimState(readLocalJson<unknown>(SK_CERTIFICATE_CLAIM, EMPTY_CERTIFICATE_CLAIM_STATE));
+    return validateCertificateClaimState(
+      readLocalJson<unknown>(SK_CERTIFICATE_CLAIM, EMPTY_CERTIFICATE_CLAIM_STATE)
+    );
   }
 }

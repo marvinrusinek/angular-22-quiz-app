@@ -26,21 +26,23 @@ function state(over: Partial<QuestionVerdictState> = {}): QuestionVerdictState {
   return { ...IDLE_VERDICT_STATE, ...over } as QuestionVerdictState;
 }
 
-const resolvedCorrect = () => state({
-  phase: 'resolved',
-  isResolvedCorrect: true,
-  selectedVerdicts: new Map([[':', true]]),
-  correctOptionTexts: [':'],
-  explanation: 'TS uses a colon.'
-});
+const resolvedCorrect = () =>
+  state({
+    phase: 'resolved',
+    isResolvedCorrect: true,
+    selectedVerdicts: new Map([[':', true]]),
+    correctOptionTexts: [':'],
+    explanation: 'TS uses a colon.'
+  });
 
-const resolvedWrong = () => state({
-  phase: 'resolved',
-  isResolvedCorrect: false,
-  selectedVerdicts: new Map([[';', false]]),
-  correctOptionTexts: [':'],
-  explanation: 'TS uses a colon.'
-});
+const resolvedWrong = () =>
+  state({
+    phase: 'resolved',
+    isResolvedCorrect: false,
+    selectedVerdicts: new Map([[';', false]]),
+    correctOptionTexts: [':'],
+    explanation: 'TS uses a colon.'
+  });
 
 beforeEach(() => sessionStorage.clear());
 
@@ -73,7 +75,11 @@ describe('only earned state is persisted', () => {
   it('the reveal is stored ONLY when the server actually revealed it', () => {
     // An expired question that was never revealed: no correct texts, no
     // explanation. Absence here is the whole point.
-    saveEarnedVerdict(QUIZ, Q, state({ phase: 'expired', correctOptionTexts: [], explanation: null }));
+    saveEarnedVerdict(
+      QUIZ,
+      Q,
+      state({ phase: 'expired', correctOptionTexts: [], explanation: null })
+    );
 
     const [entry] = readPayload(QUIZ);
     expect(entry.phase).toBe('expired');
@@ -126,7 +132,13 @@ describe('fail closed', () => {
   it('discards a payload written under a different schema version', () => {
     sessionStorage.setItem(
       'earnedVerdicts:v1:' + QUIZ,
-      JSON.stringify({ v: 99, quizId: QUIZ, entries: [{ questionText: Q, phase: 'resolved', selectedVerdicts: [], isResolvedCorrect: true }] })
+      JSON.stringify({
+        v: 99,
+        quizId: QUIZ,
+        entries: [
+          { questionText: Q, phase: 'resolved', selectedVerdicts: [], isResolvedCorrect: true }
+        ]
+      })
     );
     expect(readPayload(QUIZ)).toEqual([]);
   });
@@ -135,7 +147,13 @@ describe('fail closed', () => {
     // Tampering with the key cannot make another quiz's verdicts apply here.
     sessionStorage.setItem(
       'earnedVerdicts:v1:' + QUIZ,
-      JSON.stringify({ v: 1, quizId: 'some-other-quiz', entries: [{ questionText: Q, phase: 'resolved', selectedVerdicts: [], isResolvedCorrect: true }] })
+      JSON.stringify({
+        v: 1,
+        quizId: 'some-other-quiz',
+        entries: [
+          { questionText: Q, phase: 'resolved', selectedVerdicts: [], isResolvedCorrect: true }
+        ]
+      })
     );
     expect(readPayload(QUIZ)).toEqual([]);
   });
@@ -152,9 +170,24 @@ describe('fail closed', () => {
         v: 1,
         quizId: QUIZ,
         entries: [
-          { questionText: Q, phase: 'resolved', selectedVerdicts: [[':', true]], isResolvedCorrect: true },
-          { questionText: 'bad', phase: 'resolved', selectedVerdicts: 'not-an-array', isResolvedCorrect: true },
-          { questionText: 'also bad', phase: 'checking', selectedVerdicts: [], isResolvedCorrect: null },
+          {
+            questionText: Q,
+            phase: 'resolved',
+            selectedVerdicts: [[':', true]],
+            isResolvedCorrect: true
+          },
+          {
+            questionText: 'bad',
+            phase: 'resolved',
+            selectedVerdicts: 'not-an-array',
+            isResolvedCorrect: true
+          },
+          {
+            questionText: 'also bad',
+            phase: 'checking',
+            selectedVerdicts: [],
+            isResolvedCorrect: null
+          },
           { phase: 'resolved', selectedVerdicts: [], isResolvedCorrect: null }
         ]
       })
@@ -168,7 +201,13 @@ describe('fail closed', () => {
   it('a non-terminal phase in a hand-written payload is rejected', () => {
     sessionStorage.setItem(
       'earnedVerdicts:v1:' + QUIZ,
-      JSON.stringify({ v: 1, quizId: QUIZ, entries: [{ questionText: Q, phase: 'incomplete', selectedVerdicts: [], isResolvedCorrect: null }] })
+      JSON.stringify({
+        v: 1,
+        quizId: QUIZ,
+        entries: [
+          { questionText: Q, phase: 'incomplete', selectedVerdicts: [], isResolvedCorrect: null }
+        ]
+      })
     );
     expect(readPayload(QUIZ)).toEqual([]);
   });

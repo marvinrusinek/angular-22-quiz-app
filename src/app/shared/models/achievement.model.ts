@@ -19,7 +19,7 @@ export interface AchievementDefinition {
 /** The minimal durable record persisted when an achievement is earned. */
 export interface EarnedAchievement {
   id: AchievementId;
-  earnedAt: string;  // ISO 8601 timestamp
+  earnedAt: string; // ISO 8601 timestamp
 }
 
 /** A definition paired with the user's earned/locked state — for catalog display. */

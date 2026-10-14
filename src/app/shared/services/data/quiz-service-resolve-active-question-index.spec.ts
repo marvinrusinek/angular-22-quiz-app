@@ -42,8 +42,11 @@ describe('QuizService.resolveActiveQuestionIndex', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
-      ],
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
+      ]
     });
     service = TestBed.inject(QuizService);
     // Reset signal-backed index to a known value

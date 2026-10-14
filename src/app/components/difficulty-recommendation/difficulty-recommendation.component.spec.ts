@@ -34,9 +34,15 @@ const COMPLETE: DifficultyRecommendation = {
   action: { label: 'Build an Interview', kind: 'interview' }
 };
 
-const stub = { unlocked: unlockedSig, progress: progressSig, ensureQualificationStarted } as unknown as InterviewCertificateService;
+const stub = {
+  unlocked: unlockedSig,
+  progress: progressSig,
+  ensureQualificationStarted
+} as unknown as InterviewCertificateService;
 
-function render(rec: DifficultyRecommendation | null): ComponentFixture<DifficultyRecommendationComponent> {
+function render(
+  rec: DifficultyRecommendation | null
+): ComponentFixture<DifficultyRecommendationComponent> {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [DifficultyRecommendationComponent],
@@ -60,8 +66,9 @@ describe('DifficultyRecommendationComponent — certificate-journey completion c
   it('before Interview Master: prompts to become an Interview Master + Build action', () => {
     progressSig.set(progress({ interviewMasterEarned: false }));
     const el = render(COMPLETE).nativeElement as HTMLElement;
-    expect(el.querySelector('.dr__message')?.textContent)
-      .toContain('Build a mixed-topic interview and become an Interview Master.');
+    expect(el.querySelector('.dr__message')?.textContent).toContain(
+      'Build a mixed-topic interview and become an Interview Master.'
+    );
     expect(text(el)).toContain('Ready for Interview Mode?');
     expect(el.querySelector('button.dr__btn')?.textContent).toContain('Build an Interview');
   });
@@ -73,28 +80,34 @@ describe('DifficultyRecommendationComponent — certificate-journey completion c
   it('after Interview Master, Explorer still locked: names BOTH outstanding requirements', () => {
     progressSig.set(progress({ interviewMasterEarned: true }));
     const el = render(COMPLETE).nativeElement as HTMLElement;
-    expect(el.querySelector('.dr__message')?.textContent)
-      .toContain('Continue earning achievements and completing interviews.');
+    expect(el.querySelector('.dr__message')?.textContent).toContain(
+      'Continue earning achievements and completing interviews.'
+    );
     expect(el.querySelector('button.dr__btn')?.textContent).toContain('Build an Interview');
   });
 
   it('Explorer earned, interviews outstanding: counts down the REMAINING interviews', () => {
-    progressSig.set(progress({
-      interviewMasterEarned: true,
-      angularExplorerEarned: true,
-      qualifyingInterviewsCompleted: 3
-    }));
+    progressSig.set(
+      progress({
+        interviewMasterEarned: true,
+        angularExplorerEarned: true,
+        qualifyingInterviewsCompleted: 3
+      })
+    );
     const el = render(COMPLETE).nativeElement as HTMLElement;
     // 2 remaining — not a restatement of the requirement.
-    expect(el.querySelector('.dr__message')?.textContent)
-      .toContain('Complete 2 more interviews to earn your certificate.');
+    expect(el.querySelector('.dr__message')?.textContent).toContain(
+      'Complete 2 more interviews to earn your certificate.'
+    );
   });
 
   it('certificate earned: shows the medal + View Certificate link', () => {
     unlockedSig.set(true);
     const el = render(COMPLETE).nativeElement as HTMLElement;
     expect(text(el)).toContain('Certificate Earned');
-    expect(el.querySelector('.dr__message')?.textContent).toContain('View your Angular Interview Master Certificate.');
+    expect(el.querySelector('.dr__message')?.textContent).toContain(
+      'View your Angular Interview Master Certificate.'
+    );
     const link = el.querySelector('a.dr__btn') as HTMLAnchorElement;
     expect(link?.textContent).toContain('View Certificate');
     expect(link?.getAttribute('href')).toContain('/interview/certificate');
@@ -109,10 +122,14 @@ describe('DifficultyRecommendationComponent — certificate-journey completion c
 
   it('non-complete level renders the difficulty advice unchanged', () => {
     const el = render({
-      level: 'beginner', heading: 'Beginner', message: 'Build confidence with more Beginner quizzes.',
+      level: 'beginner',
+      heading: 'Beginner',
+      message: 'Build confidence with more Beginner quizzes.',
       action: { label: 'Browse Beginner', kind: 'browse', difficulty: 'beginner' }
     } as DifficultyRecommendation).nativeElement as HTMLElement;
-    expect(el.querySelector('.dr__message')?.textContent).toContain('Build confidence with more Beginner quizzes.');
+    expect(el.querySelector('.dr__message')?.textContent).toContain(
+      'Build confidence with more Beginner quizzes.'
+    );
     expect(el.querySelector('button.dr__btn')?.textContent).toContain('Browse Beginner');
   });
 

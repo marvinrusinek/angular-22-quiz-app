@@ -45,16 +45,27 @@ const MULTI_QUESTION = 'Select every operator that maps values';
 const QUESTIONS = [{ questionText: QUESTION }, { questionText: MULTI_QUESTION }];
 
 const RESOLVED_CORRECT = {
-  status: 'resolved', correct: true, correctOptionTexts: ['map'], explanation: 'e'
+  status: 'resolved',
+  correct: true,
+  correctOptionTexts: ['map'],
+  explanation: 'e'
 } as QuestionCheckResult;
 const RESOLVED_INCORRECT = {
-  status: 'resolved', correct: false, correctOptionTexts: ['map'], explanation: 'e'
+  status: 'resolved',
+  correct: false,
+  correctOptionTexts: ['map'],
+  explanation: 'e'
 } as QuestionCheckResult;
 const RESOLVED_CORRECT_MULTI = {
-  status: 'resolved', correct: true, correctOptionTexts: ['map', 'switchMap'], explanation: 'e'
+  status: 'resolved',
+  correct: true,
+  correctOptionTexts: ['map', 'switchMap'],
+  explanation: 'e'
 } as QuestionCheckResult;
 const INCOMPLETE_MULTI = {
-  status: 'incomplete', selectedVerdicts: [{ text: 'map', correct: true }], remainingCorrectCount: 1
+  status: 'incomplete',
+  selectedVerdicts: [{ text: 'map', correct: true }],
+  remainingCorrectCount: 1
 } as QuestionCheckResult;
 
 /** Anything not explicitly stubbed becomes a harmless no-op function. */
@@ -68,7 +79,11 @@ function lenient<T extends object>(known: T): T {
   });
 }
 
-interface Ch { texts: readonly string[]; subject: Subject<QuestionCheckResult>; unsubscribed: boolean }
+interface Ch {
+  texts: readonly string[];
+  subject: Subject<QuestionCheckResult>;
+  unsubscribed: boolean;
+}
 let checks: Ch[];
 let expiries: Ch[];
 let fixture: ComponentFixture<QuizComponent>;
@@ -88,7 +103,10 @@ function channel(sink: Ch[]) {
       const entry: Ch = { texts, subject: new Subject<QuestionCheckResult>(), unsubscribed: false };
       sink.push(entry);
       const inner = entry.subject.subscribe(subscriber);
-      return () => { entry.unsubscribed = true; inner.unsubscribe(); };
+      return () => {
+        entry.unsubscribed = true;
+        inner.unsubscribe();
+      };
     });
 }
 
@@ -113,10 +131,13 @@ async function mountQuiz(): Promise<void> {
   // `shouldShowResultsButton`'s "is this the last question" check reads
   // `quizService.questions.length` directly, and would otherwise see 2
   // questions even in a test that set totalQuestions(1).
-  const visibleQuestions = () => QUESTIONS.slice(0, component?.totalQuestions() || QUESTIONS.length);
+  const visibleQuestions = () =>
+    QUESTIONS.slice(0, component?.totalQuestions() || QUESTIONS.length);
   const quizService = {
     quizId: QUIZ,
-    get questions() { return visibleQuestions(); },
+    get questions() {
+      return visibleQuestions();
+    },
     shuffledQuestions: [],
     questionsSig: signal(QUESTIONS),
     questions$: NEVER,
@@ -189,7 +210,10 @@ async function mountQuiz(): Promise<void> {
 
   // Only the notice is real; the heavy children are inert.
   TestBed.overrideComponent(QuizComponent, {
-    set: { imports: [NgClass, MatTooltipModule, VerdictNoticeComponent], schemas: [NO_ERRORS_SCHEMA] }
+    set: {
+      imports: [NgClass, MatTooltipModule, VerdictNoticeComponent],
+      schemas: [NO_ERRORS_SCHEMA]
+    }
   });
 
   fixture = TestBed.createComponent(QuizComponent);
@@ -251,7 +275,7 @@ describe('QuizComponent — failed answer check', () => {
     pick();
     fixture.detectChanges();
     expect(phase()).toBe('checking');
-    expect(notice()).toBeNull();                        // pending is not a failure
+    expect(notice()).toBeNull(); // pending is not a failure
   });
 
   it('renders the notice as an accessible alert with the retry message when the check fails', () => {
@@ -271,10 +295,10 @@ describe('QuizComponent — failed answer check', () => {
 
     const button = retryButton()!;
     expect(button).not.toBeNull();
-    expect(button.tagName).toBe('BUTTON');              // native: Enter and Space activate it
+    expect(button.tagName).toBe('BUTTON'); // native: Enter and Space activate it
     expect(button.type).toBe('button');
     expect(button.disabled).toBe(false);
-    expect(button.tabIndex).toBeGreaterThanOrEqual(0);  // in the tab order
+    expect(button.tabIndex).toBeGreaterThanOrEqual(0); // in the tab order
     button.focus();
     expect(document.activeElement).toBe(button);
   });
@@ -284,20 +308,20 @@ describe('QuizComponent — failed answer check', () => {
     // final-question submission-policy suite below for that case.)
     pick();
     fixture.detectChanges();
-    expect(resultsButton()).toBeNull();                 // checking
+    expect(resultsButton()).toBeNull(); // checking
 
     failCheck(0);
-    expect(resultsButton()).toBeNull();                 // error
+    expect(resultsButton()).toBeNull(); // error
 
     retryButton()!.click();
     fixture.detectChanges();
     expect(phase()).toBe('checking');
-    expect(resultsButton()).toBeNull();                 // retry pending
+    expect(resultsButton()).toBeNull(); // retry pending
 
     checks[1]!.subject.next(RESOLVED_CORRECT);
     fixture.detectChanges();
     expect(phase()).toBe('resolved');
-    expect(resultsButton()).not.toBeNull();             // verified: available
+    expect(resultsButton()).not.toBeNull(); // verified: available
   });
 
   it('clicking Retry invokes retryVerdict() exactly once, with the current question, and resends the same selection', () => {
@@ -309,7 +333,7 @@ describe('QuizComponent — failed answer check', () => {
     expect(retrySpy).toHaveBeenCalledTimes(1);
     expect(retrySpy).toHaveBeenCalledWith(0);
     expect(checks).toHaveLength(2);
-    expect(checks[1]!.texts).toEqual(['map']);          // the unchanged selection
+    expect(checks[1]!.texts).toEqual(['map']); // the unchanged selection
   });
 
   it('rapid repeated activation cannot create duplicate requests', () => {
@@ -322,8 +346,8 @@ describe('QuizComponent — failed answer check', () => {
     button.click();
     fixture.detectChanges();
 
-    expect(checks).toHaveLength(2);                     // the original + exactly ONE retry
-    expect(notice()).toBeNull();                        // now pending: nothing to retry
+    expect(checks).toHaveLength(2); // the original + exactly ONE retry
+    expect(notice()).toBeNull(); // now pending: nothing to retry
   });
 
   it('removes the notice after a successful retry', () => {
@@ -362,12 +386,13 @@ describe('QuizComponent — progression gate (single-answer)', () => {
   beforeEach(() => {
     component.totalQuestions.set(2);
     component.currentQuestionIndex.set(0);
-    TestBed.inject(NextButtonStateService).isButtonEnabled.set(true);   // what an option click does
+    TestBed.inject(NextButtonStateService).isButtonEnabled.set(true); // what an option click does
     fixture.detectChanges();
   });
 
-  const advance = (): jest.Mock => TestBed.inject(QuizSetupService).advanceQuestion as unknown as jest.Mock;
-  const laterDotClickable = (): boolean => component.isDotClickable(1);   // a FORWARD jump
+  const advance = (): jest.Mock =>
+    TestBed.inject(QuizSetupService).advanceQuestion as unknown as jest.Mock;
+  const laterDotClickable = (): boolean => component.isDotClickable(1); // a FORWARD jump
 
   it('1. selection alone (before the check is even dispatched) does not enable Next', () => {
     // isButtonEnabled was already forced true above, exactly as a real click
@@ -489,9 +514,9 @@ describe('QuizComponent — progression gate (single-answer)', () => {
     resolve(1, RESOLVED_CORRECT);
     expect(nextButton()!.disabled).toBe(false);
 
-    failCheck(0);   // the stale, superseded request fails LAST
-    expect(phase()).toBe('resolved');       // unchanged — the stale failure was dropped
-    expect(nextButton()!.disabled).toBe(false);   // NOT reopened
+    failCheck(0); // the stale, superseded request fails LAST
+    expect(phase()).toBe('resolved'); // unchanged — the stale failure was dropped
+    expect(nextButton()!.disabled).toBe(false); // NOT reopened
   });
 });
 
@@ -503,7 +528,7 @@ describe('QuizComponent — progression gate (multi-answer)', () => {
   beforeEach(() => {
     component.totalQuestions.set(3);
     component.currentQuestionIndex.set(1);
-    TestBed.inject(NextButtonStateService).isButtonEnabled.set(true);   // "any selection" — the existing click-time policy
+    TestBed.inject(NextButtonStateService).isButtonEnabled.set(true); // "any selection" — the existing click-time policy
     fixture.detectChanges();
   });
 
@@ -524,7 +549,7 @@ describe('QuizComponent — progression gate (multi-answer)', () => {
   });
 
   it('15. resolved incorrect / incomplete selection remains blocked', () => {
-    pickMulti(['map', 'filter']);            // one correct, one wrong extra — still not the exact set
+    pickMulti(['map', 'filter']); // one correct, one wrong extra — still not the exact set
     resolve(0, INCOMPLETE_MULTI);
     expect(nextButton()!.disabled).toBe(true);
 
@@ -537,7 +562,7 @@ describe('QuizComponent — progression gate (multi-answer)', () => {
     pickMulti(['map', 'switchMap']);
     resolve(0, RESOLVED_CORRECT_MULTI);
     expect(nextButton()!.disabled).toBe(false);
-    expect(component.isDotClickable(2)).toBe(true);   // a further forward index, now unblocked
+    expect(component.isDotClickable(2)).toBe(true); // a further forward index, now unblocked
   });
 
   it('17. retry uses the UNCHANGED selected set and follows the same gate', () => {
@@ -545,9 +570,9 @@ describe('QuizComponent — progression gate (multi-answer)', () => {
     failCheck(0);
     expect(nextButton()!.disabled).toBe(true);
 
-    selected.retryVerdict(1);   // display index 1 — this question
+    selected.retryVerdict(1); // display index 1 — this question
     expect(checks[1]!.texts).toEqual(['map', 'switchMap']);
-    expect(nextButton()!.disabled).toBe(true);      // pending again
+    expect(nextButton()!.disabled).toBe(true); // pending again
 
     resolve(1, RESOLVED_CORRECT_MULTI);
     expect(nextButton()!.disabled).toBe(false);
@@ -606,14 +631,22 @@ describe('QuizComponent — final question submission policy (Results)', () => {
     // canSubmitFinalQuestion's doc comment), so on the final question it
     // follows the same "selection + backend responded" policy as `resolved`.
     pick(['map']);
-    resolve(0, { status: 'incomplete', selectedVerdicts: [{ text: 'map', correct: true }], remainingCorrectCount: 1 } as QuestionCheckResult);
+    resolve(0, {
+      status: 'incomplete',
+      selectedVerdicts: [{ text: 'map', correct: true }],
+      remainingCorrectCount: 1
+    } as QuestionCheckResult);
     expect(phase()).toBe('incomplete');
     expect(resultsButton()).not.toBeNull();
   });
 
   it('18b. a completed INCOMPLETE response with NO current selection (deselected to empty) still blocks — "no selection" wins', () => {
     pick([]);
-    resolve(0, { status: 'incomplete', selectedVerdicts: [], remainingCorrectCount: 2 } as QuestionCheckResult);
+    resolve(0, {
+      status: 'incomplete',
+      selectedVerdicts: [],
+      remainingCorrectCount: 2
+    } as QuestionCheckResult);
     expect(phase()).toBe('incomplete');
     expect(resultsButton()).toBeNull();
   });
@@ -784,9 +817,10 @@ describe('QuizComponent — progression unlock call sites', () => {
 describe('QuizComponent — browser tab title (document-title fix)', () => {
   const ORIGINAL_TITLE = 'Angular Quiz App';
 
-  function mountWithSelectedQuiz(
-    selectedQuiz: { milestone: string } | null
-  ): { fixture: ComponentFixture<QuizComponent>; selectedQuizSig: ReturnType<typeof signal<{ milestone: string } | null>> } {
+  function mountWithSelectedQuiz(selectedQuiz: { milestone: string } | null): {
+    fixture: ComponentFixture<QuizComponent>;
+    selectedQuizSig: ReturnType<typeof signal<{ milestone: string } | null>>;
+  } {
     const selectedQuizSig = signal(selectedQuiz);
     const quizService = {
       quizId: 'dependency-injection',
@@ -824,13 +858,19 @@ describe('QuizComponent — browser tab title (document-title fix)', () => {
             advanceQuestion: jest.fn(async () => undefined)
           }
         },
-        { provide: SelectionMessageService, useValue: lenient({ selectionMessageSig: signal('') }) },
+        {
+          provide: SelectionMessageService,
+          useValue: lenient({ selectionMessageSig: signal('') })
+        },
         { provide: QuizProgressionService, useValue: lenient({}) },
         { provide: MatDialog, useValue: lenient({}) }
       ]
     });
     TestBed.overrideComponent(QuizComponent, {
-      set: { imports: [NgClass, MatTooltipModule, VerdictNoticeComponent], schemas: [NO_ERRORS_SCHEMA] }
+      set: {
+        imports: [NgClass, MatTooltipModule, VerdictNoticeComponent],
+        schemas: [NO_ERRORS_SCHEMA]
+      }
     });
 
     const f = TestBed.createComponent(QuizComponent);
@@ -863,8 +903,10 @@ describe('QuizComponent — browser tab title (document-title fix)', () => {
     expect(document.title).toBe(ORIGINAL_TITLE);
   });
 
-  it('updates to the NEW quiz\'s title if selectedQuizSig changes within the same instance (quiz switch, never resets to generic in between)', () => {
-    const { fixture: f, selectedQuizSig } = mountWithSelectedQuiz({ milestone: 'Dependency Injection' });
+  it("updates to the NEW quiz's title if selectedQuizSig changes within the same instance (quiz switch, never resets to generic in between)", () => {
+    const { fixture: f, selectedQuizSig } = mountWithSelectedQuiz({
+      milestone: 'Dependency Injection'
+    });
     expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz App');
 
     selectedQuizSig.set({ milestone: 'TypeScript' });

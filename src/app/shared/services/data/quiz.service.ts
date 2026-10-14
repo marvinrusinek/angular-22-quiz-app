@@ -1,4 +1,4 @@
-﻿import { inject, Injector, Service, signal, WritableSignal } from '@angular/core';
+import { inject, Injector, Service, signal, WritableSignal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, firstValueFrom, from, Observable, of, Subject } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
@@ -17,7 +17,6 @@ import {
   toDurableFinalResult
 } from '@shared/models';
 
-
 import { QuizAnswerEvaluationService } from './quiz-answer-evaluation.service';
 import { QuizBannerService } from './quiz-banner.service';
 import { QuizDataLoaderService } from './quiz-data-loader.service';
@@ -31,7 +30,12 @@ import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-regi
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { QuizStateService } from '@shared/services/state/quizstate.service';
 
-import { SK_RESULTS_REACHED_ATTEMPT, SK_SHUFFLED_QUESTIONS, SK_SHUFFLED_QUESTIONS_QUIZ_ID, SK_USER_ANSWERS } from '@shared/constants/session-keys';
+import {
+  SK_RESULTS_REACHED_ATTEMPT,
+  SK_SHUFFLED_QUESTIONS,
+  SK_SHUFFLED_QUESTIONS_QUIZ_ID,
+  SK_USER_ANSWERS
+} from '@shared/constants/session-keys';
 
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 import { norm } from '@shared/utils/text-norm';
@@ -59,7 +63,9 @@ export class QuizService {
    * Plain `quizService.currentQuestionIndex = X` writes route through
    * the setter so external writers always update both stores.
    */
-  get currentQuestionIndex(): number { return this.currentQuestionIndexSig(); }
+  get currentQuestionIndex(): number {
+    return this.currentQuestionIndexSig();
+  }
   set currentQuestionIndex(v: number) {
     this.currentQuestionIndexSig.set(v);
     this.currentQuestionIndexSubject.next(v);
@@ -72,17 +78,18 @@ export class QuizService {
   quizInitialState: Quiz[] = [];
   quizData: Quiz[] | null = this.quizInitialState;
   data: {
-    questionText: string,
-    correctAnswersText?: string,
-    currentOptions: Option[]
+    questionText: string;
+    correctAnswersText?: string;
+    currentOptions: Option[];
   } = {
-      questionText: '',
-      correctAnswersText: '',
-      currentOptions: []
-    };
+    questionText: '',
+    correctAnswersText: '',
+    currentOptions: []
+  };
   quizId = (() => {
-    try { return localStorage.getItem('quizId') ?? ''; }
-    catch (err: unknown) {
+    try {
+      return localStorage.getItem('quizId') ?? '';
+    } catch (err: unknown) {
       console.error('QuizService.quizId localStorage read failed:', err);
       return '';
     }
@@ -180,7 +187,11 @@ export class QuizService {
 
   /** Clear one question's answer state across all three, on one boundary. */
   clearAnswerStateAt(idx: number): void {
-    for (const target of [this._questionResolved, this._multiAnswerCompletion, this._multiAnswerPerfect]) {
+    for (const target of [
+      this._questionResolved,
+      this._multiAnswerCompletion,
+      this._multiAnswerPerfect
+    ]) {
       if (!target().has(idx)) continue;
       const next = new Map(target());
       next.delete(idx);
@@ -190,7 +201,11 @@ export class QuizService {
 
   /** Clear every question's answer state (quiz reset / switch). */
   clearAllAnswerState(): void {
-    for (const target of [this._questionResolved, this._multiAnswerCompletion, this._multiAnswerPerfect]) {
+    for (const target of [
+      this._questionResolved,
+      this._multiAnswerCompletion,
+      this._multiAnswerPerfect
+    ]) {
       if (target().size === 0) continue;
       target.set(new Map());
     }
@@ -218,8 +233,9 @@ export class QuizService {
   questions$: Observable<QuizQuestion[]> = toObservable(this.questionsSig);
 
   private questionsQuizId: string | null = (() => {
-    try { return localStorage.getItem(SK_SHUFFLED_QUESTIONS_QUIZ_ID); }
-    catch (err: unknown) {
+    try {
+      return localStorage.getItem(SK_SHUFFLED_QUESTIONS_QUIZ_ID);
+    } catch (err: unknown) {
       console.error('QuizService.questionsQuizId localStorage read failed:', err);
       return null;
     }
@@ -237,11 +253,17 @@ export class QuizService {
   answers: Option[] = [];
   // Single source of truth: delegates to dataLoader so loadResourcesForQuiz()
   // doesn't have to mirror the value into a separate field.
-  get resources(): Resource[] { return this.dataLoader.resources; }
+  get resources(): Resource[] {
+    return this.dataLoader.resources;
+  }
 
   readonly totalQuestions = signal<number>(0);
-  get correctCount(): number { return this.scoringService.correctCountSig(); }
-  set correctCount(val: number) { this.scoringService.correctCountSig.set(val); }
+  get correctCount(): number {
+    return this.scoringService.correctCountSig();
+  }
+  set correctCount(val: number) {
+    this.scoringService.correctCountSig.set(val);
+  }
 
   selectedQuiz: Quiz | null = null;
   selectedQuizSig = signal<Quiz | null>(null);
@@ -268,8 +290,7 @@ export class QuizService {
   multipleAnswer = false;
 
   currentQuestionSig = signal<QuizQuestion | null>(null);
-  public currentQuestion$: Observable<QuizQuestion | null> =
-    toObservable(this.currentQuestionSig);
+  public currentQuestion$: Observable<QuizQuestion | null> = toObservable(this.currentQuestionSig);
 
   currentOptionsSig = signal<Option[]>([]);
   totalQuestions$: Observable<number> = toObservable(this.totalQuestions);
@@ -308,8 +329,9 @@ export class QuizService {
   }
 
   userAnswers: any[] = (() => {
-    try { return JSON.parse(localStorage.getItem(SK_USER_ANSWERS) ?? '[]'); }
-    catch (err: unknown) {
+    try {
+      return JSON.parse(localStorage.getItem(SK_USER_ANSWERS) ?? '[]');
+    } catch (err: unknown) {
       console.error('QuizService.userAnswers localStorage parse failed:', err);
       return [];
     }
@@ -335,20 +357,36 @@ export class QuizService {
   private quizResetSource = new Subject<void>();
   quizReset$ = this.quizResetSource.asObservable();
 
-  get score(): number { return this.scoringService.scoreSig(); }
-  set score(val: number) { this.scoringService.scoreSig.set(val); }
-  get quizScore(): QuizScore | null { return this.scoringService.quizScore; }
-  set quizScore(val: QuizScore | null) { this.scoringService.quizScore = val; }
-  get highScores(): QuizScore[] { return this.scoringService.highScores; }
-  set highScores(val: QuizScore[]) { this.scoringService.highScores = val; }
-  get highScoresLocal(): QuizScore[] { return this.scoringService.highScoresLocal; }
-  set highScoresLocal(val: QuizScore[]) { this.scoringService.highScoresLocal = val; }
+  get score(): number {
+    return this.scoringService.scoreSig();
+  }
+  set score(val: number) {
+    this.scoringService.scoreSig.set(val);
+  }
+  get quizScore(): QuizScore | null {
+    return this.scoringService.quizScore;
+  }
+  set quizScore(val: QuizScore | null) {
+    this.scoringService.quizScore = val;
+  }
+  get highScores(): QuizScore[] {
+    return this.scoringService.highScores;
+  }
+  set highScores(val: QuizScore[]) {
+    this.scoringService.highScores = val;
+  }
+  get highScoresLocal(): QuizScore[] {
+    return this.scoringService.highScoresLocal;
+  }
+  set highScoresLocal(val: QuizScore[]) {
+    this.scoringService.highScoresLocal = val;
+  }
 
   questionPayloadSig = signal<QuestionPayload | null>(null);
   questionPayload$ = toObservable(this.questionPayloadSig).pipe(
     map((payload) => {
       if (!payload?.question) return payload;
-      
+
       if (this.isShuffleEnabled() && this.shuffledQuestions?.length > 0) {
         const idx = this.currentQuestionIndex ?? 0;
         const correctQ = this.shuffledQuestions[idx];
@@ -453,7 +491,9 @@ export class QuizService {
     // the registry's HTTP stack would otherwise be constructed with QuizService.
     try {
       this.injector.get(TopicQuizTypeRegistry, null)?.load(this.quizId).subscribe();
-    } catch (err: unknown) { swallow('quiz.service.ts type-registry load', err); }
+    } catch (err: unknown) {
+      swallow('quiz.service.ts type-registry load', err);
+    }
   }
 
   public setActiveQuiz(quiz: Quiz): void {
@@ -491,7 +531,7 @@ export class QuizService {
     this.activeQuiz = q;
     this.currentQuizSig.set(q);
     if (q?.quizId) this.quizId = q.quizId;
-    
+
     if (Array.isArray(q?.questions)) {
       // When shuffle is active, do NOT emit unshuffled questions to subscribers.
       // That causes questionsArray in QuizComponent to briefly hold unshuffled
@@ -561,8 +601,7 @@ export class QuizService {
 
   getQuestionsInDisplayOrder(): QuizQuestion[] {
     const shuffled = this.shuffledQuestions ?? [];
-    return this.isShuffleEnabled() && shuffled.length
-      ? shuffled : (this.questions ?? []);
+    return this.isShuffleEnabled() && shuffled.length ? shuffled : (this.questions ?? []);
   }
 
   /**
@@ -599,13 +638,13 @@ export class QuizService {
         // setQuizData path already started rather than issuing a second one.
         typesLoaded = firstValueFrom(registry.load(quizId)).catch(() => undefined);
       }
-    } catch (err: unknown) { swallow('quiz.service.ts type-registry load', err); }
+    } catch (err: unknown) {
+      swallow('quiz.service.ts type-registry load', err);
+    }
 
-    const questions = await this.dataLoader.fetchQuizQuestions(
-      quizId,
-      this.questionsSig,
-      (qs) => { this._questions = qs; }
-    );
+    const questions = await this.dataLoader.fetchQuizQuestions(quizId, this.questionsSig, (qs) => {
+      this._questions = qs;
+    });
 
     // Awaited, unlike the fire-and-forget load at setQuizData: stamping after
     // the questions render would leave the first question mid-flight on the
@@ -628,10 +667,13 @@ export class QuizService {
     // the verdict service eagerly here would pull its HTTP stack into
     // QuizService's own construction.
     try {
-      this.injector
-        .get(QuestionVerdictService, null)
-        ?.rehydrateEarnedVerdicts(quizId, questions.map((q) => q?.questionText ?? ''));
-    } catch (err: unknown) { swallow('quiz.service.ts earned-verdict rehydrate', err); }
+      this.injector.get(QuestionVerdictService, null)?.rehydrateEarnedVerdicts(
+        quizId,
+        questions.map((q) => q?.questionText ?? '')
+      );
+    } catch (err: unknown) {
+      swallow('quiz.service.ts earned-verdict rehydrate', err);
+    }
 
     this.quizId = quizId;
     this.totalQuestions.set(questions.length);
@@ -662,7 +704,8 @@ export class QuizService {
       previousQuestion.questionText === question.questionText &&
       previousQuestion.options?.length === question.options?.length &&
       previousQuestion.explanation === question.explanation
-    ) return;
+    )
+      return;
     if (!Array.isArray(question.options) || question.options.length === 0) return;
 
     const updatedOptions = question.options.map((option, index) => ({
@@ -680,9 +723,7 @@ export class QuizService {
     this.currentQuestionSig.set({ ...question, options: updatedOptions });
   }
 
-  public getCurrentQuestion(
-    questionIndex: number,
-  ): Observable<QuizQuestion | null> {
+  public getCurrentQuestion(questionIndex: number): Observable<QuizQuestion | null> {
     return this.questionResolver.getCurrentQuestion(questionIndex, this.questions);
   }
 
@@ -691,12 +732,9 @@ export class QuizService {
   }
 
   // Get the current options for the current quiz and question
-  getCurrentOptions(
-    questionIndex: number = this.currentQuestionIndex ?? 0
-  ): Observable<Option[]> {
-    return this.optionsService.getCurrentOptions(
-      questionIndex,
-      (idx) => this.getQuestionByIndex(idx)
+  getCurrentOptions(questionIndex: number = this.currentQuestionIndex ?? 0): Observable<Option[]> {
+    return this.optionsService.getCurrentOptions(questionIndex, (idx) =>
+      this.getQuestionByIndex(idx)
     );
   }
 
@@ -724,9 +762,7 @@ export class QuizService {
             .filter((t: string) => !!t)
         );
         const _selectedTexts = new Set(
-          _selections
-            .map((s: SelectedOption) => norm(s?.text))
-            .filter((t: string) => !!t)
+          _selections.map((s: SelectedOption) => norm(s?.text)).filter((t: string) => !!t)
         );
         const _userAnsweredCorrectly =
           _correctTexts.size > 0 &&
@@ -756,13 +792,14 @@ export class QuizService {
 
     if (prevSelected && prevSelected.length > 0) {
       // Re-hydrate full Option objects (needing .correct flag) from the source question
-      const question = this.questions[safeIndex];  // use getter (handles shuffle)
+      const question = this.questions[safeIndex]; // use getter (handles shuffle)
       if (question && question.options) {
-        const selectedIds = new Set(prevSelected.map(s => s.optionId));
+        const selectedIds = new Set(prevSelected.map((s) => s.optionId));
         // text-match fallback for robustness
-        const restoredAnswers = question.options.filter((o: Option) =>
-          selectedIds.has(o.optionId) ||
-          prevSelected.some(s => (s.text || '').trim() === (o.text || '').trim())
+        const restoredAnswers = question.options.filter(
+          (o: Option) =>
+            selectedIds.has(o.optionId) ||
+            prevSelected.some((s) => (s.text || '').trim() === (o.text || '').trim())
         );
         this.answers = restoredAnswers;
       } else {
@@ -793,7 +830,8 @@ export class QuizService {
     const svcIdx = this.getCurrentQuestionIndex();
     if (typeof svcIdx === 'number' && svcIdx >= 0) return svcIdx;
     return Number.isFinite(this.currentQuestionIndex) && this.currentQuestionIndex >= 0
-      ? this.currentQuestionIndex : 0;
+      ? this.currentQuestionIndex
+      : 0;
   }
 
   getCurrentQuestionIndexObservable(): Observable<number> {
@@ -865,7 +903,6 @@ export class QuizService {
     }
   }
 
-
   returnQuizSelectionParams(): QuizSelectionParams {
     return {
       startedQuizId: this.startedQuizId,
@@ -884,7 +921,12 @@ export class QuizService {
     this.scoringService.saveHighScores(this.quizId, this.totalQuestions());
   }
 
-  recordCompletedQuizScore(quizId: string, score: number, totalQuestions: number, attemptId: string): void {
+  recordCompletedQuizScore(
+    quizId: string,
+    score: number,
+    totalQuestions: number,
+    attemptId: string
+  ): void {
     this.scoringService.recordCompletedQuizScore(quizId, score, totalQuestions, attemptId);
   }
 
@@ -897,7 +939,9 @@ export class QuizService {
   }
 
   calculatePercentageOfCorrectlyAnsweredQuestions(): number {
-    return this.scoringService.calculatePercentageOfCorrectlyAnsweredQuestions(this.totalQuestions());
+    return this.scoringService.calculatePercentageOfCorrectlyAnsweredQuestions(
+      this.totalQuestions()
+    );
   }
 
   isShuffleEnabled(): boolean {
@@ -905,12 +949,18 @@ export class QuizService {
   }
 
   // Expose sub-services for direct access by consumers that need them
-  get quizDataLoader(): QuizDataLoaderService { return this.dataLoader; }
+  get quizDataLoader(): QuizDataLoaderService {
+    return this.dataLoader;
+  }
   get quizQuestionResolver(): QuizQuestionResolverService {
     return this.questionResolver;
   }
-  get quizOptions(): QuizOptionsService { return this.optionsService; }
-  get quizScoring(): QuizScoringService { return this.scoringService; }
+  get quizOptions(): QuizOptionsService {
+    return this.optionsService;
+  }
+  get quizScoring(): QuizScoringService {
+    return this.scoringService;
+  }
 
   setCheckedShuffle(isChecked: boolean): void {
     this.shuffleEnabledSig.set(isChecked);
@@ -920,7 +970,9 @@ export class QuizService {
       // Clear stale shuffledQuestions from localStorage to prevent mismatch
       localStorage.removeItem(SK_SHUFFLED_QUESTIONS);
       localStorage.removeItem(SK_SHUFFLED_QUESTIONS_QUIZ_ID);
-    } catch (err: unknown) { swallow('quiz.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz.service.ts', err);
+    }
 
     // Clear shuffle state on toggle to ensure fresh shuffle
     // This prevents stale shuffled data from being used when toggling
@@ -939,10 +991,7 @@ export class QuizService {
     this.quizId = '';
   }
 
-  setCanonicalQuestions(
-    quizId: string,
-    questions: QuizQuestion[] | null | undefined
-  ): void {
+  setCanonicalQuestions(quizId: string, questions: QuizQuestion[] | null | undefined): void {
     this.dataLoader.setCanonicalQuestions(
       quizId,
       questions,
@@ -957,10 +1006,8 @@ export class QuizService {
    * @param index The original (unshuffled) index of the question.
    */
   public getPristineQuestion(index: number): QuizQuestion | null {
-    return this.dataLoader.getPristineQuestion(
-      this.quizId,
-      index,
-      (q, idx) => this.questionResolver.cloneQuestionForSession(q, idx)
+    return this.dataLoader.getPristineQuestion(this.quizId, index, (q, idx) =>
+      this.questionResolver.cloneQuestionForSession(q, idx)
     );
   }
 
@@ -1005,14 +1052,10 @@ export class QuizService {
    * needed the answer key to ask a question that has nothing to do with the
    * answers. The declared type carries the cardinality without the identities.
    */
-  public isDeclaredMultiAnswer(
-    questionText: string | null | undefined
-  ): boolean | null {
+  public isDeclaredMultiAnswer(questionText: string | null | undefined): boolean | null {
     if (!questionText) return null;
     try {
-      return this.injector
-        .get(TopicQuizTypeRegistry, null)
-        ?.isMultiAnswer(questionText) ?? null;
+      return this.injector.get(TopicQuizTypeRegistry, null)?.isMultiAnswer(questionText) ?? null;
     } catch {
       return null;
     }
@@ -1062,13 +1105,10 @@ export class QuizService {
     optionText: string | null | undefined
   ): boolean | null {
     if (!questionText || !optionText || !this.quizId) return null;
-    return this.verdictsOrNull()
-      ?.verdictForOption(this.quizId, questionText, optionText) ?? null;
+    return this.verdictsOrNull()?.verdictForOption(this.quizId, questionText, optionText) ?? null;
   }
 
-  public getPristineQuestionByText(
-    questionText: string | null | undefined
-  ): QuizQuestion | null {
+  public getPristineQuestionByText(questionText: string | null | undefined): QuizQuestion | null {
     const key = norm(questionText);
     if (!key) return null;
     if (!this._pristineByQText) {
@@ -1086,9 +1126,7 @@ export class QuizService {
    * per click. Derived on-demand from the pristine-by-text cache and
    * memoized so repeat lookups are also O(1).
    */
-  public getPristineCorrectTextsForQuestion(
-    questionText: string | null | undefined
-  ): Set<string> {
+  public getPristineCorrectTextsForQuestion(questionText: string | null | undefined): Set<string> {
     const key = norm(questionText);
     if (!key) return new Set();
     if (!this._correctTextsByQText) this._correctTextsByQText = new Map();
@@ -1117,9 +1155,7 @@ export class QuizService {
    * actual Option references (not clones) so callers needing full option
    * objects don't have to re-walk quizInitialState.
    */
-  public getPristineCorrectOptionsForQuestion(
-    questionText: string | null | undefined
-  ): Option[] {
+  public getPristineCorrectOptionsForQuestion(questionText: string | null | undefined): Option[] {
     const key = norm(questionText);
     if (!key) return [];
     if (!this._correctOptionsByQText) this._correctOptionsByQText = new Map();
@@ -1131,9 +1167,7 @@ export class QuizService {
       this._correctOptionsByQText.set(key, empty);
       return empty;
     }
-    const opts = ((pq as any).options ?? []).filter(
-      (o: any) => isOptionCorrect(o)
-    ) as Option[];
+    const opts = ((pq as any).options ?? []).filter((o: any) => isOptionCorrect(o)) as Option[];
     this._correctOptionsByQText.set(key, opts);
     return opts;
   }
@@ -1142,9 +1176,7 @@ export class QuizService {
    * Convenience: number of pristine correct options for a given live
    * questionText. Derived from the cached correct-options helper.
    */
-  public getPristineCorrectCountForQuestion(
-    questionText: string | null | undefined
-  ): number {
+  public getPristineCorrectCountForQuestion(questionText: string | null | undefined): number {
     return this.getPristineCorrectOptionsForQuestion(questionText).length;
   }
 
@@ -1166,8 +1198,11 @@ export class QuizService {
 
   applySessionQuestions(quizId: string, questions: QuizQuestion[]): void {
     const newQuizId = this.sessionManager.applySessionQuestions(
-      this, quizId, questions,
-      this.questionsSig, this.quizResetSource
+      this,
+      quizId,
+      questions,
+      this.questionsSig,
+      this.quizResetSource
     );
     if (newQuizId) {
       this.questionsQuizId = newQuizId;
@@ -1217,7 +1252,10 @@ export class QuizService {
     }
   }
 
-  async checkIfAnsweredCorrectly(index: number = -1, updateScore: boolean = false): Promise<boolean> {
+  async checkIfAnsweredCorrectly(
+    index: number = -1,
+    updateScore: boolean = false
+  ): Promise<boolean> {
     const qIndex = index >= 0 ? index : this.currentQuestionIndex;
 
     let currentQuestionValue: QuizQuestion | null = null;
@@ -1231,7 +1269,8 @@ export class QuizService {
     if (!currentQuestionValue) return false;
 
     const storedAnswerIds = Array.isArray(this.userAnswers[qIndex])
-      ? (this.userAnswers[qIndex] as number[]) : [];
+      ? (this.userAnswers[qIndex] as number[])
+      : [];
 
     const result = await this.answerEvaluation.evaluateCorrectness(
       qIndex,
@@ -1272,7 +1311,12 @@ export class QuizService {
   ): void {
     const qIndex = questionIndex >= 0 ? questionIndex : this.currentQuestionIndex;
     this.scoringService.incrementScore(
-      answers, correctAnswerFound, isMultipleAnswer, qIndex, this.isShuffleEnabled(), this.quizId
+      answers,
+      correctAnswerFound,
+      isMultipleAnswer,
+      qIndex,
+      this.isShuffleEnabled(),
+      this.quizId
     );
   }
 
@@ -1311,9 +1355,7 @@ export class QuizService {
   }
 
   private resolveShuffleQuizId(): string | null {
-    return this.quizId 
-      || this.activeQuiz?.quizId 
-      || this.selectedQuiz?.quizId || null;
+    return this.quizId || this.activeQuiz?.quizId || this.selectedQuiz?.quizId || null;
   }
 
   private resolveCanonicalQuestion(
@@ -1439,7 +1481,9 @@ export class QuizService {
     this.finalResultSig.set(null);
     try {
       sessionStorage.removeItem('finalResult');
-    } catch (err: unknown) { swallow('quiz.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz.service.ts', err);
+    }
   }
 
   /**
@@ -1460,7 +1504,9 @@ export class QuizService {
     if (this.finalResultSig()) this.finalResultSig.set(patched);
     try {
       sessionStorage.setItem('finalResult', JSON.stringify(patched));
-    } catch (err: unknown) { swallow('quiz.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz.service.ts', err);
+    }
   }
 
   resetQuizSessionForNewRun(quizId: string): void {

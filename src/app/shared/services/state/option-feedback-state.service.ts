@@ -58,8 +58,8 @@ export class OptionFeedbackStateService {
   ): Record<string, boolean> {
     const feedbackMap: Record<string, boolean> = {};
 
-    const targetSelections = isMultiAnswer && selections.length > 0
-      ? [selections[selections.length - 1]] : selections;
+    const targetSelections =
+      isMultiAnswer && selections.length > 0 ? [selections[selections.length - 1]] : selections;
 
     for (const selection of targetSelections ?? []) {
       if (!selection) continue;
@@ -116,22 +116,19 @@ export class OptionFeedbackStateService {
       keys.add(numericSelectionId);
     }
 
-    if (selection.optionId !== undefined && selection.optionId !== null && String(selection.optionId) !== '-1') {
+    if (
+      selection.optionId !== undefined &&
+      selection.optionId !== null &&
+      String(selection.optionId) !== '-1'
+    ) {
       keys.add(selection.optionId);
     }
 
     const options = this.idResolver.getKnownOptions(questionIndex);
     if (options.length > 0) {
-      const resolvedIndex = this.idResolver.resolveOptionIndexFromSelection(
-        options,
-        selection
-      );
+      const resolvedIndex = this.idResolver.resolveOptionIndexFromSelection(options, selection);
 
-      if (
-        resolvedIndex !== null &&
-        resolvedIndex >= 0 &&
-        resolvedIndex < options.length
-      ) {
+      if (resolvedIndex !== null && resolvedIndex >= 0 && resolvedIndex < options.length) {
         const option: any = options[resolvedIndex];
 
         const normalizedOptionId = this.idResolver.normalizeOptionId(option?.optionId);
@@ -144,7 +141,11 @@ export class OptionFeedbackStateService {
           keys.add(numericOptionId);
         }
 
-        if (option?.optionId !== undefined && option?.optionId !== null && String(option.optionId) !== '-1') {
+        if (
+          option?.optionId !== undefined &&
+          option?.optionId !== null &&
+          String(option.optionId) !== '-1'
+        ) {
           keys.add(option.optionId);
         }
 

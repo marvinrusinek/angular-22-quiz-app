@@ -22,10 +22,7 @@ export class OptionFeedbackDisplayService {
   shouldShowFeedbackFor(host: Host, b: OptionBindings): boolean {
     const h = host as any;
     const id: any = b.option.optionId;
-    return (
-      id === h.lastFeedbackOptionId &&
-      !!h.feedbackConfigs[id]?.showFeedback
-    );
+    return id === h.lastFeedbackOptionId && !!h.feedbackConfigs[id]?.showFeedback;
   }
 
   shouldShowFeedbackAfter(host: Host, b: OptionBindings, i: number): boolean {
@@ -37,7 +34,8 @@ export class OptionFeedbackDisplayService {
       return true;
     }
     if (h.timerExpiredForQuestion()) {
-      const cfg = h.feedbackConfigs[b.option?.optionId ?? -1] ?? h.feedbackConfigs[h.keyOf(b.option, i)];
+      const cfg =
+        h.feedbackConfigs[b.option?.optionId ?? -1] ?? h.feedbackConfigs[h.keyOf(b.option, i)];
       return !!cfg?.showFeedback;
     }
     return false;

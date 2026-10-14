@@ -113,14 +113,17 @@ export class PracticeSessionService {
     this.verdicts.isResolved(question?.sourceQuizId ?? '', question?.questionText ?? '');
 
   private readonly authorizedCorrectTexts = (question: QuizQuestion): readonly string[] =>
-    this.verdicts.verdictFor(question?.sourceQuizId ?? '', question?.questionText ?? '').correctTexts;
+    this.verdicts.verdictFor(question?.sourceQuizId ?? '', question?.questionText ?? '')
+      .correctTexts;
 
   /** Current question is fully, exactly right — reveals FET and locks options. */
   readonly isCurrentResolved = computed(() => {
     // Read the verdict signal so this recomputes when a verdict lands.
     this.verdicts.verdicts();
     return isQuestionResolved(
-      this.currentQuestion(), this.currentSelection(), this.authorizedResolved
+      this.currentQuestion(),
+      this.currentSelection(),
+      this.authorizedResolved
     );
   });
 
@@ -133,7 +136,9 @@ export class PracticeSessionService {
   readonly canAdvance = computed(() => {
     this.verdicts.verdicts();
     return canAdvanceFromQuestion(
-      this.currentQuestion(), this.currentSelection(), this.authorizedResolved
+      this.currentQuestion(),
+      this.currentSelection(),
+      this.authorizedResolved
     );
   });
 
@@ -173,8 +178,7 @@ export class PracticeSessionService {
     const pools = await this.loadApiPools(topicIds);
     if (!pools) return false;
 
-    const built: GeneratedAssessment | null =
-      this.builder.buildPractice(topicIds, 10, pools);
+    const built: GeneratedAssessment | null = this.builder.buildPractice(topicIds, 10, pools);
     if (!built || built.questions.length === 0) return false;
 
     // A new session must not inherit the previous one's verdicts.
@@ -232,7 +236,7 @@ export class PracticeSessionService {
 
   select(index: number, optionIds: number[]): void {
     if (index < 0 || index >= this.total()) return;
-    if (this._status() === 'submitted') return;   // answers lock after submission
+    if (this._status() === 'submitted') return; // answers lock after submission
     this._answersByIndex.update((current) => ({ ...current, [index]: [...optionIds] }));
     this.persist();
   }
@@ -259,7 +263,7 @@ export class PracticeSessionService {
   submit(): void {
     if (this._status() === 'submitted') return;
     if (this.total() === 0) return;
-    if (!this.canSubmit()) return;   // same gate the visible button enforces
+    if (!this.canSubmit()) return; // same gate the visible button enforces
 
     this._result.set(
       computePracticeResult({

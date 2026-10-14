@@ -15,7 +15,7 @@ import { formatMMSS } from '@shared/utils/format-time';
  */
 @Service()
 export class InterviewTimerService implements OnDestroy {
-  private static readonly LOW_TIME_THRESHOLD = 5 * 60;   // 5 minutes
+  private static readonly LOW_TIME_THRESHOLD = 5 * 60; // 5 minutes
 
   private expiresAtMs = 0;
   private totalSeconds = 0;

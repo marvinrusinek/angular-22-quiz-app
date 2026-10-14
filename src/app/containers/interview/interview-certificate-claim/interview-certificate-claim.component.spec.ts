@@ -70,6 +70,8 @@ describe('InterviewCertificateClaimComponent', () => {
     await fixture.componentInstance.submit();
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Check your email');
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('check the name and email address');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'check the name and email address'
+    );
   });
 });

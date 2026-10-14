@@ -9,7 +9,10 @@ import { AnswerOptionsService } from './answer-options.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import {
+  IDLE_VERDICT_STATE,
+  type QuestionVerdictState
+} from '@shared/services/features/verdict/question-verdict.types';
 import type { OptionBindings, SelectedOption } from '@shared/models';
 
 /**
@@ -38,8 +41,10 @@ const QUESTION = 'Which operator maps values?';
 let service: AnswerBindingsService;
 let verdictState: QuestionVerdictState;
 
-const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState =>
-  ({ ...IDLE_VERDICT_STATE, ...over });
+const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState => ({
+  ...IDLE_VERDICT_STATE,
+  ...over
+});
 
 beforeEach(() => {
   verdictState = IDLE_VERDICT_STATE;
@@ -48,7 +53,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       AnswerBindingsService,
       AnswerOptionsService,
@@ -81,10 +89,10 @@ function bindings(withCorrectFlags = true): OptionBindings[] {
     }) as unknown as OptionBindings;
 
   return withCorrectFlags
-    // 'map' is the real answer and is flagged; the others are not.
-    ? [mk(1, 'map', true), mk(2, 'Subject', false), mk(3, 'Observable', false)]
-    // No `correct` property anywhere — the shape /questions returns.
-    : [mk(1, 'map'), mk(2, 'Subject'), mk(3, 'Observable')];
+    ? // 'map' is the real answer and is flagged; the others are not.
+      [mk(1, 'map', true), mk(2, 'Subject', false), mk(3, 'Observable', false)]
+    : // No `correct` property anywhere — the shape /questions returns.
+      [mk(1, 'map'), mk(2, 'Subject'), mk(3, 'Observable')];
 }
 
 const clicked = (optionId: number): SelectedOption =>
@@ -104,8 +112,8 @@ describe('a wrong single-answer pick reveals nothing about the rest', () => {
     const result = service.updateVisualBindings(bindings(), clicked(2), 'single');
 
     // 'map' must not stand out from 'Observable' in any way.
-    expect(result[0].disabled).toBe(false);   // map (the answer)
-    expect(result[2].disabled).toBe(false);   // Observable (also wrong)
+    expect(result[0].disabled).toBe(false); // map (the answer)
+    expect(result[2].disabled).toBe(false); // Observable (also wrong)
     expect(disabledOf(result)).toEqual([false, false, false]);
   });
 
@@ -198,7 +206,7 @@ describe('a correct answer still locks the rest', () => {
 
     const result = service.updateVisualBindings(bindings(), clicked(1), 'single');
 
-    expect(result[0].isSelected).toBe(true);    // the pick stays live
+    expect(result[0].isSelected).toBe(true); // the pick stays live
     expect(result[1].disabled).toBe(true);
     expect(result[2].disabled).toBe(true);
   });

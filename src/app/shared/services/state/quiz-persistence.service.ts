@@ -1,6 +1,16 @@
 import { Service, inject } from '@angular/core';
 
-import { SK_COMPLETED_QUIZ_IDS, SK_CORRECT_ANSWERS_COUNT, SK_DOT_CONFIRMED, SK_DISPLAY_MODE, SK_IS_ANSWERED, SK_SAVED_QUESTION_INDEX, SK_SEL_Q, SK_SELECTED_OPTIONS_MAP, SK_USER_ANSWERS } from '@shared/constants/session-keys';
+import {
+  SK_COMPLETED_QUIZ_IDS,
+  SK_CORRECT_ANSWERS_COUNT,
+  SK_DOT_CONFIRMED,
+  SK_DISPLAY_MODE,
+  SK_IS_ANSWERED,
+  SK_SAVED_QUESTION_INDEX,
+  SK_SEL_Q,
+  SK_SELECTED_OPTIONS_MAP,
+  SK_USER_ANSWERS
+} from '@shared/constants/session-keys';
 import { readSessionJson, removeSessionKey, writeSessionJson } from '@shared/utils/session-storage';
 
 import { QuizService } from '@shared/services/data/quiz.service';
@@ -25,10 +35,7 @@ export class QuizPersistenceService {
   // ═══════════════════════════════════════════════════════════════
 
   getEffectiveQuizId(quizId: string): string {
-    return quizId
-      || this.quizService.quizId
-      || localStorage.getItem('lastQuizId')
-      || 'default';
+    return quizId || this.quizService.quizId || localStorage.getItem('lastQuizId') || 'default';
   }
 
   getDotStatusStorageKey(quizId: string): string {
@@ -49,24 +56,27 @@ export class QuizPersistenceService {
       for (const key of keys) {
         const raw = localStorage.getItem(key);
         if (raw == null) continue;
-        
+
         const n = Number(raw);
         if (Number.isFinite(n) && n >= 0) return Math.trunc(n);
       }
-    } catch (err: unknown) { swallow('quiz-persistence.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-persistence.service.ts', err);
+    }
     return null;
   }
 
   setPersistedProgress(quizId: string, value: number): void {
     try {
-      const keys = Array.from(new Set([
-        this.getProgressStorageKey(quizId),
-        'quiz_progress_default',
-      ]));
+      const keys = Array.from(
+        new Set([this.getProgressStorageKey(quizId), 'quiz_progress_default'])
+      );
       for (const key of keys) {
         localStorage.setItem(key, String(Math.max(0, Math.trunc(value))));
       }
-    } catch (err: unknown) { swallow('quiz-persistence.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-persistence.service.ts', err);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -75,10 +85,7 @@ export class QuizPersistenceService {
 
   getPersistedDotStatus(quizId: string, index: number): 'correct' | 'wrong' | null {
     try {
-      const keys = [
-        this.getDotStatusStorageKey(quizId),
-        'quiz_dot_status_default',
-      ];
+      const keys = [this.getDotStatusStorageKey(quizId), 'quiz_dot_status_default'];
 
       for (const key of keys) {
         const raw = localStorage.getItem(key);
@@ -98,10 +105,9 @@ export class QuizPersistenceService {
 
   setPersistedDotStatus(quizId: string, index: number, status: 'correct' | 'wrong'): void {
     try {
-      const keys = Array.from(new Set([
-        this.getDotStatusStorageKey(quizId),
-        'quiz_dot_status_default',
-      ]));
+      const keys = Array.from(
+        new Set([this.getDotStatusStorageKey(quizId), 'quiz_dot_status_default'])
+      );
 
       for (const key of keys) {
         const raw = localStorage.getItem(key);
@@ -109,15 +115,16 @@ export class QuizPersistenceService {
         parsed[String(index)] = status;
         localStorage.setItem(key, JSON.stringify(parsed));
       }
-    } catch (err: unknown) { swallow('quiz-persistence.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-persistence.service.ts', err);
+    }
   }
 
   clearPersistedDotStatus(quizId: string, index: number): void {
     try {
-      const keys = Array.from(new Set([
-        this.getDotStatusStorageKey(quizId),
-        'quiz_dot_status_default',
-      ]));
+      const keys = Array.from(
+        new Set([this.getDotStatusStorageKey(quizId), 'quiz_dot_status_default'])
+      );
 
       for (const key of keys) {
         const raw = localStorage.getItem(key);
@@ -127,18 +134,21 @@ export class QuizPersistenceService {
           localStorage.setItem(key, JSON.stringify(parsed));
         }
       }
-    } catch (err: unknown) { swallow('quiz-persistence.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-persistence.service.ts', err);
+    }
   }
 
   /** Remove ALL persisted dot status entries (used on quiz restart). */
   clearAllPersistedDotStatus(quizId: string): void {
     try {
-      const keys = Array.from(new Set([
-        this.getDotStatusStorageKey(quizId),
-        'quiz_dot_status_default',
-      ]));
+      const keys = Array.from(
+        new Set([this.getDotStatusStorageKey(quizId), 'quiz_dot_status_default'])
+      );
       for (const key of keys) localStorage.removeItem(key);
-    } catch (err: unknown) { swallow('quiz-persistence.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-persistence.service.ts', err);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -151,14 +161,18 @@ export class QuizPersistenceService {
     for (const [key] of this.selectedOptionService.clickConfirmedDotStatus) {
       try {
         sessionStorage.removeItem(SK_DOT_CONFIRMED + key);
-      } catch (err: unknown) { swallow('quiz-persistence.service.ts', err); }
+      } catch (err: unknown) {
+        swallow('quiz-persistence.service.ts', err);
+      }
     }
     // Also sweep any orphaned session keys (up to totalQuestions)
     const total = totalQuestions || 20;
     for (let i = 0; i < total; i++) {
       try {
         sessionStorage.removeItem(SK_DOT_CONFIRMED + i);
-      } catch (err: unknown) { swallow('quiz-persistence.service.ts', err); }
+      } catch (err: unknown) {
+        swallow('quiz-persistence.service.ts', err);
+      }
     }
     this.selectedOptionService.clickConfirmedDotStatus.clear();
   }
@@ -186,7 +200,7 @@ export class QuizPersistenceService {
 
       // Drop this quiz from the completed list (we're restarting it)
       const ids = readSessionJson<string[]>(SK_COMPLETED_QUIZ_IDS, []);
-      const filtered = ids.filter(id => id !== quizId);
+      const filtered = ids.filter((id) => id !== quizId);
       if (filtered.length > 0) {
         writeSessionJson(SK_COMPLETED_QUIZ_IDS, filtered);
       } else {
@@ -211,6 +225,8 @@ export class QuizPersistenceService {
         }
       }
       for (const key of lsKeysToRemove) localStorage.removeItem(key);
-    } catch (err: unknown) { swallow('quiz-persistence.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-persistence.service.ts', err);
+    }
   }
 }

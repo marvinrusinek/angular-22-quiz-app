@@ -32,11 +32,13 @@ function localOptions() {
 }
 
 /** Minimal deps for buildHeadingInputs — only what the banner path reads. */
-function deps(overrides: {
-  declaredCount?: number | null;
-  registry?: unknown;
-  type?: QuestionType;
-} = {}) {
+function deps(
+  overrides: {
+    declaredCount?: number | null;
+    registry?: unknown;
+    type?: QuestionType;
+  } = {}
+) {
   const question = {
     questionText: QUESTION,
     type: overrides.type ?? QuestionType.MultipleAnswer,
@@ -44,9 +46,10 @@ function deps(overrides: {
     options: localOptions()
   };
 
-  const registry = 'registry' in overrides
-    ? overrides.registry
-    : { correctCountOf: () => overrides.declaredCount ?? null };
+  const registry =
+    'registry' in overrides
+      ? overrides.registry
+      : { correctCountOf: () => overrides.declaredCount ?? null };
 
   return {
     idx: 0,
@@ -57,7 +60,11 @@ function deps(overrides: {
       isShuffleEnabled: () => false,
       shuffledQuestions: [],
       getPristineCorrectTextsForQuestion: () =>
-        new Set(localOptions().filter((o) => o.correct).map((o) => o.text.toLowerCase())),
+        new Set(
+          localOptions()
+            .filter((o) => o.correct)
+            .map((o) => o.text.toLowerCase())
+        ),
       isMultiAnswerComplete: () => false
     },
     explanationTextService: {
@@ -67,7 +74,10 @@ function deps(overrides: {
       fetBypassForQuestion: new Map()
     },
     timerService: { expiredForQuestionIndexSig: () => -1, expiredOnArrivalSig: () => -1 },
-    selectedOptionService: { selectedOptionsMap: new Map(), uiSelectedTextsForQuestion: () => new Set() },
+    selectedOptionService: {
+      selectedOptionsMap: new Map(),
+      uiSelectedTextsForQuestion: () => new Set()
+    },
     quizStateService: {},
     quizNavigationService: { isNavigatingToPreviousSig: () => false },
     quizQuestionManagerService: {
@@ -100,12 +110,14 @@ describe('the banner uses the DECLARED count, not the local flags', () => {
     const d = deps({ declaredCount: 2 }) as unknown as {
       quizService: { getQuestionsInDisplayOrder: () => unknown[] };
     };
-    d.quizService.getQuestionsInDisplayOrder = () => [{
-      questionText: QUESTION,
-      type: QuestionType.MultipleAnswer,
-      explanation: 'e',
-      options: localOptions().map(({ optionId, text }) => ({ optionId, text }))
-    }];
+    d.quizService.getQuestionsInDisplayOrder = () => [
+      {
+        questionText: QUESTION,
+        type: QuestionType.MultipleAnswer,
+        explanation: 'e',
+        options: localOptions().map(({ optionId, text }) => ({ optionId, text }))
+      }
+    ];
 
     expect(bannerOf(d as never)).toContain('(2 answers are correct)');
   });
@@ -188,7 +200,9 @@ describe('D. a missing count FAILS CLOSED', () => {
 
 describe('F. the count NEVER decides the question type', () => {
   it('a declared MULTIPLE question with correctCount 1 keeps its type and shows 1', () => {
-    const inputs = buildHeadingInputs(deps({ declaredCount: 1, type: QuestionType.MultipleAnswer }));
+    const inputs = buildHeadingInputs(
+      deps({ declaredCount: 1, type: QuestionType.MultipleAnswer })
+    );
     expect(inputs!.questionHtml).toContain('(1 answer is correct)');
   });
 

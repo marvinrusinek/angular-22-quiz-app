@@ -53,7 +53,11 @@ function interviewAttempt(over: Partial<SanitizedAttemptInput> = {}): SanitizedA
 /** Every key/value currently in localStorage and sessionStorage. */
 function storageSnapshot(): string {
   const dump = (s: Storage): Record<string, string | null> =>
-    Object.fromEntries(Object.keys(s).sort().map((k) => [k, s.getItem(k)]));
+    Object.fromEntries(
+      Object.keys(s)
+        .sort()
+        .map((k) => [k, s.getItem(k)])
+    );
   return JSON.stringify({ local: dump(localStorage), session: dump(sessionStorage) });
 }
 
@@ -72,20 +76,48 @@ describe('PerformanceInsightsService — derives from the existing stores', () =
   it('is empty with no history', () => {
     const { insights } = stack();
     expect(insights.insights()).toEqual({
-      hasData: false, topicQuiz: null, interview: null, practice: null, topics: [], strongest: [], needsReview: []
+      hasData: false,
+      topicQuiz: null,
+      interview: null,
+      practice: null,
+      topics: [],
+      strongest: [],
+      needsReview: []
     });
   });
 
   it('reads all three sources and keeps them separate', () => {
     const s = stack();
-    s.topic.record('quiz:rxjs:1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 9, total: 10 }]);
-    s.topic.record('practice:p1', 'weak-areas-practice', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 4 }]);
+    s.topic.record('quiz:rxjs:1', 'topic-quiz', [
+      { topicId: 'rxjs', topicName: 'RxJS', correct: 9, total: 10 }
+    ]);
+    s.topic.record('practice:p1', 'weak-areas-practice', [
+      { topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 4 }
+    ]);
     s.interview.recordAttempt(interviewAttempt());
 
     const out = s.insights.insights();
-    expect(out.topicQuiz).toMatchObject({ source: 'topic-quiz', attempts: 1, correct: 9, total: 10, accuracyPct: 90 });
-    expect(out.practice).toMatchObject({ source: 'weak-areas-practice', attempts: 1, correct: 1, total: 4, accuracyPct: 25 });
-    expect(out.interview).toMatchObject({ source: 'interview', attempts: 1, correct: 7, total: 10, accuracyPct: 70 });
+    expect(out.topicQuiz).toMatchObject({
+      source: 'topic-quiz',
+      attempts: 1,
+      correct: 9,
+      total: 10,
+      accuracyPct: 90
+    });
+    expect(out.practice).toMatchObject({
+      source: 'weak-areas-practice',
+      attempts: 1,
+      correct: 1,
+      total: 4,
+      accuracyPct: 25
+    });
+    expect(out.interview).toMatchObject({
+      source: 'interview',
+      attempts: 1,
+      correct: 7,
+      total: 10,
+      accuracyPct: 70
+    });
     expect(out.hasData).toBe(true);
   });
 
@@ -111,7 +143,9 @@ describe('PerformanceInsightsService — derives from the existing stores', () =
   it('builds topics from the SAME merged dataset Weak Areas judges', () => {
     const s = stack();
     s.interview.recordAttempt(interviewAttempt());
-    s.topic.record('quiz:rxjs:1', 'topic-quiz', [{ topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 5 }]);
+    s.topic.record('quiz:rxjs:1', 'topic-quiz', [
+      { topicId: 'rxjs', topicName: 'RxJS', correct: 1, total: 5 }
+    ]);
 
     const rxjs = s.insights.insights().topics.find((t) => t.topicId === 'rxjs')!;
     // interview 2/5 + quiz 1/5, exactly what WeakAreasService aggregates.
@@ -144,7 +178,12 @@ describe('PerformanceInsightsService — derives from the existing stores', () =
     expect(s.insights.insights().topicQuiz).toMatchObject({ attempts: 1, correct: 2, total: 4 });
 
     s.topic.record('quiz:rxjs:2', 'topic-quiz', [{ topicId: 'rxjs', correct: 4, total: 4 }]);
-    expect(s.insights.insights().topicQuiz).toMatchObject({ attempts: 2, correct: 6, total: 8, accuracyPct: 75 });
+    expect(s.insights.insights().topicQuiz).toMatchObject({
+      attempts: 2,
+      correct: 6,
+      total: 8,
+      accuracyPct: 75
+    });
 
     s.interview.recordAttempt(interviewAttempt());
     expect(s.insights.insights().interview).not.toBeNull();
@@ -173,7 +212,9 @@ describe('PerformanceInsightsService — read-only guarantees', () => {
   it('writes nothing and creates no storage key, however often it is read', () => {
     const s = stack();
     s.topic.record('quiz:rxjs:1', 'topic-quiz', [{ topicId: 'rxjs', correct: 2, total: 4 }]);
-    s.topic.record('practice:p1', 'weak-areas-practice', [{ topicId: 'forms', correct: 3, total: 4 }]);
+    s.topic.record('practice:p1', 'weak-areas-practice', [
+      { topicId: 'forms', correct: 3, total: 4 }
+    ]);
     s.interview.recordAttempt(interviewAttempt());
 
     const before = storageSnapshot();
@@ -209,9 +250,15 @@ describe('PerformanceInsightsService — read-only guarantees', () => {
     s.topic.record('quiz:rxjs:1', 'topic-quiz', [{ topicId: 'rxjs', correct: 2, total: 4 }]);
     s.interview.recordAttempt(interviewAttempt());
 
-    const before = JSON.stringify({ t: s.topic.records(), i: s.interview.history(), m: s.weak.mergedAttempts() });
+    const before = JSON.stringify({
+      t: s.topic.records(),
+      i: s.interview.history(),
+      m: s.weak.mergedAttempts()
+    });
     s.insights.insights();
-    expect(JSON.stringify({ t: s.topic.records(), i: s.interview.history(), m: s.weak.mergedAttempts() })).toBe(before);
+    expect(
+      JSON.stringify({ t: s.topic.records(), i: s.interview.history(), m: s.weak.mergedAttempts() })
+    ).toBe(before);
   });
 
   it('is not a weaker or different Weak Areas: WeakAreasService output is identical with it present', () => {
@@ -228,7 +275,13 @@ describe('PerformanceInsightsService — read-only guarantees', () => {
     s.interview.recordAttempt(interviewAttempt());
     const json = JSON.stringify(s.insights.insights());
     for (const banned of [
-      'questionText', 'option', 'explanation', 'correctOptionIds', 'selectedOptionIds', 'answerKey', 'sessionToken'
+      'questionText',
+      'option',
+      'explanation',
+      'correctOptionIds',
+      'selectedOptionIds',
+      'answerKey',
+      'sessionToken'
     ]) {
       expect(json).not.toContain(banned);
     }

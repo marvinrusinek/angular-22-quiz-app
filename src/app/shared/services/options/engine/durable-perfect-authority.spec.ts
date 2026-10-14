@@ -10,7 +10,10 @@ import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
-import { IDLE_VERDICT_STATE, type QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
+import {
+  IDLE_VERDICT_STATE,
+  type QuestionVerdictState
+} from '@shared/services/features/verdict/question-verdict.types';
 
 /**
  * "Is the durable selection perfect?" — the flag behind the all-correct
@@ -37,8 +40,10 @@ let service: SocAnswerProcessingService;
 let verdictState: QuestionVerdictState;
 let uiSelected: string[];
 
-const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState =>
-  ({ ...IDLE_VERDICT_STATE, ...over });
+const state = (over: Partial<QuestionVerdictState>): QuestionVerdictState => ({
+  ...IDLE_VERDICT_STATE,
+  ...over
+});
 
 /** The bank claims map+filter — consulted only by the no-verdict fallback. */
 const BANK_QUESTION = {
@@ -62,7 +67,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       {
         provide: QuizService,
@@ -86,7 +94,10 @@ beforeEach(() => {
           clickConfirmedDotStatus: new Map()
         }
       },
-      { provide: TimerService, useValue: { stopTimer: () => undefined, resetTimer: () => undefined } },
+      {
+        provide: TimerService,
+        useValue: { stopTimer: () => undefined, resetTimer: () => undefined }
+      },
       { provide: QuestionVerdictService, useValue: { verdictFor: () => verdictState } }
     ]
   });
@@ -108,7 +119,10 @@ describe('perfect means every answer AND nothing wrong', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     expect(durablePerfect([0, 1])).toBe(true);
@@ -121,7 +135,11 @@ describe('perfect means every answer AND nothing wrong', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true], ['Observable', false]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true],
+        ['Observable', false]
+      ])
     });
 
     expect(durablePerfect([0, 1, 2])).toBe(false);
@@ -160,7 +178,10 @@ describe('the local answer key cannot decide this', () => {
     verdictState = state({
       phase: 'incomplete',
       remainingCorrectCount: 1,
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     expect(durablePerfect([0, 1])).toBe(false);
@@ -171,7 +192,10 @@ describe('the local answer key cannot decide this', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['Observable', 'Subject'],
-      selectedVerdicts: new Map([['Observable', true], ['Subject', true]])
+      selectedVerdicts: new Map([
+        ['Observable', true],
+        ['Subject', true]
+      ])
     });
 
     expect(durablePerfect([2, 3])).toBe(true);
@@ -182,7 +206,10 @@ describe('the local answer key cannot decide this', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     // Deliberately empty AND deliberately wrong — neither changes the answer.
@@ -199,22 +226,28 @@ describe('the durable + revisit-snapshot union is preserved', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     expect(durablePerfect([])).toBe(true);
   });
 
   it('completes from the union when each half is partial', () => {
-    uiSelected = ['filter'];                 // remembered from the first visit
+    uiSelected = ['filter']; // remembered from the first visit
     verdictState = state({
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
-    expect(durablePerfect([0])).toBe(true);  // just-clicked 'map'
+    expect(durablePerfect([0])).toBe(true); // just-clicked 'map'
   });
 
   it('is unaffected by the same option appearing in both halves', () => {
@@ -223,7 +256,10 @@ describe('the durable + revisit-snapshot union is preserved', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true]
+      ])
     });
 
     expect(durablePerfect([0, 1])).toBe(true);
@@ -235,7 +271,11 @@ describe('the durable + revisit-snapshot union is preserved', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['map', true], ['filter', true], ['Observable', false]])
+      selectedVerdicts: new Map([
+        ['map', true],
+        ['filter', true],
+        ['Observable', false]
+      ])
     });
 
     expect(durablePerfect([0, 1])).toBe(false);
@@ -285,7 +325,10 @@ describe('selection order does not matter', () => {
       phase: 'resolved',
       isResolvedCorrect: true,
       correctOptionTexts: ['map', 'filter'],
-      selectedVerdicts: new Map([['filter', true], ['map', true]])
+      selectedVerdicts: new Map([
+        ['filter', true],
+        ['map', true]
+      ])
     });
 
     expect(durablePerfect([1, 0])).toBe(true);

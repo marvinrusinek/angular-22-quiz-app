@@ -23,7 +23,6 @@ import { of } from 'rxjs';
 
 import { Option, Quiz, QuizStatus } from '@shared/models';
 
-
 import { SK_USER_ANSWERS } from '@shared/constants/session-keys';
 
 import { QuizService } from './quiz.service';
@@ -31,10 +30,11 @@ import { QuizService } from './quiz.service';
 describe('QuizService core state + query methods', () => {
   let service: QuizService;
 
-  const quiz = (id: string, n: number): Quiz => ({
-    quizId: id,
-    questions: Array.from({ length: n }, (_, i) => ({ questionText: `Q${i + 1}` }))
-  } as Quiz);
+  const quiz = (id: string, n: number): Quiz =>
+    ({
+      quizId: id,
+      questions: Array.from({ length: n }, (_, i) => ({ questionText: `Q${i + 1}` }))
+    }) as Quiz;
 
   beforeEach(() => {
     localStorage.clear();
@@ -42,7 +42,10 @@ describe('QuizService core state + query methods', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
       ]
     });
     service = TestBed.inject(QuizService);
@@ -118,7 +121,7 @@ describe('QuizService core state + query methods', () => {
       service.updateAnswersForOption({ optionId: 5 } as Option);
       service.updateAnswersForOption({ optionId: 7 } as Option);
 
-      expect(service.answers.map(a => a.optionId)).toEqual([5, 7]);
+      expect(service.answers.map((a) => a.optionId)).toEqual([5, 7]);
       expect(service.userAnswers[0]).toEqual([5, 7]);
     });
 

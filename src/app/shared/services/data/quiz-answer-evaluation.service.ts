@@ -29,7 +29,7 @@ export class QuizAnswerEvaluationService {
     shouldShuffle: boolean
   ): Option[] {
     if (!question || !Array.isArray(question.options)) {
-      return answerIds.map(id => ({ optionId: id } as Option));
+      return answerIds.map((id) => ({ optionId: id }) as Option);
     }
 
     return answerIds
@@ -48,9 +48,10 @@ export class QuizAnswerEvaluationService {
 
         if (!match) {
           const answerId = id;
-          match = question.options.find((o: Option) =>
-            (o.text && String(o.optionId) === String(answerId)) ||
-            (o.text && String(o.value) === String(answerId))
+          match = question.options.find(
+            (o: Option) =>
+              (o.text && String(o.optionId) === String(answerId)) ||
+              (o.text && String(o.value) === String(answerId))
           );
         }
 
@@ -87,8 +88,8 @@ export class QuizAnswerEvaluationService {
 
     const resolvedAnswers = userAnswerIds
       .map((id) => {
-        const found = currentQuestion.options.find((o: Option) =>
-          String(o.optionId) === String(id)
+        const found = currentQuestion.options.find(
+          (o: Option) => String(o.optionId) === String(id)
         );
         if (found) return found;
 
@@ -108,16 +109,24 @@ export class QuizAnswerEvaluationService {
       .filter((o): o is Option => !!o);
 
     if (!resolvedAnswers || resolvedAnswers.length === 0) {
-      return { isCorrect: false, numberOfCorrectAnswers, multipleAnswer, resolvedAnswers, answerIds: [] };
+      return {
+        isCorrect: false,
+        numberOfCorrectAnswers,
+        multipleAnswer,
+        resolvedAnswers,
+        answerIds: []
+      };
     }
 
-    const correctnessArray =
-      await this.optionsService.determineCorrectAnswer(currentQuestion, resolvedAnswers);
+    const correctnessArray = await this.optionsService.determineCorrectAnswer(
+      currentQuestion,
+      resolvedAnswers
+    );
     const allSelectedAreCorrect = correctnessArray.every((v) => v === true);
-    const isCorrect =
-      allSelectedAreCorrect && correctnessArray.length === numberOfCorrectAnswers;
-    const answerIds =
-      resolvedAnswers.map((a) => a.optionId).filter((id): id is number => id !== undefined);
+    const isCorrect = allSelectedAreCorrect && correctnessArray.length === numberOfCorrectAnswers;
+    const answerIds = resolvedAnswers
+      .map((a) => a.optionId)
+      .filter((id): id is number => id !== undefined);
 
     return { isCorrect, numberOfCorrectAnswers, multipleAnswer, resolvedAnswers, answerIds };
   }
@@ -129,5 +138,4 @@ export class QuizAnswerEvaluationService {
   // answer-key claim. Its only caller was QuizService.scoreDirectly(), which
   // is also gone now that Topic Quiz credit comes solely from
   // QuizScoringService.creditResolvedQuestion on authorized verdict arrival.
-
 }

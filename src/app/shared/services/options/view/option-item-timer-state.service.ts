@@ -95,7 +95,6 @@ export class OptionItemTimerStateService {
   }
 
   isStampedCorrect(binding: OptionBindings | undefined, qIdxInput: number): boolean {
-    return this.isStamped(binding, qIdxInput)
-      && binding?.cssClasses?.['correct-option'] === true;
+    return this.isStamped(binding, qIdxInput) && binding?.cssClasses?.['correct-option'] === true;
   }
 }

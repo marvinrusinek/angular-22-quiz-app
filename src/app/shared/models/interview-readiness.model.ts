@@ -8,11 +8,11 @@
 
 /** Readiness band (0–100 → label). */
 export type InterviewReadinessBand =
-  | 'early-preparation'   // 0–39
-  | 'developing'          // 40–59
-  | 'progressing'         // 60–74
-  | 'strong'              // 75–89
-  | 'interview-ready';    // 90–100
+  | 'early-preparation' // 0–39
+  | 'developing' // 40–59
+  | 'progressing' // 60–74
+  | 'strong' // 75–89
+  | 'interview-ready'; // 90–100
 
 /** The four weighted contributors. */
 export type InterviewReadinessFactor =
@@ -26,12 +26,12 @@ export interface InterviewReadiness {
   // authoritative score). 'ready' = two or more (a calculated score).
   status: 'insufficient' | 'ready';
 
-  score: number;                        // 0–100 (0 while insufficient)
+  score: number; // 0–100 (0 while insufficient)
   band: InterviewReadinessBand;
 
   // Factor scores, each on a 0–100 scale.
   recentPerformance: number;
-  consistency: number;         // performance-safeguarded (feeds the weighted score)
+  consistency: number; // performance-safeguarded (feeds the weighted score)
   // Raw score stability (range only, NOT performance-adjusted). Used purely for
   // wording — a consistently-low user is stable, not "varying" — while the
   // safeguarded `consistency` above is what the score uses.
@@ -49,9 +49,9 @@ export interface InterviewReadiness {
   strongestFactor: InterviewReadinessFactor;
   limitingFactor: InterviewReadinessFactor;
 
-  explanation: string;                  // strongest + limiting, factual
-  recommendations: string[];            // at most two, priority-ordered
+  explanation: string; // strongest + limiting, factual
+  recommendations: string[]; // at most two, priority-ordered
 
-  attemptsUsed: number;                 // attempts feeding recent/consistency (≤ 5)
-  totalAttempts: number;                // total retained attempts
+  attemptsUsed: number; // attempts feeding recent/consistency (≤ 5)
+  totalAttempts: number; // total retained attempts
 }

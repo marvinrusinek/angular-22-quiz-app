@@ -34,17 +34,35 @@ export function answerStateStub() {
     multiAnswerPerfect,
     questionResolved,
 
-    multiAnswerCompletionSig: () => { version(); return multiAnswerCompletion; },
-    multiAnswerPerfectSig: () => { version(); return multiAnswerPerfect; },
-    questionResolvedSig: () => { version(); return questionResolved; },
+    multiAnswerCompletionSig: () => {
+      version();
+      return multiAnswerCompletion;
+    },
+    multiAnswerPerfectSig: () => {
+      version();
+      return multiAnswerPerfect;
+    },
+    questionResolvedSig: () => {
+      version();
+      return questionResolved;
+    },
 
     isMultiAnswerComplete: (i: number) => multiAnswerCompletion.get(i) === true,
     isMultiAnswerPerfect: (i: number) => multiAnswerPerfect.get(i) === true,
     isQuestionResolved: (i: number) => questionResolved.get(i) === true,
 
-    markMultiAnswerComplete: (i: number) => { multiAnswerCompletion.set(i, true); bump(); },
-    markMultiAnswerPerfect: (i: number) => { multiAnswerPerfect.set(i, true); bump(); },
-    markQuestionResolved: (i: number) => { questionResolved.set(i, true); bump(); },
+    markMultiAnswerComplete: (i: number) => {
+      multiAnswerCompletion.set(i, true);
+      bump();
+    },
+    markMultiAnswerPerfect: (i: number) => {
+      multiAnswerPerfect.set(i, true);
+      bump();
+    },
+    markQuestionResolved: (i: number) => {
+      questionResolved.set(i, true);
+      bump();
+    },
 
     clearAnswerStateAt: (i: number) => {
       multiAnswerCompletion.delete(i);

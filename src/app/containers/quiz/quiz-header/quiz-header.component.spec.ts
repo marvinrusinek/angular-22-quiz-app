@@ -21,7 +21,7 @@ describe('CodelabQuizHeaderComponent', () => {
     TestBed.resetTestingModule();
     metadataApi = {
       questionCountByQuiz: jest.fn().mockReturnValue(new Map()),
-      milestoneFor: jest.fn().mockReturnValue(''),
+      milestoneFor: jest.fn().mockReturnValue('')
     };
     quizService = { quizId };
 
@@ -31,8 +31,14 @@ describe('CodelabQuizHeaderComponent', () => {
         { provide: TopicQuizMetadataService, useValue: metadataApi },
         { provide: QuizService, useValue: quizService },
         { provide: MatDialog, useValue: { open: jest.fn() } },
-        { provide: ActivatedRoute, useValue: { snapshot: {}, params: { subscribe: () => ({ unsubscribe: () => undefined }) } } },
-      ],
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {},
+            params: { subscribe: () => ({ unsubscribe: () => undefined }) }
+          }
+        }
+      ]
     });
   }
 

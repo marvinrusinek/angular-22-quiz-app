@@ -51,7 +51,10 @@ describe('QuizSortComponent', () => {
       expect(buttons.every((b) => b.getAttribute('type') === 'button')).toBe(true);
       // Visible text per button (the icon is a separate, decorative element; the
       // gap between word and arrow is CSS `gap`, not a space character).
-      expect(buttons.map((b) => b.querySelector('.sort-btn__text')?.textContent?.trim())).toEqual(['Difficulty', 'A–Z']);
+      expect(buttons.map((b) => b.querySelector('.sort-btn__text')?.textContent?.trim())).toEqual([
+        'Difficulty',
+        'A–Z'
+      ]);
       expect(buttons[0].querySelectorAll('mat-icon')).toHaveLength(1);
       expect(buttons[1].querySelectorAll('mat-icon')).toHaveLength(0);
     });
@@ -70,13 +73,16 @@ describe('QuizSortComponent', () => {
     it.each([
       ['asc', 'arrow_upward'],
       ['desc', 'arrow_downward']
-    ] as const)('when %s it shows the word "Difficulty" plus the %s arrow, inside the SAME button', (direction, icon) => {
-      render(direction);
+    ] as const)(
+      'when %s it shows the word "Difficulty" plus the %s arrow, inside the SAME button',
+      (direction, icon) => {
+        render(direction);
 
-      const btn = difficultyBtn();
-      expect(btn.querySelector('.sort-btn__text')?.textContent?.trim()).toBe('Difficulty');
-      expect(btn.querySelector('mat-icon')?.textContent?.trim()).toBe(icon);
-    });
+        const btn = difficultyBtn();
+        expect(btn.querySelector('.sort-btn__text')?.textContent?.trim()).toBe('Difficulty');
+        expect(btn.querySelector('mat-icon')?.textContent?.trim()).toBe(icon);
+      }
+    );
 
     it('toggles direction: asc → desc, and desc → asc', () => {
       render('asc');
@@ -166,20 +172,24 @@ describe('QuizSortComponent', () => {
 
     it('tooltips say what ACTIVATING the button does, and follow the state', () => {
       render('asc', 'az');
-      expect(tooltipOf(DIFFICULTY)).toBe('Beginner to Advanced. Select to sort Advanced to Beginner.');
+      expect(tooltipOf(DIFFICULTY)).toBe(
+        'Beginner to Advanced. Select to sort Advanced to Beginner.'
+      );
       expect(tooltipOf(ALPHA)).toBe('A to Z within each difficulty. Select to sort Z to A.');
 
       fixture.componentRef.setInput('difficultyDirection', 'desc');
       fixture.componentRef.setInput('alphaDirection', 'za');
       fixture.detectChanges();
-      expect(tooltipOf(DIFFICULTY)).toBe('Advanced to Beginner. Select to sort Beginner to Advanced.');
+      expect(tooltipOf(DIFFICULTY)).toBe(
+        'Advanced to Beginner. Select to sort Beginner to Advanced.'
+      );
       expect(tooltipOf(ALPHA)).toBe('Z to A within each difficulty. Select to sort A to Z.');
     });
 
     it('is keyboard-operable: native, focusable, in the tab order', () => {
       render();
       for (const btn of [difficultyBtn(), alphaBtn()]) {
-        expect(btn.tagName).toBe('BUTTON');   // Enter / Space activate a native button
+        expect(btn.tagName).toBe('BUTTON'); // Enter / Space activate a native button
         expect(btn.tabIndex).toBeGreaterThanOrEqual(0);
         btn.focus();
         expect(document.activeElement).toBe(btn);

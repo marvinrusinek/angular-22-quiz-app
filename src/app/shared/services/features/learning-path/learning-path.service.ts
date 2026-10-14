@@ -63,7 +63,11 @@ export class LearningPathService {
       return { recommendation: null, allComplete: true, totalCount: total };
     }
 
-    const state = (quiz: Quiz, reason: string, actionLabel: QuizRecommendation['actionLabel']): LearningPathState => ({
+    const state = (
+      quiz: Quiz,
+      reason: string,
+      actionLabel: QuizRecommendation['actionLabel']
+    ): LearningPathState => ({
       recommendation: {
         quizId: quiz.quizId,
         title: quiz.milestone ?? quiz.quizId,
@@ -126,7 +130,8 @@ export class LearningPathService {
     };
 
     if (completedRatio('beginner') < LearningPathService.LEVEL_UP_THRESHOLD) return 'beginner';
-    if (completedRatio('intermediate') < LearningPathService.LEVEL_UP_THRESHOLD) return 'intermediate';
+    if (completedRatio('intermediate') < LearningPathService.LEVEL_UP_THRESHOLD)
+      return 'intermediate';
     return 'advanced';
   }
 

@@ -7,7 +7,7 @@ import {
   effect,
   inject,
   OnInit,
-  signal,
+  signal
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NgOptimizedImage, NgTemplateOutlet } from '@angular/common';
@@ -37,14 +37,13 @@ import {
   SK_SELECTED_OPTIONS_MAP,
   SK_SHUFFLED_QUESTIONS,
   SK_STARTED_QUIZ_IDS,
-  SK_USER_ANSWERS,
+  SK_USER_ANSWERS
 } from '@shared/constants/session-keys';
 import {
   readSessionJson,
   writeSessionJson,
-  writeSessionString,
+  writeSessionString
 } from '@shared/utils/session-storage';
-
 
 import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
 import { QuizService } from '@shared/services/data/quiz.service';
@@ -88,15 +87,15 @@ import { swallow } from '@shared/utils/error-logging';
     ChallengeComponent,
     ReturnComponent,
     StatisticsComponent,
-    SummaryReportComponent,
+    SummaryReportComponent
   ],
   templateUrl: './results.component.html',
   styleUrls: ['./results.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '(document:click)': 'onDocumentClick($event)',
-    '(document:keydown.escape)': 'onEscapeKey()',
-  },
+    '(document:keydown.escape)': 'onEscapeKey()'
+  }
 })
 export class ResultsComponent implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
@@ -151,10 +150,9 @@ export class ResultsComponent implements OnInit {
   // The service resolves to nothing on failure rather than falling back, which
   // matches how the panel already behaves for quizzes that have no facts.
   readonly currentQuizFacts = computed<readonly string[]>(() => {
-    this.metadataApi.factsByQuiz();   // track the signal so this recomputes on load
+    this.metadataApi.factsByQuiz(); // track the signal so this recomputes on load
     return this.metadataApi.factsFor(this.quizId());
   });
-
 
   // Tracks whether ngOnInit already applied a synchronous snapshot, so the
   // finalResult$ effect skips re-applying when the observable later emits.
@@ -169,7 +167,7 @@ export class ResultsComponent implements OnInit {
   // this is a second, independent check at the write site itself.
   private routeResultIsValid = false;
   private readonly finalResultStream = toSignal(this.quizService.finalResult$, {
-    initialValue: null as FinalResult | null,
+    initialValue: null as FinalResult | null
   });
 
   constructor() {
@@ -210,8 +208,9 @@ export class ResultsComponent implements OnInit {
     effect(() => {
       const result = this.pendingAchievementResult();
       if (!result) return;
-      const achievementCatalog: AchievementCatalogEntry[] = [...this.metadataApi.difficultyByQuiz()]
-        .map(([quizId, difficulty]) => ({ quizId, difficulty }));
+      const achievementCatalog: AchievementCatalogEntry[] = [
+        ...this.metadataApi.difficultyByQuiz()
+      ].map(([quizId, difficulty]) => ({ quizId, difficulty }));
       const newly = this.achievementService.evaluate(achievementCatalog);
       if (newly.length > 0) this.newlyEarnedAchievements.set(newly);
       // Refresh the catalog so any just-earned achievement flips to "Earned".
@@ -289,7 +288,7 @@ export class ResultsComponent implements OnInit {
         percentage: total > 0 ? Math.round((correct / total) * 100) : 0,
         analysis,
         completionTime,
-        completedAt: Date.now(),
+        completedAt: Date.now()
       };
     }
 
@@ -519,7 +518,9 @@ export class ResultsComponent implements OnInit {
         existing.push(id);
         writeSessionJson(SK_COMPLETED_QUIZ_IDS, existing);
       }
-    } catch (err: unknown) { swallow('results.component.ts#setCompletedQuiz', err); }
+    } catch (err: unknown) {
+      swallow('results.component.ts#setCompletedQuiz', err);
+    }
 
     // Reaching Results IS the proof that this attempt finished the last
     // question. Recording it here (not only on the way out of the quiz)
@@ -594,14 +595,16 @@ export class ResultsComponent implements OnInit {
     this.topicPerformanceHistory.record(
       `quiz:${result.quizId}:${result.completedAt}`,
       'topic-quiz',
-      [{
-        topicId: result.quizId,
-        // FROM /quizzes — `milestone` IS the topic name, and topicId IS the
-        // quizId. Same id fallback as before if metadata has not landed.
-        topicName: this.metadataApi.milestoneFor(result.quizId),
-        correct: result.correct,
-        total: result.total
-      }]
+      [
+        {
+          topicId: result.quizId,
+          // FROM /quizzes — `milestone` IS the topic name, and topicId IS the
+          // quizId. Same id fallback as before if metadata has not landed.
+          topicName: this.metadataApi.milestoneFor(result.quizId),
+          correct: result.correct,
+          total: result.total
+        }
+      ]
     );
   }
 

@@ -68,18 +68,16 @@ export class ExplanationGateService {
     const { text$ } = this.getOrCreate(index);
     const existing =
       this.formatter.formattedExplanations[index]?.explanation ||
-      this.formatter.fetByIndex.get(index) || '';
+      this.formatter.fetByIndex.get(index) ||
+      '';
 
     return merge(
       text$,
       this.formatter.explanationsUpdated$.pipe(
-        map(dict => dict[index]?.explanation || ''),
+        map((dict) => dict[index]?.explanation || ''),
         distinctUntilChanged()
       )
-    ).pipe(
-      startWith(existing),
-      distinctUntilChanged()
-    );
+    ).pipe(startWith(existing), distinctUntilChanged());
   }
 
   // Close the secondary `_gatesByIndex` entry for one index, if present.
@@ -92,7 +90,9 @@ export class ExplanationGateService {
   closePrimaryGate(index: number): void {
     try {
       this._gate.get(index)?.next(false);
-    } catch (err: unknown) { swallow('explanation-gate.service.ts closePrimaryGate', err); }
+    } catch (err: unknown) {
+      swallow('explanation-gate.service.ts closePrimaryGate', err);
+    }
   }
 
   // Drop the text-stream entry for a single index (used by purge flows).

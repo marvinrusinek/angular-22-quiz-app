@@ -47,7 +47,7 @@ describe('QuizService#hasValidResultFor', () => {
       total: 5,
       percentage: 100,
       analysis: [],
-      completedAt: Date.now(),
+      completedAt: Date.now()
     });
 
     // Simulates both the initial completion AND a later refresh/revisit —
@@ -64,7 +64,7 @@ describe('QuizService#hasValidResultFor', () => {
       total: 5,
       percentage: 100,
       analysis: [],
-      completedAt: Date.now(),
+      completedAt: Date.now()
     });
 
     expect(svc.hasValidResultFor('quizB')).toBe(false);

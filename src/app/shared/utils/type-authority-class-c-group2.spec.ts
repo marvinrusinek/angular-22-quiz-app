@@ -37,28 +37,30 @@ const q = (
   type: QuestionType | undefined,
   correctCount: number,
   questionText = 'Which of these apply?'
-): QuizQuestion => ({
-  questionText,
-  explanation: 'e',
-  type,
-  options: Array.from({ length: 4 }, (_, i) => ({
-    optionId: i + 1,
-    text: `opt${i + 1}`,
-    value: i + 1,
-    correct: i < correctCount
-  }))
-} as unknown as QuizQuestion);
+): QuizQuestion =>
+  ({
+    questionText,
+    explanation: 'e',
+    type,
+    options: Array.from({ length: 4 }, (_, i) => ({
+      optionId: i + 1,
+      text: `opt${i + 1}`,
+      value: i + 1,
+      correct: i < correctCount
+    }))
+  }) as unknown as QuizQuestion;
 
 /** A question whose options carry no `correct` property whatsoever. */
-const bare = (type: QuestionType | undefined): QuizQuestion => ({
-  questionText: 'No answer key at all',
-  explanation: 'e',
-  type,
-  options: [
-    { optionId: 1, text: 'a', value: 1 },
-    { optionId: 2, text: 'b', value: 2 }
-  ]
-} as unknown as QuizQuestion);
+const bare = (type: QuestionType | undefined): QuizQuestion =>
+  ({
+    questionText: 'No answer key at all',
+    explanation: 'e',
+    type,
+    options: [
+      { optionId: 1, text: 'a', value: 1 },
+      { optionId: 2, text: 'b', value: 2 }
+    ]
+  }) as unknown as QuizQuestion;
 
 describe('qqc cold-load fallback: declared type decides which component loads', () => {
   let service: QqcOrchQuestionLoadService;
@@ -83,9 +85,7 @@ describe('qqc cold-load fallback: declared type decides which component loads', 
         // the real name — a missing method would throw and land in the catch,
         // making these tests pass for the wrong reason.
         isMultipleAnswerInteraction: () =>
-          primary === 'throws'
-            ? throwError(() => new Error('cold load: no emission'))
-            : of()   // completes without emitting -> firstValueFrom EmptyError
+          primary === 'throws' ? throwError(() => new Error('cold load: no emission')) : of() // completes without emitting -> firstValueFrom EmptyError
       },
       dynamicComponentService: {
         loadComponent: (_c: unknown, isMulti: boolean) => {
@@ -109,7 +109,10 @@ describe('qqc cold-load fallback: declared type decides which component loads', 
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test/api' },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
       ]
     });
     service = TestBed.inject(QqcOrchQuestionLoadService);

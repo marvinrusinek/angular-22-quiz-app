@@ -123,11 +123,16 @@ export function groupIntoLogicalAttempts(
   const byAttempt = new Map<string, { completedAt: string; correct: number; total: number }>();
 
   for (const r of Array.isArray(records) ? records : []) {
-    if (!r || r.source !== source || typeof r.attemptId !== 'string' || r.attemptId.length === 0) continue;
+    if (!r || r.source !== source || typeof r.attemptId !== 'string' || r.attemptId.length === 0)
+      continue;
     if (typeof r.completedAt !== 'string' || Number.isNaN(timeOf(r.completedAt))) continue;
     if (!Number.isFinite(r.correct) || !Number.isFinite(r.total) || r.total <= 0) continue;
 
-    const current = byAttempt.get(r.attemptId) ?? { completedAt: r.completedAt, correct: 0, total: 0 };
+    const current = byAttempt.get(r.attemptId) ?? {
+      completedAt: r.completedAt,
+      correct: 0,
+      total: 0
+    };
     current.correct += Math.min(Math.max(r.correct, 0), r.total);
     current.total += r.total;
     if (timeOf(r.completedAt) > timeOf(current.completedAt)) current.completedAt = r.completedAt;
@@ -135,7 +140,12 @@ export function groupIntoLogicalAttempts(
   }
 
   return usableTallies(
-    [...byAttempt.entries()].map(([id, v]) => ({ id, completedAt: v.completedAt, correct: v.correct, total: v.total }))
+    [...byAttempt.entries()].map(([id, v]) => ({
+      id,
+      completedAt: v.completedAt,
+      correct: v.correct,
+      total: v.total
+    }))
   );
 }
 
@@ -189,7 +199,7 @@ export function compareWindows(sorted: readonly AttemptTally[]): PerformanceComp
 // ── per-source summary ──────────────────────────────────────────────
 
 const RETENTION_LABEL: Record<InsightSource, string> = {
-  'interview': `${INTERVIEW_HISTORY_MAX} most recent interviews`,
+  interview: `${INTERVIEW_HISTORY_MAX} most recent interviews`,
   'topic-quiz': `${TOPIC_PERFORMANCE_HISTORY_MAX} most recent topic results`,
   'weak-areas-practice': `${TOPIC_PERFORMANCE_HISTORY_MAX} most recent topic results`
 };
@@ -287,7 +297,10 @@ export function summarizeTopics(attempts: readonly TopicAttemptLike[]): TopicPer
 // ── assembly ────────────────────────────────────────────────────────
 
 export function buildPerformanceInsights(input: PerformanceInsightsInput): PerformanceInsights {
-  const topicQuiz = summarizeSource('topic-quiz', groupIntoLogicalAttempts(input.topicRecords, 'topic-quiz'));
+  const topicQuiz = summarizeSource(
+    'topic-quiz',
+    groupIntoLogicalAttempts(input.topicRecords, 'topic-quiz')
+  );
   const practice = summarizeSource(
     'weak-areas-practice',
     groupIntoLogicalAttempts(input.topicRecords, 'weak-areas-practice')

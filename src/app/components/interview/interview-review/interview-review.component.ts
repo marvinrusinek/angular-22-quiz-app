@@ -43,8 +43,8 @@ interface ReviewOptionView {
   text: string;
   state: InterviewReviewOptionState;
   label: string;
-  cssClass: string;   // 'rv-correct' | 'rv-wrong' | ''  (visual only)
-  mark: string;       // decorative ✓ / ✕ (aria-hidden)
+  cssClass: string; // 'rv-correct' | 'rv-wrong' | ''  (visual only)
+  mark: string; // decorative ✓ / ✕ (aria-hidden)
 }
 
 interface ReviewItem {
@@ -144,9 +144,7 @@ export class InterviewReviewComponent {
         };
       });
 
-      const correctLabels = q.options
-        .filter((o) => correctIds.has(o.optionId))
-        .map((o) => o.text);
+      const correctLabels = q.options.filter((o) => correctIds.has(o.optionId)).map((o) => o.text);
       // A concise "Correct answers: …" line helps most for multi-answer questions
       // and for questions the user skipped; single-answer answered questions read
       // clearly from the option labels alone.
@@ -173,7 +171,12 @@ export class InterviewReviewComponent {
   readonly summary = computed(() => {
     const r = this.result();
     if (r) {
-      return { correct: r.correct, incorrect: r.incorrect, unanswered: r.unanswered, total: r.total };
+      return {
+        correct: r.correct,
+        incorrect: r.incorrect,
+        unanswered: r.unanswered,
+        total: r.total
+      };
     }
     return countReviewStatuses(this.items().map((i) => i.status));
   });
@@ -185,9 +188,7 @@ export class InterviewReviewComponent {
   private readonly anyFlagged = computed(() => this.items().some((i) => i.flagged));
 
   readonly visibleFilters = computed<ReviewFilterDef[]>(() =>
-    REVIEW_FILTERS.filter(
-      (f) => !f.requiresFlagging || this.flaggingEnabled() || this.anyFlagged()
-    )
+    REVIEW_FILTERS.filter((f) => !f.requiresFlagging || this.flaggingEnabled() || this.anyFlagged())
   );
 
   readonly counts = computed<Record<ReviewFilterId, number>>(() => {
@@ -205,7 +206,7 @@ export class InterviewReviewComponent {
 
   readonly filtered = computed<ReviewItem[]>(() => {
     const match = this.activeFilter().match;
-    return this.items().filter((i) => match(i));   // preserves original order
+    return this.items().filter((i) => match(i)); // preserves original order
   });
 
   setFilter(id: ReviewFilterId): void {

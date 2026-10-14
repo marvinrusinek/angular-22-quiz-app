@@ -91,8 +91,12 @@ export class InterviewCertificateComponent implements OnInit {
   // certificate must never show. Null only if history was cleared post-issue.
   readonly score = computed(() => this.historyService.trends().best);
 
-  readonly recipientName = computed(() => this.verifiedCertificate()?.recipientName ?? this.legacyRecord()?.recipientName ?? '');
-  readonly certificateId = computed(() => this.verifiedCertificate()?.certificateId ?? this.legacyRecord()?.certificateId ?? '');
+  readonly recipientName = computed(
+    () => this.verifiedCertificate()?.recipientName ?? this.legacyRecord()?.recipientName ?? ''
+  );
+  readonly certificateId = computed(
+    () => this.verifiedCertificate()?.certificateId ?? this.legacyRecord()?.certificateId ?? ''
+  );
 
   ngOnInit(): void {
     // Qualification-date tracking is unaffected by this feature — it only

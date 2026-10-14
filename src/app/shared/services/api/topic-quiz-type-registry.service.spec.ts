@@ -24,9 +24,24 @@ const TF = 'Is a Subject also an Observable?';
 const RESPONSE = {
   quizId: QUIZ,
   questions: [
-    { questionText: SINGLE, type: 'single', difficulty: null, options: [{ text: 'map' }, { text: 'of' }] },
-    { questionText: MULTI, type: 'multiple', difficulty: null, options: [{ text: 'map' }, { text: 'filter' }] },
-    { questionText: TF, type: 'trueFalse', difficulty: null, options: [{ text: 'True' }, { text: 'False' }] }
+    {
+      questionText: SINGLE,
+      type: 'single',
+      difficulty: null,
+      options: [{ text: 'map' }, { text: 'of' }]
+    },
+    {
+      questionText: MULTI,
+      type: 'multiple',
+      difficulty: null,
+      options: [{ text: 'map' }, { text: 'filter' }]
+    },
+    {
+      questionText: TF,
+      type: 'trueFalse',
+      difficulty: null,
+      options: [{ text: 'True' }, { text: 'False' }]
+    }
   ]
 };
 
@@ -53,7 +68,7 @@ function loadAndFlush(body: unknown = RESPONSE): void {
 }
 
 describe('declared types', () => {
-  it('records each question\'s declared type', () => {
+  it("records each question's declared type", () => {
     loadAndFlush();
 
     expect(registry.typeOf(SINGLE)).toBe('single');
@@ -148,7 +163,14 @@ describe('lifecycle', () => {
 
     http.expectOne({ method: 'GET', url: `${BASE}/quizzes/signals/questions` }).flush({
       quizId: 'signals',
-      questions: [{ questionText: 'What does computed() return?', type: 'single', difficulty: null, options: [{ text: 'A signal' }] }]
+      questions: [
+        {
+          questionText: 'What does computed() return?',
+          type: 'single',
+          difficulty: null,
+          options: [{ text: 'A signal' }]
+        }
+      ]
     });
 
     expect(registry.typeOf('What does computed() return?')).toBe('single');
@@ -168,13 +190,15 @@ describe('lifecycle', () => {
     registry.load(QUIZ).subscribe();
     http.expectOne({ method: 'GET', url: URL }).flush({
       quizId: QUIZ,
-      questions: [{
-        questionText: MULTI,
-        type: 'multiple',
-        difficulty: null,
-        explanation: 'LEAKED',
-        options: [{ text: 'map', correct: true }]
-      }]
+      questions: [
+        {
+          questionText: MULTI,
+          type: 'multiple',
+          difficulty: null,
+          explanation: 'LEAKED',
+          options: [{ text: 'map', correct: true }]
+        }
+      ]
     });
 
     // Inspect what was actually retained. The registry is not a question
@@ -186,9 +210,13 @@ describe('lifecycle', () => {
     // S2 added ONE more retained fact: how many options are correct. It is a
     // number, held separately from the types, and it is still not identity —
     // there is nowhere here recording WHICH option was flagged.
-    const counts = [...(registry as unknown as {
-      correctCounts: Map<string, number>
-    }).correctCounts.values()];
+    const counts = [
+      ...(
+        registry as unknown as {
+          correctCounts: Map<string, number>;
+        }
+      ).correctCounts.values()
+    ];
     expect(counts.every((n) => typeof n === 'number')).toBe(true);
     expect(JSON.stringify(counts)).not.toContain('map');
     expect(JSON.stringify(counts)).not.toContain('LEAKED');
@@ -198,10 +226,16 @@ describe('lifecycle', () => {
     // `applyDeclaredTypes` writes the type onto locally-loaded questions and
     // `questionTypeOf` returns it as the app's enum. If a name ever appears
     // that could return options, correctness or an explanation, this fails.
-    expect(Object.getOwnPropertyNames(Object.getPrototypeOf(registry)).sort())
-      .toEqual([
-        'applyDeclaredTypes', 'clear', 'constructor', 'correctCountOf',
-        'isMultiAnswer', 'key', 'load', 'questionTypeOf', 'typeOf'
-      ]);
+    expect(Object.getOwnPropertyNames(Object.getPrototypeOf(registry)).sort()).toEqual([
+      'applyDeclaredTypes',
+      'clear',
+      'constructor',
+      'correctCountOf',
+      'isMultiAnswer',
+      'key',
+      'load',
+      'questionTypeOf',
+      'typeOf'
+    ]);
   });
 });

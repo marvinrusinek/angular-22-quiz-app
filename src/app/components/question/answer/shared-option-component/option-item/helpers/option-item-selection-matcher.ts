@@ -17,7 +17,9 @@ function resolveQIndexFromUrl(qIndex: number): number {
       const urlIdx = Number(m[1]) - 1;
       if (Number.isFinite(urlIdx) && urlIdx > 0) return urlIdx;
     }
-  } catch (err: unknown) { swallow('option-item-selection-matcher.ts resolveQIndexFromUrl', err); }
+  } catch (err: unknown) {
+    swallow('option-item-selection-matcher.ts resolveQIndexFromUrl', err);
+  }
   return qIndex;
 }
 
@@ -39,8 +41,7 @@ export function matchesBindingSelection(
 ): boolean {
   const activeQIdx = resolveQIndexFromUrl(qIndex);
 
-  const selQIdx =
-    sel.questionIndex ?? (sel as any).qIdx ?? (sel as any).questionIdx;
+  const selQIdx = sel.questionIndex ?? (sel as any).qIdx ?? (sel as any).questionIdx;
 
   if (selQIdx !== undefined && selQIdx !== null && selQIdx !== -1) {
     if (Number(selQIdx) !== activeQIdx) return false;
@@ -54,8 +55,7 @@ export function matchesBindingSelection(
   const bText = norm(binding?.option?.text);
   if (selText && bText) return selText === bText;
 
-  const rawIdx =
-    sel?.displayIndex ?? (sel as any)?.index ?? (sel as any)?.idx;
+  const rawIdx = sel?.displayIndex ?? (sel as any)?.index ?? (sel as any)?.idx;
   const normalizedSelectedIndex =
     rawIdx != null && Number.isFinite(Number(rawIdx)) ? Number(rawIdx) : null;
 
@@ -64,19 +64,15 @@ export function matchesBindingSelection(
 
     const selId = sel?.optionId;
     const bId = binding?.option?.optionId;
-    const selIdIsReal =
-      selId != null && selId !== -1 && String(selId) !== '-1';
-    const bIdIsReal =
-      bId != null && bId !== -1 && String(bId) !== '-1';
+    const selIdIsReal = selId != null && selId !== -1 && String(selId) !== '-1';
+    const bIdIsReal = bId != null && bId !== -1 && String(bId) !== '-1';
     return !selIdIsReal || !bIdIsReal || String(selId) === String(bId);
   }
 
   const selId = sel?.optionId;
   const bId = binding?.option?.optionId;
-  const selIdIsReal =
-    selId != null && selId !== -1 && String(selId) !== '-1';
-  const bIdIsReal =
-    bId != null && bId !== -1 && String(bId) !== '-1';
+  const selIdIsReal = selId != null && selId !== -1 && String(selId) !== '-1';
+  const bIdIsReal = bId != null && bId !== -1 && String(bId) !== '-1';
   return selIdIsReal && bIdIsReal && String(selId) === String(bId);
 }
 

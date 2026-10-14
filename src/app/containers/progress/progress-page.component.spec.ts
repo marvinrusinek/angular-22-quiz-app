@@ -14,11 +14,21 @@ const API = 'http://test/api';
 
 function interviewResult(pct: number, over: Partial<InterviewResult> = {}): InterviewResult {
   return {
-    total: 10, answered: 10, unanswered: 0, correct: pct / 10, incorrect: 10 - pct / 10,
-    percentage: pct, timeUsedSeconds: 120, timeRemainingSeconds: 0, difficulty: 'mixed',
+    total: 10,
+    answered: 10,
+    unanswered: 0,
+    correct: pct / 10,
+    incorrect: 10 - pct / 10,
+    percentage: pct,
+    timeUsedSeconds: 120,
+    timeRemainingSeconds: 0,
+    difficulty: 'mixed',
     topicIds: ['router'],
-    perTopic: [{ quizId: 'router', title: 'Angular Router', correct: pct / 10, total: 10, percentage: pct }],
-    submittedByExpiry: false, focusChanges: 0,
+    perTopic: [
+      { quizId: 'router', title: 'Angular Router', correct: pct / 10, total: 10, percentage: pct }
+    ],
+    submittedByExpiry: false,
+    focusChanges: 0,
     ...over
   };
 }
@@ -94,7 +104,9 @@ describe('ProgressPageComponent', () => {
     it('shows a useful, accessible empty state', () => {
       const empty = q('.progress-page__empty')!;
       expect(empty.getAttribute('role')).toBe('status');
-      expect(text(empty)).toBe('Complete a Topic Quiz or an Interview to start building your performance history.');
+      expect(text(empty)).toBe(
+        'Complete a Topic Quiz or an Interview to start building your performance history.'
+      );
     });
 
     it('offers "Choose a Quiz" and "Start an Interview" as real links', () => {
@@ -165,7 +177,9 @@ describe('ProgressPageComponent', () => {
   });
 
   describe('Preset Interview history only', () => {
-    beforeEach(() => create(() => seedInterview({ presetId: 'junior', presetName: 'Junior Angular Developer' })));
+    beforeEach(() =>
+      create(() => seedInterview({ presetId: 'junior', presetName: 'Junior Angular Developer' }))
+    );
 
     it('behaves exactly like a custom Interview: dashboard with Interview performance', () => {
       expect(q('.progress-page__empty')).toBeNull();
@@ -190,7 +204,13 @@ describe('ProgressPageComponent', () => {
   // ── mixed ─────────────────────────────────────────────────────────
 
   describe('mixed history', () => {
-    beforeEach(() => create(() => { seedTopicQuiz(); seedInterview(); seedPractice(); }));
+    beforeEach(() =>
+      create(() => {
+        seedTopicQuiz();
+        seedInterview();
+        seedPractice();
+      })
+    );
 
     it('keeps the three sources separate, each with its own figures', () => {
       expect(text(q('[data-source="topic-quiz"]'))).toContain('9 / 10 questions');
@@ -201,7 +221,7 @@ describe('ProgressPageComponent', () => {
     it('offers Practice Weak Areas when weak topics exist (existing behavior, unchanged)', () => {
       const practice = q('.progress-summary__practice') as HTMLButtonElement | null;
       expect(practice).not.toBeNull();
-      expect(practice!.tagName).toBe('BUTTON');   // an action, not a navigation
+      expect(practice!.tagName).toBe('BUTTON'); // an action, not a navigation
       expect(text(practice)).toBe('Practice Weak Areas');
     });
   });
@@ -210,10 +230,15 @@ describe('ProgressPageComponent', () => {
 
   describe('the dashboard composition', () => {
     it('shows the existing completion summary FIRST, with Performance Insights beneath it', () => {
-      create(() => { seedTopicQuiz(); seedBestScore(); });
+      create(() => {
+        seedTopicQuiz();
+        seedBestScore();
+      });
       const summary = q('codelab-progress-summary')!;
       const insights = q('codelab-performance-insights')!;
-      expect(summary.compareDocumentPosition(insights) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(
+        summary.compareDocumentPosition(insights) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
       // The summary's own content is all still there, unchanged.
       const t = text(summary);
       expect(t).toContain('Overall Progress');
@@ -325,7 +350,12 @@ describe('ProgressPageComponent', () => {
       create(seedBestScore);
       http.expectOne(`${API}/quizzes`).flush({
         quizzes: [
-          { quizId: 'typescript', milestone: 'TypeScript', difficulty: 'beginner', questionCount: 10 },
+          {
+            quizId: 'typescript',
+            milestone: 'TypeScript',
+            difficulty: 'beginner',
+            questionCount: 10
+          },
           { quizId: 'templates', milestone: 'Templates', difficulty: 'beginner', questionCount: 10 }
         ]
       });
@@ -335,7 +365,9 @@ describe('ProgressPageComponent', () => {
 
     it('survives a failed request: no crash, the bundled seed stays in place', () => {
       create(seedBestScore);
-      expect(() => http.expectOne(`${API}/quizzes`).error(new ProgressEvent('error'))).not.toThrow();
+      expect(() =>
+        http.expectOne(`${API}/quizzes`).error(new ProgressEvent('error'))
+      ).not.toThrow();
       TestBed.tick();
       expect(q('.progress-page')).not.toBeNull();
       expect(component.summary().totalCount).toBeGreaterThan(0);
@@ -360,7 +392,10 @@ describe('ProgressPageComponent', () => {
     });
 
     it('never skips a heading level: h1 → h2 → h3', () => {
-      create(() => { seedTopicQuiz(); seedInterview(); });
+      create(() => {
+        seedTopicQuiz();
+        seedInterview();
+      });
       const levels = qa('h1, h2, h3, h4, h5, h6').map((h) => Number(h.tagName[1]));
       expect(levels[0]).toBe(1);
       levels.forEach((level, i) => {
@@ -385,5 +420,4 @@ describe('ProgressPageComponent', () => {
       expect(document.activeElement).toBe(h1);
     });
   });
-
 });

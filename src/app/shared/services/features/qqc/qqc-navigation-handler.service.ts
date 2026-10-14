@@ -62,8 +62,9 @@ export class QqcNavigationHandlerService {
     const { quizId, currentQuestionIndex: idx, displayExplanation } = params;
 
     try {
-      const qState = this.quizStateService.getQuestionState(quizId, idx)
-        || this.quizStateService.createDefaultQuestionState();
+      const qState =
+        this.quizStateService.getQuestionState(quizId, idx) ||
+        this.quizStateService.createDefaultQuestionState();
 
       this.quizStateService.setQuestionState(quizId, idx, {
         isAnswered: qState.isAnswered ?? false,
@@ -73,7 +74,7 @@ export class QqcNavigationHandlerService {
         explanationDisplayed: displayExplanation,
         explanationText: this.explanationTextService.latestExplanation ?? ''
       });
-    } catch { }
+    } catch {}
   }
 
   /**
@@ -88,7 +89,7 @@ export class QqcNavigationHandlerService {
       ets.updateFormattedExplanation('');
       ets._activeIndex = -1;
       ets.latestExplanation = '';
-    } catch { }
+    } catch {}
   }
 
   /**
@@ -96,9 +97,7 @@ export class QqcNavigationHandlerService {
    */
   async captureElapsedOnHide(): Promise<void> {
     try {
-      const snap = await firstValueFrom<number>(
-        this.timerService.elapsedTime$.pipe(take(1))
-      );
+      const snap = await firstValueFrom<number>(this.timerService.elapsedTime$.pipe(take(1)));
       this._elapsedAtHide = snap;
     } catch {
       this._elapsedAtHide = null;
@@ -150,7 +149,7 @@ export class QqcNavigationHandlerService {
 
       this._hiddenAt = null;
       this._elapsedAtHide = null;
-    } catch {    }
+    } catch {}
 
     return { shouldExpire: false, expiredIndex: -1 };
   }
@@ -163,10 +162,7 @@ export class QqcNavigationHandlerService {
    * Restores core quiz state from persistence after a visibility change.
    * Returns the restored state for the component to apply.
    */
-  restoreQuizState(params: {
-    currentQuestionIndex: number;
-    optionsToDisplay: Option[];
-  }): {
+  restoreQuizState(params: { currentQuestionIndex: number; optionsToDisplay: Option[] }): {
     explanationText: string;
     displayMode: string;
     parsedOptions: Option[] | null;
@@ -181,10 +177,14 @@ export class QqcNavigationHandlerService {
       // Restore options
       if (restored.parsedOptions) {
         const storageIndex =
-          typeof params.currentQuestionIndex === 'number' && !Number.isNaN(params.currentQuestionIndex)
+          typeof params.currentQuestionIndex === 'number' &&
+          !Number.isNaN(params.currentQuestionIndex)
             ? params.currentQuestionIndex
             : 0;
-        optionsToDisplay = this.quizService.quizOptions.assignOptionIds(restored.parsedOptions, storageIndex);
+        optionsToDisplay = this.quizService.quizOptions.assignOptionIds(
+          restored.parsedOptions,
+          storageIndex
+        );
       }
 
       // Fallback: use last known options if still empty
@@ -226,10 +226,10 @@ export class QqcNavigationHandlerService {
    * Restores the FET display state after visibility change.
    * Returns whether explanation should be displayed.
    */
-  restoreFetDisplayState(params: {
-    quizId: string;
-    currentQuestionIndex: number;
-  }): { shouldShowExplanation: boolean; explanationText: string } {
+  restoreFetDisplayState(params: { quizId: string; currentQuestionIndex: number }): {
+    shouldShowExplanation: boolean;
+    explanationText: string;
+  } {
     const { quizId, currentQuestionIndex: qIdx } = params;
 
     try {
@@ -239,10 +239,9 @@ export class QqcNavigationHandlerService {
       // back to the global shouldDisplayExplanation$ flag or to
       // latestExplanation lets a previously-answered question's FET (e.g.
       // Q1) bleed onto an unanswered Q2 on tab return.
-      const ownFetText = (typeof qState?.explanationText === 'string'
-        ? qState.explanationText.trim() : '');
-      const thisQHasOwnFet = qState?.explanationDisplayed === true
-        && ownFetText.length > 0;
+      const ownFetText =
+        typeof qState?.explanationText === 'string' ? qState.explanationText.trim() : '';
+      const thisQHasOwnFet = qState?.explanationDisplayed === true && ownFetText.length > 0;
 
       // A durably timed-out question always shows its FET on tab return —
       // and counts as answered so the Next button stays enabled — even when
@@ -250,9 +249,9 @@ export class QqcNavigationHandlerService {
       // heading FET re-assertion gated on the same durable timeout flag.
       const durablyTimedOut = this.dotStatusService?.timedOutFetForced?.has(qIdx) === true;
       const fallbackFetText = durablyTimedOut
-        ? (ownFetText
-            || this.explanationTextService.fetByIndex?.get(qIdx)?.trim()
-            || (this.explanationTextService.formattedExplanations?.[qIdx]?.explanation ?? '').trim())
+        ? ownFetText ||
+          this.explanationTextService.fetByIndex?.get(qIdx)?.trim() ||
+          (this.explanationTextService.formattedExplanations?.[qIdx]?.explanation ?? '').trim()
         : '';
 
       const showFet = thisQHasOwnFet || durablyTimedOut;
@@ -268,8 +267,12 @@ export class QqcNavigationHandlerService {
         // stream (driven by selectedOptionService.isAnswered$) stays enabled
         // on tab return, even with no options selected.
         if (durablyTimedOut) {
-          try { this.selectedOptionService.setAnswered(true, true); } catch { }
-          try { this.nextButtonStateService.setNextButtonState(true); } catch { }
+          try {
+            this.selectedOptionService.setAnswered(true, true);
+          } catch {}
+          try {
+            this.nextButtonStateService.setNextButtonState(true);
+          } catch {}
         }
       } else {
         this.explanationTextService.setShouldDisplayExplanation(false, { force: true });
@@ -289,9 +292,7 @@ export class QqcNavigationHandlerService {
    * Handles FET purge logic when user navigated to another question while hidden.
    */
   purgeFetIfNavigatedWhileHidden(currentQuestionIndex: number): void {
-    if (this._wasHidden && 
-      currentQuestionIndex !== this.explanationTextService._activeIndex
-    ) {
+    if (this._wasHidden && currentQuestionIndex !== this.explanationTextService._activeIndex) {
       this.explanationTextService.purgeAndDefer(currentQuestionIndex);
     }
 
@@ -309,7 +310,7 @@ export class QqcNavigationHandlerService {
       ets.latestExplanation = '';
       ets.setShouldDisplayExplanation(false);
       ets.setIsExplanationTextDisplayed(false);
-    } catch { }
+    } catch {}
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -326,7 +327,7 @@ export class QqcNavigationHandlerService {
 
     if (questionIndex < 1 || questionIndex > totalQuestions) questionIndex = 1;
 
-    return questionIndex - 1;  // convert to 0-based
+    return questionIndex - 1; // convert to 0-based
   }
 
   /**
@@ -433,11 +434,10 @@ export class QqcNavigationHandlerService {
     visibilityRestoreInProgress: boolean;
     suppressDisplayStateUntil: number;
   }): boolean {
-    if (params.visibilityRestoreInProgress || 
-      performance.now() < params.suppressDisplayStateUntil
-    ) return false;  // suppressed
-    
-    return true;  // allowed
+    if (params.visibilityRestoreInProgress || performance.now() < params.suppressDisplayStateUntil)
+      return false; // suppressed
+
+    return true; // allowed
   }
 
   /**
@@ -547,7 +547,7 @@ export class QqcNavigationHandlerService {
       params.restoreFeedbackState();
 
       setTimeout(() => {
-        const prevOpt = optionsToDisplay.find(o => o.selected);
+        const prevOpt = optionsToDisplay.find((o) => o.selected);
         if (prevOpt) {
           params.applyOptionFeedback(prevOpt);
         }
@@ -555,7 +555,7 @@ export class QqcNavigationHandlerService {
 
       try {
         feedbackText = await params.generateFeedbackText(params.currentQuestion);
-      } catch { }
+      } catch {}
     }
 
     // Debounce before applying FET state (ensures no race)

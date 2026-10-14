@@ -52,7 +52,8 @@ export class BestScoreService {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
     const out: BestScores = {};
     for (const [quizId, value] of Object.entries(raw as Record<string, unknown>)) {
-      if (typeof value === 'number' && Number.isFinite(value)) out[quizId] = this.clampPercent(value);
+      if (typeof value === 'number' && Number.isFinite(value))
+        out[quizId] = this.clampPercent(value);
     }
     return out;
   }

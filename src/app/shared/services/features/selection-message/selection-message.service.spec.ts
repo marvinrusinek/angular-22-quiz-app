@@ -45,8 +45,12 @@ describe('SelectionMessageService', () => {
     quizServiceMock = {
       quizId: 'typescript',
       getQuestionsInDisplayOrder: () => [
-        { questionText: 'Q1' }, { questionText: 'Q2' }, { questionText: 'Q3' },
-        { questionText: 'Q4' }, { questionText: 'Q5' }, { questionText: 'Q6' }
+        { questionText: 'Q1' },
+        { questionText: 'Q2' },
+        { questionText: 'Q3' },
+        { questionText: 'Q4' },
+        { questionText: 'Q5' },
+        { questionText: 'Q6' }
       ],
       currentQuestionIndex: 0,
       currentQuestionIndexSig: () => 0,
@@ -58,11 +62,11 @@ describe('SelectionMessageService', () => {
       currentQuestion: { value: null },
       scoringService: { questionCorrectness: new Map() },
       questionResolved: new Map(),
-      getCurrentQuestionIndex: () => 0,
+      getCurrentQuestionIndex: () => 0
     };
 
     selectedOptionServiceMock = {
-      selectedOptionsMap: new Map(),
+      selectedOptionsMap: new Map()
     };
 
     TestBed.configureTestingModule({
@@ -78,8 +82,11 @@ describe('SelectionMessageService', () => {
         },
         { provide: SelectedOptionService, useValue: selectedOptionServiceMock },
         { provide: QuizDotStatusService, useValue: { timedOutFetForced: new Set<number>() } },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
-      ],
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
+      ]
     });
 
     service = TestBed.inject(SelectionMessageService);
@@ -159,8 +166,8 @@ describe('SelectionMessageService', () => {
         qType: QuestionType.SingleAnswer,
         opts: [
           { text: 'A', correct: true, selected: false, value: 1 },
-          { text: 'B', correct: false, selected: false, value: 2 },
-        ],
+          { text: 'B', correct: false, selected: false, value: 2 }
+        ]
       });
       expect(msg).toBe(START_MSG);
     });
@@ -172,8 +179,8 @@ describe('SelectionMessageService', () => {
         qType: QuestionType.SingleAnswer,
         opts: [
           { text: 'A', correct: true, selected: false, value: 1 },
-          { text: 'B', correct: false, selected: false, value: 2 },
-        ],
+          { text: 'B', correct: false, selected: false, value: 2 }
+        ]
       });
       expect(msg).toBe(CONTINUE_MSG);
     });
@@ -186,8 +193,8 @@ describe('SelectionMessageService', () => {
         qType: QuestionType.SingleAnswer,
         opts: [
           { text: 'A', correct: true, selected: true, value: 1 },
-          { text: 'B', correct: false, selected: false, value: 2 },
-        ],
+          { text: 'B', correct: false, selected: false, value: 2 }
+        ]
       });
       expect(msg).toBe(NEXT_BTN_MSG);
     });
@@ -200,8 +207,8 @@ describe('SelectionMessageService', () => {
         qType: QuestionType.SingleAnswer,
         opts: [
           { text: 'A', correct: true, selected: true, value: 1 },
-          { text: 'B', correct: false, selected: false, value: 2 },
-        ],
+          { text: 'B', correct: false, selected: false, value: 2 }
+        ]
       });
       expect(msg).toBe(SHOW_RESULTS_MSG);
     });
@@ -214,8 +221,8 @@ describe('SelectionMessageService', () => {
         qType: QuestionType.SingleAnswer,
         opts: [
           { text: 'A', correct: true, selected: false, value: 1 },
-          { text: 'B', correct: false, selected: true, value: 2 },
-        ],
+          { text: 'B', correct: false, selected: true, value: 2 }
+        ]
       });
       expect(msg).toBe('Please select the correct answer to continue.');
     });
@@ -228,8 +235,8 @@ describe('SelectionMessageService', () => {
         opts: [
           { text: 'A', correct: true, selected: true, value: 1 },
           { text: 'B', correct: true, selected: false, value: 2 },
-          { text: 'C', correct: false, selected: false, value: 3 },
-        ],
+          { text: 'C', correct: false, selected: false, value: 3 }
+        ]
       });
       expect(msg).toBe('Select 1 more correct answer to continue...');
     });
@@ -246,8 +253,8 @@ describe('SelectionMessageService', () => {
         opts: [
           { text: 'A', correct: true, selected: false, value: 1 },
           { text: 'B', correct: true, selected: false, value: 2 },
-          { text: 'C', correct: false, selected: false, value: 3 },
-        ],
+          { text: 'C', correct: false, selected: false, value: 3 }
+        ]
       });
       expect(msg).toBe('Select all that apply');
       expect(msg).not.toMatch(/\d/);
@@ -264,8 +271,8 @@ describe('SelectionMessageService', () => {
           opts: [
             { text: 'A', correct: correctCount >= 1, selected: false, value: 1 },
             { text: 'B', correct: correctCount >= 2, selected: false, value: 2 },
-            { text: 'C', correct: correctCount >= 3, selected: false, value: 3 },
-          ],
+            { text: 'C', correct: correctCount >= 3, selected: false, value: 3 }
+          ]
         });
 
       expect(promptFor(1)).toBe(promptFor(3));
@@ -280,8 +287,8 @@ describe('SelectionMessageService', () => {
         opts: [
           { text: 'A', correct: true, selected: true, value: 1 },
           { text: 'B', correct: true, selected: true, value: 2 },
-          { text: 'C', correct: false, selected: false, value: 3 },
-        ],
+          { text: 'C', correct: false, selected: false, value: 3 }
+        ]
       });
       expect(msg).toBe(NEXT_BTN_MSG);
     });
@@ -291,7 +298,7 @@ describe('SelectionMessageService', () => {
         index: 0,
         total: 6,
         qType: QuestionType.SingleAnswer,
-        opts: [],
+        opts: []
       });
       expect(msg).toBe(START_MSG);
     });
@@ -367,7 +374,10 @@ describe('SelectionMessageService', () => {
     it('PENDING: a pick with no verdict preserves the neutral prompt, not "Checking" or "wrong"', () => {
       verdictState = { ...IDLE_VERDICT_STATE, phase: 'checking' } as QuestionVerdictState;
       const msg = service.computeFinalMessage({
-        index: 0, total: 6, qType: QuestionType.SingleAnswer, opts: apiOpts('A')
+        index: 0,
+        total: 6,
+        qType: QuestionType.SingleAnswer,
+        opts: apiOpts('A')
       });
       expect(msg).toBe(START_MSG);
       expect(msg).not.toContain('Checking');
@@ -377,7 +387,10 @@ describe('SelectionMessageService', () => {
     it('PENDING writes NEITHER lock — this is what made the bad message stick', () => {
       verdictState = { ...IDLE_VERDICT_STATE, phase: 'checking' } as QuestionVerdictState;
       service.computeFinalMessage({
-        index: 2, total: 6, qType: QuestionType.SingleAnswer, opts: apiOpts('A')
+        index: 2,
+        total: 6,
+        qType: QuestionType.SingleAnswer,
+        opts: apiOpts('A')
       });
       expect((service as any)._singleAnswerIncorrectLock.has(2)).toBe(false);
       expect((service as any)._singleAnswerCorrectLock.has(2)).toBe(false);
@@ -390,7 +403,10 @@ describe('SelectionMessageService', () => {
         expect(Object.prototype.hasOwnProperty.call(o, 'correct')).toBe(false);
       }
       const msg = service.computeFinalMessage({
-        index: 0, total: 6, qType: QuestionType.SingleAnswer, opts
+        index: 0,
+        total: 6,
+        qType: QuestionType.SingleAnswer,
+        opts
       });
       expect(msg).toBe(NEXT_BTN_MSG);
     });
@@ -398,7 +414,10 @@ describe('SelectionMessageService', () => {
     it('RESOLVED + wrong: the select-correct prompt', () => {
       resolvedWith('A', 'B');
       const msg = service.computeFinalMessage({
-        index: 0, total: 6, qType: QuestionType.SingleAnswer, opts: apiOpts('B')
+        index: 0,
+        total: 6,
+        qType: QuestionType.SingleAnswer,
+        opts: apiOpts('B')
       });
       expect(msg).toBe('Please select the correct answer to continue.');
     });
@@ -407,7 +426,10 @@ describe('SelectionMessageService', () => {
       (service as any)._singleAnswerIncorrectLock.add(3);
       resolvedWith('A', 'A');
       const msg = service.computeFinalMessage({
-        index: 3, total: 6, qType: QuestionType.SingleAnswer, opts: apiOpts('A')
+        index: 3,
+        total: 6,
+        qType: QuestionType.SingleAnswer,
+        opts: apiOpts('A')
       });
       expect(msg).toBe(NEXT_BTN_MSG);
       expect((service as any)._singleAnswerIncorrectLock.has(3)).toBe(false);
@@ -417,7 +439,10 @@ describe('SelectionMessageService', () => {
     it('REVISIT: recomputing a resolved-correct question still says Next', () => {
       resolvedWith('A', 'A');
       const args = {
-        index: 1, total: 6, qType: QuestionType.SingleAnswer, opts: apiOpts('A')
+        index: 1,
+        total: 6,
+        qType: QuestionType.SingleAnswer,
+        opts: apiOpts('A')
       };
       expect(service.computeFinalMessage(args)).toBe(NEXT_BTN_MSG);
       // Navigating away and back recomputes from the same authorized verdict.
@@ -427,7 +452,9 @@ describe('SelectionMessageService', () => {
     it('no selection at all still yields the ordinary prompt', () => {
       verdictState = IDLE_VERDICT_STATE;
       const msg = service.computeFinalMessage({
-        index: 2, total: 6, qType: QuestionType.SingleAnswer,
+        index: 2,
+        total: 6,
+        qType: QuestionType.SingleAnswer,
         opts: [{ text: 'A', selected: false, value: 1 }] as any[]
       });
       expect(msg).toBe(CONTINUE_MSG);

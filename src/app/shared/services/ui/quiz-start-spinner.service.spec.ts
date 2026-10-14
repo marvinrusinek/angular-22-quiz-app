@@ -67,7 +67,9 @@ describe('QuizStartSpinnerService', () => {
 
   it("showForStart()'s minimumElapsed resolves at exactly the minimum duration, independent of hide()", async () => {
     let resolved = false;
-    void service.showForStart().minimumElapsed.then(() => { resolved = true; });
+    void service.showForStart().minimumElapsed.then(() => {
+      resolved = true;
+    });
 
     await jest.advanceTimersByTimeAsync(1599);
     expect(resolved).toBe(false);

@@ -9,7 +9,10 @@ import { QqcQlFetchService } from './qqc-ql-fetch.service';
 import { QqcQlOptionBuildService } from './qqc-ql-option-build.service';
 import { QqcQlStreamService } from './qqc-ql-stream.service';
 import { QuizService } from '@shared/services/data/quiz.service';
-import { allCorrectSelectedFromVerdict, questionTextForDisplayIndex } from '@shared/services/features/verdict/authorized-correctness';
+import {
+  allCorrectSelectedFromVerdict,
+  questionTextForDisplayIndex
+} from '@shared/services/features/verdict/authorized-correctness';
 import { QuizStateService } from '@shared/services/state/quizstate.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
@@ -37,65 +40,147 @@ export class QqcQuestionLoaderService {
   // ─── Pass-through: QqcQlStreamService ───────
 
   // Properties
-  get activeQuizId(): string { return this.qql.activeQuizId; }
-  set activeQuizId(v: string) { this.qql.activeQuizId = v; }
+  get activeQuizId(): string {
+    return this.qql.activeQuizId;
+  }
+  set activeQuizId(v: string) {
+    this.qql.activeQuizId = v;
+  }
 
-  get totalQuestions(): number { return this.qql.totalQuestions; }
-  set totalQuestions(v: number) { this.qql.totalQuestions = v; }
+  get totalQuestions(): number {
+    return this.qql.totalQuestions;
+  }
+  set totalQuestions(v: number) {
+    this.qql.totalQuestions = v;
+  }
 
-  get currentQuestion(): QuizQuestion | null { return this.qql.currentQuestion; }
-  set currentQuestion(v: QuizQuestion | null) { this.qql.currentQuestion = v; }
+  get currentQuestion(): QuizQuestion | null {
+    return this.qql.currentQuestion;
+  }
+  set currentQuestion(v: QuizQuestion | null) {
+    this.qql.currentQuestion = v;
+  }
 
-  get pendingOptions(): Option[] | null { return this.qql.pendingOptions; }
-  set pendingOptions(v: Option[] | null) { this.qql.pendingOptions = v; }
+  get pendingOptions(): Option[] | null {
+    return this.qql.pendingOptions;
+  }
+  set pendingOptions(v: Option[] | null) {
+    this.qql.pendingOptions = v;
+  }
 
-  get hasOptionsLoaded(): boolean { return this.qql.hasOptionsLoaded; }
-  set hasOptionsLoaded(v: boolean) { this.qql.hasOptionsLoaded = v; }
+  get hasOptionsLoaded(): boolean {
+    return this.qql.hasOptionsLoaded;
+  }
+  set hasOptionsLoaded(v: boolean) {
+    this.qql.hasOptionsLoaded = v;
+  }
 
-  get shouldRenderOptions(): boolean { return this.qql.shouldRenderOptions; }
-  set shouldRenderOptions(v: boolean) { this.qql.shouldRenderOptions = v; }
+  get shouldRenderOptions(): boolean {
+    return this.qql.shouldRenderOptions;
+  }
+  set shouldRenderOptions(v: boolean) {
+    this.qql.shouldRenderOptions = v;
+  }
 
-  get hasContentLoaded(): boolean { return this.qql.hasContentLoaded; }
-  set hasContentLoaded(v: boolean) { this.qql.hasContentLoaded = v; }
+  get hasContentLoaded(): boolean {
+    return this.qql.hasContentLoaded;
+  }
+  set hasContentLoaded(v: boolean) {
+    this.qql.hasContentLoaded = v;
+  }
 
   // Freeze/timing state (used by navigation service)
-  get _frozen(): boolean { return this.qql._frozen; }
-  set _frozen(v: boolean) { this.qql._frozen = v; }
+  get _frozen(): boolean {
+    return this.qql._frozen;
+  }
+  set _frozen(v: boolean) {
+    this.qql._frozen = v;
+  }
 
-  get _isVisualFrozen(): boolean { return this.qql._isVisualFrozen; }
-  set _isVisualFrozen(v: boolean) { this.qql._isVisualFrozen = v; }
+  get _isVisualFrozen(): boolean {
+    return this.qql._isVisualFrozen;
+  }
+  set _isVisualFrozen(v: boolean) {
+    this.qql._isVisualFrozen = v;
+  }
 
-  get _renderFreezeUntil(): number { return this.qql._renderFreezeUntil; }
-  set _renderFreezeUntil(v: number) { this.qql._renderFreezeUntil = v; }
+  get _renderFreezeUntil(): number {
+    return this.qql._renderFreezeUntil;
+  }
+  set _renderFreezeUntil(v: number) {
+    this.qql._renderFreezeUntil = v;
+  }
 
-  get _quietZoneUntil(): number { return this.qql._quietZoneUntil; }
-  set _quietZoneUntil(v: number) { this.qql._quietZoneUntil = v; }
+  get _quietZoneUntil(): number {
+    return this.qql._quietZoneUntil;
+  }
+  set _quietZoneUntil(v: number) {
+    this.qql._quietZoneUntil = v;
+  }
 
-  get _lastNavTime(): number { return this.qql._lastNavTime; }
-  set _lastNavTime(v: number) { this.qql._lastNavTime = v; }
+  get _lastNavTime(): number {
+    return this.qql._lastNavTime;
+  }
+  set _lastNavTime(v: number) {
+    this.qql._lastNavTime = v;
+  }
 
-  get _lastQuestionText(): string { return this.qql._lastQuestionText; }
-  set _lastQuestionText(v: string) { this.qql._lastQuestionText = v; }
+  get _lastQuestionText(): string {
+    return this.qql._lastQuestionText;
+  }
+  set _lastQuestionText(v: string) {
+    this.qql._lastQuestionText = v;
+  }
 
-  get _lastRenderedIndex(): number { return this.qql._lastRenderedIndex; }
-  set _lastRenderedIndex(v: number) { this.qql._lastRenderedIndex = v; }
+  get _lastRenderedIndex(): number {
+    return this.qql._lastRenderedIndex;
+  }
+  set _lastRenderedIndex(v: number) {
+    this.qql._lastRenderedIndex = v;
+  }
 
   // Signals / Observables
-  get questionToDisplay$() { return this.qql.questionToDisplay$; }
-  get questionToDisplaySig() { return this.qql.questionToDisplaySig; }
-  get optionsToDisplaySig() { return this.qql.optionsToDisplaySig; }
-  get optionsToDisplay$() { return this.qql.optionsToDisplay$; }
-  get optionsSig() { return this.qql.optionsSig; }
-  get optionsStream$() { return this.qql.optionsStream$; }
-  get options$() { return this.qql.options$; }
-  get quietZoneUntilSig() { return this.qql.quietZoneUntilSig; }
-  get quietZoneUntil$() { return this.qql.quietZoneUntil$; }
-  get isLoadingSig() { return this.qql.isLoadingSig; }
-  get isLoading$() { return this.qql.isLoading$; }
+  get questionToDisplay$() {
+    return this.qql.questionToDisplay$;
+  }
+  get questionToDisplaySig() {
+    return this.qql.questionToDisplaySig;
+  }
+  get optionsToDisplaySig() {
+    return this.qql.optionsToDisplaySig;
+  }
+  get optionsToDisplay$() {
+    return this.qql.optionsToDisplay$;
+  }
+  get optionsSig() {
+    return this.qql.optionsSig;
+  }
+  get optionsStream$() {
+    return this.qql.optionsStream$;
+  }
+  get options$() {
+    return this.qql.options$;
+  }
+  get quietZoneUntilSig() {
+    return this.qql.quietZoneUntilSig;
+  }
+  get quietZoneUntil$() {
+    return this.qql.quietZoneUntil$;
+  }
+  get isLoadingSig() {
+    return this.qql.isLoadingSig;
+  }
+  get isLoading$() {
+    return this.qql.isLoading$;
+  }
 
   // Methods
-  resetUI(): void { this.qql.resetUI(); }
-  clearQA(): void { this.qql.clearQA(); }
+  resetUI(): void {
+    this.qql.resetUI();
+  }
+  clearQA(): void {
+    this.qql.clearQA();
+  }
   resetHeadlineStreams(index?: number): void {
     this.qql.resetHeadlineStreams(index);
   }
@@ -149,9 +234,7 @@ export class QqcQuestionLoaderService {
     return this.fetch.ensureQuestionsLoaded(questionsArray, quizId);
   }
 
-  async fetchQuestionsIfNeeded(
-    questionsArray: QuizQuestion[] | null
-  ): Promise<QuizQuestion[]> {
+  async fetchQuestionsIfNeeded(questionsArray: QuizQuestion[] | null): Promise<QuizQuestion[]> {
     return this.fetch.fetchQuestionsIfNeeded(questionsArray);
   }
 
@@ -163,10 +246,7 @@ export class QqcQuestionLoaderService {
     return this.fetch.checkEndOfQuiz(params);
   }
 
-  canRenderQuestionInstantly(
-    questionsArray: QuizQuestion[],
-    index: number
-  ): boolean {
+  canRenderQuestionInstantly(questionsArray: QuizQuestion[], index: number): boolean {
     return this.fetch.canRenderQuestionInstantly(questionsArray, index);
   }
 
@@ -209,10 +289,7 @@ export class QqcQuestionLoaderService {
     return this.fetch.loadCurrentQuestion(params);
   }
 
-  async waitForQuestionData(params: {
-    currentQuestionIndex: number;
-    quizId: string;
-  }): Promise<{
+  async waitForQuestionData(params: { currentQuestionIndex: number; quizId: string }): Promise<{
     currentQuestion: QuizQuestion | null;
     optionsToDisplay: Option[];
     currentQuestionIndex: number;
@@ -220,9 +297,7 @@ export class QqcQuestionLoaderService {
     return this.fetch.waitForQuestionData(params);
   }
 
-  async performQuizDataAndRoutingInit(params: {
-    quizId: string | null | undefined;
-  }): Promise<{
+  async performQuizDataAndRoutingInit(params: { quizId: string | null | undefined }): Promise<{
     questions: QuizQuestion[];
     quiz: any;
   } | null> {
@@ -231,10 +306,7 @@ export class QqcQuestionLoaderService {
 
   // ─── Option Build (delegated) ────────────────────────────────
 
-  buildFreshOptions(
-    question: QuizQuestion,
-    currentQuestionIndex: number
-  ): Option[] {
+  buildFreshOptions(question: QuizQuestion, currentQuestionIndex: number): Option[] {
     return this.optionBuild.buildFreshOptions(question, currentQuestionIndex);
   }
 
@@ -251,13 +323,14 @@ export class QqcQuestionLoaderService {
     currentOptionsToDisplay: Option[],
     lastSignature: string | null
   ): { options: Option[]; signature: string | null } {
-    return this.optionBuild.populateOptionsToDisplay(currentQuestion, currentOptionsToDisplay, lastSignature);
+    return this.optionBuild.populateOptionsToDisplay(
+      currentQuestion,
+      currentOptionsToDisplay,
+      lastSignature
+    );
   }
 
-  buildOptionBindings(
-    clonedOptions: Option[],
-    isMultipleAnswer: boolean
-  ): OptionBindings[] {
+  buildOptionBindings(clonedOptions: Option[], isMultipleAnswer: boolean): OptionBindings[] {
     return this.optionBuild.buildOptionBindings(clonedOptions, isMultipleAnswer);
   }
 
@@ -271,10 +344,7 @@ export class QqcQuestionLoaderService {
     return this.optionBuild.buildSharedOptionConfig(params);
   }
 
-  prepareOptionsForQuestion(params: {
-    question: QuizQuestion;
-    currentOptionsLength: number;
-  }): {
+  prepareOptionsForQuestion(params: { question: QuizQuestion; currentOptionsLength: number }): {
     enrichedOptions: Option[];
     shouldClearFirst: boolean;
   } {
@@ -406,7 +476,10 @@ export class QqcQuestionLoaderService {
     const currentQuestion = { ...params.potentialQuestion };
 
     // Deep clone options to guarantee new references
-    const optionsToDisplay = this.optionBuild.buildFreshOptions(params.potentialQuestion, params.currentQuestionIndex);
+    const optionsToDisplay = this.optionBuild.buildFreshOptions(
+      params.potentialQuestion,
+      params.currentQuestionIndex
+    );
 
     // Verify no shared references
     let hasSharedRefs = false;
@@ -513,9 +586,13 @@ export class QqcQuestionLoaderService {
         if (params.optionsToDisplay?.length > 0) {
           const q = params.questions[params.currentQuestionIndex];
           if (q) {
-            const totalCorrect = q.options.filter(o => !!o.correct).length;
+            const totalCorrect = q.options.filter((o) => !!o.correct).length;
             // Push the baseline immediately
-            await this.selectionMessageService.enforceBaselineAtInit(params.currentQuestionIndex, q.type!, totalCorrect);
+            await this.selectionMessageService.enforceBaselineAtInit(
+              params.currentQuestionIndex,
+              q.type!,
+              totalCorrect
+            );
           }
         }
       });
@@ -551,8 +628,8 @@ export class QqcQuestionLoaderService {
     this.nextButtonStateService.setNextButtonState(false);
 
     // Emit the passive message from the same array the UI just rendered
-    const pendingPassiveRaf = requestAnimationFrame(
-      () => params.emitPassiveNow(params.currentQuestionIndex)
+    const pendingPassiveRaf = requestAnimationFrame(() =>
+      params.emitPassiveNow(params.currentQuestionIndex)
     );
 
     return {
@@ -567,14 +644,17 @@ export class QqcQuestionLoaderService {
   async performAfterViewInitQuestionSetup(params: {
     questionsArray: QuizQuestion[];
     currentQuestionIndex: number;
-    getFormattedExplanation: (question: QuizQuestion, index: number) => Promise<{ explanation: string }>;
+    getFormattedExplanation: (
+      question: QuizQuestion,
+      index: number
+    ) => Promise<{ explanation: string }>;
     updateExplanationUI: (index: number, explanationText: string) => void;
   }): Promise<QuizQuestion | null> {
     const { questionsArray, currentQuestionIndex: index } = params;
 
     // Wait until questions are available
     if (!questionsArray || questionsArray.length <= index) {
-      return null;  // caller should retry
+      return null; // caller should retry
     }
 
     const question = questionsArray[index];
@@ -583,7 +663,8 @@ export class QqcQuestionLoaderService {
 
       setTimeout(async () => {
         const formatted = await params.getFormattedExplanation(question, index);
-        const explanationText = formatted?.explanation || question.explanation || 'No explanation available';
+        const explanationText =
+          formatted?.explanation || question.explanation || 'No explanation available';
         params.updateExplanationUI(index, explanationText);
       }, 50);
 
@@ -633,7 +714,7 @@ export class QqcQuestionLoaderService {
         shouldRedirect: true,
         questionsArray,
         currentQuestion: null as any,
-        optionsToDisplay: [], 
+        optionsToDisplay: [],
         questionToDisplay: ''
       };
     }
@@ -722,8 +803,10 @@ export class QqcQuestionLoaderService {
     // When shuffle is active, use shuffledQuestions as the authoritative source.
     // params.questionsArray may contain unshuffled data, causing Q&A mismatch.
     const shuffled = this.quizService.shuffledQuestions;
-    const effectiveQuestions = this.quizService.isShuffleEnabled() && shuffled?.length > 0
-      ? shuffled : params.questionsArray;
+    const effectiveQuestions =
+      this.quizService.isShuffleEnabled() && shuffled?.length > 0
+        ? shuffled
+        : params.questionsArray;
     const currentQuestion = effectiveQuestions?.[params.zeroBasedIndex] ?? null;
     if (!currentQuestion) return null;
 

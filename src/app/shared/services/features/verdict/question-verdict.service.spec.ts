@@ -109,8 +109,9 @@ describe('single-answer questions', () => {
 
     expect(result.status).toBe('resolved');
     expect((result as { correct: boolean }).correct).toBe(false);
-    expect((result as { correctOptionTexts: readonly string[] }).correctOptionTexts)
-      .toEqual(['A multicast observable']);
+    expect((result as { correctOptionTexts: readonly string[] }).correctOptionTexts).toEqual([
+      'A multicast observable'
+    ]);
   });
 
   it('rejects two selections on a single-answer question', async () => {
@@ -119,7 +120,11 @@ describe('single-answer questions', () => {
 
   it('an empty selection is incomplete, not an error', async () => {
     const result = await check('rxjs', Q, []);
-    expect(result).toEqual({ status: 'incomplete', selectedVerdicts: [], remainingCorrectCount: 1 });
+    expect(result).toEqual({
+      status: 'incomplete',
+      selectedVerdicts: [],
+      remainingCorrectCount: 1
+    });
   });
 });
 
@@ -140,7 +145,7 @@ describe('trueFalse questions', () => {
 });
 
 describe('multiple-answer questions use the SUPERSET rule', () => {
-  const Q = 'Select every operator';   // correct: map, filter
+  const Q = 'Select every operator'; // correct: map, filter
 
   it('one correct of several → incomplete', async () => {
     expect(await check('rxjs', Q, ['map'])).toEqual({
@@ -185,7 +190,10 @@ describe('multiple-answer questions use the SUPERSET rule', () => {
 
     expect(result.status).toBe('resolved');
     expect((result as { correct: boolean }).correct).toBe(true);
-    expect((result as { correctOptionTexts: readonly string[] }).correctOptionTexts).toEqual(['map', 'filter']);
+    expect((result as { correctOptionTexts: readonly string[] }).correctOptionTexts).toEqual([
+      'map',
+      'filter'
+    ]);
   });
 
   it('missing one correct plus one incorrect → incomplete', async () => {
@@ -231,8 +239,10 @@ describe('expiry reveal', () => {
 
     expect(result.status).toBe('expired');
     expect(service.verdictFor('rxjs', 'Select every operator').phase).toBe('expired');
-    expect(service.verdictFor('rxjs', 'Select every operator').correctOptionTexts)
-      .toEqual(['map', 'filter']);
+    expect(service.verdictFor('rxjs', 'Select every operator').correctOptionTexts).toEqual([
+      'map',
+      'filter'
+    ]);
   });
 });
 
@@ -248,14 +258,16 @@ describe('invalid input fails safely and identically', () => {
     ['blank question text', 'rxjs', '   ', ['A pipe']],
     ['blank option text', 'rxjs', 'Which answer is correct?', ['  ']]
   ])('rejects %s', async (_label, quizId, questionText, selected) => {
-    await expect(check(quizId, questionText, selected as string[]))
-      .rejects.toThrow(QuestionVerdictError);
+    await expect(check(quizId, questionText, selected as string[])).rejects.toThrow(
+      QuestionVerdictError
+    );
   });
 
   it('rejects malformed input without throwing something unexpected', async () => {
     for (const bad of [null, undefined, 'not an array', 42, [null], [42]]) {
-      await expect(check('rxjs', 'Which answer is correct?', bad as never))
-        .rejects.toThrow(QuestionVerdictError);
+      await expect(check('rxjs', 'Which answer is correct?', bad as never)).rejects.toThrow(
+        QuestionVerdictError
+      );
     }
   });
 
@@ -293,8 +305,9 @@ describe('text fidelity', () => {
 
     expect(result.status).toBe('resolved');
     expect((result as { correct: boolean }).correct).toBe(true);
-    expect((result as { correctOptionTexts: readonly string[] }).correctOptionTexts)
-      .toEqual(['<router-outlet>']);
+    expect((result as { correctOptionTexts: readonly string[] }).correctOptionTexts).toEqual([
+      '<router-outlet>'
+    ]);
   });
 
   it('matches a question whose text contains tags and entities', async () => {
@@ -308,20 +321,26 @@ describe('text fidelity', () => {
   });
 
   it('preserves non-ASCII text and returns the EXACT stored strings', async () => {
-    const result = await check('rxjs', '  Does   café — naïve — résumé  survive?  ', ['Yes — précisément']);
+    const result = await check('rxjs', '  Does   café — naïve — résumé  survive?  ', [
+      'Yes — précisément'
+    ]);
 
     expect(result.status).toBe('resolved');
-    expect((result as { correctOptionTexts: readonly string[] }).correctOptionTexts)
-      .toEqual(['Yes — précisément']);
+    expect((result as { correctOptionTexts: readonly string[] }).correctOptionTexts).toEqual([
+      'Yes — précisément'
+    ]);
   });
 
   it('normalizes case and whitespace for MATCHING but not for OUTPUT', async () => {
-    const result = await check('rxjs', '  WHICH   answer is Correct?  ', ['  a MULTICAST observable ']);
+    const result = await check('rxjs', '  WHICH   answer is Correct?  ', [
+      '  a MULTICAST observable '
+    ]);
 
     expect(result.status).toBe('resolved');
     // Returns the stored casing, never the caller's.
-    expect((result as { correctOptionTexts: readonly string[] }).correctOptionTexts)
-      .toEqual(['A multicast observable']);
+    expect((result as { correctOptionTexts: readonly string[] }).correctOptionTexts).toEqual([
+      'A multicast observable'
+    ]);
   });
 });
 
@@ -399,15 +418,31 @@ describe('containment guarantees', () => {
 
     const keysDeep = (value: unknown, out: string[] = []): string[] => {
       if (value === null || typeof value !== 'object') return out;
-      if (Array.isArray(value)) { for (const item of value) keysDeep(item, out); return out; }
-      for (const [key, nested] of Object.entries(value)) { out.push(key); keysDeep(nested, out); }
+      if (Array.isArray(value)) {
+        for (const item of value) keysDeep(item, out);
+        return out;
+      }
+      for (const [key, nested] of Object.entries(value)) {
+        out.push(key);
+        keysDeep(nested, out);
+      }
       return out;
     };
 
     const keys = new Set(results.flatMap((result) => keysDeep(result)));
     for (const banned of [
-      'optionId', 'questionId', 'id', 'options', 'questions', 'quizId',
-      'isCorrect', 'sourceQuizId', 'index', 'displayOrder', 'selected', 'highlight'
+      'optionId',
+      'questionId',
+      'id',
+      'options',
+      'questions',
+      'quizId',
+      'isCorrect',
+      'sourceQuizId',
+      'index',
+      'displayOrder',
+      'selected',
+      'highlight'
     ]) {
       expect(keys.has(banned)).toBe(false);
     }
@@ -457,6 +492,9 @@ describe('containment guarantees', () => {
     (result as unknown as { correctOptionTexts: string[] }).correctOptionTexts.push('TAMPERED');
 
     const fresh = await check('rxjs', 'Select every operator', ['map', 'filter']);
-    expect((fresh as { correctOptionTexts: readonly string[] }).correctOptionTexts).toEqual(['map', 'filter']);
+    expect((fresh as { correctOptionTexts: readonly string[] }).correctOptionTexts).toEqual([
+      'map',
+      'filter'
+    ]);
   });
 });

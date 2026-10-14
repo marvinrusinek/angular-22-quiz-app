@@ -128,9 +128,24 @@ describe('the registry stamps declared types onto locally-loaded questions', () 
     http.expectOne(`${BASE}/quizzes/${QUIZ}/questions`).flush({
       quizId: QUIZ,
       questions: [
-        { questionText: 'Which operators exist?', type: 'single', difficulty: null, options: [{ text: 'map' }] },
-        { questionText: 'Which operator maps values?', type: 'multiple', difficulty: null, options: [{ text: 'map' }] },
-        { questionText: 'Observables are lazy.', type: 'trueFalse', difficulty: null, options: [{ text: 'True' }] }
+        {
+          questionText: 'Which operators exist?',
+          type: 'single',
+          difficulty: null,
+          options: [{ text: 'map' }]
+        },
+        {
+          questionText: 'Which operator maps values?',
+          type: 'multiple',
+          difficulty: null,
+          options: [{ text: 'map' }]
+        },
+        {
+          questionText: 'Observables are lazy.',
+          type: 'trueFalse',
+          difficulty: null,
+          options: [{ text: 'True' }]
+        }
       ]
     });
   }
@@ -166,7 +181,10 @@ describe('the registry stamps declared types onto locally-loaded questions', () 
 
   it('is whitespace- and case-insensitive on the text key', () => {
     loadTypes();
-    const q = { questionText: '  WHICH   Operators   Exist?  ', options: [] } as unknown as QuizQuestion;
+    const q = {
+      questionText: '  WHICH   Operators   Exist?  ',
+      options: []
+    } as unknown as QuizQuestion;
     registry.applyDeclaredTypes([q]);
 
     expect(q.type).toBe(QuestionType.SingleAnswer);
@@ -182,7 +200,8 @@ describe('the registry stamps declared types onto locally-loaded questions', () 
 
   it('stamps nothing when the type request failed', () => {
     registry.load(QUIZ).subscribe();
-    http.expectOne(`${BASE}/quizzes/${QUIZ}/questions`)
+    http
+      .expectOne(`${BASE}/quizzes/${QUIZ}/questions`)
       .flush({ error: 'down' }, { status: 500, statusText: 'Server Error' });
 
     const q = locallyMulti();

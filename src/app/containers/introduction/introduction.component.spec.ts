@@ -144,7 +144,9 @@ describe('IntroductionComponent — API-backed question count (Stage 14 regressi
     const fixture = TestBed.createComponent(IntroductionComponent);
     fixture.detectChanges();
 
-    const subtitleSpan = (fixture.nativeElement as HTMLElement).querySelector('mat-card-subtitle span');
+    const subtitleSpan = (fixture.nativeElement as HTMLElement).querySelector(
+      'mat-card-subtitle span'
+    );
     expect(subtitleSpan).toBeTruthy();
 
     const childNodes = Array.from(subtitleSpan!.childNodes);
@@ -209,7 +211,9 @@ describe('IntroductionComponent — API-backed question count (Stage 14 regressi
 
     // Exact wording and reading order, built from the real count.
     const fullText = (paragraph!.textContent ?? '').trim();
-    expect(fullText).toBe('Test your wits with 10 timed multiple-choice questions! Have fun and share!');
+    expect(fullText).toBe(
+      'Test your wits with 10 timed multiple-choice questions! Have fun and share!'
+    );
   });
 });
 

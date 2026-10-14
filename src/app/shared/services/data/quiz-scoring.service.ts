@@ -113,7 +113,11 @@ export class QuizScoringService {
     const scoringKey = this.resolveScoringKey(qIndex, shouldShuffle, quizId);
     const wasCorrect = this.resolveWasCorrect(scoringKey);
     const isNowCorrect = this.applyPristineMultiAnswerGate(
-      correctAnswerFound, quizId, isMultipleAnswer, qIndex, scoringKey
+      correctAnswerFound,
+      quizId,
+      isMultipleAnswer,
+      qIndex,
+      scoringKey
     );
 
     // DEFERRED: no verdict decision yet. Writing here would record a guess.
@@ -161,7 +165,7 @@ export class QuizScoringService {
       const shouldShuffle = quizService?.isShuffleEnabled?.() === true;
       const scoringKey = this.resolveScoringKey(displayIndex, shouldShuffle, quizId);
 
-      if (this.questionCorrectness.get(scoringKey) === true) return;   // already credited
+      if (this.questionCorrectness.get(scoringKey) === true) return; // already credited
 
       this.applyCorrectnessUpdate(scoringKey, true, false);
       this.saveQuestionCorrectness();
@@ -182,10 +186,12 @@ export class QuizScoringService {
       if (!effectiveQuizId) {
         try {
           effectiveQuizId = localStorage.getItem('lastQuizId') || '';
-        } catch (err: unknown) { swallow('quiz-scoring.service.ts', err); }
+        } catch (err: unknown) {
+          swallow('quiz-scoring.service.ts', err);
+        }
       }
       if (!effectiveQuizId) {
-        const shuffleKeys = Object.keys(localStorage).filter(k => k.startsWith('shuffleState:'));
+        const shuffleKeys = Object.keys(localStorage).filter((k) => k.startsWith('shuffleState:'));
         if (shuffleKeys.length > 0) {
           effectiveQuizId = shuffleKeys[0].replace('shuffleState:', '');
         }
@@ -263,7 +269,7 @@ export class QuizScoringService {
     qIndex: number,
     scoringKey: number
   ): boolean | null {
-    let isNowCorrect = correctAnswerFound;  // simplified
+    let isNowCorrect = correctAnswerFound; // simplified
     if (isNowCorrect && quizId && isMultipleAnswer) {
       // Union the confirmed correct clicks with the cross-visit UI selection
       // (uiSelectedTexts = live bindings ∪ first-visit snapshot). _confirmedCorrectClicks
@@ -275,7 +281,9 @@ export class QuizScoringService {
         const sos = this.injector.get(SelectedOptionService, null);
         const ui = sos?.uiSelectedTextsForQuestion?.(qIndex);
         if (ui) for (const t of ui) selected.add(norm(t));
-      } catch (err: unknown) { swallow('quiz-scoring.service.ts gate ui-union', err); }
+      } catch (err: unknown) {
+        swallow('quiz-scoring.service.ts gate ui-union', err);
+      }
       // VERDICT FIRST — same question, authoritative answer.
       // Keyed by qIndex (DISPLAY) — scoringKey is a SOURCE index under shuffle.
       const fromVerdict = this.multiAnswerCompleteFromVerdict(quizId, qIndex);
@@ -325,7 +333,7 @@ export class QuizScoringService {
       const state = verdicts.verdictFor(quizId, questionText);
       if (state.phase === 'resolved') return state.isResolvedCorrect === true;
       if (state.phase === 'incomplete') return false;
-      return null;   // idle | checking | expired | error → caller decides
+      return null; // idle | checking | expired | error → caller decides
     } catch (err: unknown) {
       swallow('quiz-scoring.service.ts verdict gate', err);
       return null;
@@ -350,9 +358,12 @@ export class QuizScoringService {
     return typeof inDisplayOrder === 'string' && inDisplayOrder.length > 0 ? inDisplayOrder : null;
   }
 
-
   // Update the correctness map + running count based on now-vs-was correctness.
-  private applyCorrectnessUpdate(scoringKey: number, isNowCorrect: boolean, wasCorrect: boolean): void {
+  private applyCorrectnessUpdate(
+    scoringKey: number,
+    isNowCorrect: boolean,
+    wasCorrect: boolean
+  ): void {
     if (isNowCorrect && !wasCorrect) {
       this.questionCorrectness.set(scoringKey, true);
       this.updateCorrectCountForResults(this.correctCountSig() + 1);
@@ -377,8 +388,9 @@ export class QuizScoringService {
     // questions in our map, ignore the zero and re-derive from the map.
     // This prevents navigation-triggered accidental resets.
     if (safeValue === 0 && this.questionCorrectness.size > 0) {
-      const trueCount = Array.from(this.questionCorrectness.values())
-        .filter(v => v === true).length;
+      const trueCount = Array.from(this.questionCorrectness.values()).filter(
+        (v) => v === true
+      ).length;
       if (trueCount > 0) {
         this.correctCountSig.set(trueCount);
         this.correctAnswersCountSig.set(trueCount);
@@ -403,10 +415,11 @@ export class QuizScoringService {
   resetScore(quizId?: string): void {
     this.questionCorrectness.clear();
     this._confirmedCorrectClicks.clear();
-    this.saveQuestionCorrectness();  // clear persistence
+    this.saveQuestionCorrectness(); // clear persistence
     this.correctCountSig.set(0);
     // Use _forceSetScore to bypass the guard in sendCorrectCountToResults
-    this._forceSetScore(0, quizId);  }
+    this._forceSetScore(0, quizId);
+  }
 
   /** Bypass guard — only for explicit resets (restart, new quiz). */
   _forceSetScore(value: number, quizId?: string): void {
@@ -428,7 +441,8 @@ export class QuizScoringService {
         const parsed = JSON.parse(stored);
         this.questionCorrectness = new Map(
           Object.entries(parsed).map(([k, v]) => [Number(k), Boolean(v)])
-        );      }
+        );
+      }
     } catch (err: unknown) {
       console.error('QuizScoringService.loadQuestionCorrectness localStorage parse failed:', err);
     }
@@ -462,10 +476,10 @@ export class QuizScoringService {
       // even if the user was on Q1 (savedIndex === 0).
       const storedRaw = localStorage.getItem(SK_CORRECT_ANSWERS_COUNT);
       const storedCount = Number(storedRaw);
-      const safeStored = Number.isFinite(storedCount)
-        ? Math.max(0, Math.trunc(storedCount)) : 0;
-      const mapTrueCount = Array.from(this.questionCorrectness.values())
-        .filter((v) => v === true).length;
+      const safeStored = Number.isFinite(storedCount) ? Math.max(0, Math.trunc(storedCount)) : 0;
+      const mapTrueCount = Array.from(this.questionCorrectness.values()).filter(
+        (v) => v === true
+      ).length;
       const hasStoredScore = safeStored > 0 || mapTrueCount > 0;
 
       // Wipe ONLY when: (a) quiz doesn't match (switching quizzes), OR
@@ -558,8 +572,7 @@ export class QuizScoringService {
     // below so the read-only view reflects the stored list (otherwise
     // `highScores` could render an unnormalized/blank list).
     const alreadyRecorded =
-      !!attemptId &&
-      this.highScoresLocal.some((entry: QuizScore) => entry.attemptId === attemptId);
+      !!attemptId && this.highScoresLocal.some((entry: QuizScore) => entry.attemptId === attemptId);
 
     if (attemptId && !alreadyRecorded) {
       this.quizScore = {
@@ -572,7 +585,7 @@ export class QuizScoringService {
       this.highScoresLocal.push(this.quizScore);
     }
 
-    const MAX_HIGH_SCORES = 10;  // show results of the last 10 quizzes
+    const MAX_HIGH_SCORES = 10; // show results of the last 10 quizzes
 
     // Sort descending by date
     this.highScoresLocal.sort((a: any, b: any) => {
@@ -589,17 +602,14 @@ export class QuizScoringService {
     });
 
     this.highScoresLocal.splice(MAX_HIGH_SCORES);
-    localStorage.setItem(
-      'highScoresLocal',
-      JSON.stringify(this.highScoresLocal)
-    );
+    localStorage.setItem('highScoresLocal', JSON.stringify(this.highScoresLocal));
     this.highScores = this.highScoresLocal;
   }
 
   calculatePercentageOfCorrectlyAnsweredQuestions(totalQuestions: number): number {
     const correctAnswers = this.correctAnswersCountSig();
 
-    if (totalQuestions === 0) return 0;  // handle division by zero
+    if (totalQuestions === 0) return 0; // handle division by zero
 
     return Math.round((correctAnswers / totalQuestions) * 100);
   }

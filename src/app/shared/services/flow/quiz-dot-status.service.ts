@@ -77,7 +77,6 @@ interface ScoredDotParams {
  */
 @Service()
 export class QuizDotStatusService {
-
   // ── injects ─────────────────────────────────────────────────────
   private persistence = inject(QuizPersistenceService);
   private quizService = inject(QuizService);
@@ -120,10 +119,8 @@ export class QuizDotStatusService {
   // ═══════════════════════════════════════════════════════════════
 
   getScoringKey(quizId: string, index: number): number {
-    const effectiveQuizId = quizId
-      || this.quizService.quizId
-      || localStorage.getItem('lastQuizId')
-      || '';
+    const effectiveQuizId =
+      quizId || this.quizService.quizId || localStorage.getItem('lastQuizId') || '';
     if (this.quizService.isShuffleEnabled() && effectiveQuizId) {
       const originalIndex = this.quizShuffleService.toOriginalIndex(effectiveQuizId, index);
       if (typeof originalIndex === 'number' && originalIndex >= 0) {
@@ -143,10 +140,12 @@ export class QuizDotStatusService {
   // ═══════════════════════════════════════════════════════════════
 
   getQuestionForIndex(index: number, questionsArray: QuizQuestion[]): QuizQuestion | null {
-    return this.quizService.questions?.[index] ||
+    return (
+      this.quizService.questions?.[index] ||
       questionsArray?.[index] ||
       this.quizService.activeQuiz?.questions?.[index] ||
-      null;
+      null
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -188,8 +187,10 @@ export class QuizDotStatusService {
     question: QuizQuestion | null | undefined,
     fallbackOptions: Option[] = []
   ): Array<{ option: Option; index: number }> {
-    const options = Array.isArray(question?.options) && question!.options.length > 0
-      ? question!.options : fallbackOptions;
+    const options =
+      Array.isArray(question?.options) && question!.options.length > 0
+        ? question!.options
+        : fallbackOptions;
 
     if (!Array.isArray(options) || options.length === 0) return [];
 
@@ -228,8 +229,9 @@ export class QuizDotStatusService {
     question: QuizQuestion | null | undefined,
     fallbackOptions: Option[] = []
   ): Option[] {
-    return this.getResolvedCorrectOptionEntries(question, fallbackOptions)
-      .map(({ option }) => option);
+    return this.getResolvedCorrectOptionEntries(question, fallbackOptions).map(
+      ({ option }) => option
+    );
   }
 
   matchesAnyCorrectOption(
@@ -237,8 +239,9 @@ export class QuizDotStatusService {
     question: QuizQuestion | null | undefined,
     fallbackOptions: Option[] = []
   ): boolean {
-    return this.getResolvedCorrectOptionEntries(question, fallbackOptions)
-      .some(({ option, index }) => this.selectionMatchesOption(selection, option, index));
+    return this.getResolvedCorrectOptionEntries(question, fallbackOptions).some(
+      ({ option, index }) => this.selectionMatchesOption(selection, option, index)
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -253,9 +256,21 @@ export class QuizDotStatusService {
     currentQuestion: QuizQuestion | null;
     questionsArray: QuizQuestion[];
   }): boolean {
-    const { index, selections, currentQuestionIndex, optionsToDisplay, currentQuestion, questionsArray } = params;
+    const {
+      index,
+      selections,
+      currentQuestionIndex,
+      optionsToDisplay,
+      currentQuestion,
+      questionsArray
+    } = params;
     const question = this.getQuestionForIndex(index, questionsArray);
-    const fallbackOptions = this.getFallbackOptions(index, currentQuestionIndex, optionsToDisplay, currentQuestion);
+    const fallbackOptions = this.getFallbackOptions(
+      index,
+      currentQuestionIndex,
+      optionsToDisplay,
+      currentQuestion
+    );
 
     if (selections.length === 0) return false;
 
@@ -263,8 +278,8 @@ export class QuizDotStatusService {
 
     if (correctOptionEntries.length <= 1) return false;
 
-    const hasIncorrectSelection = selections.some((selection) =>
-      !this.matchesAnyCorrectOption(selection, question, fallbackOptions)
+    const hasIncorrectSelection = selections.some(
+      (selection) => !this.matchesAnyCorrectOption(selection, question, fallbackOptions)
     );
 
     if (hasIncorrectSelection) return false;
@@ -288,14 +303,27 @@ export class QuizDotStatusService {
     currentQuestion: QuizQuestion | null;
     questionsArray: QuizQuestion[];
   }): boolean | null {
-    const { index, selections, currentQuestionIndex, optionsToDisplay, currentQuestion, questionsArray } = params;
+    const {
+      index,
+      selections,
+      currentQuestionIndex,
+      optionsToDisplay,
+      currentQuestion,
+      questionsArray
+    } = params;
     const question = this.getQuestionForIndex(index, questionsArray);
-    const fallbackOptions = this.getFallbackOptions(index, currentQuestionIndex, optionsToDisplay, currentQuestion);
+    const fallbackOptions = this.getFallbackOptions(
+      index,
+      currentQuestionIndex,
+      optionsToDisplay,
+      currentQuestion
+    );
 
     if (
-      (!question || !Array.isArray(question.options) || question.options.length === 0)
-      && fallbackOptions.length === 0
-    ) return null;
+      (!question || !Array.isArray(question.options) || question.options.length === 0) &&
+      fallbackOptions.length === 0
+    )
+      return null;
 
     const correctOptionEntries = this.getResolvedCorrectOptionEntries(question, fallbackOptions);
     const correctOptions = correctOptionEntries.map(({ option }) => option);
@@ -321,10 +349,11 @@ export class QuizDotStatusService {
       )
     );
 
-    const incorrectSelections = selections.filter((selection) =>
-      !correctOptionEntries.some(({ option, index: optionIndex }) =>
-        this.selectionMatchesOption(selection, option, optionIndex)
-      )
+    const incorrectSelections = selections.filter(
+      (selection) =>
+        !correctOptionEntries.some(({ option, index: optionIndex }) =>
+          this.selectionMatchesOption(selection, option, optionIndex)
+        )
     );
 
     if (matchedCorrectSelections.length === 0 && incorrectSelections.length === 0) {
@@ -353,18 +382,24 @@ export class QuizDotStatusService {
     currentQuestion: QuizQuestion | null;
     questionsArray: QuizQuestion[];
   }): SelectedOption[] {
-    const { index, currentQuestionIndex, optionsToDisplay, currentQuestion, questionsArray } = params;
-    const question = this.quizService.questions?.[index] ||
+    const { index, currentQuestionIndex, optionsToDisplay, currentQuestion, questionsArray } =
+      params;
+    const question =
+      this.quizService.questions?.[index] ||
       questionsArray?.[index] ||
       this.quizService.activeQuiz?.questions?.[index];
-    const currentQuestionOptions = index === currentQuestionIndex
-      ? ((Array.isArray(optionsToDisplay) && optionsToDisplay.length > 0)
+    const currentQuestionOptions =
+      index === currentQuestionIndex
+        ? Array.isArray(optionsToDisplay) && optionsToDisplay.length > 0
           ? optionsToDisplay
-          : (Array.isArray(currentQuestion?.options) ? currentQuestion!.options as Option[] : []))
-      : [];
-    const referenceOptions = Array.isArray(question?.options) && question!.options.length > 0
-      ? question!.options
-      : currentQuestionOptions;
+          : Array.isArray(currentQuestion?.options)
+            ? (currentQuestion!.options as Option[])
+            : []
+        : [];
+    const referenceOptions =
+      Array.isArray(question?.options) && question!.options.length > 0
+        ? question!.options
+        : currentQuestionOptions;
 
     const sets = this.buildOptionMatchSets(referenceOptions);
 
@@ -402,10 +437,12 @@ export class QuizDotStatusService {
   private isSelectionActive(selection: SelectedOption): boolean {
     if (!selection) return false;
 
-    return selection.selected !== false &&
+    return (
+      selection.selected !== false &&
       (selection as any)?.checked !== false &&
       (selection as any)?.isSelected !== false &&
-      (selection as any)?.active !== false;
+      (selection as any)?.active !== false
+    );
   }
 
   private buildOptionMatchSets(referenceOptions: Option[]): {
@@ -414,14 +451,13 @@ export class QuizDotStatusService {
     optionIndexSet: Set<number>;
   } {
     const optionIdSet = new Set(
-      referenceOptions
-        .map((opt: Option, optIndex: number) => {
-          const rawId = opt?.optionId;
-          if (rawId !== undefined && rawId !== null && String(rawId).trim() !== '') {
-            return String(rawId).trim();
-          }
-          return String(optIndex);
-        })
+      referenceOptions.map((opt: Option, optIndex: number) => {
+        const rawId = opt?.optionId;
+        if (rawId !== undefined && rawId !== null && String(rawId).trim() !== '') {
+          return String(rawId).trim();
+        }
+        return String(optIndex);
+      })
     );
     const optionTextSet = new Set(
       referenceOptions.map((opt: Option) => norm(opt?.text)).filter(Boolean)
@@ -464,25 +500,41 @@ export class QuizDotStatusService {
     return matchedSelections.length > 0 ? matchedSelections : activeSelections;
   }
 
-  private collectDisplayedSelections(currentQuestionOptions: Option[], index: number): SelectedOption[] {
+  private collectDisplayedSelections(
+    currentQuestionOptions: Option[],
+    index: number
+  ): SelectedOption[] {
     return currentQuestionOptions
       .map((option: Option, optionIndex: number) => ({ option, optionIndex }))
       .filter(({ option }) => this.isSelectionActive(option as SelectedOption))
-      .map(({ option, optionIndex }) => ({
-        ...(option as SelectedOption),
-        optionId: option?.optionId ?? optionIndex,
-        questionIndex: index,
-        displayIndex: Number(
-          (option as any)?.displayIndex ?? (option as any)?.index ?? optionIndex
-        ),
-        selected: true
-      } as SelectedOption));
+      .map(
+        ({ option, optionIndex }) =>
+          ({
+            ...(option as SelectedOption),
+            optionId: option?.optionId ?? optionIndex,
+            questionIndex: index,
+            displayIndex: Number(
+              (option as any)?.displayIndex ?? (option as any)?.index ?? optionIndex
+            ),
+            selected: true
+          }) as SelectedOption
+      );
   }
 
-  private reconstructStoredSelections(index: number, question: QuizQuestion | undefined): SelectedOption[] {
+  private reconstructStoredSelections(
+    index: number,
+    question: QuizQuestion | undefined
+  ): SelectedOption[] {
     const storedAnswerIds = Array.isArray(this.quizService?.userAnswers?.[index])
-      ? (this.quizService.userAnswers[index] as number[]) : [];
-    if (!(storedAnswerIds.length > 0 && Array.isArray(question?.options) && question!.options.length > 0)) {
+      ? (this.quizService.userAnswers[index] as number[])
+      : [];
+    if (
+      !(
+        storedAnswerIds.length > 0 &&
+        Array.isArray(question?.options) &&
+        question!.options.length > 0
+      )
+    ) {
       return [];
     }
     return storedAnswerIds
@@ -545,27 +597,27 @@ export class QuizDotStatusService {
     if (currentQuestionIndex !== 0) return false;
 
     const hasSelectionsInSelectedOptionService =
-      (this.selectedOptionService?.selectedOptionsMap?.size ?? 0) > 0
-      || this.selectedOptionService?.hasRefreshBackup
-      || (this.selectedOptionService?.clickConfirmedDotStatus?.size ?? 0) > 0;
-    const hasSelectionsInQuizService =
-      (this.quizService?.selectedOptionsMap?.size ?? 0) > 0;
-    const hasScoredQuestions =
-      (this.quizService?.questionCorrectness?.size ?? 0) > 0;
+      (this.selectedOptionService?.selectedOptionsMap?.size ?? 0) > 0 ||
+      this.selectedOptionService?.hasRefreshBackup ||
+      (this.selectedOptionService?.clickConfirmedDotStatus?.size ?? 0) > 0;
+    const hasSelectionsInQuizService = (this.quizService?.selectedOptionsMap?.size ?? 0) > 0;
+    const hasScoredQuestions = (this.quizService?.questionCorrectness?.size ?? 0) > 0;
     const hasStoredUserAnswers =
       Array.isArray(this.quizService?.userAnswers) &&
-      this.quizService.userAnswers.some((answers: unknown) =>
-        Array.isArray(answers) && answers.length > 0
+      this.quizService.userAnswers.some(
+        (answers: unknown) => Array.isArray(answers) && answers.length > 0
       );
     const hasStateServiceActivity =
       (this.quizStateService?._answeredQuestionIndices?.size ?? 0) > 0 ||
       (this.quizStateService?._hasUserInteracted?.size ?? 0) > 0;
 
-    return !hasSelectionsInSelectedOptionService &&
+    return (
+      !hasSelectionsInSelectedOptionService &&
       !hasSelectionsInQuizService &&
       !hasScoredQuestions &&
       !hasStoredUserAnswers &&
-      !hasStateServiceActivity;
+      !hasStateServiceActivity
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -608,26 +660,53 @@ export class QuizDotStatusService {
 
   getQuestionStatus(params: GetQuestionStatusParams): DotStatus {
     const {
-      index, quizId, currentQuestionIndex, optionsToDisplay, currentQuestion,
-      questionsArray, dotStatusCache, pendingDotStatusOverrides, activeDotClickStatus,
+      index,
+      quizId,
+      currentQuestionIndex,
+      optionsToDisplay,
+      currentQuestion,
+      questionsArray,
+      dotStatusCache,
+      pendingDotStatusOverrides,
+      activeDotClickStatus
     } = params;
     const forceRecompute = !!params.options?.forceRecompute;
 
     // Refresh-restore short-circuit + fresh-at-Q1 reset.
-    const early = this.tryEarlyDotExits(index, currentQuestionIndex, dotStatusCache, pendingDotStatusOverrides, activeDotClickStatus);
+    const early = this.tryEarlyDotExits(
+      index,
+      currentQuestionIndex,
+      dotStatusCache,
+      pendingDotStatusOverrides,
+      activeDotClickStatus
+    );
     if (early) return early;
 
     const {
-      pendingOverrideStatus, previousCached, hasCachedStatus, selections, questionHasLiveSessionState,
+      pendingOverrideStatus,
+      previousCached,
+      hasCachedStatus,
+      selections,
+      questionHasLiveSessionState
     } = this.deriveDotState(params);
 
     const r2 = this.tryCachedShortCircuit({
-      index, currentQuestionIndex, forceRecompute, dotStatusCache,
-      hasCachedStatus, questionHasLiveSessionState, selections,
+      index,
+      currentQuestionIndex,
+      forceRecompute,
+      dotStatusCache,
+      hasCachedStatus,
+      questionHasLiveSessionState,
+      selections
     });
     if (r2) return r2;
 
-    const r3 = this.tryEarlyAuthoritativeNonCurrent(index, quizId, currentQuestionIndex, dotStatusCache);
+    const r3 = this.tryEarlyAuthoritativeNonCurrent(
+      index,
+      quizId,
+      currentQuestionIndex,
+      dotStatusCache
+    );
     if (r3) return r3;
 
     if (index === currentQuestionIndex && !questionHasLiveSessionState && selections.length === 0) {
@@ -635,9 +714,19 @@ export class QuizDotStatusService {
     }
 
     return this.resolveScoredDotStatus({
-      index, quizId, currentQuestionIndex, optionsToDisplay, currentQuestion, questionsArray,
-      selections, questionHasLiveSessionState, pendingOverrideStatus, previousCached,
-      dotStatusCache, pendingDotStatusOverrides, activeDotClickStatus,
+      index,
+      quizId,
+      currentQuestionIndex,
+      optionsToDisplay,
+      currentQuestion,
+      questionsArray,
+      selections,
+      questionHasLiveSessionState,
+      pendingOverrideStatus,
+      previousCached,
+      dotStatusCache,
+      pendingDotStatusOverrides,
+      activeDotClickStatus
     });
   }
 
@@ -649,14 +738,29 @@ export class QuizDotStatusService {
     selections: Array<SelectedOption | Option>;
     questionHasLiveSessionState: boolean;
   } {
-    const { index, quizId, currentQuestionIndex, optionsToDisplay, currentQuestion, questionsArray, dotStatusCache, pendingDotStatusOverrides } = p;
-    const selectionParams = { index, currentQuestionIndex, optionsToDisplay, currentQuestion, questionsArray };
+    const {
+      index,
+      quizId,
+      currentQuestionIndex,
+      optionsToDisplay,
+      currentQuestion,
+      questionsArray,
+      dotStatusCache,
+      pendingDotStatusOverrides
+    } = p;
+    const selectionParams = {
+      index,
+      currentQuestionIndex,
+      optionsToDisplay,
+      currentQuestion,
+      questionsArray
+    };
     return {
       pendingOverrideStatus: pendingDotStatusOverrides.get(index),
       previousCached: dotStatusCache.get(index),
       hasCachedStatus: dotStatusCache.has(index),
       selections: this.getSelectionsForQuestion(selectionParams),
-      questionHasLiveSessionState: this.hasLiveSessionStateForQuestion(quizId, index),
+      questionHasLiveSessionState: this.hasLiveSessionStateForQuestion(quizId, index)
     };
   }
 
@@ -668,7 +772,12 @@ export class QuizDotStatusService {
     pendingDotStatusOverrides: Map<number, DotResolved>,
     activeDotClickStatus: Map<number, DotResolved>
   ): DotStatus | null {
-    const r1 = this.tryConfirmedOnRefresh(index, pendingDotStatusOverrides, activeDotClickStatus, dotStatusCache);
+    const r1 = this.tryConfirmedOnRefresh(
+      index,
+      pendingDotStatusOverrides,
+      activeDotClickStatus,
+      dotStatusCache
+    );
     if (r1) return r1;
 
     if (this.isQuizFreshAtQuestionOne(currentQuestionIndex)) {
@@ -799,7 +908,9 @@ export class QuizDotStatusService {
         this.persistence.setPersistedDotStatus(quizId, index, sessionVal);
         return sessionVal;
       }
-    } catch (err: unknown) { swallow('quiz-dot-status.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-dot-status.service.ts', err);
+    }
     return null;
   }
 
@@ -810,68 +921,126 @@ export class QuizDotStatusService {
    */
   private resolveScoredDotStatus(p: ScoredDotParams): DotStatus {
     const ctx = this.buildScoredDotCtx(p);
-    return this.resolveOverrideDotStatus(ctx)
-      ?? this.resolveSelectionDotStatus(ctx)
-      ?? this.resolveAuthoritativeDotStatus(ctx)
-      ?? this.resolveUnscoredFallbackDotStatus(ctx);
+    return (
+      this.resolveOverrideDotStatus(ctx) ??
+      this.resolveSelectionDotStatus(ctx) ??
+      this.resolveAuthoritativeDotStatus(ctx) ??
+      this.resolveUnscoredFallbackDotStatus(ctx)
+    );
   }
 
   /** Compute the scoring/evaluation context for the decision branches. Extracted verbatim. */
   private buildScoredDotCtx(p: ScoredDotParams): ScoredDotCtx {
     const {
-      index, quizId, currentQuestionIndex, optionsToDisplay, currentQuestion, questionsArray,
-      selections, questionHasLiveSessionState, pendingOverrideStatus, previousCached,
-      dotStatusCache, pendingDotStatusOverrides, activeDotClickStatus,
+      index,
+      quizId,
+      currentQuestionIndex,
+      optionsToDisplay,
+      currentQuestion,
+      questionsArray,
+      selections,
+      questionHasLiveSessionState,
+      pendingOverrideStatus,
+      previousCached,
+      dotStatusCache,
+      pendingDotStatusOverrides,
+      activeDotClickStatus
     } = p;
 
-    const { scoringKey, hasScoredState, hasAuthoritativeCorrectState } = this.getScoredStateFlags(quizId, index);
+    const { scoringKey, hasScoredState, hasAuthoritativeCorrectState } = this.getScoredStateFlags(
+      quizId,
+      index
+    );
 
-    const evalParams = { index, selections, currentQuestionIndex, optionsToDisplay, currentQuestion, questionsArray };
-    const evaluatedStatus = selections.length > 0
-      ? this.evaluateSelectionCorrectness(evalParams)
-      : null;
-    const hasOptimisticCorrectSelection = selections.length > 0 &&
-      this.hasOptimisticCorrectSelection({ ...evalParams, selections });
+    const evalParams = {
+      index,
+      selections,
+      currentQuestionIndex,
+      optionsToDisplay,
+      currentQuestion,
+      questionsArray
+    };
+    const evaluatedStatus =
+      selections.length > 0 ? this.evaluateSelectionCorrectness(evalParams) : null;
+    const hasOptimisticCorrectSelection =
+      selections.length > 0 && this.hasOptimisticCorrectSelection({ ...evalParams, selections });
 
     const localStatus = this.persistence.getPersistedDotStatus(quizId, index);
     const isLiveMultiAnswerQuestion = this.computeIsLiveMultiAnswer(p);
     const activeClickStatus = activeDotClickStatus.get(index);
 
     return {
-      index, quizId, currentQuestionIndex, dotStatusCache, pendingDotStatusOverrides,
-      pendingOverrideStatus, previousCached, selections, questionHasLiveSessionState,
-      scoringKey, hasScoredState, hasAuthoritativeCorrectState, evaluatedStatus,
-      hasOptimisticCorrectSelection, localStatus, isLiveMultiAnswerQuestion, activeClickStatus,
+      index,
+      quizId,
+      currentQuestionIndex,
+      dotStatusCache,
+      pendingDotStatusOverrides,
+      pendingOverrideStatus,
+      previousCached,
+      selections,
+      questionHasLiveSessionState,
+      scoringKey,
+      hasScoredState,
+      hasAuthoritativeCorrectState,
+      evaluatedStatus,
+      hasOptimisticCorrectSelection,
+      localStatus,
+      isLiveMultiAnswerQuestion,
+      activeClickStatus
     };
   }
 
   /** Scoring flags from questionCorrectness for this index. Extracted verbatim. */
-  private getScoredStateFlags(quizId: string, index: number): {
-    scoringKey: any; hasScoredState: boolean; hasAuthoritativeCorrectState: boolean;
+  private getScoredStateFlags(
+    quizId: string,
+    index: number
+  ): {
+    scoringKey: any;
+    hasScoredState: boolean;
+    hasAuthoritativeCorrectState: boolean;
   } {
     const scoringKey = this.getScoringKey(quizId, index);
-    const persistedScoredValues = [this.quizService.questionCorrectness.get(scoringKey)]
-      .filter((value): value is boolean => value === true || value === false);
+    const persistedScoredValues = [this.quizService.questionCorrectness.get(scoringKey)].filter(
+      (value): value is boolean => value === true || value === false
+    );
     return {
       scoringKey,
       hasScoredState: persistedScoredValues.length > 0,
-      hasAuthoritativeCorrectState: persistedScoredValues.includes(true),
+      hasAuthoritativeCorrectState: persistedScoredValues.includes(true)
     };
   }
 
   /** Is this the live (current, interacted) multi-answer question? Extracted verbatim. */
   private computeIsLiveMultiAnswer(p: ScoredDotParams): boolean {
-    const { index, currentQuestionIndex, optionsToDisplay, currentQuestion, questionsArray, selections, questionHasLiveSessionState } = p;
+    const {
+      index,
+      currentQuestionIndex,
+      optionsToDisplay,
+      currentQuestion,
+      questionsArray,
+      selections,
+      questionHasLiveSessionState
+    } = p;
     const question = this.getQuestionForIndex(index, questionsArray);
-    const fallbackOptions = this.getFallbackOptions(index, currentQuestionIndex, optionsToDisplay, currentQuestion);
-    const resolvedCorrectOptionCount = this.getResolvedCorrectOptionEntries(question, fallbackOptions).length;
+    const fallbackOptions = this.getFallbackOptions(
+      index,
+      currentQuestionIndex,
+      optionsToDisplay,
+      currentQuestion
+    );
+    const resolvedCorrectOptionCount = this.getResolvedCorrectOptionEntries(
+      question,
+      fallbackOptions
+    ).length;
     // DECLARED TYPE WINS — same OR-promotion defect as evaluateSelectionCorrectness.
-    return index === currentQuestionIndex &&
+    return (
+      index === currentQuestionIndex &&
       (questionHasLiveSessionState || selections.length > 0) &&
       resolveIsMultiAnswer(
         this.quizService.getDisplayedQuestion?.(index) ?? question,
         resolvedCorrectOptionCount > 1
-      );
+      )
+    );
   }
 
   /** setPersistedDotStatus + cache + return. Extracted (common to the scored branches). */
@@ -919,12 +1088,20 @@ export class QuizDotStatusService {
       return this.persistAndCache(c, 'correct');
     }
 
-    if (c.localStatus === 'wrong' && c.evaluatedStatus !== true && !c.hasAuthoritativeCorrectState) {
+    if (
+      c.localStatus === 'wrong' &&
+      c.evaluatedStatus !== true &&
+      !c.hasAuthoritativeCorrectState
+    ) {
       // Don't return 'wrong' if the most recent click was correct.
       return this.tryClickConfirmedCorrect(c) ?? this.cacheAndReturn(c, 'wrong');
     }
 
-    if (c.index === c.currentQuestionIndex && c.isLiveMultiAnswerQuestion && c.localStatus === 'correct') {
+    if (
+      c.index === c.currentQuestionIndex &&
+      c.isLiveMultiAnswerQuestion &&
+      c.localStatus === 'correct'
+    ) {
       return this.cacheAndReturn(c, 'correct');
     }
 
@@ -1007,7 +1184,9 @@ export class QuizDotStatusService {
       if (sessionVal === 'correct' || sessionVal === 'wrong') {
         return this.cacheAndReturn(c, sessionVal);
       }
-    } catch (err: unknown) { swallow('quiz-dot-status.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-dot-status.service.ts', err);
+    }
 
     return 'pending';
   }
@@ -1044,8 +1223,13 @@ export class QuizDotStatusService {
     timerExpiredUnanswered: Set<number>;
   }): string {
     const {
-      index, quizId, currentQuestionIndex, dotStatusCache,
-      pendingDotStatusOverrides, activeDotClickStatus, timerExpiredUnanswered,
+      index,
+      quizId,
+      currentQuestionIndex,
+      dotStatusCache,
+      pendingDotStatusOverrides,
+      activeDotClickStatus,
+      timerExpiredUnanswered
     } = params;
 
     if (index === currentQuestionIndex) {
@@ -1067,7 +1251,7 @@ export class QuizDotStatusService {
           return `${confirmedStatus} current`;
         }
         if (timerExpiredUnanswered.has(index)) return 'pending';
-        
+
         return 'current';
       }
 
@@ -1148,9 +1332,11 @@ export class QuizDotStatusService {
     currentQuestion: QuizQuestion | null
   ): Option[] {
     return index === currentQuestionIndex
-      ? ((Array.isArray(optionsToDisplay) && optionsToDisplay.length > 0)
-          ? optionsToDisplay
-          : (Array.isArray(currentQuestion?.options) ? currentQuestion!.options as Option[] : []))
+      ? Array.isArray(optionsToDisplay) && optionsToDisplay.length > 0
+        ? optionsToDisplay
+        : Array.isArray(currentQuestion?.options)
+          ? (currentQuestion!.options as Option[])
+          : []
       : [];
   }
 }

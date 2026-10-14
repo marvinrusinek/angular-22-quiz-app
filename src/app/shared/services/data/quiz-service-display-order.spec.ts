@@ -23,7 +23,7 @@ import { QuizService } from './quiz.service';
 describe('QuizService display-order resolution (shuffle-aware)', () => {
   let service: QuizService;
 
-  const q = (text: string): QuizQuestion => ({ questionText: text } as QuizQuestion);
+  const q = (text: string): QuizQuestion => ({ questionText: text }) as QuizQuestion;
   const original = [q('Q1'), q('Q2'), q('Q3')];
   const shuffled = [q('Q3'), q('Q1'), q('Q2')];
 
@@ -36,8 +36,11 @@ describe('QuizService display-order resolution (shuffle-aware)', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
-      ],
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
+      ]
     });
     service = TestBed.inject(QuizService);
     (service as any)._questions = original;

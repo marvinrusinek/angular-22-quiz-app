@@ -57,8 +57,7 @@ function deps(over: {
     idx: IDX,
     quizService: {
       quizId: 'router',
-      getQuestionsInDisplayOrder: () =>
-        Object.assign([], { [IDX]: question, length: IDX + 1 }),
+      getQuestionsInDisplayOrder: () => Object.assign([], { [IDX]: question, length: IDX + 1 }),
       questions: Object.assign([], { [IDX]: question, length: IDX + 1 }),
       isShuffleEnabled: () => false,
       shuffledQuestions: [],
@@ -123,17 +122,13 @@ describe('the formatter does not store absence as content', () => {
 
   it('stores NOTHING for a question with no explanation of its own', () => {
     // The shape every API-sourced question arrives in.
-    formatter.initializeFormattedExplanations([
-      { questionIndex: IDX, explanation: '' }
-    ]);
+    formatter.initializeFormattedExplanations([{ questionIndex: IDX, explanation: '' }]);
 
     expect(formatter.formattedExplanations[IDX]).toBeUndefined();
   });
 
   it('stores nothing for whitespace-only explanation text either', () => {
-    formatter.initializeFormattedExplanations([
-      { questionIndex: IDX, explanation: '   ' }
-    ]);
+    formatter.initializeFormattedExplanations([{ questionIndex: IDX, explanation: '   ' }]);
 
     expect(formatter.formattedExplanations[IDX]).toBeUndefined();
   });
@@ -152,8 +147,9 @@ describe('the formatter does not store absence as content', () => {
       { questionIndex: 1, explanation: '' }
     ]);
 
-    const stored = Object.values(formatter.formattedExplanations)
-      .map((e: any) => e?.explanation ?? '');
+    const stored = Object.values(formatter.formattedExplanations).map(
+      (e: any) => e?.explanation ?? ''
+    );
     expect(stored.join(' ')).not.toContain('No explanation available');
   });
 });
@@ -186,7 +182,7 @@ describe('a timed-out question renders the AUTHORIZED explanation through the or
     // arrived afterwards. With the placeholder no longer stored, the chain falls
     // through to the authorized text.
     const html = headingFor({
-      formattedExplanations: {},   // fix A: absence is not stored
+      formattedExplanations: {}, // fix A: absence is not stored
       verdictPhase: 'expired',
       verdictExplanation: AUTHORIZED,
       correctOptionTexts: ['The Router']

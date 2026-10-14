@@ -25,34 +25,89 @@ import type {
 // Q3 true/false (True correct, unanswered)
 const QUESTIONS: InterviewReviewQuestionViewModel[] = [
   {
-    questionId: 'q1', sourceQuizId: 'rxjs', questionText: 'Q1', type: 'single',
-    options: [{ optionId: 1, text: 'A' }, { optionId: 2, text: 'B' }],
-    selectedOptionIds: [1], correctOptionIds: [1], explanation: 'E1',
-    isCorrect: true, isAnswered: true, flagged: false
+    questionId: 'q1',
+    sourceQuizId: 'rxjs',
+    questionText: 'Q1',
+    type: 'single',
+    options: [
+      { optionId: 1, text: 'A' },
+      { optionId: 2, text: 'B' }
+    ],
+    selectedOptionIds: [1],
+    correctOptionIds: [1],
+    explanation: 'E1',
+    isCorrect: true,
+    isAnswered: true,
+    flagged: false
   },
   {
-    questionId: 'q2', sourceQuizId: 'signals', questionText: 'Q2', type: 'multiple',
-    options: [{ optionId: 3, text: 'C' }, { optionId: 4, text: 'D' }, { optionId: 5, text: 'E' }],
-    selectedOptionIds: [3], correctOptionIds: [3, 5], explanation: 'E2',
-    isCorrect: false, isAnswered: true, flagged: true
+    questionId: 'q2',
+    sourceQuizId: 'signals',
+    questionText: 'Q2',
+    type: 'multiple',
+    options: [
+      { optionId: 3, text: 'C' },
+      { optionId: 4, text: 'D' },
+      { optionId: 5, text: 'E' }
+    ],
+    selectedOptionIds: [3],
+    correctOptionIds: [3, 5],
+    explanation: 'E2',
+    isCorrect: false,
+    isAnswered: true,
+    flagged: true
   },
   {
-    questionId: 'q3', sourceQuizId: 'rxjs', questionText: 'Q3', type: 'trueFalse',
-    options: [{ optionId: 6, text: 'True' }, { optionId: 7, text: 'False' }],
-    selectedOptionIds: [], correctOptionIds: [6], explanation: '',
-    isCorrect: false, isAnswered: false, flagged: false
+    questionId: 'q3',
+    sourceQuizId: 'rxjs',
+    questionText: 'Q3',
+    type: 'trueFalse',
+    options: [
+      { optionId: 6, text: 'True' },
+      { optionId: 7, text: 'False' }
+    ],
+    selectedOptionIds: [],
+    correctOptionIds: [6],
+    explanation: '',
+    isCorrect: false,
+    isAnswered: false,
+    flagged: false
   }
 ];
 
 function result(over: Partial<InterviewResultViewModel> = {}): InterviewResultViewModel {
   return {
-    sessionId: 'is_1', submittedAtMs: 1_700_000_000_000, submittedByExpiry: false,
-    total: 3, answered: 2, unanswered: 1, correct: 1, incorrect: 1, percentage: 33,
-    durationSeconds: 900, timeUsedSeconds: 300,
+    sessionId: 'is_1',
+    submittedAtMs: 1_700_000_000_000,
+    submittedByExpiry: false,
+    total: 3,
+    answered: 2,
+    unanswered: 1,
+    correct: 1,
+    incorrect: 1,
+    percentage: 33,
+    durationSeconds: 900,
+    timeUsedSeconds: 300,
     config: { mode: 'custom', difficulty: 'mixed', topicIds: ['rxjs'], questionCount: 3 },
     byTopic: [
-      { topicId: 'rxjs', title: 'RxJS', correct: 1, incorrect: 0, unanswered: 1, total: 2, percentage: 50 },
-      { topicId: 'signals', title: 'Signals', correct: 0, incorrect: 1, unanswered: 0, total: 1, percentage: 0 }
+      {
+        topicId: 'rxjs',
+        title: 'RxJS',
+        correct: 1,
+        incorrect: 0,
+        unanswered: 1,
+        total: 2,
+        percentage: 50
+      },
+      {
+        topicId: 'signals',
+        title: 'Signals',
+        correct: 0,
+        incorrect: 1,
+        unanswered: 0,
+        total: 1,
+        percentage: 0
+      }
     ],
     review: QUESTIONS,
     ...over
@@ -122,7 +177,9 @@ describe('InterviewReviewComponent', () => {
     );
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [InterviewReviewComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [InterviewReviewComponent]
+    }).compileComponents();
   });
 
   it('takes status from the SERVER, not from local scoring', () => {
@@ -153,22 +210,35 @@ describe('InterviewReviewComponent', () => {
   });
 
   it('preserves the server question and option order — no re-sort, no AOTA re-pin', () => {
-    const withAota: InterviewReviewQuestionViewModel[] = [{
-      ...QUESTIONS[0]!,
-      options: [
-        { optionId: 1, text: 'All of the above' },
-        { optionId: 2, text: 'B' },
-        { optionId: 3, text: 'C' }
-      ]
-    }];
+    const withAota: InterviewReviewQuestionViewModel[] = [
+      {
+        ...QUESTIONS[0]!,
+        options: [
+          { optionId: 1, text: 'All of the above' },
+          { optionId: 2, text: 'B' },
+          { optionId: 3, text: 'C' }
+        ]
+      }
+    ];
     setup(withAota);
-    expect(component.items()[0]!.options.map((o) => o.text)).toEqual(['All of the above', 'B', 'C']);
+    expect(component.items()[0]!.options.map((o) => o.text)).toEqual([
+      'All of the above',
+      'B',
+      'C'
+    ]);
   });
 
   it('summary uses the backend result as the source of truth', () => {
     setup(QUESTIONS, result({ correct: 5, incorrect: 4, unanswered: 2, total: 11 }));
-    expect(component.summary()).toMatchObject({ correct: 5, incorrect: 4, unanswered: 2, total: 11 });
-    const dds = Array.from(el().querySelectorAll('.rv-summary dd')).map((d) => d.textContent?.trim());
+    expect(component.summary()).toMatchObject({
+      correct: 5,
+      incorrect: 4,
+      unanswered: 2,
+      total: 11
+    });
+    const dds = Array.from(el().querySelectorAll('.rv-summary dd')).map((d) =>
+      d.textContent?.trim()
+    );
     expect(dds).toEqual(['5 / 11', '5', '4', '2']);
   });
 
@@ -182,9 +252,12 @@ describe('InterviewReviewComponent', () => {
     expect(el().querySelector('.rv-meta')?.textContent).toContain('Mixed');
 
     // A role preset mixes difficulties, so no chip is shown at all.
-    setup(QUESTIONS, result({
-      config: { mode: 'preset', presetId: 'junior', topicIds: ['rxjs'], questionCount: 3 }
-    }));
+    setup(
+      QUESTIONS,
+      result({
+        config: { mode: 'preset', presetId: 'junior', topicIds: ['rxjs'], questionCount: 3 }
+      })
+    );
     expect(el().querySelector('.rv-meta')?.textContent).not.toContain('Mixed');
   });
 
@@ -193,12 +266,20 @@ describe('InterviewReviewComponent', () => {
     setup();
     // QUESTIONS includes q2 with flagged: true, so Flagged is already visible.
     expect(chipIds()).toEqual(['all', 'incorrect', 'unanswered', 'correct', 'flagged']);
-    expect(component.counts()).toEqual({ all: 3, incorrect: 1, unanswered: 1, correct: 1, flagged: 1 });
+    expect(component.counts()).toEqual({
+      all: 3,
+      incorrect: 1,
+      unanswered: 1,
+      correct: 1,
+      flagged: 1
+    });
   });
 
   it('each filter shows only its questions, preserving order', () => {
     const allIncorrect = QUESTIONS.map((q, i) =>
-      i === 0 ? q : { ...q, isCorrect: false, isAnswered: true, selectedOptionIds: [q.options[1]!.optionId] }
+      i === 0
+        ? q
+        : { ...q, isCorrect: false, isAnswered: true, selectedOptionIds: [q.options[1]!.optionId] }
     );
     setup(allIncorrect);
     component.setFilter('incorrect');
@@ -211,7 +292,10 @@ describe('InterviewReviewComponent', () => {
 
   it('an empty filter result shows a friendly state', () => {
     const allCorrect = QUESTIONS.map((q) => ({
-      ...q, isCorrect: true, isAnswered: true, selectedOptionIds: [...q.correctOptionIds]
+      ...q,
+      isCorrect: true,
+      isAnswered: true,
+      selectedOptionIds: [...q.correctOptionIds]
     }));
     setup(allCorrect);
     component.setFilter('incorrect');
@@ -236,10 +320,16 @@ describe('InterviewReviewComponent', () => {
     const chips = Array.from(el().querySelectorAll('.rv-filter')) as HTMLElement[];
     expect(chips.every((c) => c.getAttribute('role') === 'radio')).toBe(true);
     expect(chips.filter((c) => c.getAttribute('aria-checked') === 'true')).toHaveLength(1);
-    expect(chips.find((c) => c.getAttribute('aria-label')?.startsWith('Correct'))!.getAttribute('aria-label'))
-      .toBe('Correct, 1 question');
-    expect(chips.find((c) => c.getAttribute('aria-label')?.startsWith('Unanswered'))!.getAttribute('aria-label'))
-      .toBe('Unanswered, 1 question');
+    expect(
+      chips
+        .find((c) => c.getAttribute('aria-label')?.startsWith('Correct'))!
+        .getAttribute('aria-label')
+    ).toBe('Correct, 1 question');
+    expect(
+      chips
+        .find((c) => c.getAttribute('aria-label')?.startsWith('Unanswered'))!
+        .getAttribute('aria-label')
+    ).toBe('Unanswered, 1 question');
   });
 
   // ── Angular Aria Toolbar prototype ─────────────────────────────────────
@@ -300,7 +390,7 @@ describe('InterviewReviewComponent', () => {
   });
 
   it('reveals the Flagged chip once ANY question was actually marked — no flaggingEnabled needed', () => {
-    setup();   // QUESTIONS includes q2 with flagged: true
+    setup(); // QUESTIONS includes q2 with flagged: true
     expect(chipIds()).toEqual(['all', 'incorrect', 'unanswered', 'correct', 'flagged']);
   });
 

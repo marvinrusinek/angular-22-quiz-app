@@ -22,8 +22,8 @@ import type { QuizService } from '@shared/services/data/quiz.service';
  * stops shipping to the browser there would be nothing to read.
  */
 
-const MULTI = 'Select every operator';        // correct: map, filter
-const SINGLE = 'Which answer is correct?';    // correct: A multicast observable
+const MULTI = 'Select every operator'; // correct: map, filter
+const SINGLE = 'Which answer is correct?'; // correct: A multicast observable
 
 const BANK = [
   {
@@ -33,10 +33,7 @@ const BANK = [
       {
         questionText: SINGLE,
         explanation: 'Because a Subject multicasts.',
-        options: [
-          { text: 'A multicast observable', correct: true },
-          { text: 'A pipe' }
-        ]
+        options: [{ text: 'A multicast observable', correct: true }, { text: 'A pipe' }]
       },
       {
         questionText: MULTI,
@@ -122,8 +119,9 @@ describe('multiple-answer, INCOMPLETE', () => {
 
   it('a SELECTED INCORRECT option shows incorrect', async () => {
     await check(MULTI, ['Observable']);
-    expect(isCurrentOptionCorrect(binding('Observable'), quizServiceStub(MULTI), 0, verdicts))
-      .toBe(false);
+    expect(isCurrentOptionCorrect(binding('Observable'), quizServiceStub(MULTI), 0, verdicts)).toBe(
+      false
+    );
   });
 
   it('an UNSELECTED CORRECT option reveals NOTHING', async () => {
@@ -132,14 +130,16 @@ describe('multiple-answer, INCOMPLETE', () => {
     // `filter` is correct, but the user has not selected it and the question
     // has not resolved. Returning true here would leak the answer key one
     // click at a time.
-    expect(isCurrentOptionCorrect(binding('filter'), quizServiceStub(MULTI), 0, verdicts))
-      .toBe(false);
+    expect(isCurrentOptionCorrect(binding('filter'), quizServiceStub(MULTI), 0, verdicts)).toBe(
+      false
+    );
   });
 
   it('an UNSELECTED INCORRECT option stays neutral', async () => {
     await check(MULTI, ['map']);
-    expect(isCurrentOptionCorrect(binding('Subject'), quizServiceStub(MULTI), 0, verdicts))
-      .toBe(false);
+    expect(isCurrentOptionCorrect(binding('Subject'), quizServiceStub(MULTI), 0, verdicts)).toBe(
+      false
+    );
   });
 
   it('the local fallback CANNOT run for an unselected option while incomplete', async () => {
@@ -186,8 +186,9 @@ describe('single-answer', () => {
     await check(SINGLE, ['A multicast observable']);
     const service = quizServiceStub(SINGLE);
 
-    expect(isCurrentOptionCorrect(binding('A multicast observable'), service, 0, verdicts))
-      .toBe(true);
+    expect(isCurrentOptionCorrect(binding('A multicast observable'), service, 0, verdicts)).toBe(
+      true
+    );
     expect(isCurrentOptionCorrect(binding('A pipe'), service, 0, verdicts)).toBe(false);
   });
 
@@ -198,8 +199,9 @@ describe('single-answer', () => {
     const service = quizServiceStub(SINGLE);
 
     expect(isCurrentOptionCorrect(binding('A pipe'), service, 0, verdicts)).toBe(false);
-    expect(isCurrentOptionCorrect(binding('A multicast observable'), service, 0, verdicts))
-      .toBe(true);
+    expect(isCurrentOptionCorrect(binding('A multicast observable'), service, 0, verdicts)).toBe(
+      true
+    );
   });
 });
 
@@ -216,8 +218,7 @@ describe('single-answer', () => {
  * authoritative again, these fail.
  */
 describe('local correct flags are never consulted', () => {
-  const lyingTrue = () =>
-    ({ option: { text: 'map', correct: true } }) as unknown as OptionBindings;
+  const lyingTrue = () => ({ option: { text: 'map', correct: true } }) as unknown as OptionBindings;
 
   it('stays neutral while idle, despite a local correct=true', () => {
     expect(isCurrentOptionCorrect(lyingTrue(), quizServiceStub(MULTI), 0, verdicts)).toBe(false);
@@ -303,8 +304,14 @@ describe('the single-answer lock follows the verdict on the user own picks', () 
     // and theirs was wrong.
     await check(SINGLE, ['A pipe']);
 
-    expect(isCurrentOptionCorrect(binding('A multicast observable'), quizServiceStub(SINGLE), 0, verdicts))
-      .toBe(true);
+    expect(
+      isCurrentOptionCorrect(
+        binding('A multicast observable'),
+        quizServiceStub(SINGLE),
+        0,
+        verdicts
+      )
+    ).toBe(true);
     expect(hasAuthorizedCorrectSelection(quizServiceStub(SINGLE), 0, verdicts)).toBe(false);
   });
 
@@ -379,8 +386,7 @@ describe(`pending correctness is UNDEFINED, not false`, () => {
   const bare = () => ({ option: { text: `map` } }) as unknown as OptionBindings;
 
   it(`is undefined while idle`, () => {
-    expect(currentOptionCorrectness(bare(), quizServiceStub(MULTI), 0, verdicts))
-      .toBeUndefined();
+    expect(currentOptionCorrectness(bare(), quizServiceStub(MULTI), 0, verdicts)).toBeUndefined();
   });
 
   it(`is undefined while a check is still in flight`, () => {
@@ -481,7 +487,7 @@ describe('every paint path treats unknown as unknown', () => {
 
   /** option-item timerColor, expired-but-unrevealed branch. */
   const timerColour = (correctness: boolean | undefined, wasSelected: boolean) =>
-    (wasSelected && correctness === false ? INCORRECT_COLOR : null);
+    wasSelected && correctness === false ? INCORRECT_COLOR : null;
 
   it('paints NO background while the verdict is pending, even on the click', () => {
     expect(background(undefined, true)).toBeNull();

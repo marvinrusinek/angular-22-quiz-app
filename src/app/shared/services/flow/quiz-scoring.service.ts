@@ -23,10 +23,7 @@ export class QuizScoringService {
     const canonicalClicked: SelectedOption = {
       ...clickedOption,
       questionIndex: index,
-      selected:
-        clickedOption?.selected !== undefined
-          ? clickedOption.selected
-          : true
+      selected: clickedOption?.selected !== undefined ? clickedOption.selected : true
     };
 
     if (isSingleAnswerQuestion) {
@@ -41,9 +38,7 @@ export class QuizScoringService {
       merged.set(key, selection);
     }
 
-    const clickedKey = String(
-      canonicalClicked?.optionId ?? canonicalClicked?.text ?? ''
-    ).trim();
+    const clickedKey = String(canonicalClicked?.optionId ?? canonicalClicked?.text ?? '').trim();
 
     if (clickedKey) {
       const wasPreviouslySelected = merged.has(clickedKey);
@@ -51,9 +46,10 @@ export class QuizScoringService {
         clickedOption?.selected ??
         (clickedOption as any)?.checked ??
         (clickedOption as any)?.isSelected;
-      const shouldSelect = explicitSelectedState === undefined
-        ? !wasPreviouslySelected
-        : explicitSelectedState === true;
+      const shouldSelect =
+        explicitSelectedState === undefined
+          ? !wasPreviouslySelected
+          : explicitSelectedState === true;
 
       if (!shouldSelect) {
         merged.delete(clickedKey);
@@ -76,9 +72,9 @@ export class QuizScoringService {
       ...question,
       options: Array.isArray(question.options)
         ? question.options.map((option) => ({
-          ...option,
-          correct: (option.correct as any) === true || (option.correct as any) === 'true',
-        }))
+            ...option,
+            correct: (option.correct as any) === true || (option.correct as any) === 'true'
+          }))
         : []
     }));
   }

@@ -74,7 +74,8 @@ export function toInterviewApiError(error: unknown): InterviewApiError {
 
   // The backend distinguishes an expired assessment from an ordinary conflict
   // using the error CODE; both are 409, so the status alone is not enough.
-  if (backendCode === 'SESSION_EXPIRED') return new InterviewApiError('SESSION_EXPIRED', error.status);
+  if (backendCode === 'SESSION_EXPIRED')
+    return new InterviewApiError('SESSION_EXPIRED', error.status);
 
   switch (error.status) {
     case 400:

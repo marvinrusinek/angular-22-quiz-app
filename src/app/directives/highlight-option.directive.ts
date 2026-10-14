@@ -1,5 +1,13 @@
 import {
-  Directive, effect, ElementRef, inject, input, OnDestroy, OnInit, output, Renderer2
+  Directive,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  OnDestroy,
+  OnInit,
+  output,
+  Renderer2
 } from '@angular/core';
 
 import { Option } from '@shared/models/Option.model';
@@ -24,15 +32,14 @@ export class HighlightOptionDirective implements OnInit, OnDestroy {
   readonly optionClicked = output<Option>();
 
   // ── inputs ──────────────────────────────────────────────────────
-  readonly appHighlightInputTypeInput =
-    input<'checkbox' | 'radio'>('radio', { alias: 'appHighlightInputType' });
+  readonly appHighlightInputTypeInput = input<'checkbox' | 'radio'>('radio', {
+    alias: 'appHighlightInputType'
+  });
   readonly type = input<'single' | 'multiple'>('single');
-  readonly appHighlightResetInput =
-    input(false, { alias: 'appHighlightReset' });
+  readonly appHighlightResetInput = input(false, { alias: 'appHighlightReset' });
   readonly appResetBackground = input(false);
-  readonly optionInput =
-    input<Option | undefined>(undefined, { alias: 'option' });
-  readonly showFeedbackForOption = input<{ [key: number]: boolean; }>({});
+  readonly optionInput = input<Option | undefined>(undefined, { alias: 'option' });
+  readonly showFeedbackForOption = input<{ [key: number]: boolean }>({});
   readonly highlightCorrectAfterIncorrect = input(false);
   readonly allOptions = input<Option[]>([]);
   readonly optionsToDisplay = input<Option[]>([]);
@@ -121,11 +128,11 @@ export class HighlightOptionDirective implements OnInit, OnDestroy {
 
     setTimeout(() => {
       try {
-        if (this.destroyed) return;  // the host is gone; never mutate state after that
+        if (this.destroyed) return; // the host is gone; never mutate state after that
 
         const optionBinding = this.optionBinding();
         const opt = optionBinding?.option;
-        if (!opt) return;  // null guard for strict mode
+        if (!opt) return; // null guard for strict mode
 
         const host = this.el.nativeElement as HTMLElement;
 
@@ -218,7 +225,7 @@ export class HighlightOptionDirective implements OnInit, OnDestroy {
     // This ensures new questions always start clean, regardless of stale state
     if (cfg.shouldResetBackground) {
       opt.showIcon = false;
-      return;  // exit early - don't apply any stale highlighting
+      return; // exit early - don't apply any stale highlighting
     }
 
     // Do NOT set opt.showIcon = true here. Icon visibility decisions

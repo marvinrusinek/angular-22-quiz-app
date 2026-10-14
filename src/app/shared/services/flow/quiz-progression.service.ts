@@ -189,11 +189,15 @@ export class QuizProgressionService {
     if (!parsed || typeof parsed !== 'object') return null;
 
     const candidate = parsed as Partial<FurthestUnlockedRecord>;
-    if (candidate.v !== SCHEMA_VERSION) return null;                 // stale schema
+    if (candidate.v !== SCHEMA_VERSION) return null; // stale schema
     if (typeof candidate.quizId !== 'string' || candidate.quizId !== quizId) return null; // wrong quiz
     if (typeof candidate.attemptId !== 'string' || !candidate.attemptId) return null;
     if (candidate.attemptId !== this.quizService.getCurrentAttemptId()) return null; // stale/other attempt
-    if (typeof candidate.index !== 'number' || !Number.isInteger(candidate.index) || candidate.index < 1) {
+    if (
+      typeof candidate.index !== 'number' ||
+      !Number.isInteger(candidate.index) ||
+      candidate.index < 1
+    ) {
       return null; // negative, zero, non-integer
     }
 

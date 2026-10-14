@@ -16,7 +16,9 @@ function progress(over: Partial<InterviewCertificateProgress> = {}): InterviewCe
   const requiredInterviews = 5;
   return {
     interviewMasterEarned: over.interviewMasterEarned ?? angularExplorerEarned,
-    angularExplorerEarned, qualifyingInterviewsCompleted, requiredInterviews,
+    angularExplorerEarned,
+    qualifyingInterviewsCompleted,
+    requiredInterviews,
     interviewsRemaining: Math.max(requiredInterviews - qualifyingInterviewsCompleted, 0),
     isEligible: angularExplorerEarned && qualifyingInterviewsCompleted >= requiredInterviews,
     isUnlocked: over.isUnlocked ?? false,
@@ -25,7 +27,11 @@ function progress(over: Partial<InterviewCertificateProgress> = {}): InterviewCe
 }
 
 const ensureQualificationStarted = jest.fn();
-const stub = { unlocked: unlockedSig, progress: progressSig, ensureQualificationStarted } as unknown as InterviewCertificateService;
+const stub = {
+  unlocked: unlockedSig,
+  progress: progressSig,
+  ensureQualificationStarted
+} as unknown as InterviewCertificateService;
 const claimStatusSig = signal<'none' | 'pending' | 'verified'>('none');
 const claimStub = { status: claimStatusSig } as unknown as CertificateClaimService;
 
@@ -53,27 +59,36 @@ describe('InterviewCertificateCalloutComponent (Interview Builder)', () => {
 
   it('36. displays a compact certificate progress callout while locked', () => {
     const el = render().nativeElement as HTMLElement;
-    expect(el.querySelector('.icc__title')?.textContent).toContain('Angular Interview Master Certificate');
+    expect(el.querySelector('.icc__title')?.textContent).toContain(
+      'Angular Interview Master Certificate'
+    );
     expect(el.querySelector('.icc__line')).not.toBeNull();
     expect(el.querySelector('.icc__action')).not.toBeNull();
   });
 
   it('37. reflects Angular Explorer status', () => {
     progressSig.set(progress({ angularExplorerEarned: false, qualifyingInterviewsCompleted: 3 }));
-    expect((render().nativeElement as HTMLElement).textContent).not.toContain('Angular Explorer unlocked');
+    expect((render().nativeElement as HTMLElement).textContent).not.toContain(
+      'Angular Explorer unlocked'
+    );
     progressSig.set(progress({ angularExplorerEarned: true, qualifyingInterviewsCompleted: 3 }));
-    expect((render().nativeElement as HTMLElement).textContent).toContain('Angular Explorer unlocked');
+    expect((render().nativeElement as HTMLElement).textContent).toContain(
+      'Angular Explorer unlocked'
+    );
   });
 
   it('38. displays completed-interview progress', () => {
     progressSig.set(progress({ qualifyingInterviewsCompleted: 3 }));
-    expect((render().nativeElement as HTMLElement).textContent).toContain('Interviews completed: 3 / 5');
+    expect((render().nativeElement as HTMLElement).textContent).toContain(
+      'Interviews completed: 3 / 5'
+    );
   });
 
   it('39. displays the correct next action', () => {
     progressSig.set(progress({ angularExplorerEarned: true, qualifyingInterviewsCompleted: 3 }));
-    expect((render().nativeElement as HTMLElement).querySelector('.icc__action')?.textContent)
-      .toContain('Complete 2 more interviews');
+    expect(
+      (render().nativeElement as HTMLElement).querySelector('.icc__action')?.textContent
+    ).toContain('Complete 2 more interviews');
   });
 
   it('40. shows Certificate Earned + View Certificate when unlocked', () => {
@@ -93,7 +108,9 @@ describe('InterviewCertificateCalloutComponent (Interview Builder)', () => {
     expect(el.querySelector('button[type="submit"]')).toBeNull();
     expect(el.textContent).not.toContain('Build an Interview');
     // Read-only: the component exposes no unlock/mutation API.
-    expect((render().componentInstance as unknown as Record<string, unknown>)['unlock']).toBeUndefined();
+    expect(
+      (render().componentInstance as unknown as Record<string, unknown>)['unlock']
+    ).toBeUndefined();
   });
 
   it('43/45/46. accessible: decorative marks aria-hidden + sr summary present', () => {

@@ -4,7 +4,6 @@ import { catchError, map } from 'rxjs/operators';
 
 import { Option, QuestionPayload, QuestionType, Quiz, QuizQuestion } from '@shared/models';
 
-
 import { SK_DOT_CONFIRMED } from '@shared/constants/session-keys';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
@@ -165,9 +164,8 @@ export class QuizContentLoaderService {
     totalQuestions: number;
     quizId: string;
   }): Promise<FetchQuestionResult> {
-    return this.questionFetch.fetchAndPrepareQuestion(
-      params,
-      (idx) => this.sessionRestore.restoreSessionSelections(idx)
+    return this.questionFetch.fetchAndPrepareQuestion(params, (idx) =>
+      this.sessionRestore.restoreSessionSelections(idx)
     );
   }
 
@@ -180,10 +178,7 @@ export class QuizContentLoaderService {
     return this.questionFetch.loadQuestionByRoute(params);
   }
 
-  async fetchQuestionFromAPI(
-    quizId: string,
-    questionIndex: number
-  ): Promise<QuizQuestion | null> {
+  async fetchQuestionFromAPI(quizId: string, questionIndex: number): Promise<QuizQuestion | null> {
     return this.questionFetch.fetchQuestionFromAPI(quizId, questionIndex);
   }
 
@@ -248,7 +243,9 @@ export class QuizContentLoaderService {
           o.showIcon = false;
         }
       }
-    } catch (err: unknown) { swallow('quiz-content-loader.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('quiz-content-loader.service.ts', err);
+    }
   }
 
   enableAllOptionPointerEvents(): void {
@@ -279,9 +276,7 @@ export class QuizContentLoaderService {
     }
 
     const qState =
-      quizId && Number.isFinite(idx)
-        ? this.quizStateService.getQuestionState?.(quizId, idx)
-        : null;
+      quizId && Number.isFinite(idx) ? this.quizStateService.getQuestionState?.(quizId, idx) : null;
     if (qState) {
       qState.explanationDisplayed = false;
       qState.explanationText = '';
@@ -291,8 +286,7 @@ export class QuizContentLoaderService {
     ets.latestExplanationIndex = idx;
     ets._fetLocked = false;
 
-    const question = this.quizService.questions?.[idx]
-      ?? params.questionsArray[idx] ?? null;
+    const question = this.quizService.questions?.[idx] ?? params.questionsArray[idx] ?? null;
     if (question) {
       this.quizStateService.updateCurrentQuestion(question);
       this.quizService.updateCurrentQuestion(question);
@@ -309,7 +303,10 @@ export class QuizContentLoaderService {
     return { question, isNavigation };
   }
 
-  emitCorrectAnswersBanner(index: number, getNumberOfCorrectAnswersText: (numCorrect: number, totalOpts: number) => string): void {
+  emitCorrectAnswersBanner(
+    index: number,
+    getNumberOfCorrectAnswersText: (numCorrect: number, totalOpts: number) => string
+  ): void {
     const fresh = this.quizService.questions?.[index];
     if (!fresh || !Array.isArray(fresh.options)) return;
 
@@ -323,9 +320,8 @@ export class QuizContentLoaderService {
     // null means nobody has, and the banner is then omitted rather than guessed.
     const bannerCount = bannerCorrectCount(isMulti, this.topicQuizTypeRegistry, fresh.questionText);
     const totalOpts = fresh.options.length;
-    const banner = bannerCount !== null
-      ? getNumberOfCorrectAnswersText(bannerCount, totalOpts)
-      : '';
+    const banner =
+      bannerCount !== null ? getNumberOfCorrectAnswersText(bannerCount, totalOpts) : '';
 
     this.quizService.updateCorrectAnswersText(banner);
   }
@@ -337,9 +333,11 @@ export class QuizContentLoaderService {
     getScoringKey: (idx: number) => number;
   }): void {
     const { leavingIdx, leavingDotClass, quizId } = params;
-    const leavingStatus: 'correct' | 'wrong' | null =
-      leavingDotClass.includes('correct') ? 'correct' :
-      leavingDotClass.includes('wrong') ? 'wrong' : null;
+    const leavingStatus: 'correct' | 'wrong' | null = leavingDotClass.includes('correct')
+      ? 'correct'
+      : leavingDotClass.includes('wrong')
+        ? 'wrong'
+        : null;
 
     if (leavingStatus) {
       // NOTE: the score is credited ONLY on the completing click (option-ui-sync
@@ -351,11 +349,15 @@ export class QuizContentLoaderService {
       try {
         const key = `dot_status_${quizId}_${leavingIdx}`;
         localStorage.setItem(key, leavingStatus);
-      } catch (err: unknown) { swallow('quiz-content-loader.service.ts', err); }
+      } catch (err: unknown) {
+        swallow('quiz-content-loader.service.ts', err);
+      }
       this.selectedOptionService.clickConfirmedDotStatus.set(leavingIdx, leavingStatus);
-      try { 
+      try {
         sessionStorage.setItem(SK_DOT_CONFIRMED + leavingIdx, leavingStatus);
-      } catch (err: unknown) { swallow('quiz-content-loader.service.ts', err); }
+      } catch (err: unknown) {
+        swallow('quiz-content-loader.service.ts', err);
+      }
     }
   }
 
@@ -378,16 +380,12 @@ export class QuizContentLoaderService {
         const baseQuestion = payload?.question ?? fallbackQuestion;
         const safeOptions = Array.isArray(payload?.options)
           ? payload.options.map((option: Option) => ({
-            ...option,
-            correct: option.correct ?? false
-          }))
+              ...option,
+              correct: option.correct ?? false
+            }))
           : [];
 
-        const explanation = (
-          payload?.explanation ??
-          baseQuestion.explanation ??
-          ''
-        ).trim();
+        const explanation = (payload?.explanation ?? baseQuestion.explanation ?? '').trim();
 
         const normalizedQuestion: QuizQuestion = {
           ...baseQuestion,
@@ -419,7 +417,8 @@ export class QuizContentLoaderService {
     answerIds: number[];
   } {
     const option =
-      params.question?.options?.[params.optionIndex] ?? params.optionsToDisplay?.[params.optionIndex];
+      params.question?.options?.[params.optionIndex] ??
+      params.optionsToDisplay?.[params.optionIndex];
     if (!option) return { option: null, answers: params.answers, answerIds: [] };
 
     const correctAnswers = params.question?.options.filter((opt: Option) => opt.correct) ?? [];

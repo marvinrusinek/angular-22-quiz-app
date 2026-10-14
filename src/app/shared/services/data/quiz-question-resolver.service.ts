@@ -1,11 +1,8 @@
 import { Service } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import {
-  catchError, distinctUntilChanged, filter, map, take
-} from 'rxjs/operators';
+import { catchError, distinctUntilChanged, filter, map, take } from 'rxjs/operators';
 
 import { Option, QuestionType, QuizQuestion } from '@shared/models';
-
 
 import { QuizShuffleService } from '@shared/services/flow/quiz-shuffle.service';
 
@@ -13,7 +10,6 @@ import { isOptionCorrect } from '@shared/utils/is-option-correct';
 
 @Service()
 export class QuizQuestionResolverService {
-
   getQuestionByIndex(
     index: number,
     resolveShuffleQuizId: () => string | null,
@@ -115,12 +111,15 @@ export class QuizQuestionResolverService {
 
       if (!clone.type) clone.type = question.type ?? QuestionType.SingleAnswer;
 
-
       return clone;
     };
 
     if (shuffleActive) {
-      if (Array.isArray(shuffledQuestions) && shuffledQuestions.length > index && shuffledQuestions[index]) {
+      if (
+        Array.isArray(shuffledQuestions) &&
+        shuffledQuestions.length > index &&
+        shuffledQuestions[index]
+      ) {
         return shuffledQuestions[index];
       }
 
@@ -138,7 +137,10 @@ export class QuizQuestionResolverService {
           originalIndex >= 0 &&
           originalIndex < canonical.length
         ) {
-          const canonicalClone = cloneCandidate(canonical[originalIndex], 'canonical-original-index');
+          const canonicalClone = cloneCandidate(
+            canonical[originalIndex],
+            'canonical-original-index'
+          );
           if (canonicalClone) return canonicalClone;
         }
       }
@@ -191,25 +193,34 @@ export class QuizQuestionResolverService {
     const deepClone = JSON.parse(JSON.stringify(question)) as QuizQuestion;
 
     const normalize = (val: unknown): string =>
-      String(val ?? '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\u00A0/g, ' ').trim().toLowerCase().replace(/\s+/g, ' ');
+      String(val ?? '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/\u00A0/g, ' ')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ');
 
     // Phase 1: Normalize Options and enforce stable, unique numeric IDs
     const normalizedOptions = Array.isArray(deepClone.options)
       ? deepClone.options.map((option, optionIdx) => {
-        const rawOId = (option as any).optionId;
-        const oId = (typeof qIndex === 'number')
-          ? (qIndex + 1) * 100 + (optionIdx + 1)
-          : (!isNaN(Number(rawOId)) && Number(rawOId) > 0 ? Number(rawOId) : optionIdx + 1);
+          const rawOId = (option as any).optionId;
+          const oId =
+            typeof qIndex === 'number'
+              ? (qIndex + 1) * 100 + (optionIdx + 1)
+              : !isNaN(Number(rawOId)) && Number(rawOId) > 0
+                ? Number(rawOId)
+                : optionIdx + 1;
 
-        return {
-          ...option,
-          optionId: oId,
-          displayOrder: typeof option.displayOrder === 'number' ? option.displayOrder : optionIdx,
-          selected: option.selected === true || (option as any).selected === 'true',
-          highlight: option.highlight ?? false,
-          showIcon: option.showIcon ?? false
-        };
-      })
+          return {
+            ...option,
+            optionId: oId,
+            displayOrder: typeof option.displayOrder === 'number' ? option.displayOrder : optionIdx,
+            selected: option.selected === true || (option as any).selected === 'true',
+            highlight: option.highlight ?? false,
+            showIcon: option.showIcon ?? false
+          };
+        })
       : [];
 
     // Phase 2: Build authoritative 'answer' array
@@ -233,11 +244,10 @@ export class QuizQuestionResolverService {
         // reordering; the id does not. Only fall back to the id when no text
         // matches at all.
         const match =
-          normalizedOptions.find(o => {
+          normalizedOptions.find((o) => {
             const normOptText = normalize(o.text);
             return !!normOptText && !!normAnsText && normOptText === normAnsText;
-          }) ??
-          normalizedOptions.find(o => !isNaN(ansId) && Number(o.optionId) === ansId);
+          }) ?? normalizedOptions.find((o) => !isNaN(ansId) && Number(o.optionId) === ansId);
 
         if (match) {
           finalAnswers.push({
@@ -275,15 +285,16 @@ export class QuizQuestionResolverService {
     // Presence is still synchronized exactly as before; only absence is left
     // alone, so the bank-sourced paths (Weak Areas, pristine lookups) are
     // unaffected.
-    const hasCorrectness = Array.isArray(deepClone.answer) && deepClone.answer.length > 0
-      || normalizedOptions.some(o => (o as any).correct !== undefined);
+    const hasCorrectness =
+      (Array.isArray(deepClone.answer) && deepClone.answer.length > 0) ||
+      normalizedOptions.some((o) => (o as any).correct !== undefined);
 
     if (!hasCorrectness) {
       return { ...deepClone, options: normalizedOptions, answer: undefined };
     }
 
-    const correctIds = new Set(finalAnswers.map(a => Number(a.optionId)));
-    const finalOptions = normalizedOptions.map(o => ({
+    const correctIds = new Set(finalAnswers.map((a) => Number(a.optionId)));
+    const finalOptions = normalizedOptions.map((o) => ({
       ...o,
       correct: correctIds.has(Number(o.optionId))
     }));

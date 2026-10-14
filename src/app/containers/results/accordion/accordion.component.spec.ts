@@ -25,18 +25,37 @@ import { QuizQuestion } from '@shared/models';
  * `correct:true` option reads as CORRECT (vacuously — zero required texts).
  */
 const QUESTIONS: QuizQuestion[] = [
-  { questionText: 'Q1', options: [{ optionId: 1, text: 'A', correct: true }, { optionId: 2, text: 'B' }] } as QuizQuestion,
-  { questionText: 'Q2', options: [{ optionId: 1, text: 'C' }, { optionId: 2, text: 'D' }] } as QuizQuestion
+  {
+    questionText: 'Q1',
+    options: [
+      { optionId: 1, text: 'A', correct: true },
+      { optionId: 2, text: 'B' }
+    ]
+  } as QuizQuestion,
+  {
+    questionText: 'Q2',
+    options: [
+      { optionId: 1, text: 'C' },
+      { optionId: 2, text: 'D' }
+    ]
+  } as QuizQuestion
 ];
 
-async function render(): Promise<{ fixture: ComponentFixture<AccordionComponent>; comp: AccordionComponent }> {
+async function render(): Promise<{
+  fixture: ComponentFixture<AccordionComponent>;
+  comp: AccordionComponent;
+}> {
   TestBed.configureTestingModule({
     imports: [AccordionComponent],
     providers: [
       provideRouter([]),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, parent: null } },
       {
-        provide: QuizService, useValue: {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, parent: null }
+      },
+      {
+        provide: QuizService,
+        useValue: {
           questionsSig: () => QUESTIONS,
           userAnswers: [],
           questions: [],
@@ -45,9 +64,13 @@ async function render(): Promise<{ fixture: ComponentFixture<AccordionComponent>
           getFinalResultSnapshot: () => null
         }
       },
-      { provide: QuizDataService, useValue: { getQuestionsForQuiz: () => ({ pipe: () => ({ subscribe: () => undefined }) }) } },
       {
-        provide: SelectedOptionService, useValue: {
+        provide: QuizDataService,
+        useValue: { getQuestionsForQuiz: () => ({ pipe: () => ({ subscribe: () => undefined }) }) }
+      },
+      {
+        provide: SelectedOptionService,
+        useValue: {
           recoverAnswersForResults: jest.fn(),
           rawSelectionsMap: new Map(),
           selectedOptionsMap: new Map()
@@ -127,9 +150,13 @@ describe('AccordionComponent — Review filter Angular Aria Toolbar prototype', 
       imports: [AccordionComponent],
       providers: [
         provideRouter([]),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, parent: null } },
         {
-          provide: QuizService, useValue: {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, parent: null }
+        },
+        {
+          provide: QuizService,
+          useValue: {
             questionsSig: () => withSnippet,
             userAnswers: [],
             questions: [],
@@ -138,9 +165,15 @@ describe('AccordionComponent — Review filter Angular Aria Toolbar prototype', 
             getFinalResultSnapshot: () => null
           }
         },
-        { provide: QuizDataService, useValue: { getQuestionsForQuiz: () => ({ pipe: () => ({ subscribe: () => undefined }) }) } },
         {
-          provide: SelectedOptionService, useValue: {
+          provide: QuizDataService,
+          useValue: {
+            getQuestionsForQuiz: () => ({ pipe: () => ({ subscribe: () => undefined }) })
+          }
+        },
+        {
+          provide: SelectedOptionService,
+          useValue: {
             recoverAnswersForResults: jest.fn(),
             rawSelectionsMap: new Map(),
             selectedOptionsMap: new Map()
@@ -155,7 +188,9 @@ describe('AccordionComponent — Review filter Angular Aria Toolbar prototype', 
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const headers = [...fixture.nativeElement.querySelectorAll('mat-expansion-panel-header')] as HTMLElement[];
+    const headers = [
+      ...fixture.nativeElement.querySelectorAll('mat-expansion-panel-header')
+    ] as HTMLElement[];
     headers[0]!.click();
     fixture.detectChanges();
     await fixture.whenStable();

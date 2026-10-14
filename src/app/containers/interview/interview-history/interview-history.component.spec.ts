@@ -52,14 +52,18 @@ describe('InterviewHistoryComponent', () => {
 
   it('2. shows the empty state when there is no history', () => {
     const el = render().nativeElement as HTMLElement;
-    expect(el.querySelector('.interview-history__empty')?.textContent).toContain('No completed interviews yet');
+    expect(el.querySelector('.interview-history__empty')?.textContent).toContain(
+      'No completed interviews yet'
+    );
     expect(el.querySelector('.ih-card')).toBeNull();
   });
 
   it('4/5. lists attempts newest first with chronological numbers', () => {
     seed([entry(70, 1), entry(80, 2), entry(90, 3)]);
     const el = render().nativeElement as HTMLElement;
-    const titles = Array.from(el.querySelectorAll('.ih-card__title')).map((n) => n.textContent?.trim());
+    const titles = Array.from(el.querySelectorAll('.ih-card__title')).map((n) =>
+      n.textContent?.trim()
+    );
     expect(titles).toEqual(['Interview #3', 'Interview #2', 'Interview #1']);
     // Newest (90%) card is first.
     expect(el.querySelector('.ih-card__pct')?.textContent).toContain('90%');
@@ -67,9 +71,9 @@ describe('InterviewHistoryComponent', () => {
 
   it('11-14. summary metrics reuse the shared trends', () => {
     seed([entry(70, 1), entry(90, 2), entry(84, 3)]);
-    const dds = Array.from((render().nativeElement as HTMLElement).querySelectorAll('.ih-summary dd')).map(
-      (n) => n.textContent?.trim()
-    );
+    const dds = Array.from(
+      (render().nativeElement as HTMLElement).querySelectorAll('.ih-summary dd')
+    ).map((n) => n.textContent?.trim());
     // Completed / Best / Average / Latest
     expect(dds).toEqual(['3', '90%', '81%', '84%']);
   });
@@ -79,23 +83,25 @@ describe('InterviewHistoryComponent', () => {
     const fixture = render();
     const el = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelectorAll('.ih-card')).toHaveLength(3);   // All
+    expect(el.querySelectorAll('.ih-card')).toHaveLength(3); // All
 
     const filters = el.querySelectorAll<HTMLButtonElement>('.ih-filter');
     // filters: [All, Submitted, Time Expired]
     filters[1].click();
     fixture.detectChanges();
-    expect(el.querySelectorAll('.ih-card')).toHaveLength(2);   // Submitted
+    expect(el.querySelectorAll('.ih-card')).toHaveLength(2); // Submitted
 
     filters[2].click();
     fixture.detectChanges();
-    expect(el.querySelectorAll('.ih-card')).toHaveLength(1);   // Time Expired
+    expect(el.querySelectorAll('.ih-card')).toHaveLength(1); // Time Expired
     expect(el.querySelector('.ih-card__badge')?.textContent).toContain('Time expired');
   });
 
-  it('9. each card links to that attempt\'s read-only summary', () => {
+  it("9. each card links to that attempt's read-only summary", () => {
     seed([entry(70, 1)]);
-    const link = (render().nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.ih-card__actions a');
+    const link = (render().nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
+      '.ih-card__actions a'
+    );
     expect(link?.textContent).toContain('View Summary');
     expect(link?.getAttribute('href')).toContain('/interview/history/att-1');
   });
@@ -107,8 +113,9 @@ describe('InterviewHistoryComponent', () => {
     seed([entry(70, 1), entry(80, 2)]);
     const cards = Array.from((render().nativeElement as HTMLElement).querySelectorAll('.ih-card'));
     for (const card of cards) {
-      const labels = Array.from(card.querySelectorAll<HTMLAnchorElement>('.ih-card__actions a'))
-        .map((el) => el.textContent?.trim());
+      const labels = Array.from(
+        card.querySelectorAll<HTMLAnchorElement>('.ih-card__actions a')
+      ).map((el) => el.textContent?.trim());
       expect(labels).toEqual(['View Summary']);
     }
   });
@@ -116,9 +123,12 @@ describe('InterviewHistoryComponent', () => {
   it('orders the page summary → interviews → readiness → topic trends', () => {
     seed([entry(70, 1)]);
     const el = render().nativeElement as HTMLElement;
-    const nodes = ['.ih-summary', '#interviews', '.interview-history__readiness', '#topic-trends'].map(
-      (sel) => el.querySelector(sel)
-    );
+    const nodes = [
+      '.ih-summary',
+      '#interviews',
+      '.interview-history__readiness',
+      '#topic-trends'
+    ].map((sel) => el.querySelector(sel));
     for (const n of nodes) expect(n).not.toBeNull();
     // The interviews list contains the cards, and each section precedes the next.
     expect(el.querySelector('#interviews .ih-card')).not.toBeNull();
@@ -131,7 +141,9 @@ describe('InterviewHistoryComponent', () => {
   it('jumpToInterviews smooth-scrolls the interviews section into view', () => {
     seed([entry(70, 1)]);
     const fixture = render();
-    const section = (fixture.nativeElement as HTMLElement).querySelector('#interviews') as HTMLElement;
+    const section = (fixture.nativeElement as HTMLElement).querySelector(
+      '#interviews'
+    ) as HTMLElement;
     const scroll = jest.fn();
     section.scrollIntoView = scroll;
     fixture.componentInstance.jumpToInterviews();
@@ -164,9 +176,9 @@ describe('InterviewHistoryComponent', () => {
       { ...entry(70, 1), attemptNumber: 6 },
       { ...entry(80, 2), attemptNumber: 7 }
     ]);
-    const titles = Array.from((render().nativeElement as HTMLElement).querySelectorAll('.ih-card__title')).map(
-      (n) => n.textContent?.trim()
-    );
+    const titles = Array.from(
+      (render().nativeElement as HTMLElement).querySelectorAll('.ih-card__title')
+    ).map((n) => n.textContent?.trim());
     expect(titles).toEqual(['Interview #7', 'Interview #6']);
   });
 
@@ -174,9 +186,11 @@ describe('InterviewHistoryComponent', () => {
     seed([entry(70, 1, 'submitted')]);
     const fixture = render();
     const el = fixture.nativeElement as HTMLElement;
-    el.querySelectorAll<HTMLButtonElement>('.ih-filter')[2].click();  // Time Expired
+    el.querySelectorAll<HTMLButtonElement>('.ih-filter')[2].click(); // Time Expired
     fixture.detectChanges();
-    expect(el.querySelector('.interview-history__none')?.textContent).toContain('No interviews match');
+    expect(el.querySelector('.interview-history__none')?.textContent).toContain(
+      'No interviews match'
+    );
   });
 });
 
@@ -202,7 +216,8 @@ describe('InterviewHistoryComponent — lifetime vs retained counts', () => {
     expect(comp.lifetimeCount()).toBe(25);
     expect(comp.hasAgedOut()).toBe(true);
 
-    const summary = (fixture.nativeElement as HTMLElement).querySelector('.ih-summary')?.textContent ?? '';
+    const summary =
+      (fixture.nativeElement as HTMLElement).querySelector('.ih-summary')?.textContent ?? '';
     expect(summary).toContain('25');
     expect(summary).toContain('last 20 shown');
   });
@@ -221,7 +236,7 @@ describe('InterviewHistoryComponent — lifetime vs retained counts', () => {
   });
 
   it('falls back to the retained count for legacy entries with no attemptNumber', () => {
-    seed([entry(60, 1), entry(70, 2)]);   // no attemptNumber field at all
+    seed([entry(60, 1), entry(70, 2)]); // no attemptNumber field at all
 
     const comp = render().componentInstance;
     expect(comp.lifetimeCount()).toBe(2);
@@ -246,7 +261,9 @@ describe('InterviewHistoryComponent — filter Angular Aria Toolbar prototype', 
     return fixture;
   }
 
-  function filterButtons(fixture: ComponentFixture<InterviewHistoryComponent>): HTMLButtonElement[] {
+  function filterButtons(
+    fixture: ComponentFixture<InterviewHistoryComponent>
+  ): HTMLButtonElement[] {
     return [...fixture.nativeElement.querySelectorAll('.ih-filter')] as HTMLButtonElement[];
   }
 

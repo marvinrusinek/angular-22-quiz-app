@@ -22,9 +22,7 @@ const API_VIEWS = [
     type: 'multiple' as const,
     difficulty: 'intermediate',
     correctCount: 2,
-    options: [
-      { text: 'mergeMap' }, { text: 'tap' }, { text: 'switchMap' }, { text: 'filter' }
-    ]
+    options: [{ text: 'mergeMap' }, { text: 'tap' }, { text: 'switchMap' }, { text: 'filter' }]
   },
   {
     questionText: 'Is a signal synchronous?',
@@ -130,7 +128,10 @@ describe('AssessmentBuilder — API questions in, no answer key out', () => {
     // API-sourced option it produces exactly this, which the invariant above
     // rejects — so the assertion genuinely constrains the production code.
     const apiOption = { optionId: 1, text: 'mergeMap' };
-    const fabricated = { ...apiOption, correct: (apiOption as { correct?: boolean }).correct === true };
+    const fabricated = {
+      ...apiOption,
+      correct: (apiOption as { correct?: boolean }).correct === true
+    };
 
     expect(Object.prototype.hasOwnProperty.call(fabricated, 'correct')).toBe(true);
     expect(fabricated.correct).toBe(false);

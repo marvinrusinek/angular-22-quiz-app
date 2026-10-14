@@ -56,7 +56,11 @@ function makeComp() {
   }));
   return {
     optionsToDisplay: opts,
-    optionBindings: Object.assign(() => bindings, { set: (n: any[]) => { bindings = n; } }),
+    optionBindings: Object.assign(() => bindings, {
+      set: (n: any[]) => {
+        bindings = n;
+      }
+    }),
     currentQuestion: () => ({ questionText: QUESTION, options: opts }),
     disabledOptionsPerQuestion: new Map<number, Set<number>>(),
     cdRef: { markForCheck: () => undefined, detectChanges: () => undefined },
@@ -71,7 +75,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       {
         provide: ExplanationTextService,
@@ -83,7 +90,10 @@ beforeEach(() => {
           formatExplanation: (_q: any, _i: number[], t: string) => t
         }
       },
-      { provide: NextButtonStateService, useValue: { setNextButtonState: () => undefined, forceEnable: () => undefined } },
+      {
+        provide: NextButtonStateService,
+        useValue: { setNextButtonState: () => undefined, forceEnable: () => undefined }
+      },
       {
         provide: QuizService,
         useValue: {
@@ -111,7 +121,10 @@ beforeEach(() => {
           clickConfirmedDotStatus: new Map()
         }
       },
-      { provide: TimerService, useValue: { stopTimer: () => undefined, resetTimer: () => undefined } },
+      {
+        provide: TimerService,
+        useValue: { stopTimer: () => undefined, resetTimer: () => undefined }
+      },
       { provide: FeedbackService, useValue: { setCorrectMessage: () => '' } },
       { provide: QuestionVerdictService, useValue: { verdictFor: () => IDLE_VERDICT_STATE } }
     ]
@@ -128,7 +141,12 @@ const resolved = () => quiz.questionResolved.get(IDX);
 /** 'map'(0) and 'filter'(2) are the correct pair; 'Subject'(1) is wrong. */
 const disablePass = (clicked: number, durable: number[]) =>
   (service as any).applyMultiAnswerDisableState(
-    makeComp(), clicked, IDX, IDX, new Set(durable), [0, 2]
+    makeComp(),
+    clicked,
+    IDX,
+    IDX,
+    new Set(durable),
+    [0, 2]
   );
 
 describe('the click records the answer but never completes the question', () => {
@@ -143,14 +161,14 @@ describe('the click records the answer but never completes the question', () => 
   });
 
   it('does NOT complete on the click when a wrong option is also picked', () => {
-    disablePass(2, [0, 1, 2]);   // map + Subject(wrong) + filter
+    disablePass(2, [0, 1, 2]); // map + Subject(wrong) + filter
 
     expect(completion()).toBeUndefined();
     expect(perfect()).toBeUndefined();
   });
 
   it('a partial selection is neither', () => {
-    disablePass(0, [0]);         // one of two correct
+    disablePass(0, [0]); // one of two correct
 
     expect(completion()).toBeUndefined();
     expect(perfect()).toBeUndefined();
@@ -228,7 +246,11 @@ describe('auto-reveal does not manufacture completion', () => {
     // never marked finished. Pinning that here because a comment claiming the
     // opposite previously misdirected a whole migration.
     (service as any).applyAutoRevealBindings(
-      c, c.optionBindings(), new Set([0, 2]), new Set<number>(), 1
+      c,
+      c.optionBindings(),
+      new Set([0, 2]),
+      new Set<number>(),
+      1
     );
 
     expect(resolved()).toBeUndefined();

@@ -87,7 +87,7 @@ describe('what is deliberately kept', () => {
     expect(parsed.completedAt).toBe(1_700_000_000_000);
   });
 
-  it('keeps the user\'s OWN selection and outcome', () => {
+  it("keeps the user's OWN selection and outcome", () => {
     const item = toDurableAnalysisItem(ITEM);
 
     // Neither discloses the key: these are what the user did, and how they did.
@@ -115,15 +115,17 @@ describe('legacy entries persisted by earlier builds', () => {
       total: 1,
       percentage: 100,
       completedAt: 1,
-      analysis: [{
-        questionIndex: 0,
-        questionText: 'Select every operator',
-        wasCorrect: true,
-        selectedOptionIds: ['2'],
-        correctOptionIds: ['2'],
-        correctOptionTexts: [REVEALED_ANSWER],
-        explanation: EXPLANATION
-      }]
+      analysis: [
+        {
+          questionIndex: 0,
+          questionText: 'Select every operator',
+          wasCorrect: true,
+          selectedOptionIds: ['2'],
+          correctOptionIds: ['2'],
+          correctOptionTexts: [REVEALED_ANSWER],
+          explanation: EXPLANATION
+        }
+      ]
     } as unknown as FinalResult;
 
     const scrubbed = toDurableFinalResult(legacy);
@@ -140,7 +142,12 @@ describe('legacy entries persisted by earlier builds', () => {
   });
 
   it('tolerates an entry with no analysis array', () => {
-    const legacy = { quizId: 'rxjs', correct: 0, total: 0, percentage: 0 } as unknown as FinalResult;
+    const legacy = {
+      quizId: 'rxjs',
+      correct: 0,
+      total: 0,
+      percentage: 0
+    } as unknown as FinalResult;
     expect(() => toDurableFinalResult(legacy)).not.toThrow();
     expect(toDurableFinalResult(legacy).analysis).toEqual([]);
   });

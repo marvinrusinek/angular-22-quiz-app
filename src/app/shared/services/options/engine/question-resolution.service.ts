@@ -94,10 +94,20 @@ export class QuestionResolutionService {
     const s = this.gatherSignals(qIdx, includeDot, includeSelections);
 
     const fullyResolvedCorrect = this.combineFullyResolvedCorrect(
-      s.scoredCorrect, s.isMultiAnswer, s.multiPerfect, s.computedPerfect, s.dot
+      s.scoredCorrect,
+      s.isMultiAnswer,
+      s.multiPerfect,
+      s.computedPerfect,
+      s.dot
     );
     const fullyResolvedWrong = includeWrongDetection
-      ? this.combineFullyResolvedWrong(s.scoredCorrect, s.isMultiAnswer, s.computedImperfect, s.dot, s.multiPerfect)
+      ? this.combineFullyResolvedWrong(
+          s.scoredCorrect,
+          s.isMultiAnswer,
+          s.computedImperfect,
+          s.dot,
+          s.multiPerfect
+        )
       : false;
 
     return { fullyResolvedCorrect, fullyResolvedWrong, ...s };
@@ -141,18 +151,23 @@ export class QuestionResolutionService {
       selectedVerdicts,
       revealedCorrectOptionTexts,
       isMultiAnswer,
-      liveSel,
+      liveSel
     };
   }
 
   // Signal 1: dot status
   private resolveDotSignal(qIdx: number): 'correct' | 'wrong' | undefined {
-    let dot = this.selectedOptionService.clickConfirmedDotStatus?.get?.(qIdx) as 'correct' | 'wrong' | undefined;
+    let dot = this.selectedOptionService.clickConfirmedDotStatus?.get?.(qIdx) as
+      | 'correct'
+      | 'wrong'
+      | undefined;
     if (!dot) {
       try {
         const stored = sessionStorage.getItem(SK_DOT_CONFIRMED + qIdx);
         if (stored === 'correct' || stored === 'wrong') dot = stored;
-      } catch (err: unknown) { swallow('question-resolution.service.ts resolveDotSignal', err); }
+      } catch (err: unknown) {
+        swallow('question-resolution.service.ts resolveDotSignal', err);
+      }
     }
     return dot;
   }
@@ -188,10 +203,17 @@ export class QuestionResolutionService {
     }
     let effectiveQuizId = qs?.quizId || '';
     if (!effectiveQuizId) {
-      try { effectiveQuizId = localStorage.getItem('lastQuizId') || ''; } catch (err: unknown) { swallow('question-resolution.service.ts resolveScoredCorrect', err); }
+      try {
+        effectiveQuizId = localStorage.getItem('lastQuizId') || '';
+      } catch (err: unknown) {
+        swallow('question-resolution.service.ts resolveScoredCorrect', err);
+      }
     }
     if (!effectiveQuizId) return false;
-    const origIdx = qs?.scoringService?.quizShuffleService?.toOriginalIndex?.(effectiveQuizId, qIdx);
+    const origIdx = qs?.scoringService?.quizShuffleService?.toOriginalIndex?.(
+      effectiveQuizId,
+      qIdx
+    );
     if (typeof origIdx === 'number' && origIdx >= 0) {
       return scoreMap.get(origIdx) === true;
     }
@@ -213,16 +235,16 @@ export class QuestionResolutionService {
     try {
       const qs: any = this.quizService;
       const question =
-        qs?.getQuestionsInDisplayOrder?.()?.[qIdx]
-        ?? qs?.questions?.[qIdx]
-        ?? qs?.shuffledQuestions?.[qIdx];
+        qs?.getQuestionsInDisplayOrder?.()?.[qIdx] ??
+        qs?.questions?.[qIdx] ??
+        qs?.shuffledQuestions?.[qIdx];
       const declared =
-        declaredIsMultiAnswer(question)
-        ?? this.typeRegistry?.isMultiAnswer?.(question?.questionText)
-        ?? null;
+        declaredIsMultiAnswer(question) ??
+        this.typeRegistry?.isMultiAnswer?.(question?.questionText) ??
+        null;
       return declared !== false;
     } catch {
-      return true;   // fail closed — withhold rather than disclose
+      return true; // fail closed — withhold rather than disclose
     }
   }
   // Signal 5: selection comparison
@@ -246,13 +268,15 @@ export class QuestionResolutionService {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) sel = parsed;
       }
-    } catch (err: unknown) { swallow('question-resolution.service.ts resolveSelectionSignals', err); }
+    } catch (err: unknown) {
+      swallow('question-resolution.service.ts resolveSelectionSignals', err);
+    }
     if (sel.length === 0) {
       sel = this.selectedOptionService.getSelectedOptionsForQuestion?.(qIdx) ?? [];
     }
 
-    const liveSel = sel.filter((s: any) =>
-      s?.selected === true || s?.showIcon === true || s?.highlight === true
+    const liveSel = sel.filter(
+      (s: any) => s?.selected === true || s?.showIcon === true || s?.highlight === true
     );
 
     let computedPerfect = false;
@@ -321,9 +345,7 @@ export class QuestionResolutionService {
   ): boolean {
     return (
       (!scoredCorrect || isCanonMulti) &&
-      (computedImperfect ||
-        dot === 'wrong' ||
-        (isCanonMulti && dot === 'correct' && !multiPerfect))
+      (computedImperfect || dot === 'wrong' || (isCanonMulti && dot === 'correct' && !multiPerfect))
     );
   }
 

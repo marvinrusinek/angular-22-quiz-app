@@ -113,10 +113,10 @@ export class BackendInterviewResultService {
     switch (outcome.kind) {
       case 'loaded':
         return { kind: 'results', sessionId: reference.sessionId };
-      case 'unauthorized':   // load() already dropped the dead reference
+      case 'unauthorized': // load() already dropped the dead reference
       case 'none':
         return { kind: 'builder' };
-      default:               // 'not-ready' | 'unavailable' | 'malformed'
+      default: // 'not-ready' | 'unavailable' | 'malformed'
         this.session.markResumeUnresolved();
         return { kind: 'unresolved' };
     }
@@ -145,9 +145,7 @@ export class BackendInterviewResultService {
     this._loading.set(true);
     this._error.set(null);
     try {
-      const result = await firstValueFrom(
-        this.api.getResult(routeSessionId, token)
-      );
+      const result = await firstValueFrom(this.api.getResult(routeSessionId, token));
       if (!isUsableResult(result)) return this.fail('malformed');
       return this.adopt(result);
     } catch (err: unknown) {

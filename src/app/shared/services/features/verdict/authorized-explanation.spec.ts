@@ -7,10 +7,7 @@ import { of } from 'rxjs';
 import { SharedOptionExplanationService } from '@shared/services/features/shared-option/shared-option-explanation.service';
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuestionVerdictService } from './question-verdict.service';
-import {
-  authorizedExplanation,
-  explanationFromVerdict
-} from './authorized-correctness';
+import { authorizedExplanation, explanationFromVerdict } from './authorized-correctness';
 import { IDLE_VERDICT_STATE } from './question-verdict.types';
 import type { QuestionVerdictState } from './question-verdict.types';
 import { QuizService } from '@shared/services/data/quiz.service';
@@ -91,7 +88,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' },
       { provide: ExplanationTextService, useValue: explanationTextStub },
       { provide: QuizStateService, useValue: { setDisplayState: () => undefined } },
@@ -99,7 +99,9 @@ beforeEach(() => {
         provide: QuizService,
         useValue: {
           quizId: 'rxjs',
-          get questions() { return questions; },
+          get questions() {
+            return questions;
+          },
           getQuestionsInDisplayOrder: () => questions,
           isShuffleEnabled: () => false,
           shuffledQuestions: [],
@@ -131,7 +133,10 @@ function fetText(index = 0): string {
     currentQuestion: questions[index] ?? null,
     quizId: 'rxjs',
     optionBindings: (questions[index]?.options ?? []).map((option, i) => ({
-      option, index: i, isSelected: false, isCorrect: null
+      option,
+      index: i,
+      isSelected: false,
+      isCorrect: null
     })) as never,
     optionsToDisplay: (questions[index]?.options ?? []) as never,
     isMultiMode: false
@@ -140,8 +145,12 @@ function fetText(index = 0): string {
 
 describe('the authorized-explanation accessor', () => {
   it('answers only on a terminal phase', () => {
-    expect(explanationFromVerdict(state({ phase: 'resolved', explanation: AUTHORIZED }))).toBe(AUTHORIZED);
-    expect(explanationFromVerdict(state({ phase: 'expired', explanation: AUTHORIZED }))).toBe(AUTHORIZED);
+    expect(explanationFromVerdict(state({ phase: 'resolved', explanation: AUTHORIZED }))).toBe(
+      AUTHORIZED
+    );
+    expect(explanationFromVerdict(state({ phase: 'expired', explanation: AUTHORIZED }))).toBe(
+      AUTHORIZED
+    );
   });
 
   it('returns NULL — never a local read — before authorization', () => {
@@ -213,21 +222,27 @@ describe('the FET renders the AUTHORIZED text, never the local bank', () => {
   });
 
   it('works with NO local explanation field at all — the post-cutover shape', () => {
-    questions = [{
-      questionText: QUESTION,
-      type: QuestionType.SingleAnswer,
-      options: [
-        { optionId: 1, text: 'Subscribes for you', value: 1 },
-        { optionId: 2, text: 'Formats a date', value: 2 }
-      ]
-    } as unknown as QuizQuestion];
+    questions = [
+      {
+        questionText: QUESTION,
+        type: QuestionType.SingleAnswer,
+        options: [
+          { optionId: 1, text: 'Subscribes for you', value: 1 },
+          { optionId: 2, text: 'Formats a date', value: 2 }
+        ]
+      } as unknown as QuizQuestion
+    ];
     verdictState = state({ phase: 'resolved', explanation: AUTHORIZED });
 
     expect(fetText()).toContain(AUTHORIZED);
   });
 
   it('holds for every declared type', () => {
-    for (const type of [QuestionType.SingleAnswer, QuestionType.TrueFalse, QuestionType.MultipleAnswer]) {
+    for (const type of [
+      QuestionType.SingleAnswer,
+      QuestionType.TrueFalse,
+      QuestionType.MultipleAnswer
+    ]) {
       questions = [localQuestion(type)];
       verdictState = state({ phase: 'resolved', explanation: AUTHORIZED });
 
@@ -242,30 +257,34 @@ describe('the FET renders the AUTHORIZED text, never the local bank', () => {
     questions = [{ ...localQuestion(), options: [] } as unknown as QuizQuestion];
     verdictState = state({ phase: 'checking' });
 
-    expect(service.resolveExplanationText({
-      resolvedIndex: 0,
-      question: questions[0]!,
-      currentQuestion: questions[0]!,
-      quizId: 'rxjs',
-      optionBindings: [] as never,
-      optionsToDisplay: [] as never,
-      isMultiMode: false
-    })).toBe('');
+    expect(
+      service.resolveExplanationText({
+        resolvedIndex: 0,
+        question: questions[0]!,
+        currentQuestion: questions[0]!,
+        quizId: 'rxjs',
+        optionBindings: [] as never,
+        optionsToDisplay: [] as never,
+        isMultiMode: false
+      })
+    ).toBe('');
   });
 
   it('uses the verdict on that same no-options path once authorized', () => {
     questions = [{ ...localQuestion(), options: [] } as unknown as QuizQuestion];
     verdictState = state({ phase: 'resolved', explanation: AUTHORIZED });
 
-    expect(service.resolveExplanationText({
-      resolvedIndex: 0,
-      question: questions[0]!,
-      currentQuestion: questions[0]!,
-      quizId: 'rxjs',
-      optionBindings: [] as never,
-      optionsToDisplay: [] as never,
-      isMultiMode: false
-    })).toBe(AUTHORIZED);
+    expect(
+      service.resolveExplanationText({
+        resolvedIndex: 0,
+        question: questions[0]!,
+        currentQuestion: questions[0]!,
+        quizId: 'rxjs',
+        optionBindings: [] as never,
+        optionsToDisplay: [] as never,
+        isMultiMode: false
+      })
+    ).toBe(AUTHORIZED);
   });
 });
 

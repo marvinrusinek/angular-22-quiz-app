@@ -17,16 +17,24 @@ function progress(over: Partial<InterviewCertificateProgress> = {}): InterviewCe
   const requiredInterviews = 5;
   return {
     interviewMasterEarned: over.interviewMasterEarned ?? angularExplorerEarned,
-    angularExplorerEarned, qualifyingInterviewsCompleted, requiredInterviews,
+    angularExplorerEarned,
+    qualifyingInterviewsCompleted,
+    requiredInterviews,
     interviewsRemaining: Math.max(requiredInterviews - qualifyingInterviewsCompleted, 0),
-    isEligible: over.isEligible ?? (angularExplorerEarned && qualifyingInterviewsCompleted >= requiredInterviews),
+    isEligible:
+      over.isEligible ??
+      (angularExplorerEarned && qualifyingInterviewsCompleted >= requiredInterviews),
     isUnlocked: over.isUnlocked ?? false,
     ...over
   };
 }
 
 const ensureQualificationStarted = jest.fn();
-const certStub = { unlocked: unlockedSig, progress: progressSig, ensureQualificationStarted } as unknown as InterviewCertificateService;
+const certStub = {
+  unlocked: unlockedSig,
+  progress: progressSig,
+  ensureQualificationStarted
+} as unknown as InterviewCertificateService;
 const claimStub = { status: claimStatusSig } as unknown as CertificateClaimService;
 
 function render(): ComponentFixture<InterviewCertificateStatusComponent> {
@@ -67,11 +75,13 @@ describe('InterviewCertificateStatusComponent', () => {
 
   it('renders singular/plural next action', () => {
     progressSig.set(progress({ angularExplorerEarned: true, qualifyingInterviewsCompleted: 4 }));
-    expect((render().nativeElement as HTMLElement).querySelector('.ic-status__action')?.textContent)
-      .toContain('Complete 1 more interview ');
+    expect(
+      (render().nativeElement as HTMLElement).querySelector('.ic-status__action')?.textContent
+    ).toContain('Complete 1 more interview ');
     progressSig.set(progress({ angularExplorerEarned: true, qualifyingInterviewsCompleted: 3 }));
-    expect((render().nativeElement as HTMLElement).querySelector('.ic-status__action')?.textContent)
-      .toContain('Complete 2 more interviews');
+    expect(
+      (render().nativeElement as HTMLElement).querySelector('.ic-status__action')?.textContent
+    ).toContain('Complete 2 more interviews');
   });
 
   it('eligible but not yet claimed: shows a CTA to the claim form, never an automatic unlock', () => {
@@ -86,7 +96,7 @@ describe('InterviewCertificateStatusComponent', () => {
   it('already has a certificate (legacy): shows only the View Certificate CTA', () => {
     unlockedSig.set(true);
     const el = render().nativeElement as HTMLElement;
-    expect(el.querySelector('.ic-status--progress')).toBeNull();   // not both at once
+    expect(el.querySelector('.ic-status--progress')).toBeNull(); // not both at once
     expect(el.querySelector('.ic-status--unlocked')).not.toBeNull();
     const cta = el.querySelector('.ic-status__cta') as HTMLAnchorElement;
     expect(cta?.textContent).toContain('View Certificate');

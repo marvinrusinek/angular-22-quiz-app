@@ -57,28 +57,32 @@ export class ApiTopicQuizVerdictAdapter implements TopicQuizVerdictAdapter {
     questionText: string,
     selectedOptionTexts: readonly string[]
   ): Observable<QuestionCheckResult> {
-    return this.attempts.withQuestionReceipt(quizId, questionText, (headers) =>
-      this.http.post<QuestionCheckResult>(
-        this.checkUrl(quizId),
-        // Identity is TEXT. No ids, no indexes, nothing derived from the
-        // rendered order — the server resolves both question and options from
-        // these strings.
-        { questionText, selectedOptionTexts: [...selectedOptionTexts] },
-        { headers }
-      )
-    ).pipe(
-      map((result) => {
-        if (!result || typeof (result as { status?: unknown }).status !== 'string') {
-          throw new QuestionVerdictError('Invalid submission');
-        }
-        return result;
-      }),
-      catchError((err: unknown) =>
-        throwError(() =>
-          err instanceof QuestionVerdictError ? err : new QuestionVerdictError('Invalid submission')
+    return this.attempts
+      .withQuestionReceipt(quizId, questionText, (headers) =>
+        this.http.post<QuestionCheckResult>(
+          this.checkUrl(quizId),
+          // Identity is TEXT. No ids, no indexes, nothing derived from the
+          // rendered order — the server resolves both question and options from
+          // these strings.
+          { questionText, selectedOptionTexts: [...selectedOptionTexts] },
+          { headers }
         )
       )
-    );
+      .pipe(
+        map((result) => {
+          if (!result || typeof (result as { status?: unknown }).status !== 'string') {
+            throw new QuestionVerdictError('Invalid submission');
+          }
+          return result;
+        }),
+        catchError((err: unknown) =>
+          throwError(() =>
+            err instanceof QuestionVerdictError
+              ? err
+              : new QuestionVerdictError('Invalid submission')
+          )
+        )
+      );
   }
 
   check(

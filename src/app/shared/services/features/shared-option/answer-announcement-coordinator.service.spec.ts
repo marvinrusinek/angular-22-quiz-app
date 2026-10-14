@@ -42,46 +42,79 @@ describe('AnswerAnnouncementCoordinatorService', () => {
 
   function configure(
     question: { questionText: string; type?: QuestionType; options: Array<{ correct?: boolean }> },
-    overrides: { isNavigatingToPrevious?: boolean; isTimedOut?: boolean; hasInteracted?: boolean; correctCountOf?: number | null; isMultiAnswer?: boolean | null } = {}
+    overrides: {
+      isNavigatingToPrevious?: boolean;
+      isTimedOut?: boolean;
+      hasInteracted?: boolean;
+      correctCountOf?: number | null;
+      isMultiAnswer?: boolean | null;
+    } = {}
   ) {
     TestBed.configureTestingModule({
       providers: [
-        { provide: ExplanationTextService, useValue: {
-          isExplanationTextDisplayed$: of(false),
-          formattedExplanationSig: signal(null),
-          formattedExplanations: {},
-          fetByIndex: new Map<number, string>(),
-          timeoutFetByIndex: new Map<number, string>(),
-          fetBypassForQuestion: new Map<number, boolean>(),
-        } },
-        { provide: QuestionVerdictService, useValue: { states: signal(new Map()), verdictFor: () => null } },
+        {
+          provide: ExplanationTextService,
+          useValue: {
+            isExplanationTextDisplayed$: of(false),
+            formattedExplanationSig: signal(null),
+            formattedExplanations: {},
+            fetByIndex: new Map<number, string>(),
+            timeoutFetByIndex: new Map<number, string>(),
+            fetBypassForQuestion: new Map<number, boolean>()
+          }
+        },
+        {
+          provide: QuestionVerdictService,
+          useValue: { states: signal(new Map()), verdictFor: () => null }
+        },
         // bannerCorrectCount reads `correctCountOf`, NOT `correctCount` — the
         // banner is DECLARED metadata (see heading-inputs.ts's own comment),
         // never a tally of the options array.
-        { provide: TopicQuizTypeRegistry, useValue: {
-          isMultiAnswer: () => overrides.isMultiAnswer ?? null,
-          correctCountOf: () => overrides.correctCountOf ?? null,
-        } },
-        { provide: QuizNavigationService, useValue: { isNavigatingToPreviousSig: signal(!!overrides.isNavigatingToPrevious) } },
-        { provide: QuizQuestionManagerService, useValue: { getNumberOfCorrectAnswersText: (n: number) => `(${n} answers are correct)` } },
-        { provide: QuizService, useValue: {
-          quizId: 'test-quiz',
-          currentQuestionIndex: IDX,
-          getQuestionsInDisplayOrder: () => [question],
-        } },
-        { provide: QuizStateService, useValue: {
-          lastInteractionTimeSig: signal(0),
-          hasUserInteracted: () => !!overrides.hasInteracted,
-          wasInteractedThisVisit: () => !!overrides.hasInteracted,
-        } },
-        { provide: SelectedOptionService, useValue: { selectedOptionSig: signal(null), selectedOptionsMap: new Map() } },
-        { provide: TimerService, useValue: {
-          expiredForQuestionIndexSig: signal(overrides.isTimedOut ? IDX : -1),
-          expiredOnArrivalSig: signal(-1),
-        } },
+        {
+          provide: TopicQuizTypeRegistry,
+          useValue: {
+            isMultiAnswer: () => overrides.isMultiAnswer ?? null,
+            correctCountOf: () => overrides.correctCountOf ?? null
+          }
+        },
+        {
+          provide: QuizNavigationService,
+          useValue: { isNavigatingToPreviousSig: signal(!!overrides.isNavigatingToPrevious) }
+        },
+        {
+          provide: QuizQuestionManagerService,
+          useValue: { getNumberOfCorrectAnswersText: (n: number) => `(${n} answers are correct)` }
+        },
+        {
+          provide: QuizService,
+          useValue: {
+            quizId: 'test-quiz',
+            currentQuestionIndex: IDX,
+            getQuestionsInDisplayOrder: () => [question]
+          }
+        },
+        {
+          provide: QuizStateService,
+          useValue: {
+            lastInteractionTimeSig: signal(0),
+            hasUserInteracted: () => !!overrides.hasInteracted,
+            wasInteractedThisVisit: () => !!overrides.hasInteracted
+          }
+        },
+        {
+          provide: SelectedOptionService,
+          useValue: { selectedOptionSig: signal(null), selectedOptionsMap: new Map() }
+        },
+        {
+          provide: TimerService,
+          useValue: {
+            expiredForQuestionIndexSig: signal(overrides.isTimedOut ? IDX : -1),
+            expiredOnArrivalSig: signal(-1)
+          }
+        },
         { provide: FeedbackPolicyService, useValue: { feedbackMode: signal('immediate') } },
-        { provide: SelectionMessageService, useValue: { getCurrentMessage: () => '' } },
-      ],
+        { provide: SelectionMessageService, useValue: { getCurrentMessage: () => '' } }
+      ]
     });
     return TestBed.inject(AnswerAnnouncementCoordinatorService);
   }
@@ -89,11 +122,11 @@ describe('AnswerAnnouncementCoordinatorService', () => {
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
   describe('announceQuestionArrival', () => {
-    it('clears immediately, then restores the question\'s own text after the delay', async () => {
+    it("clears immediately, then restores the question's own text after the delay", async () => {
       const svc = configure({
         questionText: 'Which lifecycle hook runs once?',
         type: QuestionType.SingleAnswer,
-        options: [{ correct: true }, {}],
+        options: [{ correct: true }, {}]
       });
 
       svc.announceQuestionArrival();
@@ -105,7 +138,11 @@ describe('AnswerAnnouncementCoordinatorService', () => {
 
     it('includes the multi-answer banner, matching what the heading itself would show', async () => {
       const svc = configure(
-        { questionText: 'Which are structural directives?', type: QuestionType.MultipleAnswer, options: [{ correct: true }, { correct: true }, {}] },
+        {
+          questionText: 'Which are structural directives?',
+          type: QuestionType.MultipleAnswer,
+          options: [{ correct: true }, { correct: true }, {}]
+        },
         { isMultiAnswer: true, correctCountOf: 2 }
       );
 
@@ -119,7 +156,11 @@ describe('AnswerAnnouncementCoordinatorService', () => {
 
     it('on a genuine revisit to an answered question, still announces the QUESTION text, never the FET', async () => {
       const svc = configure(
-        { questionText: 'Which lifecycle hook runs once?', type: QuestionType.SingleAnswer, options: [{ correct: true }, {}] },
+        {
+          questionText: 'Which lifecycle hook runs once?',
+          type: QuestionType.SingleAnswer,
+          options: [{ correct: true }, {}]
+        },
         { isNavigatingToPrevious: true, hasInteracted: false }
       );
 
@@ -135,7 +176,7 @@ describe('AnswerAnnouncementCoordinatorService', () => {
       const svc = configure({
         questionText: 'What does <code>ngOnInit</code> do?',
         type: QuestionType.SingleAnswer,
-        options: [{ correct: true }, {}],
+        options: [{ correct: true }, {}]
       });
 
       svc.announceQuestionArrival();
@@ -147,7 +188,7 @@ describe('AnswerAnnouncementCoordinatorService', () => {
       const svc = configure({
         questionText: 'First question text',
         type: QuestionType.SingleAnswer,
-        options: [{ correct: true }, {}],
+        options: [{ correct: true }, {}]
       });
 
       svc.announceQuestionArrival();
@@ -168,7 +209,7 @@ describe('AnswerAnnouncementCoordinatorService', () => {
       const svc = configure({
         questionText: 'Which lifecycle hook runs once?',
         type: QuestionType.SingleAnswer,
-        options: [{ correct: true }, {}],
+        options: [{ correct: true }, {}]
       });
 
       svc.announceOutcome('Not this one, try again!', false);
@@ -183,7 +224,7 @@ describe('AnswerAnnouncementCoordinatorService', () => {
       const svc = configure({
         questionText: 'Some question',
         type: QuestionType.SingleAnswer,
-        options: [{ correct: true }, {}],
+        options: [{ correct: true }, {}]
       });
 
       svc.announceQuestionArrival();

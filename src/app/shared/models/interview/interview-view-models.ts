@@ -1,4 +1,7 @@
-import type { CodeSnippetDto, InterviewQuestionTypeDto } from '@shared/models/api/interview-api.dto';
+import type {
+  CodeSnippetDto,
+  InterviewQuestionTypeDto
+} from '@shared/models/api/interview-api.dto';
 
 /**
  * SAFE view models for an ACTIVE Interview.
@@ -30,9 +33,7 @@ export interface InterviewQuestionViewModel {
 }
 
 /** True when a question accepts more than one selection. */
-export function isMultiSelectQuestion(question: {
-  readonly type: InterviewQuestionType;
-}): boolean {
+export function isMultiSelectQuestion(question: { readonly type: InterviewQuestionType }): boolean {
   // `trueFalse` is single-selection, exactly like `single`.
   return question.type === 'multiple';
 }

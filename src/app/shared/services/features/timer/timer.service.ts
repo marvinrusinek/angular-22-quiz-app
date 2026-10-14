@@ -1,4 +1,4 @@
-﻿import { computed, inject, Service, OnDestroy, signal } from '@angular/core';
+import { computed, inject, Service, OnDestroy, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Subject, Subscription, timer } from 'rxjs';
 import { finalize, takeUntil, tap } from 'rxjs/operators';
@@ -17,10 +17,10 @@ import { readSessionJson } from '@shared/utils/session-storage';
 import { swallow } from '@shared/utils/error-logging';
 
 interface StopTimerAttemptOptions {
-  questionIndex?: number,
-  optionsSnapshot?: Option[],
-  onBeforeStop?: () => void,
-  onStop?: (elapsedMs?: number) => void  // allow elapsed to be delivered
+  questionIndex?: number;
+  optionsSnapshot?: Option[];
+  onBeforeStop?: () => void;
+  onStop?: (elapsedMs?: number) => void; // allow elapsed to be delivered
 }
 
 @Service()
@@ -29,7 +29,7 @@ export class TimerService implements OnDestroy {
   completionTime = Number(sessionStorage.getItem('completionTime')) || 0;
   elapsedTimes: number[] = readSessionJson<number[]>('elapsedTimes', []);
 
-  isTimerRunning = false;  // tracks whether the timer is currently running
+  isTimerRunning = false; // tracks whether the timer is currently running
   isTimerStoppedForCurrentQuestion = false;
   stoppedForQuestion = new Set<number>();
 
@@ -42,8 +42,7 @@ export class TimerService implements OnDestroy {
 
   private static _initTimerType(): 'countdown' | 'stopwatch' {
     try {
-      return localStorage.getItem('timerType') === 'stopwatch'
-        ? 'stopwatch' : 'countdown';
+      return localStorage.getItem('timerType') === 'stopwatch' ? 'stopwatch' : 'countdown';
     } catch {
       return 'countdown';
     }
@@ -77,11 +76,10 @@ export class TimerService implements OnDestroy {
   }
 
   private setupTimer(): void {
-    this.stopTimerSignalSubscription =
-      this.selectedOptionService.stopTimer$.subscribe(() => {
-        if (!this.isTimerRunning) return;
-        this.stopTimer(undefined, { force: true });
-      });
+    this.stopTimerSignalSubscription = this.selectedOptionService.stopTimer$.subscribe(() => {
+      if (!this.isTimerRunning) return;
+      this.stopTimer(undefined, { force: true });
+    });
   }
 
   // NOTE: this service is providedIn: 'root', so ngOnDestroy only runs at app
@@ -95,19 +93,16 @@ export class TimerService implements OnDestroy {
   }
 
   private listenForCorrectSelections(): void {
-    this.stopTimerSignalSubscription =
-      this.selectedOptionService.stopTimer$.subscribe(() => {
-        if (!this.isTimerRunning) return;
-        this.handleStopTimerSignal();
-      });
+    this.stopTimerSignalSubscription = this.selectedOptionService.stopTimer$.subscribe(() => {
+      if (!this.isTimerRunning) return;
+      this.handleStopTimerSignal();
+    });
   }
 
   private handleStopTimerSignal(): void {
     if (!this.isTimerRunning) return;
 
-    const activeQuestionIndex = this.normalizeQuestionIndex(
-      this.quizService?.currentQuestionIndex
-    );
+    const activeQuestionIndex = this.normalizeQuestionIndex(this.quizService?.currentQuestionIndex);
     if (activeQuestionIndex < 0) {
       this.stopTimer(undefined, { force: true });
       return;
@@ -313,8 +308,8 @@ export class TimerService implements OnDestroy {
     // Once expired for this question, refuse all further starts until
     // restartForQuestion is called for a new question.
     if (this.hasExpiredForRun) return;
-    
-    if (this._lastStartedAtMs > 0 && (nowMs - this._lastStartedAtMs) < this.timePerQuestion * 1000) {
+
+    if (this._lastStartedAtMs > 0 && nowMs - this._lastStartedAtMs < this.timePerQuestion * 1000) {
       // Re-arm running flag in case a rogue stop slipped through
       if (!this.isTimerRunning && this.timerSubscription) {
         this.isTimerRunning = true;
@@ -323,14 +318,14 @@ export class TimerService implements OnDestroy {
     }
 
     if (this.isTimerRunning) {
-      if (!forceRestart) return;  // prevent restarting an already running timer
+      if (!forceRestart) return; // prevent restarting an already running timer
       this.stopTimer(undefined, { force: true });
     }
     this._lastStartedAtMs = nowMs;
 
     if (forceRestart) this.isTimerStoppedForCurrentQuestion = false;
 
-    this.isTimerRunning = true;  // mark timer as running
+    this.isTimerRunning = true; // mark timer as running
     this.hasExpiredForRun = false;
 
     // Show initial value immediately. Non-zero when resuming a question whose
@@ -377,7 +372,7 @@ export class TimerService implements OnDestroy {
     // Reset authority immediately to prevent re-entry / double stop paths
     this._authoritativeStop = false;
 
-    void options;  // prevent unused-parameter warning (intentional)
+    void options; // prevent unused-parameter warning (intentional)
 
     // Capture the live elapsed for the current question BEFORE any early-return
     // below (anti-thrash / not-running). This is the central, path-agnostic
@@ -386,7 +381,12 @@ export class TimerService implements OnDestroy {
     if (this.isTimerRunning) {
       const stopIdx = this.normalizeQuestionIndex(this.quizService?.currentQuestionIndex);
       const curElapsed = this.elapsedTimeSig();
-      if (stopIdx >= 0 && typeof curElapsed === 'number' && curElapsed > 0 && !(this.elapsedTimes[stopIdx] > 0)) {
+      if (
+        stopIdx >= 0 &&
+        typeof curElapsed === 'number' &&
+        curElapsed > 0 &&
+        !(this.elapsedTimes[stopIdx] > 0)
+      ) {
         this.elapsedTimes[stopIdx] = curElapsed;
       }
     }
@@ -397,7 +397,11 @@ export class TimerService implements OnDestroy {
     // (init-chain churn). Only honor stops once the timer has had a chance
     // to actually tick, OR if expiry has been reached.
     const sinceStart = Date.now() - this._lastStartedAtMs;
-    if (sinceStart < this.timePerQuestion * 1000 && !this.hasExpiredForRun && !options.bypassAntiThrash) {
+    if (
+      sinceStart < this.timePerQuestion * 1000 &&
+      !this.hasExpiredForRun &&
+      !options.bypassAntiThrash
+    ) {
       return;
     }
 
@@ -407,9 +411,9 @@ export class TimerService implements OnDestroy {
       this.timerSubscription = null;
     }
 
-    this.isTimerRunning = false;  // mark the timer as stopped
-    this.isTimerStoppedForCurrentQuestion = true;  // prevent restart for current question
-    this.stopSig.update(v => v + 1);  // emit stop signal to stop the timer
+    this.isTimerRunning = false; // mark the timer as stopped
+    this.isTimerStoppedForCurrentQuestion = true; // prevent restart for current question
+    this.stopSig.update((v) => v + 1); // emit stop signal to stop the timer
     this.isStop.next();
 
     if (callback) callback(this.elapsedTimeSig());
@@ -417,7 +421,6 @@ export class TimerService implements OnDestroy {
 
   // Resets the timer
   resetTimer(): void {
-
     // Anti-thrash: ignore resets after a start is in flight or after expiry,
     // until restartForQuestion explicitly clears the flags for a new question.
     if (this.hasExpiredForRun) return;
@@ -430,15 +433,13 @@ export class TimerService implements OnDestroy {
     if (this.isTimerRunning) this.stopTimer(undefined, { force: true });
 
     this.isTimerRunning = false;
-    this.isTimerStoppedForCurrentQuestion = false;  // allow restart for the new question
+    this.isTimerStoppedForCurrentQuestion = false; // allow restart for the new question
     this.hasExpiredForRun = false;
 
-    this.elapsedTimeSig.set(0);  // reset elapsed time for observers
+    this.elapsedTimeSig.set(0); // reset elapsed time for observers
   }
 
-  public attemptStopTimerForQuestion(
-    options: StopTimerAttemptOptions = {}
-  ): boolean {
+  public attemptStopTimerForQuestion(options: StopTimerAttemptOptions = {}): boolean {
     // Guard: NOTHING may stop the timer without authority
     if (!this._authoritativeStop) return false;
 
@@ -461,13 +462,15 @@ export class TimerService implements OnDestroy {
 
     // If the timer isn't running, nothing to stop
     if (!this.isTimerRunning) {
-      return true;  // return true since the answer is correct, even if timer isn't running
+      return true; // return true since the answer is correct, even if timer isn't running
     }
 
     // Fire sound (or any UX) BEFORE stopping so teardown doesn't stop it
     try {
       options.onBeforeStop?.();
-    } catch (err: unknown) { swallow('timer.service.ts', err); }
+    } catch (err: unknown) {
+      swallow('timer.service.ts', err);
+    }
 
     try {
       // Stop the timer with force AND bypass anti-thrash. Anti-thrash
@@ -523,9 +526,7 @@ export class TimerService implements OnDestroy {
       if (isMultiple) {
         // pull from SelectedOptionService for this question
         const fromStore =
-          this.selectedOptionService?.getSelectedOptionsForQuestion(
-            normalizedIndex
-          ) ?? [];
+          this.selectedOptionService?.getSelectedOptionsForQuestion(normalizedIndex) ?? [];
 
         if (fromStore.length > 0) {
           selectedOptionsFinal = fromStore;
@@ -539,9 +540,8 @@ export class TimerService implements OnDestroy {
 
       const quizId = (this.quizService as any)?.quizId as string | undefined;
       const questionText = question.questionText;
-      const verdictState = quizId && questionText
-        ? this.verdicts.verdictFor(quizId, questionText)
-        : null;
+      const verdictState =
+        quizId && questionText ? this.verdicts.verdictFor(quizId, questionText) : null;
 
       let shouldStop = false;
 
@@ -636,8 +636,9 @@ export class TimerService implements OnDestroy {
    * right — nothing local can accidentally set either.
    */
   public hasRecordedCorrectCompletion(questionIndex: number): boolean {
-    const questionText = this.quizService?.getQuestionsInDisplayOrder?.()?.[questionIndex]?.questionText
-      ?? this.quizService?.questions?.[questionIndex]?.questionText;
+    const questionText =
+      this.quizService?.getQuestionsInDisplayOrder?.()?.[questionIndex]?.questionText ??
+      this.quizService?.questions?.[questionIndex]?.questionText;
     const quizId = this.quizService?.quizId;
     if (!quizId || !questionText) return false;
 
@@ -732,7 +733,7 @@ export class TimerService implements OnDestroy {
       this.timerSubscription = null;
     }
     this.isTimerRunning = false;
-    this.isTimerStoppedForCurrentQuestion = true;  // prevent non-forced restart
+    this.isTimerStoppedForCurrentQuestion = true; // prevent non-forced restart
     this.hasExpiredForRun = false;
     this._runningForQuestion = questionIndex;
     this.stoppedForQuestion.add(questionIndex);
@@ -828,7 +829,9 @@ export class TimerService implements OnDestroy {
     if (!quizId || !(total > 0)) return;
     try {
       localStorage.setItem(this.durableCompletionTimeKey(quizId), String(total));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   /** Reads the durably-stored elapsed time for a quiz (0 if none/invalid). */
@@ -847,7 +850,9 @@ export class TimerService implements OnDestroy {
     if (!quizId) return;
     try {
       localStorage.removeItem(this.durableCompletionTimeKey(quizId));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   private normalizeQuestionIndex(index: number | null | undefined): number {

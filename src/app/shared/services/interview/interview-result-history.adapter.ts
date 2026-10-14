@@ -83,9 +83,7 @@ function describeConfig(result: InterviewResultViewModel): {
  * re-resolved from the local quiz bank, so a renamed or removed topic still
  * displays as it did when the interview was taken.
  */
-function toTopicPerformance(
-  result: InterviewResultViewModel
-): InterviewTopicHistoryEntry[] {
+function toTopicPerformance(result: InterviewResultViewModel): InterviewTopicHistoryEntry[] {
   return result.byTopic.map((bucket) => ({
     topicId: bucket.topicId,
     topicName: bucket.title,
@@ -115,9 +113,9 @@ export function toSanitizedAttempt(
     completedAt: new Date(result.submittedAtMs).toISOString(),
 
     // Backend values, copied verbatim.
-    score: result.correct,             // backend `correct`  → score
-    totalQuestions: result.total,      // backend `total`    → totalQuestions
-    percentage: result.percentage,     // NEVER recalculated
+    score: result.correct, // backend `correct`  → score
+    totalQuestions: result.total, // backend `total`    → totalQuestions
+    percentage: result.percentage, // NEVER recalculated
     answered: result.answered,
     unanswered: result.unanswered,
     incorrect: result.incorrect,

@@ -1,9 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { signal } from '@angular/core';
 import { firstValueFrom, of } from 'rxjs';
@@ -31,30 +28,32 @@ const BASE = 'https://api.test/api';
 const QUIZ = 'rxjs';
 
 /** What `assets/data/quiz.json` would have supplied — deliberately different. */
-const LOCAL_BANK = [{
-  quizId: QUIZ,
-  milestone: 'RxJS',
-  summary: '',
-  image: '',
-  questions: [
-    {
-      questionText: 'LOCAL QUESTION ONE',
-      explanation: 'LOCAL EXPLANATION',
-      options: [
-        { optionId: 1, text: 'LOCAL OPTION A', correct: true },
-        { optionId: 2, text: 'LOCAL OPTION B' }
-      ]
-    },
-    {
-      questionText: 'LOCAL QUESTION TWO',
-      explanation: 'LOCAL EXPLANATION TWO',
-      options: [
-        { optionId: 1, text: 'LOCAL OPTION C', correct: true },
-        { optionId: 2, text: 'LOCAL OPTION D' }
-      ]
-    }
-  ]
-}];
+const LOCAL_BANK = [
+  {
+    quizId: QUIZ,
+    milestone: 'RxJS',
+    summary: '',
+    image: '',
+    questions: [
+      {
+        questionText: 'LOCAL QUESTION ONE',
+        explanation: 'LOCAL EXPLANATION',
+        options: [
+          { optionId: 1, text: 'LOCAL OPTION A', correct: true },
+          { optionId: 2, text: 'LOCAL OPTION B' }
+        ]
+      },
+      {
+        questionText: 'LOCAL QUESTION TWO',
+        explanation: 'LOCAL EXPLANATION TWO',
+        options: [
+          { optionId: 1, text: 'LOCAL OPTION C', correct: true },
+          { optionId: 2, text: 'LOCAL OPTION D' }
+        ]
+      }
+    ]
+  }
+];
 
 /** What the API serves. Different text, different types, different arity. */
 const API_BODY = {
@@ -99,7 +98,10 @@ beforeEach(() => {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: BASE },
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      }
     ]
   });
 
@@ -123,15 +125,17 @@ async function load(body: object = API_BODY): Promise<QuizQuestion[]> {
 describe('A/B. content comes from the API, not the bank', () => {
   it('renders the API question text, not the local one', async () => {
     const questions = await load();
-    expect(questions.map((q) => q.questionText))
-      .toEqual(['API QUESTION ONE', 'API QUESTION TWO']);
+    expect(questions.map((q) => q.questionText)).toEqual(['API QUESTION ONE', 'API QUESTION TWO']);
     expect(JSON.stringify(questions)).not.toContain('LOCAL');
   });
 
   it('renders the API option text, not the local one', async () => {
     const questions = await load();
-    expect(questions[0]!.options.map((o) => o.text))
-      .toEqual(['API OPTION A', 'API OPTION B', 'API OPTION C']);
+    expect(questions[0]!.options.map((o) => o.text)).toEqual([
+      'API OPTION A',
+      'API OPTION B',
+      'API OPTION C'
+    ]);
   });
 
   it('takes the API arity — three options where the bank had two', async () => {
@@ -174,10 +178,11 @@ describe('E. no correctness or explanation reaches the rendered questions', () =
 });
 
 describe('the API is the only source — failure does NOT fall back', () => {
-  it('yields no questions when /questions fails, rather than the bank\'s', async () => {
+  it("yields no questions when /questions fails, rather than the bank's", async () => {
     const sig = signal<QuizQuestion[]>([]);
     const promise = loader.fetchQuizQuestions(QUIZ, sig, () => undefined);
-    http.expectOne(`${BASE}/quizzes/${QUIZ}/questions`)
+    http
+      .expectOne(`${BASE}/quizzes/${QUIZ}/questions`)
       .flush('boom', { status: 500, statusText: 'Server Error' });
 
     const questions = await promise;
@@ -221,13 +226,12 @@ describe('QuizDataService.getQuestionsForQuiz sources from the API', () => {
     dataService = TestBed.inject(QuizDataService);
   });
 
-  it('returns the API questions, not the bank\'s', async () => {
+  it("returns the API questions, not the bank's", async () => {
     const promise = firstValueFrom(dataService.getQuestionsForQuiz(QUIZ));
     http.expectOne(`${BASE}/quizzes/${QUIZ}/questions`).flush(API_BODY);
 
     const questions = await promise;
-    expect(questions.map((q) => q.questionText))
-      .toEqual(['API QUESTION ONE', 'API QUESTION TWO']);
+    expect(questions.map((q) => q.questionText)).toEqual(['API QUESTION ONE', 'API QUESTION TWO']);
     expect(JSON.stringify(questions)).not.toContain('LOCAL');
   });
 
@@ -254,12 +258,13 @@ describe('QuizDataService.getQuestionsForQuiz sources from the API', () => {
     }
   });
 
-  it('FAILS rather than substituting the bank\'s questions', async () => {
+  it("FAILS rather than substituting the bank's questions", async () => {
     // This path rethrows — its pre-existing contract, unchanged by S4 — and
     // consumers handle it. What matters here is the negative: the failure is
     // not quietly answered with local content.
     const promise = firstValueFrom(dataService.getQuestionsForQuiz(QUIZ));
-    http.expectOne(`${BASE}/quizzes/${QUIZ}/questions`)
+    http
+      .expectOne(`${BASE}/quizzes/${QUIZ}/questions`)
       .flush('boom', { status: 500, statusText: 'Server Error' });
 
     await expect(promise).rejects.toBeDefined();

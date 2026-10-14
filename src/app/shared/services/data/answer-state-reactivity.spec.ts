@@ -36,7 +36,10 @@ beforeEach(() => {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+      },
       { provide: API_BASE_URL, useValue: 'https://api.test/api' }
     ]
   });
@@ -45,9 +48,7 @@ beforeEach(() => {
 
 describe('an async write is observed by a computed consumer', () => {
   it('recomputes when completion arrives later', () => {
-    const view = TestBed.runInInjectionContext(() =>
-      computed(() => quiz.isMultiAnswerComplete(2))
-    );
+    const view = TestBed.runInInjectionContext(() => computed(() => quiz.isMultiAnswerComplete(2)));
     expect(view()).toBe(false);
 
     // The arrival path writes from a subscription callback — no click, no
@@ -58,9 +59,7 @@ describe('an async write is observed by a computed consumer', () => {
   });
 
   it('recomputes when resolved arrives later', () => {
-    const view = TestBed.runInInjectionContext(() =>
-      computed(() => quiz.isQuestionResolved(1))
-    );
+    const view = TestBed.runInInjectionContext(() => computed(() => quiz.isQuestionResolved(1)));
     expect(view()).toBe(false);
 
     quiz.markQuestionResolved(1);
@@ -69,9 +68,7 @@ describe('an async write is observed by a computed consumer', () => {
   });
 
   it('recomputes when perfect arrives later', () => {
-    const view = TestBed.runInInjectionContext(() =>
-      computed(() => quiz.isMultiAnswerPerfect(0))
-    );
+    const view = TestBed.runInInjectionContext(() => computed(() => quiz.isMultiAnswerPerfect(0)));
     expect(view()).toBe(false);
 
     quiz.markMultiAnswerPerfect(0);
@@ -82,7 +79,9 @@ describe('an async write is observed by a computed consumer', () => {
   it('notifies an effect, which is how a rendered view finds out', () => {
     const seen: boolean[] = [];
     TestBed.runInInjectionContext(() => {
-      effect(() => { seen.push(quiz.isMultiAnswerComplete(3)); });
+      effect(() => {
+        seen.push(quiz.isMultiAnswerComplete(3));
+      });
     });
     TestBed.flushEffects();
     expect(seen).toEqual([false]);
@@ -104,14 +103,17 @@ describe('reactivity did not make the state lazy', () => {
   it('a repeated identical write does not churn the signal', () => {
     let runs = 0;
     const view = TestBed.runInInjectionContext(() =>
-      computed(() => { runs++; return quiz.isQuestionResolved(5); })
+      computed(() => {
+        runs++;
+        return quiz.isQuestionResolved(5);
+      })
     );
     view();
     quiz.markQuestionResolved(5);
     view();
     const after = runs;
 
-    quiz.markQuestionResolved(5);   // same value again
+    quiz.markQuestionResolved(5); // same value again
     view();
 
     expect(runs).toBe(after);
@@ -120,9 +122,7 @@ describe('reactivity did not make the state lazy', () => {
 
 describe('clearing is reactive too', () => {
   it('clearing one question notifies consumers', () => {
-    const view = TestBed.runInInjectionContext(() =>
-      computed(() => quiz.isMultiAnswerComplete(6))
-    );
+    const view = TestBed.runInInjectionContext(() => computed(() => quiz.isMultiAnswerComplete(6)));
     quiz.markMultiAnswerComplete(6);
     expect(view()).toBe(true);
 
@@ -144,9 +144,7 @@ describe('clearing is reactive too', () => {
   });
 
   it('a full reset notifies and clears every question', () => {
-    const view = TestBed.runInInjectionContext(() =>
-      computed(() => quiz.isQuestionResolved(8))
-    );
+    const view = TestBed.runInInjectionContext(() => computed(() => quiz.isQuestionResolved(8)));
     quiz.markQuestionResolved(8);
     quiz.markQuestionResolved(9);
     expect(view()).toBe(true);
@@ -160,12 +158,15 @@ describe('clearing is reactive too', () => {
   it('clearing an absent question does not churn the signal', () => {
     let runs = 0;
     const view = TestBed.runInInjectionContext(() =>
-      computed(() => { runs++; return quiz.isQuestionResolved(10); })
+      computed(() => {
+        runs++;
+        return quiz.isQuestionResolved(10);
+      })
     );
     view();
     const before = runs;
 
-    quiz.clearAnswerStateAt(10);   // nothing was set
+    quiz.clearAnswerStateAt(10); // nothing was set
     view();
 
     expect(runs).toBe(before);

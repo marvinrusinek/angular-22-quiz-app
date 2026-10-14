@@ -1,4 +1,4 @@
-﻿import { Service } from '@angular/core';
+import { Service } from '@angular/core';
 
 import { Option } from '@shared/models';
 
@@ -27,10 +27,10 @@ export class OptionUiContextBuilderService {
       getActiveQuestionIndex: () => src.getActiveQuestionIndex(),
       getQuestionAtDisplayIndex: (idx: number) => src.getQuestionAtDisplayIndex(idx),
       emitExplanation: (idx: number, skipGuard?: boolean) => src.emitExplanation(idx, skipGuard),
-      type: (src.isMultiMode || src.type === 'multiple') ? 'multiple' : 'single',
+      type: src.isMultiMode || src.type === 'multiple' ? 'multiple' : 'single',
       isMultiMode: src.isMultiMode,
       currentQuestion: src.currentQuestion,
-      
+
       toggleSelectedOption: (opt: any) => {
         if (opt == null || opt < 0) return;
         src.selectedOptionMap?.set(opt, !src.selectedOptionMap?.get(opt));

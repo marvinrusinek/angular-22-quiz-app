@@ -4,7 +4,6 @@ import { filter, take } from 'rxjs/operators';
 
 import { FeedbackProps, Option, OptionBindings, QuestionType } from '@shared/models';
 
-
 import { SK_MULTI_PERFECT, SK_SEL_Q } from '@shared/constants/session-keys';
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 import { writeSessionString } from '@shared/utils/session-storage';
@@ -15,10 +14,7 @@ import { NextButtonStateService } from '@shared/services/state/next-button-state
 import { OptionClickHandlerService } from './option-click-handler.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
 import { TopicQuizTypeRegistry } from '@shared/services/api/topic-quiz-type-registry.service';
-import {
-  declaredCorrectCount,
-  declaredIsMultiAnswer
-} from '@shared/utils/question-type-authority';
+import { declaredCorrectCount, declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
 import type { QuestionVerdictState } from '@shared/services/features/verdict/question-verdict.types';
 import {
   allCorrectSelectedFromVerdict,
@@ -93,27 +89,36 @@ export class SocAnswerProcessingService {
    * multi-answer "Options X and Y..." form via writeResolvedFet, and schedule a
    * component-path backup emit. Extracted verbatim from processMultiAnswerClick.
    */
-  private emitMultiAnswerFetOnAllCorrect(comp: any, qIdx: number, displayIdx: number, effectiveCorrectIndices: number[], isShuffled: boolean): void {
+  private emitMultiAnswerFetOnAllCorrect(
+    comp: any,
+    qIdx: number,
+    displayIdx: number,
+    effectiveCorrectIndices: number[],
+    isShuffled: boolean
+  ): void {
     this.scoreAndOpenFet(comp, qIdx, displayIdx, true);
 
     // Resolve explanation text from pristine data and write directly
     let fetText = '';
     try {
       const fetQText = isShuffled
-        ? (this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx]?.questionText
-          ?? this.quizService?.shuffledQuestions?.[displayIdx]?.questionText)
-        : (comp.currentQuestion()?.questionText
-          ?? this.quizService?.questions?.[qIdx]?.questionText);
+        ? (this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx]?.questionText ??
+          this.quizService?.shuffledQuestions?.[displayIdx]?.questionText)
+        : (comp.currentQuestion()?.questionText ??
+          this.quizService?.questions?.[qIdx]?.questionText);
       const pristineFETQ = this.quizService.getPristineQuestionByText(fetQText);
       fetText = ((pristineFETQ as any)?.explanation ?? '').trim();
       // Also try live question objects
       if (!fetText) {
-        const liveQ = comp.currentQuestion()
-          ?? comp.getQuestionAtDisplayIndex?.(displayIdx)
-          ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx];
+        const liveQ =
+          comp.currentQuestion() ??
+          comp.getQuestionAtDisplayIndex?.(displayIdx) ??
+          this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx];
         fetText = (liveQ?.explanation ?? '').trim();
       }
-    } catch (err: unknown) { console.error('processMultiAnswerClick FET-text resolution failed:', err); }
+    } catch (err: unknown) {
+      console.error('processMultiAnswerClick FET-text resolution failed:', err);
+    }
 
     if (fetText) {
       // Format as "Options X and Y are correct because ..." using 1-based
@@ -123,18 +128,26 @@ export class SocAnswerProcessingService {
         const oneBasedIndices = effectiveCorrectIndices
           .map((ci: number) => ci + 1)
           .filter((n: number) => Number.isFinite(n) && n > 0);
-        const qForFormat = comp.currentQuestion()
-          ?? comp.getQuestionAtDisplayIndex?.(displayIdx)
-          ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx]
-          ?? this.quizService?.questions?.[qIdx];
+        const qForFormat =
+          comp.currentQuestion() ??
+          comp.getQuestionAtDisplayIndex?.(displayIdx) ??
+          this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx] ??
+          this.quizService?.questions?.[qIdx];
         if (qForFormat && oneBasedIndices.length > 0) {
-          formattedFET = this.explanationTextService.formatExplanation(qForFormat, oneBasedIndices, fetText);
+          formattedFET = this.explanationTextService.formatExplanation(
+            qForFormat,
+            oneBasedIndices,
+            fetText
+          );
         }
-      } catch (err: unknown) { console.error('processMultiAnswerClick FET formatting failed:', err); }
+      } catch (err: unknown) {
+        console.error('processMultiAnswerClick FET formatting failed:', err);
+      }
 
-      const qForStore = comp.currentQuestion()
-        ?? comp.getQuestionAtDisplayIndex?.(displayIdx)
-        ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx];
+      const qForStore =
+        comp.currentQuestion() ??
+        comp.getQuestionAtDisplayIndex?.(displayIdx) ??
+        this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx];
       this.writeResolvedFet(displayIdx, formattedFET, qForStore);
     }
 
@@ -142,7 +155,9 @@ export class SocAnswerProcessingService {
     setTimeout(() => {
       try {
         comp.emitExplanation(displayIdx, true);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }, MULTI_ANSWER_BACKUP_FET_DELAY_MS);
   }
 
@@ -156,7 +171,13 @@ export class SocAnswerProcessingService {
    * Formerly `isPristineSingleCorrect`, which named the fallback as if it were
    * the authority.
    */
-  private isSingleAnswerClickCorrect(comp: any, index: number, qIdx: number, displayIdx: number, isShuffled: boolean): boolean {
+  private isSingleAnswerClickCorrect(
+    comp: any,
+    index: number,
+    qIdx: number,
+    displayIdx: number,
+    isShuffled: boolean
+  ): boolean {
     const clickedText = norm(comp.optionBindings()?.[index]?.option?.text);
 
     // AUTHORIZED. `undefined` means this pick carries no verdict yet, which is
@@ -180,7 +201,7 @@ export class SocAnswerProcessingService {
               comp.currentQuestion()?.questionText,
               this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx]?.questionText,
               this.quizService?.shuffledQuestions?.[displayIdx]?.questionText,
-              this.quizService?.questions?.[qIdx]?.questionText,
+              this.quizService?.questions?.[qIdx]?.questionText
             ]
           : [
               this.quizService?.questions?.[qIdx]?.questionText,
@@ -198,7 +219,9 @@ export class SocAnswerProcessingService {
           }
         }
       }
-    } catch (err: unknown) { console.error('processSingleAnswerClick pristine-correct check failed:', err); }
+    } catch (err: unknown) {
+      console.error('processSingleAnswerClick pristine-correct check failed:', err);
+    }
     return false;
   }
 
@@ -219,13 +242,19 @@ export class SocAnswerProcessingService {
         optionsToDisplay: comp.optionsToDisplay ?? [],
         isMultiMode: false
       };
-      const fetText = this.sharedOptionExplanationService.resolveExplanationText(singleFetCtxSync as any)?.trim()
-        || singleFetQuestion?.explanation || '';
+      const fetText =
+        this.sharedOptionExplanationService
+          .resolveExplanationText(singleFetCtxSync as any)
+          ?.trim() ||
+        singleFetQuestion?.explanation ||
+        '';
       if (fetText) {
         // Shared FET write (same sequence as the multi-answer path).
         this.writeResolvedFet(displayIdx, fetText, singleFetQuestion);
       }
-    } catch (err: unknown) { console.error('processSingleAnswerClick FET-sync write failed:', err); }
+    } catch (err: unknown) {
+      console.error('processSingleAnswerClick FET-sync write failed:', err);
+    }
 
     const singleFetCtx = {
       resolvedIndex: displayIdx,
@@ -240,7 +269,10 @@ export class SocAnswerProcessingService {
       try {
         this.sharedOptionExplanationService.emitExplanation(singleFetCtx as any, true);
       } catch (err: unknown) {
-        console.error('SocAnswerProcessingService.processSingleAnswerClick FET-backup emission failed:', err);
+        console.error(
+          'SocAnswerProcessingService.processSingleAnswerClick FET-backup emission failed:',
+          err
+        );
         comp.emitExplanation(displayIdx, true);
       }
     }, 0);
@@ -251,12 +283,19 @@ export class SocAnswerProcessingService {
    * rebuild every binding with fresh refs (selected/highlight from click +
    * history), and persist the selections. Extracted verbatim.
    */
-  private applySingleAnswerCorrectBindings(comp: any, index: number, qIdx: number, correctSet: Set<number>): void {
+  private applySingleAnswerCorrectBindings(
+    comp: any,
+    index: number,
+    qIdx: number,
+    correctSet: Set<number>
+  ): void {
     const disabledSetRef = this.ensureDisabledSet(comp, qIdx);
     disabledSetRef.clear();
     const currentBindings: any[] = Array.isArray(comp.optionBindings())
       ? comp.optionBindings()
-      : (typeof comp.optionBindings() === 'function' ? comp.optionBindings() : []);
+      : typeof comp.optionBindings() === 'function'
+        ? comp.optionBindings()
+        : [];
     for (let i = 0; i < currentBindings.length; i++) {
       if (!correctSet.has(i)) disabledSetRef.add(i);
     }
@@ -273,12 +312,14 @@ export class SocAnswerProcessingService {
         ...ob,
         disabled: !isCorrectBinding,
         isSelected: isClicked,
-        option: ob?.option ? {
-          ...ob.option,
-          selected: isClicked,
-          highlight: isClicked || wasPreviouslyClicked,
-          showIcon: isClicked || wasPreviouslyClicked
-        } : ob?.option
+        option: ob?.option
+          ? {
+              ...ob.option,
+              selected: isClicked,
+              highlight: isClicked || wasPreviouslyClicked,
+              showIcon: isClicked || wasPreviouslyClicked
+            }
+          : ob?.option
       };
     });
     comp.optionBindings.set(newBindings);
@@ -287,7 +328,13 @@ export class SocAnswerProcessingService {
   }
 
   /** Persist the single-answer correct selections to sessionStorage + history. */
-  private persistSingleAnswerSelections(qIdx: number, index: number, newBindings: any[], historySet: Set<number>, correctSet: Set<number>): void {
+  private persistSingleAnswerSelections(
+    qIdx: number,
+    index: number,
+    newBindings: any[],
+    historySet: Set<number>,
+    correctSet: Set<number>
+  ): void {
     try {
       const toSave: any[] = [];
       for (let bi = 0; bi < newBindings.length; bi++) {
@@ -313,11 +360,15 @@ export class SocAnswerProcessingService {
         sessionStorage.setItem(SK_SEL_Q + qIdx, JSON.stringify(toSave));
         this.selectedOptionService.addToSelectionHistory(qIdx, toSave as any[]);
       }
-    } catch (err: unknown) { console.error('processSingleAnswerClick selection-persist failed:', err); }
+    } catch (err: unknown) {
+      console.error('processSingleAnswerClick selection-persist failed:', err);
+    }
   }
 
   private scoreAndOpenFet(comp: any, qIdx: number, displayIdx: number, isMulti: boolean): void {
-    try { this.timerService.stopTimer?.(undefined, { force: true, bypassAntiThrash: true }); } catch {}
+    try {
+      this.timerService.stopTimer?.(undefined, { force: true, bypassAntiThrash: true });
+    } catch {}
     this.explanationTextService.fetBypassForQuestion.set(displayIdx, true);
     // NO SCORE HERE. The caller decided "all correct" from the local answer
     // key; credit is applied by creditResolvedQuestion on authorized verdict
@@ -362,7 +413,11 @@ export class SocAnswerProcessingService {
     this.explanationTextService.latestExplanation = fetHtml;
     this.explanationTextService.latestExplanationIndex = displayIdx;
     this.explanationTextService.storeFormattedExplanation(
-      displayIdx, fetHtml, question, question?.options ?? [], true
+      displayIdx,
+      fetHtml,
+      question,
+      question?.options ?? [],
+      true
     );
     this.explanationTextService.setExplanationText(fetHtml, {
       force: true,
@@ -390,23 +445,32 @@ export class SocAnswerProcessingService {
    * disabled onto fresh binding refs, suppressing disabled on unselected options
    * when the question isn't fully answered yet (Q2/Q4 guard). Verbatim.
    */
-  private applyMultiAnswerBindingUpdates(comp: any, bindingUpdates: any[], suppressDisableForUnselected: boolean, durableSet: Set<number>): void {
-    comp.optionBindings.set(comp.optionBindings().map((ob: OptionBindings, bi: number) => {
-      let disabledFinal = bindingUpdates[bi].disabled;
-      if (suppressDisableForUnselected && disabledFinal && !durableSet.has(bi)) {
-        disabledFinal = false;
-      }
-      return {
-        ...ob,
-        isSelected: bindingUpdates[bi].isSelected,
-        isCorrect: bindingUpdates[bi].isCorrect,
-        disabled: disabledFinal,
-        option: ob.option ? {
-          ...ob.option,
-          ...bindingUpdates[bi].optionOverrides
-        } : ob.option
-      };
-    }));
+  private applyMultiAnswerBindingUpdates(
+    comp: any,
+    bindingUpdates: any[],
+    suppressDisableForUnselected: boolean,
+    durableSet: Set<number>
+  ): void {
+    comp.optionBindings.set(
+      comp.optionBindings().map((ob: OptionBindings, bi: number) => {
+        let disabledFinal = bindingUpdates[bi].disabled;
+        if (suppressDisableForUnselected && disabledFinal && !durableSet.has(bi)) {
+          disabledFinal = false;
+        }
+        return {
+          ...ob,
+          isSelected: bindingUpdates[bi].isSelected,
+          isCorrect: bindingUpdates[bi].isCorrect,
+          disabled: disabledFinal,
+          option: ob.option
+            ? {
+                ...ob.option,
+                ...bindingUpdates[bi].optionOverrides
+              }
+            : ob.option
+        };
+      })
+    );
   }
 
   /**
@@ -414,7 +478,13 @@ export class SocAnswerProcessingService {
    * binding's option can be stale on the 2nd correct click; pristine indices are
    * the source of truth). Sets comp._feedbackDisplay. Verbatim.
    */
-  private buildMultiAnswerFeedbackDisplay(comp: any, index: number, binding: any, effectiveCorrectIndices: number[], feedbackText: string): void {
+  private buildMultiAnswerFeedbackDisplay(
+    comp: any,
+    index: number,
+    binding: any,
+    effectiveCorrectIndices: number[],
+    feedbackText: string
+  ): void {
     const correctMessage = this.feedbackService.setCorrectMessage(
       (comp.optionsToDisplay ?? []).filter((o: Option) => o && typeof o === 'object'),
       comp.currentQuestion()!
@@ -433,9 +503,10 @@ export class SocAnswerProcessingService {
       this.resolveVerdictStateForComp(comp),
       freshOption?.text
     );
-    const isClickedCorrect = authorizedClicked !== undefined
-      ? authorizedClicked
-      : new Set(effectiveCorrectIndices).has(index);
+    const isClickedCorrect =
+      authorizedClicked !== undefined
+        ? authorizedClicked
+        : new Set(effectiveCorrectIndices).has(index);
     comp._feedbackDisplay = {
       idx: index,
       optionId: freshOption?.optionId,
@@ -467,11 +538,16 @@ export class SocAnswerProcessingService {
   }
 
   /** Push the multi-answer selection message (built from pristine correctness). Verbatim. */
-  private pushMultiAnswerSelectionMessage(comp: any, qIdx: number, effectiveCorrectIndices: number[], durableSet: Set<number>): void {
+  private pushMultiAnswerSelectionMessage(
+    comp: any,
+    qIdx: number,
+    effectiveCorrectIndices: number[],
+    durableSet: Set<number>
+  ): void {
     const optsForMsg: Option[] = comp.optionBindings().map((ob: OptionBindings, bi: number) => ({
       ...ob.option,
       correct: new Set(effectiveCorrectIndices).has(bi),
-      selected: durableSet.has(bi),
+      selected: durableSet.has(bi)
     })) as Option[];
     const selMsg = this.selectionMessageService.computeFinalMessage({
       index: qIdx,
@@ -488,9 +564,11 @@ export class SocAnswerProcessingService {
    * question at qIdx. Shared by the multi-answer pristine helpers.
    */
   private resolveLiveQuestion(comp: any, primaryIdx: number, qIdx: number): any {
-    return comp.currentQuestion()
-      ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[primaryIdx]
-      ?? this.quizService?.questions?.[qIdx];
+    return (
+      comp.currentQuestion() ??
+      this.quizService?.getQuestionsInDisplayOrder?.()?.[primaryIdx] ??
+      this.quizService?.questions?.[qIdx]
+    );
   }
 
   /**
@@ -500,8 +578,15 @@ export class SocAnswerProcessingService {
    * `quizInitialState` bank comparison; that fallback was removed in
    * `0fde8ed1` (see `durable-perfect-authority.spec.ts`, which pins this).
    */
-  private computeAllCorrectInDurable(comp: any, qIdx: number, displayIdx: number, durableSet: Set<number>, effectiveCorrectIndices: number[]): boolean {
-    let allCorrectInDurable = effectiveCorrectIndices.length > 0 &&
+  private computeAllCorrectInDurable(
+    comp: any,
+    qIdx: number,
+    displayIdx: number,
+    durableSet: Set<number>,
+    effectiveCorrectIndices: number[]
+  ): boolean {
+    let allCorrectInDurable =
+      effectiveCorrectIndices.length > 0 &&
       effectiveCorrectIndices.every((ci: number) => durableSet.has(ci));
     try {
       const liveQAC: any = this.resolveLiveQuestion(comp, displayIdx, qIdx);
@@ -536,9 +621,8 @@ export class SocAnswerProcessingService {
         // asks about an option they never touched.
         const quizId = (this.quizService as any)?.quizId as string | undefined;
         const questionText = liveQAC?.questionText as string | undefined;
-        const state = quizId && questionText
-          ? this.verdicts.verdictFor(quizId, questionText)
-          : null;
+        const state =
+          quizId && questionText ? this.verdicts.verdictFor(quizId, questionText) : null;
 
         const authorizedAll = allCorrectSelectedFromVerdict(state);
         if (authorizedAll !== null) {
@@ -563,7 +647,9 @@ export class SocAnswerProcessingService {
           allCorrectInDurable = !anyWrongPickedLatched;
         }
       }
-    } catch (err: unknown) { console.error('processMultiAnswerClick allCorrectInDurable check failed:', err); }
+    } catch (err: unknown) {
+      console.error('processMultiAnswerClick allCorrectInDurable check failed:', err);
+    }
     return allCorrectInDurable;
   }
 
@@ -585,18 +671,22 @@ export class SocAnswerProcessingService {
    */
   private respreadBindingsOnAllCorrect(comp: any, correctTexts: ReadonlySet<string>): void {
     queueMicrotask(() => {
-      comp.optionBindings.set((comp.optionBindings() ?? []).map((b: OptionBindings) => {
-        const isCorrectOption = correctTexts.has(norm((b.option as any)?.text));
-        return {
-          ...b,
-          disabled: !isCorrectOption,
-          isCorrect: isCorrectOption,
-          option: b.option ? {
-            ...b.option,
-            active: isCorrectOption
-          } : b.option
-        };
-      }));
+      comp.optionBindings.set(
+        (comp.optionBindings() ?? []).map((b: OptionBindings) => {
+          const isCorrectOption = correctTexts.has(norm((b.option as any)?.text));
+          return {
+            ...b,
+            disabled: !isCorrectOption,
+            isCorrect: isCorrectOption,
+            option: b.option
+              ? {
+                  ...b.option,
+                  active: isCorrectOption
+                }
+              : b.option
+          };
+        })
+      );
       comp.cdRef.detectChanges();
     });
   }
@@ -670,10 +760,7 @@ export class SocAnswerProcessingService {
     const showing = comp?.currentQuestion?.()?.questionText as string | undefined;
     if (!showing || norm(showing) !== norm(questionText)) return;
 
-    this.respreadBindingsOnAllCorrect(
-      comp,
-      new Set(state.correctOptionTexts.map((t) => norm(t)))
-    );
+    this.respreadBindingsOnAllCorrect(comp, new Set(state.correctOptionTexts.map((t) => norm(t))));
   }
 
   /**
@@ -685,15 +772,20 @@ export class SocAnswerProcessingService {
    * Returns the rebuilt indices only when they cover at least as many as we
    * had (avoid pathological text-match failures), else the input. Verbatim.
    */
-  private recomputeEffectiveCorrectIndices(comp: any, qIdx: number, effectiveCorrectIndices: number[]): number[] {
+  private recomputeEffectiveCorrectIndices(
+    comp: any,
+    qIdx: number,
+    effectiveCorrectIndices: number[]
+  ): number[] {
     try {
       const liveQ: any = this.resolveLiveQuestion(comp, qIdx, qIdx);
       const bindings: any[] = comp.optionBindings() ?? [];
       if (bindings.length) {
         // AUTHORIZED REVEAL ONLY (S5-pre): empty until terminal, so the
         // existing indices survive untouched before the reveal.
-        const pristineCorrectTexts =
-          this.quizService.getAuthorizedCorrectTextsForQuestion(liveQ?.questionText);
+        const pristineCorrectTexts = this.quizService.getAuthorizedCorrectTextsForQuestion(
+          liveQ?.questionText
+        );
         if (pristineCorrectTexts.size > 0) {
           const rebuilt: number[] = [];
           for (let i = 0; i < bindings.length; i++) {
@@ -706,7 +798,9 @@ export class SocAnswerProcessingService {
           }
         }
       }
-    } catch (err: unknown) { console.error('processMultiAnswerClick pristine-recompute failed:', err); }
+    } catch (err: unknown) {
+      console.error('processMultiAnswerClick pristine-recompute failed:', err);
+    }
     return effectiveCorrectIndices;
   }
 
@@ -726,7 +820,12 @@ export class SocAnswerProcessingService {
    * Unknown therefore keeps them enabled, which is the same permissive side
    * this guard has always taken.
    */
-  private computeSuppressDisableForUnselected(comp: any, qIdx: number, displayIdx: number, _durableSet: Set<number>): boolean {
+  private computeSuppressDisableForUnselected(
+    comp: any,
+    qIdx: number,
+    displayIdx: number,
+    _durableSet: Set<number>
+  ): boolean {
     try {
       const liveQS: any = this.resolveLiveQuestion(comp, displayIdx, qIdx);
 
@@ -734,9 +833,11 @@ export class SocAnswerProcessingService {
       if (declaredIsMultiAnswer(liveQS) !== true) return false;
 
       const remaining = this.resolveVerdictStateForComp(comp)?.remainingCorrectCount ?? null;
-      if (remaining === null) return true;   // unknown, not "none left"
+      if (remaining === null) return true; // unknown, not "none left"
       return remaining > 0;
-    } catch (err: unknown) { console.error('processMultiAnswerClick suppressDisable-guard failed:', err); }
+    } catch (err: unknown) {
+      console.error('processMultiAnswerClick suppressDisable-guard failed:', err);
+    }
     return false;
   }
 
@@ -754,22 +855,60 @@ export class SocAnswerProcessingService {
     const { comp, index, binding, qIdx, displayIdx, durableSet, isShuffled } = params;
     let { effectiveCorrectIndices } = params;
 
-    effectiveCorrectIndices = this.recomputeEffectiveCorrectIndices(comp, qIdx, effectiveCorrectIndices);
+    effectiveCorrectIndices = this.recomputeEffectiveCorrectIndices(
+      comp,
+      qIdx,
+      effectiveCorrectIndices
+    );
 
-    const { clickState, bindingUpdates } =
-      this.applyMultiAnswerDisableState(comp, index, qIdx, displayIdx, durableSet, effectiveCorrectIndices);
+    const { clickState, bindingUpdates } = this.applyMultiAnswerDisableState(
+      comp,
+      index,
+      qIdx,
+      displayIdx,
+      durableSet,
+      effectiveCorrectIndices
+    );
 
-    const suppressDisableForUnselected = this.computeSuppressDisableForUnselected(comp, qIdx, displayIdx, durableSet);
-    this.applyMultiAnswerBindingUpdates(comp, bindingUpdates, suppressDisableForUnselected, durableSet);
+    const suppressDisableForUnselected = this.computeSuppressDisableForUnselected(
+      comp,
+      qIdx,
+      displayIdx,
+      durableSet
+    );
+    this.applyMultiAnswerBindingUpdates(
+      comp,
+      bindingUpdates,
+      suppressDisableForUnselected,
+      durableSet
+    );
 
     const feedbackText = this.clickHandler.generateMultiAnswerFeedbackText(clickState);
-    this.buildMultiAnswerFeedbackDisplay(comp, index, binding, effectiveCorrectIndices, feedbackText);
+    this.buildMultiAnswerFeedbackDisplay(
+      comp,
+      index,
+      binding,
+      effectiveCorrectIndices,
+      feedbackText
+    );
     this.pushMultiAnswerSelectionMessage(comp, qIdx, effectiveCorrectIndices, durableSet);
 
     // All correct selected? (pristine TEXT-match count, not index-based.)
-    const allCorrectInDurable = this.computeAllCorrectInDurable(comp, qIdx, displayIdx, durableSet, effectiveCorrectIndices);
+    const allCorrectInDurable = this.computeAllCorrectInDurable(
+      comp,
+      qIdx,
+      displayIdx,
+      durableSet,
+      effectiveCorrectIndices
+    );
     if (allCorrectInDurable) {
-      this.emitMultiAnswerFetOnAllCorrect(comp, qIdx, displayIdx, effectiveCorrectIndices, isShuffled);
+      this.emitMultiAnswerFetOnAllCorrect(
+        comp,
+        qIdx,
+        displayIdx,
+        effectiveCorrectIndices,
+        isShuffled
+      );
     }
 
     this.restoreFeedbackDisplayAfterCD(comp);
@@ -805,22 +944,37 @@ export class SocAnswerProcessingService {
    * (`correctIndices.length - correctSelected`), so the completion stamp keeps
    * firing on the same clicks as before.
    */
-  private applyMultiAnswerDisableState(comp: any, index: number, qIdx: number, displayIdx: number, durableSet: Set<number>, effectiveCorrectIndices: number[]): { clickState: any; bindingUpdates: any[] } {
+  private applyMultiAnswerDisableState(
+    comp: any,
+    index: number,
+    qIdx: number,
+    displayIdx: number,
+    durableSet: Set<number>,
+    effectiveCorrectIndices: number[]
+  ): { clickState: any; bindingUpdates: any[] } {
     const bindings: any[] = comp.optionBindings() ?? [];
     const authorized = this.authorizedMultiAnswerFacts(
-      this.resolveVerdictStateForComp(comp), bindings, index, durableSet
+      this.resolveVerdictStateForComp(comp),
+      bindings,
+      index,
+      durableSet
     );
 
     // REMOVE WITH THE IDLE/CHECKING/ERROR CLEANUP — the pre-verdict path. Note
     // the fallback is all-or-nothing: facts are never mixed across authorities.
-    const clickState = authorized?.clickState
-      ?? this.clickHandler.computeMultiAnswerClickState(index, durableSet, effectiveCorrectIndices);
+    const clickState =
+      authorized?.clickState ??
+      this.clickHandler.computeMultiAnswerClickState(index, durableSet, effectiveCorrectIndices);
     const correctIdxs = authorized ? authorized.correctIndices : effectiveCorrectIndices;
 
     const disabledSetRef = this.ensureDisabledSet(comp, qIdx);
     this.clickHandler.updateDisabledSet(
-      disabledSetRef, index, clickState.isClickedCorrect,
-      clickState.remaining, bindings.length, correctIdxs
+      disabledSetRef,
+      index,
+      clickState.isClickedCorrect,
+      clickState.remaining,
+      bindings.length,
+      correctIdxs
     );
 
     if (clickState.remaining === 0) {
@@ -837,9 +991,17 @@ export class SocAnswerProcessingService {
     }
 
     const bindingUpdates = authorized
-      ? this.buildAuthorizedBindingUpdates(bindings, durableSet, disabledSetRef, authorized.correctnessOf)
+      ? this.buildAuthorizedBindingUpdates(
+          bindings,
+          durableSet,
+          disabledSetRef,
+          authorized.correctnessOf
+        )
       : this.clickHandler.computeMultiAnswerBindingUpdates(
-          bindings.length, durableSet, effectiveCorrectIndices, disabledSetRef
+          bindings.length,
+          durableSet,
+          effectiveCorrectIndices,
+          disabledSetRef
         );
     return { clickState, bindingUpdates };
   }
@@ -857,15 +1019,20 @@ export class SocAnswerProcessingService {
     bindings: any[],
     clickedIndex: number,
     durableSet: Set<number>
-  ): { clickState: any; correctIndices: number[]; correctnessOf: (bi: number) => boolean | null } | null {
+  ): {
+    clickState: any;
+    correctIndices: number[];
+    correctnessOf: (bi: number) => boolean | null;
+  } | null {
     const completed = allCorrectSelectedFromVerdict(state);
     if (!state || completed === null) return null;
 
     // TERMINAL ONLY. `correctOptionTexts` is empty for the whole of incomplete
     // play, so during partial selection there is no full set to read even here.
-    const revealed = state.phase === 'resolved' || state.phase === 'expired'
-      ? new Set(state.correctOptionTexts.map((t) => norm(t)))
-      : null;
+    const revealed =
+      state.phase === 'resolved' || state.phase === 'expired'
+        ? new Set(state.correctOptionTexts.map((t) => norm(t)))
+        : null;
 
     const correctnessOf = (bi: number): boolean | null => {
       const text = bindings[bi]?.option?.text;
@@ -885,7 +1052,7 @@ export class SocAnswerProcessingService {
     } else if (typeof state.remainingCorrectCount === 'number' && state.remainingCorrectCount > 0) {
       remaining = state.remainingCorrectCount;
     } else {
-      return null;  // not complete, yet cannot say what is outstanding
+      return null; // not complete, yet cannot say what is outstanding
     }
 
     const correctIndices: number[] = [];
@@ -1011,14 +1178,21 @@ export class SocAnswerProcessingService {
    * correct are selected) and return true. Verbatim from the single-answer guard.
    */
   private routeToMultiIfPristineMulti(params: {
-    comp: any; index: number; qIdx: number; displayIdx: number;
-    durableSet: Set<number>; effectiveCorrectIndices: number[]; isShuffled: boolean;
+    comp: any;
+    index: number;
+    qIdx: number;
+    displayIdx: number;
+    durableSet: Set<number>;
+    effectiveCorrectIndices: number[];
+    isShuffled: boolean;
   }): boolean {
-    const { comp, index, qIdx, displayIdx, durableSet, effectiveCorrectIndices, isShuffled } = params;
+    const { comp, index, qIdx, displayIdx, durableSet, effectiveCorrectIndices, isShuffled } =
+      params;
     try {
-      const liveQText = comp.currentQuestion()?.questionText
-        ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx]?.questionText
-        ?? this.quizService?.questions?.[qIdx]?.questionText;
+      const liveQText =
+        comp.currentQuestion()?.questionText ??
+        this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx]?.questionText ??
+        this.quizService?.questions?.[qIdx]?.questionText;
       // TYPE IS DECLARED, NOT COUNTED.
       //
       // This asked the bank for the correct set and inferred multi-answer from
@@ -1028,9 +1202,10 @@ export class SocAnswerProcessingService {
       //
       // Only `true` routes to the multi path. An undeclared type stays on the
       // single path, which is where it was already headed.
-      const liveQ = comp.currentQuestion()
-        ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx]
-        ?? this.quizService?.questions?.[qIdx];
+      const liveQ =
+        comp.currentQuestion() ??
+        this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx] ??
+        this.quizService?.questions?.[qIdx];
 
       if (declaredIsMultiAnswer(liveQ) === true) {
         // The correct INDICES are not resolved here any more. Rebuilding them
@@ -1052,7 +1227,9 @@ export class SocAnswerProcessingService {
         });
         return true;
       }
-    } catch (err: unknown) { console.error('processSingleAnswerClick multi-answer guard failed:', err); }
+    } catch (err: unknown) {
+      console.error('processSingleAnswerClick multi-answer guard failed:', err);
+    }
     return false;
   }
 
@@ -1060,12 +1237,19 @@ export class SocAnswerProcessingService {
    * Single-answer correct click: score + open FET gates, resolve the question,
    * emit the FET, apply the correct-bindings, and run CD. Extracted verbatim.
    */
-  private handleSingleAnswerCorrect(comp: any, index: number, qIdx: number, displayIdx: number, correctSet: Set<number>): void {
+  private handleSingleAnswerCorrect(
+    comp: any,
+    index: number,
+    qIdx: number,
+    displayIdx: number,
+    correctSet: Set<number>
+  ): void {
     this.scoreAndOpenFet(comp, qIdx, displayIdx, false);
 
-    const singleFetQuestion = comp.currentQuestion()
-      ?? comp.getQuestionAtDisplayIndex?.(displayIdx)
-      ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx];
+    const singleFetQuestion =
+      comp.currentQuestion() ??
+      comp.getQuestionAtDisplayIndex?.(displayIdx) ??
+      this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx];
 
     this.emitSingleAnswerFet(comp, displayIdx, singleFetQuestion);
     this.applySingleAnswerCorrectBindings(comp, index, qIdx, correctSet);
@@ -1082,7 +1266,12 @@ export class SocAnswerProcessingService {
    * Called from both processSingleAnswerClick (incorrect-click tail) and
    * processMultiAnswerClick to share a single auto-reveal implementation.
    */
-  private triggerAllIncorrectsExhaustedAutoReveal(comp: any, index: number, qIdx: number, displayIdx: number): void {
+  private triggerAllIncorrectsExhaustedAutoReveal(
+    comp: any,
+    index: number,
+    qIdx: number,
+    displayIdx: number
+  ): void {
     try {
       const ctxAR = this.computeAutoRevealContext(comp, index, qIdx);
       if (!ctxAR) return;
@@ -1098,7 +1287,9 @@ export class SocAnswerProcessingService {
       if (ctxAR.revealable === false) {
         try {
           this.timerService.stopTimer?.(undefined, { force: true, bypassAntiThrash: true });
-        } catch { /* a stopped clock must not break the flow */ }
+        } catch {
+          /* a stopped clock must not break the flow */
+        }
         this.nextButtonStateService.setNextButtonState(true);
         this.selectionMessageService.forceNextButtonMessage(qIdx);
         return;
@@ -1127,24 +1318,41 @@ export class SocAnswerProcessingService {
       // leave the question open rather than lock it on a guess. Under the API
       // adapter the check is still in flight at click time, so null is the
       // ordinary case here, not an edge one.
-      if (isMultiModeAR &&
-          allCorrectSelectedFromVerdict(this.resolveVerdictStateForComp(comp)) !== true) {
+      if (
+        isMultiModeAR &&
+        allCorrectSelectedFromVerdict(this.resolveVerdictStateForComp(comp)) !== true
+      ) {
         return;
       }
 
       // All incorrects exhausted — auto-reveal the correct answer(s).
-      const { correctIdxsAR, correctSetAR, historySetAR } =
-        this.enterAutoRevealState(comp, index, qIdx, displayIdx, bindingsAR, bindingNormsAR, pristineCorrectTextsAR, isMultiModeAR);
+      const { correctIdxsAR, correctSetAR, historySetAR } = this.enterAutoRevealState(
+        comp,
+        index,
+        qIdx,
+        displayIdx,
+        bindingsAR,
+        bindingNormsAR,
+        pristineCorrectTextsAR,
+        isMultiModeAR
+      );
 
       // Resolve and emit the FET text FIRST while bindings are still
       // stable. The binding rebuild below must be synchronous (not
       // deferred via queueMicrotask) because detectChanges() triggers
       // effects that can overwrite the bindings before the microtask
       // runs — wiping _autoRevealedCorrect and the green highlight.
-      const fetQuestionAR = comp.currentQuestion()
-        ?? comp.getQuestionAtDisplayIndex?.(displayIdx)
-        ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx];
-      const fetTextAR = this.resolveAutoRevealFetText(comp, displayIdx, correctIdxsAR, isMultiModeAR, fetQuestionAR);
+      const fetQuestionAR =
+        comp.currentQuestion() ??
+        comp.getQuestionAtDisplayIndex?.(displayIdx) ??
+        this.quizService?.getQuestionsInDisplayOrder?.()?.[displayIdx];
+      const fetTextAR = this.resolveAutoRevealFetText(
+        comp,
+        displayIdx,
+        correctIdxsAR,
+        isMultiModeAR,
+        fetQuestionAR
+      );
 
       // Shared FET write (same sequence as the process*AnswerClick paths).
       if (fetTextAR) {
@@ -1154,14 +1362,27 @@ export class SocAnswerProcessingService {
       // Synchronous binding rebuild — MUST happen after FET emission and NOT be
       // deferred (detectChanges() effects would overwrite deferred bindings,
       // wiping _autoRevealedCorrect).
-      this.applyAutoRevealBindings(comp, bindingsAR, correctSetAR, historySetAR, index, isMultiModeAR);
+      this.applyAutoRevealBindings(
+        comp,
+        bindingsAR,
+        correctSetAR,
+        historySetAR,
+        index,
+        isMultiModeAR
+      );
 
       setTimeout(() => {
-        try { comp.emitExplanation?.(qIdx, true); } catch { /* ignore */ }
+        try {
+          comp.emitExplanation?.(qIdx, true);
+        } catch {
+          /* ignore */
+        }
       }, 0);
 
       comp.cdRef?.detectChanges?.();
-    } catch (err: unknown) { console.error('auto-reveal failed:', err); }
+    } catch (err: unknown) {
+      console.error('auto-reveal failed:', err);
+    }
   }
 
   /**
@@ -1169,28 +1390,32 @@ export class SocAnswerProcessingService {
    * binding context when every incorrect option has been selected (the trigger
    * condition), or null to bail out. Extracted verbatim.
    */
-  private computeAutoRevealContext(comp: any, index: number, qIdx: number):
-    {
-      bindingsAR: any[];
-      bindingNormsAR: string[];
-      pristineCorrectTextsAR: Set<string>;
-      isMultiModeAR: boolean;
-      /** False when the question is COMPLETE but its answers are not released. */
-      revealable: boolean;
-    } | null {
-    const liveQAR: any = comp.currentQuestion()
-      ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[qIdx]
-      ?? this.quizService?.questions?.[qIdx];
+  private computeAutoRevealContext(
+    comp: any,
+    index: number,
+    qIdx: number
+  ): {
+    bindingsAR: any[];
+    bindingNormsAR: string[];
+    pristineCorrectTextsAR: Set<string>;
+    isMultiModeAR: boolean;
+    /** False when the question is COMPLETE but its answers are not released. */
+    revealable: boolean;
+  } | null {
+    const liveQAR: any =
+      comp.currentQuestion() ??
+      this.quizService?.getQuestionsInDisplayOrder?.()?.[qIdx] ??
+      this.quizService?.questions?.[qIdx];
     const bindingsAR: any[] = Array.isArray(comp.optionBindings())
       ? comp.optionBindings()
-      : (typeof comp.optionBindings() === 'function' ? comp.optionBindings() : []);
+      : typeof comp.optionBindings() === 'function'
+        ? comp.optionBindings()
+        : [];
     if (!bindingsAR.length) return null;
 
     // Pre-compute normalized texts for all bindings (avoids repeated
     // norm() calls in the multiple loops below).
-    const bindingNormsAR: string[] = bindingsAR.map(
-      (b: any) => norm(b?.option?.text)
-    );
+    const bindingNormsAR: string[] = bindingsAR.map((b: any) => norm(b?.option?.text));
 
     // AUTHORIZED REVEAL (S5-pre).
     //
@@ -1207,8 +1432,9 @@ export class SocAnswerProcessingService {
     // exhausted" reveal working with nothing else authorized: if every option
     // but one has been picked and judged wrong, the survivor is the answer by
     // deduction from the user's own verdicts — not by reading a key.
-    const authorizedCorrectAR =
-      this.quizService.getAuthorizedCorrectTextsForQuestion(liveQAR?.questionText);
+    const authorizedCorrectAR = this.quizService.getAuthorizedCorrectTextsForQuestion(
+      liveQAR?.questionText
+    );
     // TRI-STATE, deliberately not collapsed: a null declared type means it has
     // not loaded, which is neither single nor multi. Route 2 below demands a
     // KNOWN single, so unknown declines the reveal instead of guessing.
@@ -1221,8 +1447,7 @@ export class SocAnswerProcessingService {
     // the previous), so we MUST read from comp._multiSelectByQuestion —
     // a Set<number> of every clicked binding index for this qIdx.
     const selectedTextsAR = new Set<string>();
-    const durableClicksAR0: Set<number> | undefined =
-      comp._multiSelectByQuestion?.get(qIdx);
+    const durableClicksAR0: Set<number> | undefined = comp._multiSelectByQuestion?.get(qIdx);
     if (durableClicksAR0) {
       for (const ci of durableClicksAR0) {
         const tx = bindingNormsAR[ci];
@@ -1231,11 +1456,11 @@ export class SocAnswerProcessingService {
     }
     // Belt-and-suspenders: also include the just-clicked option in case
     // the durable set hasn't been populated yet on this CD cycle.
-    const clickedTextAR = bindingNormsAR[index] ?? norm(comp.optionBindings()?.[index]?.option?.text);
+    const clickedTextAR =
+      bindingNormsAR[index] ?? norm(comp.optionBindings()?.[index]?.option?.text);
     if (clickedTextAR) selectedTextsAR.add(clickedTextAR);
     // And merge any in-memory map entries.
-    const selectionsAR =
-      this.selectedOptionService.getSelectedOptionsForQuestion(qIdx) ?? [];
+    const selectionsAR = this.selectedOptionService.getSelectedOptionsForQuestion(qIdx) ?? [];
     for (const s of selectionsAR) {
       const tx = norm(s?.text);
       if (tx) selectedTextsAR.add(tx);
@@ -1252,8 +1477,7 @@ export class SocAnswerProcessingService {
         if (tx && !authorizedCorrectAR.has(tx)) incorrectTextsAR.add(tx);
       }
       if (incorrectTextsAR.size === 0) return null;
-      const allIncorrectSelected =
-        [...incorrectTextsAR].every((t) => selectedTextsAR.has(t));
+      const allIncorrectSelected = [...incorrectTextsAR].every((t) => selectedTextsAR.has(t));
       if (!allIncorrectSelected) return null;
 
       return {
@@ -1303,9 +1527,9 @@ export class SocAnswerProcessingService {
     // reveal rather than assuming it.
     if (unpickedAR.length !== 1) return null;
     for (const picked of selectedTextsAR) {
-      if (this.quizService.authorizedCorrectnessForOption(
-        liveQAR?.questionText, picked
-      ) !== false) {
+      if (
+        this.quizService.authorizedCorrectnessForOption(liveQAR?.questionText, picked) !== false
+      ) {
         return null;
       }
     }
@@ -1324,9 +1548,19 @@ export class SocAnswerProcessingService {
    * and compute the correct/disabled/history index sets used to rebuild the
    * bindings. Extracted verbatim.
    */
-  private enterAutoRevealState(comp: any, index: number, qIdx: number, displayIdx: number, bindingsAR: any[], bindingNormsAR: string[], pristineCorrectTextsAR: Set<string>, isMultiModeAR = false):
-    { correctIdxsAR: number[]; correctSetAR: Set<number>; historySetAR: Set<number> } {
-    try { this.timerService.stopTimer?.(undefined, { force: true, bypassAntiThrash: true }); } catch {}
+  private enterAutoRevealState(
+    comp: any,
+    index: number,
+    qIdx: number,
+    displayIdx: number,
+    bindingsAR: any[],
+    bindingNormsAR: string[],
+    pristineCorrectTextsAR: Set<string>,
+    isMultiModeAR = false
+  ): { correctIdxsAR: number[]; correctSetAR: Set<number>; historySetAR: Set<number> } {
+    try {
+      this.timerService.stopTimer?.(undefined, { force: true, bypassAntiThrash: true });
+    } catch {}
     this.nextButtonStateService.setNextButtonState(true);
     this.selectionMessageService.forceNextButtonMessage(qIdx);
     this.explanationTextService.fetBypassForQuestion.set(displayIdx, true);
@@ -1382,7 +1616,13 @@ export class SocAnswerProcessingService {
    * falling back to the question's explanation), and for multi-answer format it
    * as the "Options X and Y..." form. Extracted verbatim.
    */
-  private resolveAutoRevealFetText(comp: any, displayIdx: number, correctIdxsAR: number[], isMultiModeAR: boolean, fetQuestionAR: any): string {
+  private resolveAutoRevealFetText(
+    comp: any,
+    displayIdx: number,
+    correctIdxsAR: number[],
+    isMultiModeAR: boolean,
+    fetQuestionAR: any
+  ): string {
     const fetCtxAR = {
       resolvedIndex: displayIdx,
       question: fetQuestionAR,
@@ -1398,8 +1638,11 @@ export class SocAnswerProcessingService {
     // bundled text would have re-opened exactly the hole this migration closes.
     let fetTextAR = '';
     try {
-      fetTextAR = this.sharedOptionExplanationService.resolveExplanationText(fetCtxAR as any)?.trim() ?? '';
-    } catch { /* ignore */ }
+      fetTextAR =
+        this.sharedOptionExplanationService.resolveExplanationText(fetCtxAR as any)?.trim() ?? '';
+    } catch {
+      /* ignore */
+    }
 
     if (isMultiModeAR && fetTextAR) {
       try {
@@ -1413,7 +1656,9 @@ export class SocAnswerProcessingService {
             fetTextAR
           );
         }
-      } catch (err: unknown) { console.error('triggerAllIncorrectsExhausted FET formatting failed:', err); }
+      } catch (err: unknown) {
+        console.error('triggerAllIncorrectsExhausted FET formatting failed:', err);
+      }
     }
     return fetTextAR;
   }
@@ -1425,37 +1670,48 @@ export class SocAnswerProcessingService {
    *
    * MULTI-ANSWER TAKES A DIFFERENT SHAPE — see applyMultiAnswerLockBindings.
    */
-  private applyAutoRevealBindings(comp: any, bindingsAR: any[], correctSetAR: Set<number>, historySetAR: Set<number>, index: number, isMultiModeAR = false): void {
+  private applyAutoRevealBindings(
+    comp: any,
+    bindingsAR: any[],
+    correctSetAR: Set<number>,
+    historySetAR: Set<number>,
+    index: number,
+    isMultiModeAR = false
+  ): void {
     if (isMultiModeAR) {
       this.applyMultiAnswerLockBindings(comp, bindingsAR, correctSetAR, historySetAR, index);
       return;
     }
 
-    comp.optionBindings.set(bindingsAR.map((ob: any, bi: number) => {
-      const isCorrectBinding = correctSetAR.has(bi);
-      const isClicked = bi === index;
-      const wasPreviouslyClicked = historySetAR.has(bi) && !isClicked && !isCorrectBinding;
-      return {
-        ...ob,
-        disabled: !isCorrectBinding && !isClicked,
-        isSelected: isClicked,
-        isCorrect: isCorrectBinding,
-        _autoRevealedCorrect: isCorrectBinding,
-        option: ob?.option ? {
-          ...ob.option,
-          selected: isClicked,
-          highlight: isClicked || wasPreviouslyClicked || isCorrectBinding,
-          showIcon: isClicked || wasPreviouslyClicked || isCorrectBinding,
-          active: isCorrectBinding,
-          _autoRevealedCorrect: isCorrectBinding
-        } : ob?.option,
-        cssClasses: {
-          ...(ob?.cssClasses || {}),
-          'correct-option': isCorrectBinding,
-          'incorrect-option': !isCorrectBinding && (isClicked || wasPreviouslyClicked)
-        }
-      };
-    }));
+    comp.optionBindings.set(
+      bindingsAR.map((ob: any, bi: number) => {
+        const isCorrectBinding = correctSetAR.has(bi);
+        const isClicked = bi === index;
+        const wasPreviouslyClicked = historySetAR.has(bi) && !isClicked && !isCorrectBinding;
+        return {
+          ...ob,
+          disabled: !isCorrectBinding && !isClicked,
+          isSelected: isClicked,
+          isCorrect: isCorrectBinding,
+          _autoRevealedCorrect: isCorrectBinding,
+          option: ob?.option
+            ? {
+                ...ob.option,
+                selected: isClicked,
+                highlight: isClicked || wasPreviouslyClicked || isCorrectBinding,
+                showIcon: isClicked || wasPreviouslyClicked || isCorrectBinding,
+                active: isCorrectBinding,
+                _autoRevealedCorrect: isCorrectBinding
+              }
+            : ob?.option,
+          cssClasses: {
+            ...(ob?.cssClasses || {}),
+            'correct-option': isCorrectBinding,
+            'incorrect-option': !isCorrectBinding && (isClicked || wasPreviouslyClicked)
+          }
+        };
+      })
+    );
   }
 
   /**
@@ -1498,47 +1754,56 @@ export class SocAnswerProcessingService {
    * `option-item.isDisabled()` re-deriving the lock from completion state, not
    * from here, and is the case the CONTROL e2e covers.
    */
-  private applyMultiAnswerLockBindings(comp: any, bindingsAR: any[], correctSetAR: Set<number>, historySetAR: Set<number>, index: number): void {
-    comp.optionBindings.set(bindingsAR.map((ob: any, bi: number) => {
-      const isCorrectBinding = correctSetAR.has(bi);
-      // Every option the user has clicked on this question, this visit —
-      // historySetAR already carries the durable click set plus `index`.
-      const wasPicked = historySetAR.has(bi) || bi === index;
+  private applyMultiAnswerLockBindings(
+    comp: any,
+    bindingsAR: any[],
+    correctSetAR: Set<number>,
+    historySetAR: Set<number>,
+    index: number
+  ): void {
+    comp.optionBindings.set(
+      bindingsAR.map((ob: any, bi: number) => {
+        const isCorrectBinding = correctSetAR.has(bi);
+        // Every option the user has clicked on this question, this visit —
+        // historySetAR already carries the durable click set plus `index`.
+        const wasPicked = historySetAR.has(bi) || bi === index;
 
-      const green = wasPicked && isCorrectBinding;
-      const red = wasPicked && !isCorrectBinding;
+        const green = wasPicked && isCorrectBinding;
+        const red = wasPicked && !isCorrectBinding;
 
-      return {
-        ...ob,
-        // Unselected options lock out; the user's own picks keep their state.
-        disabled: !wasPicked,
-        // `disabled` alone does not grey an option: option-item.isDisabled()
-        // re-derives locking from completion state, and this question is NOT
-        // complete (a correct answer went unfound), so it would answer false
-        // and the option would render live and white. This flag is the lock
-        // itself, cleared on navigation alongside _autoRevealedCorrect.
-        _autoRevealLocked: !wasPicked,
-        isSelected: wasPicked,
-        // Correctness is disclosed ONLY for options the user actually picked.
-        // An untouched option keeps whatever the verdict had authorized (which
-        // is nothing, mid-question) rather than being told it is wrong.
-        isCorrect: wasPicked ? isCorrectBinding : (ob?.isCorrect ?? null),
-        _autoRevealedCorrect: green,
-        option: ob?.option ? {
-          ...ob.option,
-          selected: wasPicked,
-          highlight: wasPicked,
-          showIcon: wasPicked,
-          active: wasPicked,
-          _autoRevealedCorrect: green
-        } : ob?.option,
-        cssClasses: {
-          ...(ob?.cssClasses || {}),
-          'correct-option': green,
-          'incorrect-option': red
-        }
-      };
-    }));
+        return {
+          ...ob,
+          // Unselected options lock out; the user's own picks keep their state.
+          disabled: !wasPicked,
+          // `disabled` alone does not grey an option: option-item.isDisabled()
+          // re-derives locking from completion state, and this question is NOT
+          // complete (a correct answer went unfound), so it would answer false
+          // and the option would render live and white. This flag is the lock
+          // itself, cleared on navigation alongside _autoRevealedCorrect.
+          _autoRevealLocked: !wasPicked,
+          isSelected: wasPicked,
+          // Correctness is disclosed ONLY for options the user actually picked.
+          // An untouched option keeps whatever the verdict had authorized (which
+          // is nothing, mid-question) rather than being told it is wrong.
+          isCorrect: wasPicked ? isCorrectBinding : (ob?.isCorrect ?? null),
+          _autoRevealedCorrect: green,
+          option: ob?.option
+            ? {
+                ...ob.option,
+                selected: wasPicked,
+                highlight: wasPicked,
+                showIcon: wasPicked,
+                active: wasPicked,
+                _autoRevealedCorrect: green
+              }
+            : ob?.option,
+          cssClasses: {
+            ...(ob?.cssClasses || {}),
+            'correct-option': green,
+            'incorrect-option': red
+          }
+        };
+      })
+    );
   }
-
 }

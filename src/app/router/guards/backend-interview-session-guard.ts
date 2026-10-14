@@ -60,7 +60,7 @@ export class BackendInterviewSessionGuard implements CanActivate {
           return this.router.createUrlTree(['/interview/results', verdict.sessionId]);
         }
         if (verdict.kind === 'builder') return this.toBuilder();
-        return true;   // unresolved: the component renders the retry card
+        return true; // unresolved: the component renders the retry card
       }
       case 'unauthorized':
       case 'none':

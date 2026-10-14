@@ -36,10 +36,7 @@ describe('QuizScoringService.creditResolvedQuestion — idempotency (Stage 10)',
     };
 
     TestBed.configureTestingModule({
-      providers: [
-        QuizScoringService,
-        { provide: QuizService, useValue: quizServiceMock }
-      ]
+      providers: [QuizScoringService, { provide: QuizService, useValue: quizServiceMock }]
     });
     service = TestBed.inject(QuizScoringService);
   });
@@ -49,7 +46,7 @@ describe('QuizScoringService.creditResolvedQuestion — idempotency (Stage 10)',
     expect(service.correctCountSig()).toBe(1);
 
     service.creditResolvedQuestion(QUIZ, QUESTIONS[0]!.questionText);
-    expect(service.correctCountSig()).toBe(1);   // unchanged — not 2
+    expect(service.correctCountSig()).toBe(1); // unchanged — not 2
   });
 
   it('calling it many times (simulating a replayed verdict / repeated effect run) still credits exactly once', () => {

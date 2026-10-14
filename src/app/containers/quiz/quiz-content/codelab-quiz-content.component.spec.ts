@@ -85,7 +85,11 @@ function makeHost(template: string) {
     selector: 'test-quiz-host',
     standalone: true,
     imports: [CodelabQuizContentComponent, CodeSnippetComponent],
-    template: `@let qa = data(); @let questionIndex = idx(); ${template}`
+    template: `
+      @let qa = data();
+      @let questionIndex = idx();
+      ${template}
+    `
   })
   class HostComponent {
     readonly data = signal<{ question: QuestionUnderTest }>({ question: makeQuestion() });
@@ -131,11 +135,20 @@ function fakes(question: QuestionUnderTest) {
         }
       },
       { provide: ExplanationTextService, useValue: explanationTextService },
-      { provide: QuestionVerdictService, useValue: { states: signal(new Map()), verdictFor: () => null } },
-      { provide: TopicQuizTypeRegistry, useValue: { isMultiAnswer: () => null, correctCount: () => null } },
+      {
+        provide: QuestionVerdictService,
+        useValue: { states: signal(new Map()), verdictFor: () => null }
+      },
+      {
+        provide: TopicQuizTypeRegistry,
+        useValue: { isMultiAnswer: () => null, correctCount: () => null }
+      },
       { provide: QuizDataService, useValue: {} },
       { provide: QuizNavigationService, useValue: { isNavigatingToPreviousSig: signal(false) } },
-      { provide: QuizQuestionManagerService, useValue: { getNumberOfCorrectAnswersText: () => '' } },
+      {
+        provide: QuizQuestionManagerService,
+        useValue: { getNumberOfCorrectAnswersText: () => '' }
+      },
       {
         provide: QuizService,
         useValue: {
@@ -237,15 +250,14 @@ describe('CodelabQuizContentComponent — the question is projected content', ()
     it('the receiver finds the projected heading (contentChild #qText) and fills it', () => {
       ({ fixture } = render(consumerRegion()));
 
-      const receiverInstance = fixture.debugElement
-        .query(By.directive(CodelabQuizContentComponent))
+      const receiverInstance = fixture.debugElement.query(By.directive(CodelabQuizContentComponent))
         .componentInstance as CodelabQuizContentComponent;
 
       expect(receiverInstance.qText()?.nativeElement).toBe(heading());
       expect(heading().textContent).toContain('What does the');
     });
 
-    it('a question with a code snippet renders <app-code-snippet> as the <h3>\'s sibling inside the SAME .question-box', () => {
+    it("a question with a code snippet renders <app-code-snippet> as the <h3>'s sibling inside the SAME .question-box", () => {
       const question = makeQuestion({
         codeSnippet: { code: 'export class A {}', language: 'typescript', filename: 'a.ts' }
       });
@@ -310,7 +322,7 @@ describe('CodelabQuizContentComponent — the question is projected content', ()
 
       expect(heading().querySelector('code')?.textContent).toBe('ngOnInit');
       expect(heading().textContent).toBe('What does the ngOnInit hook do?');
-      expect(sanitizerWarning).not.toHaveBeenCalled();   // nothing was stripped
+      expect(sanitizerWarning).not.toHaveBeenCalled(); // nothing was stripped
     });
 
     it.each([
@@ -339,7 +351,8 @@ describe('CodelabQuizContentComponent — the question is projected content', ()
       root.querySelectorAll('*').forEach((node) => {
         for (const attr of Array.from(node.attributes)) {
           if (/^on/i.test(attr.name)) found.push(`${node.tagName.toLowerCase()}[${attr.name}]`);
-          if (/^\s*javascript:/i.test(attr.value)) found.push(`${node.tagName.toLowerCase()}[${attr.name}=javascript:]`);
+          if (/^\s*javascript:/i.test(attr.value))
+            found.push(`${node.tagName.toLowerCase()}[${attr.name}=javascript:]`);
         }
       });
       return found;
@@ -347,7 +360,7 @@ describe('CodelabQuizContentComponent — the question is projected content', ()
 
     it('test control: the unsanitized string WOULD be dangerous, so the assertions below cannot pass vacuously', () => {
       const probe = document.createElement('div');
-      probe.innerHTML = HOSTILE;   // what an unguarded Renderer2 / innerHTML write would do
+      probe.innerHTML = HOSTILE; // what an unguarded Renderer2 / innerHTML write would do
 
       expect(unsafeThingsIn(probe).length).toBeGreaterThan(0);
     });
@@ -376,11 +389,13 @@ describe('CodelabQuizContentComponent — the question is projected content', ()
       // A live timeout is the one path that shows the FET without any click.
       const optionRow = document.createElement('div');
       optionRow.className = 'option-row';
-      document.body.appendChild(optionRow);   // the heading only reveals a FET once options exist
+      document.body.appendChild(optionRow); // the heading only reveals a FET once options exist
 
-      const { fixture: f, expiredForQuestionIndexSig, explanationTextService } = render(
-        consumerRegion()
-      );
+      const {
+        fixture: f,
+        expiredForQuestionIndexSig,
+        explanationTextService
+      } = render(consumerRegion());
       fixture = f;
       explanationTextService.timeoutFetByIndex.set(
         IDX,

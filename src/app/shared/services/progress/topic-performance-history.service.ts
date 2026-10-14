@@ -78,12 +78,12 @@ export class TopicPerformanceHistoryService {
     if (!attemptId || topics.length === 0) return;
 
     const existing = this._records();
-    if (existing.some((r) => r.attemptId === attemptId)) return;   // already recorded
+    if (existing.some((r) => r.attemptId === attemptId)) return; // already recorded
 
     const completedAt = new Date().toISOString();
     const incoming: TopicPerformanceRecord[] = [];
     for (const topic of topics) {
-      if (!topic?.topicId || !(topic.total > 0)) continue;   // skip empty samples
+      if (!topic?.topicId || !(topic.total > 0)) continue; // skip empty samples
       const candidate = validateTopicPerformanceRecord({
         attemptId,
         source,

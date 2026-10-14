@@ -102,7 +102,10 @@ describe('QclQuestionFetchService — loadQuestionFromRouteChange (S6n)', () => 
     await expect(
       service.loadQuestionFromRouteChange({ quizId: 'dependency-injection', index: 2 })
     ).resolves.toEqual(
-      expect.objectContaining({ success: true, question: expect.objectContaining({ questionText: 'Q3 text' }) })
+      expect.objectContaining({
+        success: true,
+        question: expect.objectContaining({ questionText: 'Q3 text' })
+      })
     );
   });
 

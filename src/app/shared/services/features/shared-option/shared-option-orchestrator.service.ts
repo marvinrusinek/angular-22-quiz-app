@@ -1,4 +1,4 @@
-﻿import { Service } from '@angular/core';
+import { Service } from '@angular/core';
 
 import { Option, OptionBindings, QuizQuestion, SelectedOption } from '@shared/models';
 
@@ -11,7 +11,6 @@ type Host = SharedOptionComponent;
 
 @Service()
 export class SharedOptionOrchestratorService {
-
   // ===== Lifecycle =====
   runOnInit(host: Host): void {
     host.initializeQuestionIndex();
@@ -39,10 +38,12 @@ export class SharedOptionOrchestratorService {
 
   // ===== Index helpers =====
   runInitializeQuestionIndex(host: Host): void {
-    const qIndex = host.questionIndex() ??
-        host.currentQuestionIndex ??
-        host.config()?.idx ??
-        host.quizService?.currentQuestionIndex ?? 0;
+    const qIndex =
+      host.questionIndex() ??
+      host.currentQuestionIndex ??
+      host.config()?.idx ??
+      host.quizService?.currentQuestionIndex ??
+      0;
     host.lastProcessedQuestionIndex = qIndex;
     host.updateResolvedQuestionIndex(qIndex);
   }
@@ -56,7 +57,8 @@ export class SharedOptionOrchestratorService {
     const qi = host.questionIndex();
     if (typeof qi === 'number' && Number.isFinite(qi)) return qi;
 
-    if (typeof host.currentQuestionIndex === 'number' && 
+    if (
+      typeof host.currentQuestionIndex === 'number' &&
       Number.isFinite(host.currentQuestionIndex)
     ) {
       return host.currentQuestionIndex;
@@ -64,7 +66,8 @@ export class SharedOptionOrchestratorService {
     if (Number.isFinite(host.resolvedQuestionIndex)) {
       return host.resolvedQuestionIndex!;
     }
-    const svcIndex = host.quizService?.getCurrentQuestionIndex?.() ?? host.quizService?.currentQuestionIndex;
+    const svcIndex =
+      host.quizService?.getCurrentQuestionIndex?.() ?? host.quizService?.currentQuestionIndex;
     if (typeof svcIndex === 'number' && Number.isFinite(svcIndex)) return svcIndex;
 
     return 0;
@@ -86,8 +89,8 @@ export class SharedOptionOrchestratorService {
   }
 
   runGetQuestionAtDisplayIndex(host: Host, displayIndex: number): QuizQuestion | null {
-    const isShuffled = host.quizService?.isShuffleEnabled?.() &&
-      host.quizService?.shuffledQuestions?.length > 0;
+    const isShuffled =
+      host.quizService?.isShuffleEnabled?.() && host.quizService?.shuffledQuestions?.length > 0;
     const questionSource = isShuffled
       ? host.quizService.shuffledQuestions
       : host.quizService?.questions;
@@ -113,9 +116,10 @@ export class SharedOptionOrchestratorService {
     const currentQ = host.getQuestionAtDisplayIndex(idx) ?? host.currentQuestion();
 
     const declaredMulti = declaredIsMultiAnswer(currentQ);
-    const result = declaredMulti !== null
-      ? declaredMulti
-      : host.clickHandler.detectMultiMode(currentQ, host.type, host.config()?.type);
+    const result =
+      declaredMulti !== null
+        ? declaredMulti
+        : host.clickHandler.detectMultiMode(currentQ, host.type, host.config()?.type);
 
     // Update cache for other code that reads it
     host._isMultiModeCache = result;
@@ -144,7 +148,12 @@ export class SharedOptionOrchestratorService {
     };
   }
 
-  runDisplayFeedbackForOption(host: Host, option: SelectedOption, index: number, optionId: number): void {
+  runDisplayFeedbackForOption(
+    host: Host,
+    option: SelectedOption,
+    index: number,
+    optionId: number
+  ): void {
     if (!option) return;
     const ctx = host.buildFeedbackContext();
     const result = host.feedbackManager.displayFeedbackForOption(option, index, optionId, ctx);
@@ -161,7 +170,9 @@ export class SharedOptionOrchestratorService {
 
   runRebuildShowFeedbackMapFromBindings(host: Host): void {
     const result = host.feedbackManager.rebuildShowFeedbackMapFromBindings(
-      host.optionBindings(), host.lastFeedbackOptionId, host.selectedOptionHistory
+      host.optionBindings(),
+      host.lastFeedbackOptionId,
+      host.selectedOptionHistory
     );
     host.showFeedback.set(result.showFeedback);
     host.showFeedbackForOption = result.showFeedbackForOption;
@@ -173,7 +184,11 @@ export class SharedOptionOrchestratorService {
   }
 
   runRegenerateFeedback(host: Host, idx: number): void {
-    const result = host.feedbackManager.regenerateFeedback(idx, host.optionsToDisplay, host.optionBindings());
+    const result = host.feedbackManager.regenerateFeedback(
+      idx,
+      host.optionsToDisplay,
+      host.optionBindings()
+    );
     if (result) {
       host.feedbackConfigs = result.feedbackConfigs;
       host.cdRef.markForCheck();
@@ -183,9 +198,9 @@ export class SharedOptionOrchestratorService {
   // ===== Selection / visibility =====
   runUpdateSelections(host: Host, rawSelectedId: number | string): void {
     host.optionSelectionUiService.applySingleSelectClick(
-        host.optionBindings(),
-        rawSelectedId,
-        host.selectedOptionHistory
+      host.optionBindings(),
+      rawSelectedId,
+      host.selectedOptionHistory
     );
     if (host.showFeedback()) {
       host.rebuildShowFeedbackMapFromBindings();
@@ -202,7 +217,10 @@ export class SharedOptionOrchestratorService {
       host.preserveOptionHighlighting();
       host.cdRef.markForCheck();
     } catch (err: unknown) {
-      console.error('SharedOptionOrchestratorService.runOnVisibilityChange visibility handling failed:', err);
+      console.error(
+        'SharedOptionOrchestratorService.runOnVisibilityChange visibility handling failed:',
+        err
+      );
     }
   }
 
@@ -235,7 +253,12 @@ export class SharedOptionOrchestratorService {
     );
   }
 
-  runOnOptionInteraction(host: Host, binding: OptionBindings, index: number, event: MouseEvent): void {
+  runOnOptionInteraction(
+    host: Host,
+    binding: OptionBindings,
+    index: number,
+    event: MouseEvent
+  ): void {
     if (host.isDisabled(binding, index)) {
       event.preventDefault();
       event.stopPropagation();
@@ -248,10 +271,8 @@ export class SharedOptionOrchestratorService {
 
   // ===== Rendering / explanation =====
   runMarkRenderReady(host: Host, _reason: string): void {
-    const bindingsReady =
-      Array.isArray(host.optionBindings()) && host.optionBindings().length > 0;
-    const optionsReady =
-      Array.isArray(host.optionsToDisplay) && host.optionsToDisplay.length > 0;
+    const bindingsReady = Array.isArray(host.optionBindings()) && host.optionBindings().length > 0;
+    const optionsReady = Array.isArray(host.optionsToDisplay) && host.optionsToDisplay.length > 0;
 
     if (bindingsReady && optionsReady) {
       host.renderReady.set(true);
@@ -260,16 +281,19 @@ export class SharedOptionOrchestratorService {
   }
 
   runEmitExplanation(host: Host, questionIndex: number, skipGuard: boolean): void {
-    host.explanationHandler.resolveAndEmitExplanation({
-      questionIndex,
-      activeQuestionIndex: host.getActiveQuestionIndex(),
-      currentQuestion: host.currentQuestion(),
-      quizId: host.quizId() ?? '',
-      optionBindings: host.optionBindings(),
-      optionsToDisplay: host.optionsToDisplay,
-      isMultiMode: host.isMultiMode,
-      getQuestionAtDisplayIndex: (idx: number) => host.getQuestionAtDisplayIndex(idx)
-    }, skipGuard);
+    host.explanationHandler.resolveAndEmitExplanation(
+      {
+        questionIndex,
+        activeQuestionIndex: host.getActiveQuestionIndex(),
+        currentQuestion: host.currentQuestion(),
+        quizId: host.quizId() ?? '',
+        optionBindings: host.optionBindings(),
+        optionsToDisplay: host.optionsToDisplay,
+        isMultiMode: host.isMultiMode,
+        getQuestionAtDisplayIndex: (idx: number) => host.getQuestionAtDisplayIndex(idx)
+      },
+      skipGuard
+    );
   }
 
   runDeferHighlightUpdate(host: Host, callback: () => void): void {
@@ -288,16 +312,18 @@ export class SharedOptionOrchestratorService {
     if (host.type !== 'multiple') {
       // In shuffled mode, use display-order question (currentQuestion may be wrong)
       const qs: any = host.quizService;
-      const isShuf = qs?.isShuffleEnabled?.()
-        && Array.isArray(qs?.shuffledQuestions)
-        && qs.shuffledQuestions.length > 0;
+      const isShuf =
+        qs?.isShuffleEnabled?.() &&
+        Array.isArray(qs?.shuffledQuestions) &&
+        qs.shuffledQuestions.length > 0;
       const displayIdx = host.getActiveQuestionIndex();
       const cq = host.currentQuestion();
       const questionForType = isShuf
-        ? (qs?.getQuestionsInDisplayOrder?.()?.[displayIdx] ?? qs?.shuffledQuestions?.[displayIdx] ?? cq)
+        ? (qs?.getQuestionsInDisplayOrder?.()?.[displayIdx] ??
+          qs?.shuffledQuestions?.[displayIdx] ??
+          cq)
         : cq;
-      host.type = questionForType
-          ? host.determineQuestionType(questionForType) : 'single';
+      host.type = questionForType ? host.determineQuestionType(questionForType) : 'single';
     }
   }
 
@@ -343,8 +369,7 @@ export class SharedOptionOrchestratorService {
     const opts = host.optionBindings() ?? [];
     const i = opts.findIndex((x: OptionBindings, idx: number) => {
       const explicitId = x?.option?.optionId;
-      const effectiveId = (explicitId != null && Number(explicitId) > -1)
-        ? Number(explicitId) : idx;
+      const effectiveId = explicitId != null && Number(explicitId) > -1 ? Number(explicitId) : idx;
       return effectiveId === Number(optionId);
     });
     if (i < 0) return null;
@@ -357,9 +382,10 @@ export class SharedOptionOrchestratorService {
     if (hasBindings && host.canDisplayOptions() && host.renderReady()) return true;
     // Resilience fallback: form + every binding has an option resolved
     const bindings = host.optionBindings();
-    const everyHasOption = Array.isArray(bindings)
-      && bindings.length > 0
-      && bindings.every((b: OptionBindings) => !!b?.option);
+    const everyHasOption =
+      Array.isArray(bindings) &&
+      bindings.length > 0 &&
+      bindings.every((b: OptionBindings) => !!b?.option);
     return !!host.form && everyHasOption;
   }
 

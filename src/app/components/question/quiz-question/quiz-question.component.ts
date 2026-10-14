@@ -13,7 +13,7 @@ import {
   signal,
   viewChild,
   ViewContainerRef,
-  linkedSignal,
+  linkedSignal
 } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 
@@ -60,8 +60,8 @@ const EXPLANATION_PURGE_DELAY_MS = 500;
   styleUrls: ['./quiz-question.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '(window:visibilitychange)': 'onVisibilityChange()',
-  },
+    '(window:visibilitychange)': 'onVisibilityChange()'
+  }
 })
 export class QuizQuestionComponent extends BaseQuestion implements OnInit, AfterViewInit {
   // ── injects ─────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ export class QuizQuestionComponent extends BaseQuestion implements OnInit, After
   readonly explanationText = model<string | null>(null);
   readonly isOptionSelected = model<boolean>(false);
   readonly selectionMessageInput = input<string | undefined>(undefined, {
-    alias: 'selectionMessage',
+    alias: 'selectionMessage'
   });
   readonly selectionMessage = linkedSignal(this.selectionMessageInput);
   readonly shouldRenderOptions = model<boolean>(false);
@@ -166,7 +166,7 @@ export class QuizQuestionComponent extends BaseQuestion implements OnInit, After
 
   readonly displayState = computed(() => ({
     mode: this.displayMode(),
-    answered: this.isAnswered(),
+    answered: this.isAnswered()
   }));
 
   override questionForm: FormGroup = new FormGroup({});

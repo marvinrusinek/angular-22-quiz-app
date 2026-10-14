@@ -1,8 +1,10 @@
 import { isSameFeedbackEmission } from './feedback.component';
 
 describe('isSameFeedbackEmission', () => {
-  it('is false for an instance\'s first-ever emission (prev is null), regardless of content', () => {
-    expect(isSameFeedbackEmission(null, { text: 'Not this one, try again!', isCorrect: false })).toBe(false);
+  it("is false for an instance's first-ever emission (prev is null), regardless of content", () => {
+    expect(
+      isSameFeedbackEmission(null, { text: 'Not this one, try again!', isCorrect: false })
+    ).toBe(false);
     expect(isSameFeedbackEmission(null, { text: '', isCorrect: false })).toBe(false);
   });
 
@@ -26,7 +28,7 @@ describe('isSameFeedbackEmission', () => {
     expect(isSameFeedbackEmission(prev, next)).toBe(false);
   });
 
-  it('models the real-world regression: a NEW instance (fresh click) always emits at least once, even with text identical to a PRIOR, DIFFERENT instance\'s last emission', () => {
+  it("models the real-world regression: a NEW instance (fresh click) always emits at least once, even with text identical to a PRIOR, DIFFERENT instance's last emission", () => {
     // Instance A (first wrong pick) settles on this text.
     let lastEmittedA: { text: string; isCorrect: boolean } | null = null;
     const emissionA = { text: 'Not this one, try again!', isCorrect: false };

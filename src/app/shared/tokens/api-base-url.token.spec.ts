@@ -102,20 +102,30 @@ describe('InterviewApiService with NO configured Spring origin', () => {
    * parsed as a session. Failing is strictly better.
    */
   it.each([
-    ['createSession', () => api.createSession({
-      mode: 'custom', difficulty: 'beginner', topicIds: ['a'], questionCount: 10
-    })],
+    [
+      'createSession',
+      () =>
+        api.createSession({
+          mode: 'custom',
+          difficulty: 'beginner',
+          topicIds: ['a'],
+          questionCount: 10
+        })
+    ],
     ['resumeSession', () => api.resumeSession('is_1', 't')],
     ['saveAnswer', () => api.saveAnswer('is_1', 't', 'q', [1])],
     ['submitSession', () => api.submitSession('is_1', 't')],
     ['getResult', () => api.getResult('is_1', 't')]
   ])('%s issues NO request and errors as unreachable', (_name, call) => {
     let code = '';
-    (call() as { subscribe: (o: { error: (e: { code: string }) => void }) => void })
-      .subscribe({ error: (err) => { code = err.code; } });
+    (call() as { subscribe: (o: { error: (e: { code: string }) => void }) => void }).subscribe({
+      error: (err) => {
+        code = err.code;
+      }
+    });
 
     expect(code).toBe('BACKEND_UNAVAILABLE');
-    http.expectNone(() => true);   // nothing left the app
+    http.expectNone(() => true); // nothing left the app
   });
 
   it('getQuizMetadata still succeeds — delegation never depends on INTERVIEW_API_BASE_URL', (done) => {
@@ -160,10 +170,13 @@ describe('API selection follows the serving origin', () => {
 
   it('isInterviewApiConfigured agrees with whatever resolveInterviewApiBaseUrl resolved', () => {
     for (const [devMode, hostname] of [
-      [true, 'localhost'], [true, 'x.stackblitz.io'], [false, 'marvinrusinek.github.io']
+      [true, 'localhost'],
+      [true, 'x.stackblitz.io'],
+      [false, 'marvinrusinek.github.io']
     ] as Array<[boolean, string]>) {
-      expect(isInterviewApiConfigured(devMode, hostname))
-        .toBe(resolveInterviewApiBaseUrl(devMode, hostname).trim().length > 0);
+      expect(isInterviewApiConfigured(devMode, hostname)).toBe(
+        resolveInterviewApiBaseUrl(devMode, hostname).trim().length > 0
+      );
     }
   });
 
@@ -203,7 +216,9 @@ describe('Interview API selection follows the serving origin', () => {
 
   it('a production build always uses the hosted Spring API, even on localhost', () => {
     expect(resolveInterviewApiBaseUrl(false, 'localhost')).toBe(INTERVIEW_PROD_API_BASE_URL);
-    expect(resolveInterviewApiBaseUrl(false, 'marvinrusinek.github.io')).toBe(INTERVIEW_PROD_API_BASE_URL);
+    expect(resolveInterviewApiBaseUrl(false, 'marvinrusinek.github.io')).toBe(
+      INTERVIEW_PROD_API_BASE_URL
+    );
   });
 
   it('an unknown hostname does not fall back to localhost', () => {
@@ -237,8 +252,9 @@ describe('production origins after the Oracle cutover (2026-09-19)', () => {
   });
 
   it('production Interview resolution (any non-local hostname) uses Oracle', () => {
-    expect(resolveInterviewApiBaseUrl(false, 'marvinrusinek.github.io'))
-      .toBe('https://interview-api-spring.marvinrusinek.com/api');
+    expect(resolveInterviewApiBaseUrl(false, 'marvinrusinek.github.io')).toBe(
+      'https://interview-api-spring.marvinrusinek.com/api'
+    );
   });
 
   it('local Interview resolution is unaffected — still localhost:8080', () => {

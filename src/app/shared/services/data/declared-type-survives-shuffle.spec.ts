@@ -44,25 +44,37 @@ const RESPONSE = {
   quizId: QUIZ,
   questions: [
     {
-      questionText: SINGLE_TEXT, type: 'single', difficulty: null, correctCount: 1,
+      questionText: SINGLE_TEXT,
+      type: 'single',
+      difficulty: null,
+      correctCount: 1,
       options: [{ text: 'A pattern' }, { text: 'A compiler' }]
     },
     {
-      questionText: MULTI_TEXT, type: 'multiple', difficulty: null, correctCount: 3,
-      options: [{ text: 'Reduces coupling' }, { text: 'Eases testing' }, { text: 'Is a technique' }, { text: 'Slows startup' }]
+      questionText: MULTI_TEXT,
+      type: 'multiple',
+      difficulty: null,
+      correctCount: 3,
+      options: [
+        { text: 'Reduces coupling' },
+        { text: 'Eases testing' },
+        { text: 'Is a technique' },
+        { text: 'Slows startup' }
+      ]
     }
   ]
 };
 
 /** An API-shaped option: text only. No `correct` — that is the point. */
-const apiOption = (text: string): Option => ({ text, value: text } as Option);
+const apiOption = (text: string): Option => ({ text, value: text }) as Option;
 
-const apiQuestion = (questionText: string, type: QuestionType): QuizQuestion => ({
-  questionText,
-  type,
-  options: [apiOption('one'), apiOption('two'), apiOption('three')]
-  // NO `answer`, NO `correct` — exactly what `questionFromApiView` produces.
-} as QuizQuestion);
+const apiQuestion = (questionText: string, type: QuestionType): QuizQuestion =>
+  ({
+    questionText,
+    type,
+    options: [apiOption('one'), apiOption('two'), apiOption('three')]
+    // NO `answer`, NO `correct` — exactly what `questionFromApiView` produces.
+  }) as QuizQuestion;
 
 describe('a declared type cannot be demoted by counting', () => {
   let registry: TopicQuizTypeRegistry;
@@ -78,7 +90,10 @@ describe('a declared type cannot be demoted by counting', () => {
   const setQuestionType = (question: QuizQuestion): void => {
     if (!question || !Array.isArray(question.options) || question.options.length === 0) return;
     const declared = registry.questionTypeOf(question.questionText);
-    if (declared !== null) { question.type = declared; return; }
+    if (declared !== null) {
+      question.type = declared;
+      return;
+    }
     const numCorrect = question.options.filter((o) => o?.correct ?? false).length;
     question.type = numCorrect > 1 ? QuestionType.MultipleAnswer : QuestionType.SingleAnswer;
   };
@@ -86,7 +101,8 @@ describe('a declared type cannot be demoted by counting', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(), provideHttpClientTesting(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: BASE },
         TopicQuizTypeRegistry
       ]
@@ -158,8 +174,12 @@ describe('shuffle preserves what the API did not say', () => {
   beforeAll(() => {
     store = {};
     jest.spyOn(Storage.prototype, 'getItem').mockImplementation((k) => store[k] ?? null);
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation((k, v) => { store[k] = v; });
-    jest.spyOn(Storage.prototype, 'removeItem').mockImplementation((k) => { delete store[k]; });
+    jest.spyOn(Storage.prototype, 'setItem').mockImplementation((k, v) => {
+      store[k] = v;
+    });
+    jest.spyOn(Storage.prototype, 'removeItem').mockImplementation((k) => {
+      delete store[k];
+    });
   });
 
   afterAll(() => jest.restoreAllMocks());
@@ -170,10 +190,10 @@ describe('shuffle preserves what the API did not say', () => {
     shuffle.clearAll();
   });
 
-  const apiQuestions = (): QuizQuestion[] => ([
+  const apiQuestions = (): QuizQuestion[] => [
     apiQuestion(SINGLE_TEXT, QuestionType.SingleAnswer),
     apiQuestion(MULTI_TEXT, QuestionType.MultipleAnswer)
-  ]);
+  ];
 
   it('does not invent `correct: false` on options that carry no correctness', () => {
     const questions = apiQuestions();
@@ -224,15 +244,17 @@ describe('shuffle preserves what the API did not say', () => {
   it('still aligns correctness when an answer key IS present', () => {
     // The bank path must keep working — absence is preserved, presence is not
     // discarded.
-    const withKey: QuizQuestion[] = [{
-      questionText: 'Bank question',
-      type: QuestionType.MultipleAnswer,
-      options: [
-        { text: 'a', correct: true, value: 1 } as Option,
-        { text: 'b', correct: false, value: 2 } as Option
-      ],
-      answer: [{ text: 'a', correct: true, value: 1 } as Option]
-    } as QuizQuestion];
+    const withKey: QuizQuestion[] = [
+      {
+        questionText: 'Bank question',
+        type: QuestionType.MultipleAnswer,
+        options: [
+          { text: 'a', correct: true, value: 1 } as Option,
+          { text: 'b', correct: false, value: 2 } as Option
+        ],
+        answer: [{ text: 'a', correct: true, value: 1 } as Option]
+      } as QuizQuestion
+    ];
 
     shuffle.prepareShuffle('bank', withKey);
     const shuffled = shuffle.buildShuffledQuestions('bank', withKey);

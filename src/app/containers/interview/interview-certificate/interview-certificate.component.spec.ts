@@ -16,7 +16,9 @@ import { InterviewHistoryService } from '@shared/services/features/interview/int
 import { InterviewCertificateComponent } from './interview-certificate.component';
 
 const recordSig = signal<InterviewCertificateRecord | null>(null);
-const readinessSig = signal<InterviewReadiness | null>({ band: 'interview-ready' } as InterviewReadiness);
+const readinessSig = signal<InterviewReadiness | null>({
+  band: 'interview-ready'
+} as InterviewReadiness);
 const trendsSig = signal<{ best: number | null }>({ best: 95 });
 const setRecipientName = jest.fn();
 const ensureQualificationStarted = jest.fn();
@@ -60,11 +62,22 @@ const claimStub = {
 } as unknown as CertificateClaimService;
 
 function issued(over: Partial<InterviewCertificateRecord> = {}): InterviewCertificateRecord {
-  return { version: 1, unlocked: true, unlockedAt: '2026-07-24T15:00:00.000Z', certificateId: 'AQ-2026-000128', ...over };
+  return {
+    version: 1,
+    unlocked: true,
+    unlockedAt: '2026-07-24T15:00:00.000Z',
+    certificateId: 'AQ-2026-000128',
+    ...over
+  };
 }
 
 function verified(over: Partial<VerifiedCertificate> = {}): VerifiedCertificate {
-  return { certificateId: 'AQ-2026-000200-K', recipientName: 'Ada Lovelace', issuedAt: '2026-08-01T00:00:00.000Z', ...over };
+  return {
+    certificateId: 'AQ-2026-000200-K',
+    recipientName: 'Ada Lovelace',
+    issuedAt: '2026-08-01T00:00:00.000Z',
+    ...over
+  };
 }
 
 function render(): ComponentFixture<InterviewCertificateComponent> {
@@ -141,13 +154,17 @@ describe('InterviewCertificateComponent', () => {
     verifiedCertSig.set(verified());
     claimStatusSig.set('verified');
 
-    trendsSig.set({ best: 95 });    // e.g. regular Chrome, rich local history
+    trendsSig.set({ best: 95 }); // e.g. regular Chrome, rich local history
     band('interview-ready');
-    const withHistory = (render().nativeElement as HTMLElement).querySelector('.ic-cert__facts')?.innerHTML;
+    const withHistory = (render().nativeElement as HTMLElement).querySelector(
+      '.ic-cert__facts'
+    )?.innerHTML;
 
-    trendsSig.set({ best: null });  // e.g. a fresh Incognito window, no local history
-    band(null);                     // and no readiness computed either
-    const withoutHistory = (render().nativeElement as HTMLElement).querySelector('.ic-cert__facts')?.innerHTML;
+    trendsSig.set({ best: null }); // e.g. a fresh Incognito window, no local history
+    band(null); // and no readiness computed either
+    const withoutHistory = (render().nativeElement as HTMLElement).querySelector(
+      '.ic-cert__facts'
+    )?.innerHTML;
 
     expect(withHistory).toBe(withoutHistory);
   });
@@ -213,10 +230,11 @@ describe('InterviewCertificateComponent', () => {
     recordSig.set(issued());
     band(null);
     trendsSig.set({ best: null });
-    const facts = (render().nativeElement as HTMLElement).querySelector('.ic-cert__facts')?.textContent ?? '';
-    expect(facts).toContain('Interview Ready');       // required-tier fallback
-    expect(facts).toContain('Best Interview Score');  // still shown — this IS the legacy, same-browser case
-    expect(facts).toContain('—');                     // score placeholder
+    const facts =
+      (render().nativeElement as HTMLElement).querySelector('.ic-cert__facts')?.textContent ?? '';
+    expect(facts).toContain('Interview Ready'); // required-tier fallback
+    expect(facts).toContain('Best Interview Score'); // still shown — this IS the legacy, same-browser case
+    expect(facts).toContain('—'); // score placeholder
   });
 
   it('calls ensureQualificationStarted + refresh on visit — never unlock()', () => {

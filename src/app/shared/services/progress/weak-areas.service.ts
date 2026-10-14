@@ -34,9 +34,7 @@ export class WeakAreasService {
   ]);
 
   /** Up to three weakest topics, weakest first. Empty when none qualify. */
-  readonly weakTopics = computed<WeakTopic[]>(() =>
-    calculateWeakTopics(this.mergedAttempts())
-  );
+  readonly weakTopics = computed<WeakTopic[]>(() => calculateWeakTopics(this.mergedAttempts()));
 
   /** True when at least one topic currently qualifies as weak. */
   readonly hasWeakTopics = computed(() => this.weakTopics().length > 0);
@@ -51,7 +49,7 @@ export class WeakAreasService {
     if (attempts.length === 0) return true;
     // Any topic that clears the minimum sample means we CAN judge; whether it is
     // weak is a separate question.
-    const judged = calculateWeakTopics(attempts, { threshold: 101 });   // 101 ⇒ "every judgeable topic"
+    const judged = calculateWeakTopics(attempts, { threshold: 101 }); // 101 ⇒ "every judgeable topic"
     return judged.length === 0;
   });
 

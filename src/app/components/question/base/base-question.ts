@@ -7,7 +7,7 @@ import {
   model,
   OnInit,
   output,
-  linkedSignal,
+  linkedSignal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
@@ -38,7 +38,7 @@ export interface OptionClickEvent {
 
 @Directive()
 export abstract class BaseQuestion<
-  T extends OptionClickEvent = OptionClickEvent,
+  T extends OptionClickEvent = OptionClickEvent
 > implements OnInit {
   // ── injects ─────────────────────────────────────────────────────
   public readonly cdRef = inject(ChangeDetectorRef);
@@ -73,7 +73,7 @@ export abstract class BaseQuestion<
   readonly showFeedback = model<boolean>(false);
   readonly type = model<'single' | 'multiple'>('single');
   readonly explanationToDisplayInput = input<string | null>(null, {
-    alias: 'explanationToDisplay',
+    alias: 'explanationToDisplay'
   });
   readonly explanationToDisplay = linkedSignal(this.explanationToDisplayInput);
   readonly optionBindings = model<OptionBindings[]>([]);
@@ -112,7 +112,7 @@ export abstract class BaseQuestion<
       // renderer containers carried the claim while every question container
       // was already clean.
       ...(opt.correct === undefined ? {} : { correct: isOptionCorrect(opt) }),
-      feedback: opt.feedback,
+      feedback: opt.feedback
     }));
 
     this.sharedOptionConfig = {
@@ -129,7 +129,7 @@ export abstract class BaseQuestion<
       selectedOptionIndex: -1,
       isAnswerCorrect: false,
       feedback: this.feedback() || '',
-      highlightCorrectAfterIncorrect: false,
+      highlightCorrectAfterIncorrect: false
     };
   }
 
@@ -152,7 +152,7 @@ export abstract class BaseQuestion<
       showCorrectMessage: false,
       explanationText: '',
       showExplanation: false,
-      idx: 0,
+      idx: 0
     };
   }
 
@@ -282,7 +282,7 @@ export abstract class BaseQuestion<
           this.question.set(quizQuestion);
           this.initializeOptions();
         },
-        error: () => {},
+        error: () => {}
       });
   }
 

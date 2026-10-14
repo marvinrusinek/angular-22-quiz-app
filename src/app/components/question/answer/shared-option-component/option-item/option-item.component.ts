@@ -1,5 +1,15 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef,
-  effect, inject, input, OnInit, output, ViewEncapsulation
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  input,
+  OnInit,
+  output,
+  ViewEncapsulation
 } from '@angular/core';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -109,7 +119,7 @@ export class OptionItemComponent implements OnInit {
 
   readonly optionId = computed(() => {
     const id = this.option()?.optionId;
-    return (id != null && id !== -1) ? Number(id) : this.displayIndex();
+    return id != null && id !== -1 ? Number(id) : this.displayIndex();
   });
 
   // NOTE: option text / icon visibility / icon name are intentionally plain
@@ -144,8 +154,8 @@ export class OptionItemComponent implements OnInit {
     // changes don't fire ngOnChanges.
     effect(() => {
       const nextQuestionIndex = Number(this.currentQuestionIndex() ?? -1);
-      if (!Number.isFinite(nextQuestionIndex) ||
-          nextQuestionIndex === this._lastQuestionIndex) return;
+      if (!Number.isFinite(nextQuestionIndex) || nextQuestionIndex === this._lastQuestionIndex)
+        return;
       // Always clear the _wasSelected latch on question change.
       // _wasSelected is per-visit click evidence; carrying it across
       // questions (including restart) wrongly persists highlights.
@@ -153,8 +163,7 @@ export class OptionItemComponent implements OnInit {
       // Clear additional stale state when navigating AWAY from a question
       // the user actually interacted with. Gated separately so we don't
       // wipe binding flags on a fresh first-visit.
-      if (this._lastQuestionIndex !== -1 &&
-          (this._userHasClicked || this._wasTimerExpired)) {
+      if (this._lastQuestionIndex !== -1 && (this._userHasClicked || this._wasTimerExpired)) {
         this._wasTimerExpired = false;
         this._directTimerExpired = false;
         this._directTimerExpiredForIndex = -1;
@@ -213,13 +222,11 @@ export class OptionItemComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.timerService.expired$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this._directTimerExpired = true;
-        this._directTimerExpiredForIndex = this.timerService.expiredForQuestionIndexSig();
-        this.cdRef.markForCheck();
-      });
+    this.timerService.expired$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this._directTimerExpired = true;
+      this._directTimerExpiredForIndex = this.timerService.expiredForQuestionIndexSig();
+      this.cdRef.markForCheck();
+    });
   }
 
   getOptionDisplayText(): string {
@@ -234,8 +241,10 @@ export class OptionItemComponent implements OnInit {
     // AUTO-REVEAL backup: persistent custom flag wins over any state that
     // might wipe option.showIcon (mirrors the backup in
     // getOptionBackgroundColor that paints the green background).
-    if (this.binding()?._autoRevealedCorrect === true ||
-        this.binding()?.option?._autoRevealedCorrect === true) {
+    if (
+      this.binding()?._autoRevealedCorrect === true ||
+      this.binding()?.option?._autoRevealedCorrect === true
+    ) {
       return 'check';
     }
     if (this.isTimerStamped()) {
@@ -289,8 +298,10 @@ export class OptionItemComponent implements OnInit {
     // reveal had just set. The two paths have to agree or the more specific
     // one silently wins: on Directives Q8 that painted the user's own correct
     // picks red on top of their green.
-    if (this.binding()?._autoRevealedCorrect === true ||
-        this.binding()?.option?._autoRevealedCorrect === true) {
+    if (
+      this.binding()?._autoRevealedCorrect === true ||
+      this.binding()?.option?._autoRevealedCorrect === true
+    ) {
       return { ...classes, 'correct-option': true, 'incorrect-option': false };
     }
 
@@ -384,14 +395,16 @@ export class OptionItemComponent implements OnInit {
    */
   isNativelyChecked(): boolean {
     const classes = this.getOptionClasses();
-    return !!(classes['selected-option'] || classes['correct-option'] || classes['incorrect-option'])
-      || !!this.binding().isSelected
-      || this._wasSelected;
+    return (
+      !!(classes['selected-option'] || classes['correct-option'] || classes['incorrect-option']) ||
+      !!this.binding().isSelected ||
+      this._wasSelected
+    );
   }
 
-  private getTimerExpiredOptionClasses(
-    classes: { [key: string]: boolean }
-  ): { [key: string]: boolean } {
+  private getTimerExpiredOptionClasses(classes: { [key: string]: boolean }): {
+    [key: string]: boolean;
+  } {
     const wasSelected =
       this.binding()?.isSelected ||
       !!this.binding()?.option?.highlight ||
@@ -411,9 +424,7 @@ export class OptionItemComponent implements OnInit {
     };
   }
 
-  private getDefaultOptionClasses(
-    classes: { [key: string]: boolean }
-  ): { [key: string]: boolean } {
+  private getDefaultOptionClasses(classes: { [key: string]: boolean }): { [key: string]: boolean } {
     // Tri-state: undefined until something is authorized.
     const correctness = this.currentOptionCorrectness();
     const shouldHighlight = this.shouldHighlightOption();
@@ -452,9 +463,7 @@ export class OptionItemComponent implements OnInit {
     };
   }
 
-  private clearHighlightClasses(
-    classes: { [key: string]: boolean }
-  ): { [key: string]: boolean } {
+  private clearHighlightClasses(classes: { [key: string]: boolean }): { [key: string]: boolean } {
     return {
       ...classes,
       'correct-option': false,
@@ -465,9 +474,9 @@ export class OptionItemComponent implements OnInit {
     };
   }
 
-  private getRevisitOptionClasses(
-    classes: { [key: string]: boolean }
-  ): { [key: string]: boolean } | null {
+  private getRevisitOptionClasses(classes: {
+    [key: string]: boolean;
+  }): { [key: string]: boolean } | null {
     // Defensive: a throw here must fall through to the timer/default class
     // logic (return null), never break the option render. Mirrors the
     // try/catch the original inline getOptionClasses() had around this block.
@@ -486,7 +495,12 @@ export class OptionItemComponent implements OnInit {
       const option = this.binding()?.option;
 
       if (fullyResolvedCorrect) {
-        return this.getFullyResolvedCorrectClasses(classes, option, revealedCorrectOptionTexts, questionIndex);
+        return this.getFullyResolvedCorrectClasses(
+          classes,
+          option,
+          revealedCorrectOptionTexts,
+          questionIndex
+        );
       }
 
       // Engaged-but-partial question on revisit: repaint the first-visit colors
@@ -494,8 +508,7 @@ export class OptionItemComponent implements OnInit {
       // wrong, neutral untouched). Gated on !_userHasClicked so a fresh click
       // re-engages live interaction. This snapshot never feeds the auto-reveal,
       // so restoring it can't trigger the "all incorrects selected" reveal.
-      if (!this._userHasClicked &&
-          this.selectedOptionService.hasRevisitDisplay(questionIndex)) {
+      if (!this._userHasClicked && this.selectedOptionService.hasRevisitDisplay(questionIndex)) {
         return this.getPartialRevisitClasses(classes, option, selectedVerdicts, questionIndex);
       }
 
@@ -519,7 +532,6 @@ export class OptionItemComponent implements OnInit {
    */
 
   private getFullyResolvedCorrectClasses(
-
     classes: { [key: string]: boolean },
 
     option: Option | undefined,
@@ -527,12 +539,11 @@ export class OptionItemComponent implements OnInit {
     revealedCorrectOptionTexts: ReadonlySet<string>,
 
     questionIndex: number
-
   ): { [key: string]: boolean } {
-
-    const isCanonCorrectHere =
-
-      this.questionResolution.isOptionInRevealedCorrectSet(option, revealedCorrectOptionTexts);
+    const isCanonCorrectHere = this.questionResolution.isOptionInRevealedCorrectSet(
+      option,
+      revealedCorrectOptionTexts
+    );
 
     if (isCanonCorrectHere) {
       return {
@@ -546,8 +557,7 @@ export class OptionItemComponent implements OnInit {
       };
     }
 
-    const wasClickedIncorrect =
-      this.wasClickedIncorrectOnRevisit(option, questionIndex);
+    const wasClickedIncorrect = this.wasClickedIncorrectOnRevisit(option, questionIndex);
 
     return {
       ...classes,
@@ -597,7 +607,6 @@ export class OptionItemComponent implements OnInit {
    */
 
   private getPartialRevisitClasses(
-
     classes: { [key: string]: boolean },
 
     option: Option | undefined,
@@ -605,21 +614,16 @@ export class OptionItemComponent implements OnInit {
     selectedVerdicts: ReadonlyMap<string, boolean>,
 
     questionIndex: number
-
   ): { [key: string]: boolean } {
-
     const wasSelected = this.selectedOptionService.wasTextSelectedOnLastVisit(
-
-      questionIndex, option?.text ?? ''
-
+      questionIndex,
+      option?.text ?? ''
     );
 
     if (!wasSelected) {
-
       // Untouched on the last visit → neutral, still clickable on revisit.
 
       return this.clearRevisitClasses(classes);
-
     }
 
     const verdict = this.questionResolution.selectedVerdictForOption(option, selectedVerdicts);
@@ -627,7 +631,6 @@ export class OptionItemComponent implements OnInit {
     if (verdict === undefined) return this.clearRevisitClasses(classes);
 
     return {
-
       ...classes,
 
       selected: true,
@@ -642,10 +645,7 @@ export class OptionItemComponent implements OnInit {
     };
   }
 
-  private wasClickedIncorrectOnRevisit(
-    option: Option | undefined,
-    questionIndex: number
-  ): boolean {
+  private wasClickedIncorrectOnRevisit(option: Option | undefined, questionIndex: number): boolean {
     if (
       this._wasSelected ||
       this._userHasClicked ||
@@ -658,15 +658,10 @@ export class OptionItemComponent implements OnInit {
     const optionText = norm(option?.text);
     if (!optionText) return false;
 
-    return this.selectedOptionService.wasOptionSelectedForQuestion(
-      questionIndex,
-      optionText
-    );
+    return this.selectedOptionService.wasOptionSelectedForQuestion(questionIndex, optionText);
   }
 
-  private clearRevisitClasses(
-    classes: { [key: string]: boolean }
-  ): { [key: string]: boolean } {
+  private clearRevisitClasses(classes: { [key: string]: boolean }): { [key: string]: boolean } {
     return { ...this.clearHighlightClasses(classes), 'disabled-option': false };
   }
 
@@ -686,7 +681,9 @@ export class OptionItemComponent implements OnInit {
     if (revisit !== undefined) return revisit;
 
     // Timer-expiry handler stamped all bindings as disabled
-    if (this.isTimerStamped()) { return true; }
+    if (this.isTimerStamped()) {
+      return true;
+    }
 
     const _qIdx = this.quizService.currentQuestionIndex ?? this.currentQuestionIndex();
 
@@ -696,7 +693,9 @@ export class OptionItemComponent implements OnInit {
     // Previous round trip back to an expired-but-unanswered question left it
     // fully interactive again: clicking submitted a fresh, late pick against
     // a question that had already timed out.
-    if (this.timerState.hasQuestionEverExpired(_qIdx)) { return true; }
+    if (this.timerState.hasQuestionEverExpired(_qIdx)) {
+      return true;
+    }
 
     const _type = this.resolveEffectiveDisabledType(_qIdx);
 
@@ -710,12 +709,11 @@ export class OptionItemComponent implements OnInit {
   // AUTO-REVEAL: correct options stay enabled (green), incorrect are disabled.
   private autoRevealDisabled(): boolean | undefined {
     const b = this.binding();
-    if (b?._autoRevealedCorrect === true ||
-        b?.option?._autoRevealedCorrect === true) {
-      return false;  // correct option — not disabled
+    if (b?._autoRevealedCorrect === true || b?.option?._autoRevealedCorrect === true) {
+      return false; // correct option — not disabled
     }
     if (b?.disabled && b?.cssClasses?.['incorrect-option']) {
-      return true;  // incorrect option in auto-reveal — disabled
+      return true; // incorrect option in auto-reveal — disabled
     }
     // Multi-answer end state: an option the user never picked. The question is
     // over but NOT complete, so no completion-derived rule below would lock it.
@@ -732,11 +730,14 @@ export class OptionItemComponent implements OnInit {
       const res = this.questionResolution.resolveQuestionState(_qIdxRev);
       if (res.fullyResolvedCorrect) {
         const isCanonCorrectHere = this.questionResolution.isOptionInRevealedCorrectSet(
-          this.binding()?.option, res.revealedCorrectOptionTexts
+          this.binding()?.option,
+          res.revealedCorrectOptionTexts
         );
         if (!isCanonCorrectHere) return true;
       }
-    } catch (err: unknown) { console.error('isDisabled revisit-override failed:', err); }
+    } catch (err: unknown) {
+      console.error('isDisabled revisit-override failed:', err);
+    }
     return undefined;
   }
 
@@ -762,8 +763,10 @@ export class OptionItemComponent implements OnInit {
 
   /** The question text at a display index, shuffle-safe. */
   private questionTextAt(qIdx: number): string | undefined {
-    return (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText
-      ?? (this.quizService as any)?.questions?.[qIdx]?.questionText;
+    return (
+      (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText ??
+      (this.quizService as any)?.questions?.[qIdx]?.questionText
+    );
   }
 
   /** @see hasAuthorizedCorrectSelection — the single-answer lock authority. */
@@ -778,7 +781,9 @@ export class OptionItemComponent implements OnInit {
   // component dirty whenever selections mutate (no need for manual
   // markForCheck or input-ref-change tricks).
   private isMultiAnswerOptionDisabled(_qIdx: number): boolean {
-    if (this.isTimerExpiredForThisQuestion()) { return true; }
+    if (this.isTimerExpiredForThisQuestion()) {
+      return true;
+    }
 
     if (this.quizService.isMultiAnswerComplete(_qIdx)) {
       // Read both signals directly — registers template dependencies so this
@@ -839,8 +844,10 @@ export class OptionItemComponent implements OnInit {
     // AUTO-REVEAL backup: persistent custom flag wins over downstream
     // pipelines that wipe option.showIcon back to false (mirrors the
     // backup in getOptionBackgroundColor that paints the green background).
-    if (this.binding()?._autoRevealedCorrect === true ||
-        this.binding()?.option?._autoRevealedCorrect === true) {
+    if (
+      this.binding()?._autoRevealedCorrect === true ||
+      this.binding()?.option?._autoRevealedCorrect === true
+    ) {
       return true;
     }
     if (this.isTimerStamped()) {
@@ -851,10 +858,12 @@ export class OptionItemComponent implements OnInit {
       // Show icon for correct options AND for any option the user
       // actually selected (so a selected wrong answer keeps its X).
       if (this.shouldShowCorrectOnTimeout()) return true;
-      return this.binding()?.isSelected
-        || !!this.binding()?.option?.highlight
-        || this._wasSelected
-        || this.isSelectedForCurrentQuestion();
+      return (
+        this.binding()?.isSelected ||
+        !!this.binding()?.option?.highlight ||
+        this._wasSelected ||
+        this.isSelectedForCurrentQuestion()
+      );
     }
 
     // Hard Guard: On refresh (user hasn't clicked), ONLY trust the
@@ -879,10 +888,10 @@ export class OptionItemComponent implements OnInit {
     }
 
     const hasAnyPerBindingSignal =
-      this.binding()?.option?.showIcon === true
-      || this.binding()?.isSelected === true
-      || !!this.binding()?.option?.highlight
-      || this._wasSelected;
+      this.binding()?.option?.showIcon === true ||
+      this.binding()?.isSelected === true ||
+      !!this.binding()?.option?.highlight ||
+      this._wasSelected;
     if (!hasAnyPerBindingSignal) {
       if (this.binding()?.disabled === true) return false;
       if (!this.isSelectedForCurrentQuestion()) return false;
@@ -975,8 +984,10 @@ export class OptionItemComponent implements OnInit {
   // for unclicked correct options on unresolved multi-answer questions,
   // suppressing the green highlight that auto-reveal set.
   private autoRevealColor(): string | undefined {
-    if (this.binding()?._autoRevealedCorrect === true ||
-        this.binding()?.option?._autoRevealedCorrect === true) {
+    if (
+      this.binding()?._autoRevealedCorrect === true ||
+      this.binding()?.option?._autoRevealedCorrect === true
+    ) {
       return CORRECT_COLOR;
     }
     return undefined;
@@ -990,11 +1001,14 @@ export class OptionItemComponent implements OnInit {
       const resFR = this.questionResolution.resolveQuestionState(_qIdxFR, { includeDot: false });
       if (resFR.fullyResolvedCorrect) {
         const isCanonCorrect = this.questionResolution.isOptionInRevealedCorrectSet(
-          this.binding()?.option, resFR.revealedCorrectOptionTexts
+          this.binding()?.option,
+          resFR.revealedCorrectOptionTexts
         );
         return isCanonCorrect ? CORRECT_COLOR : DISABLED_COLOR;
       }
-    } catch (err: unknown) { console.error('getOptionBackgroundColor fullyResolved check failed:', err); }
+    } catch (err: unknown) {
+      console.error('getOptionBackgroundColor fullyResolved check failed:', err);
+    }
     return undefined;
   }
 
@@ -1016,7 +1030,9 @@ export class OptionItemComponent implements OnInit {
           return null;
         }
       }
-    } catch (err: unknown) { console.error('getOptionBackgroundColor revisit-guard failed:', err); }
+    } catch (err: unknown) {
+      console.error('getOptionBackgroundColor revisit-guard failed:', err);
+    }
     return undefined;
   }
 
@@ -1034,13 +1050,12 @@ export class OptionItemComponent implements OnInit {
       // source as the background path: the expiry flag is local and instant
       // while the reveal is a round trip, so a two-state read painted the pick
       // red in the gap between them.
-      const wasSelected = this.binding()?.isSelected
-        || !!this.binding()?.option?.highlight
-        || this._wasSelected
-        || this.isSelectedForCurrentQuestion();
-      return wasSelected && this.currentOptionCorrectness() === false
-        ? INCORRECT_COLOR
-        : null;
+      const wasSelected =
+        this.binding()?.isSelected ||
+        !!this.binding()?.option?.highlight ||
+        this._wasSelected ||
+        this.isSelectedForCurrentQuestion();
+      return wasSelected && this.currentOptionCorrectness() === false ? INCORRECT_COLOR : null;
     }
     return undefined;
   }
@@ -1048,8 +1063,10 @@ export class OptionItemComponent implements OnInit {
   private correctPerfectColor(): string | undefined {
     if (this.isCurrentOptionCorrect()) {
       const _qIdxARBg = this.quizService.currentQuestionIndex ?? this.currentQuestionIndex();
-      if (this.quizService.isQuestionResolved(_qIdxARBg) ||
-          this.binding()?.cssClasses?.['correct-option'] === true) {
+      if (
+        this.quizService.isQuestionResolved(_qIdxARBg) ||
+        this.binding()?.cssClasses?.['correct-option'] === true
+      ) {
         return CORRECT_COLOR;
       }
     }
@@ -1107,7 +1124,8 @@ export class OptionItemComponent implements OnInit {
   private singleAnswerIncorrectRed(): string | undefined {
     if (this.type() === 'single' && !this.binding()?.isSelected && !this.isCurrentOptionCorrect()) {
       const b = this.binding();
-      const wasClickedByFlags = b?.option?.showIcon || b?.option?.highlight || b?.highlightIncorrect;
+      const wasClickedByFlags =
+        b?.option?.showIcon || b?.option?.highlight || b?.highlightIncorrect;
       if (wasClickedByFlags) {
         return INCORRECT_COLOR;
       }
@@ -1209,8 +1227,10 @@ export class OptionItemComponent implements OnInit {
     // spread AND the updateBindingSnapshots cssClasses rebuild that wipes
     // option.highlight-derived classes. Checked first so the green
     // highlight wins regardless of any downstream class/flag mutations.
-    if (this.binding()?._autoRevealedCorrect === true ||
-        this.binding()?.option?._autoRevealedCorrect === true) {
+    if (
+      this.binding()?._autoRevealedCorrect === true ||
+      this.binding()?.option?._autoRevealedCorrect === true
+    ) {
       return true;
     }
     // NOT an auto-reveal signal, despite what this comment used to claim — and
@@ -1250,11 +1270,18 @@ export class OptionItemComponent implements OnInit {
       if (cfg?.option && !cfg.option.highlight && !cfg.isOptionSelected) {
         return false;
       }
-      return this.isOptionIndividuallySelected() || !!this.binding().option?.highlight ||
-        this._wasSelected;
+      return (
+        this.isOptionIndividuallySelected() ||
+        !!this.binding().option?.highlight ||
+        this._wasSelected
+      );
     }
-    return this.binding().isSelected || !!this.binding().option?.highlight || this._wasSelected
-      || this.isSelectedForCurrentQuestion();
+    return (
+      this.binding().isSelected ||
+      !!this.binding().option?.highlight ||
+      this._wasSelected ||
+      this.isSelectedForCurrentQuestion()
+    );
   }
 
   // Computes the multi-answer disable state for this option from
@@ -1268,8 +1295,8 @@ export class OptionItemComponent implements OnInit {
       const _qIdx = this.quizService.currentQuestionIndex ?? this.currentQuestionIndex();
 
       const liveQT =
-        (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[_qIdx]?.questionText
-        ?? (this.quizService as any)?.questions?.[_qIdx]?.questionText;
+        (this.quizService as any)?.getQuestionsInDisplayOrder?.()?.[_qIdx]?.questionText ??
+        (this.quizService as any)?.questions?.[_qIdx]?.questionText;
 
       // AUTHORIZED COMPLETION, NOT A LOCAL ANSWER-KEY COMPARISON (S5-pre).
       //
@@ -1296,9 +1323,10 @@ export class OptionItemComponent implements OnInit {
         this.binding().disabled = true;
         if (this.binding().option) (this.binding().option as any).active = false;
       }
-    } catch (err: unknown) { console.error('applyMultiAnswerDisableState failed:', err); }
+    } catch (err: unknown) {
+      console.error('applyMultiAnswerDisableState failed:', err);
+    }
   }
-
 
   private isTimerExpiredForThisQuestion(): boolean {
     return this.timerState.isExpiredForQuestion(
@@ -1350,12 +1378,7 @@ export class OptionItemComponent implements OnInit {
 
   private isSelectedForCurrentQuestion(): boolean {
     const qIdx = this.quizService.currentQuestionIndex ?? this.currentQuestionIndex();
-    return isSelForCurrentQ(
-      this.selectedOptionService,
-      this.binding(),
-      this.displayIndex(),
-      qIdx
-    );
+    return isSelForCurrentQ(this.selectedOptionService, this.binding(), this.displayIndex(), qIdx);
   }
 
   /** Resolve the active question index. Delegates to the canonical

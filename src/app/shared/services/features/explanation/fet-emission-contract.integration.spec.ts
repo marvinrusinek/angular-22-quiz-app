@@ -45,8 +45,11 @@ describe('FET emission contract', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } },
-      ],
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
+      ]
     });
     service = TestBed.inject(ExplanationTextService);
   });
@@ -194,9 +197,7 @@ describe('FET emission contract', () => {
     // Disrupt the primary unlock: make rAF a no-op so the inner setTimeout
     // that clears the lock is never scheduled. Only the watchdog (a direct
     // setTimeout) remains to recover the gate.
-    const rafSpy = jest
-      .spyOn(window, 'requestAnimationFrame')
-      .mockImplementation(() => 0 as any);
+    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 0 as any);
 
     try {
       service.purgeAndDefer(3);

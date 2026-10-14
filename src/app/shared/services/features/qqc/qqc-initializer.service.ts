@@ -1,4 +1,4 @@
-﻿import { DestroyRef, inject, Service } from '@angular/core';
+import { DestroyRef, inject, Service } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -65,10 +65,7 @@ export class QqcInitializerService {
    * Sets up the first question based on a route index.
    * Returns the prepared question and options.
    */
-  setQuestionFirst(params: {
-    index: number;
-    questionsArray: QuizQuestion[];
-  }): {
+  setQuestionFirst(params: { index: number; questionsArray: QuizQuestion[] }): {
     currentQuestion: QuizQuestion | null;
     optionsToDisplay: Option[];
     questionIndex: number;
@@ -76,22 +73,19 @@ export class QqcInitializerService {
     const { index, questionsArray } = params;
 
     if (!questionsArray || questionsArray.length === 0) {
-      return null;  // questionsArray is empty or undefined
+      return null; // questionsArray is empty or undefined
     }
 
     // Clamp index to valid range
-    const questionIndex = Math.max(
-      0,
-      Math.min(index, questionsArray.length - 1)
-    );
+    const questionIndex = Math.max(0, Math.min(index, questionsArray.length - 1));
 
     if (questionIndex >= questionsArray.length) {
-      return null;  // invalid question index
+      return null; // invalid question index
     }
 
     const question = questionsArray[questionIndex];
     if (!question) {
-      return null;  // no question data available at this index
+      return null; // no question data available at this index
     }
 
     // Update quiz service
@@ -124,7 +118,7 @@ export class QqcInitializerService {
     const { quizId, currentQuestionIndex, questionsArray, fetchAndProcessQuizQuestions } = params;
 
     try {
-      if (!quizId) return null;  // quiz ID is empty after initialization
+      if (!quizId) return null; // quiz ID is empty after initialization
 
       // Fetch and store only if not already fetched
       let result = questionsArray;
@@ -138,10 +132,7 @@ export class QqcInitializerService {
       }
 
       // Now safe to run post-fetch logic
-      await this.quizDataService.asyncOperationToSetQuestion(
-        quizId,
-        currentQuestionIndex
-      );
+      await this.quizDataService.asyncOperationToSetQuestion(quizId, currentQuestionIndex);
 
       return {
         questionsArray: result,
@@ -204,7 +195,7 @@ export class QqcInitializerService {
    */
   parseQuestionIndexFromRoute(questionIndexParam: string | null): number {
     const routeIndex = questionIndexParam !== null ? +questionIndexParam : 1;
-    return Math.max(0, routeIndex - 1);  // normalize to 0-based
+    return Math.max(0, routeIndex - 1); // normalize to 0-based
   }
 
   /**
@@ -212,10 +203,7 @@ export class QqcInitializerService {
    * clamping to valid bounds.
    * Returns the 0-based index.
    */
-  handleRouteChangeParsing(params: {
-    rawParam: string | null;
-    totalQuestions: number;
-  }): number {
+  handleRouteChangeParsing(params: { rawParam: string | null; totalQuestions: number }): number {
     const { rawParam, totalQuestions } = params;
     const parsedParam = Number(rawParam);
     let questionIndex = isNaN(parsedParam) ? 1 : parsedParam;
@@ -238,7 +226,7 @@ export class QqcInitializerService {
       questionIndex = 1;
     }
 
-    return questionIndex - 1;  // convert to 0-based
+    return questionIndex - 1; // convert to 0-based
   }
 
   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -261,10 +249,7 @@ export class QqcInitializerService {
    * Builds a FormGroup from question options, each keyed by optionId.
    * Returns null if the question or options are not ready.
    */
-  buildFormFromOptions(
-    currentQuestion: QuizQuestion | null,
-    fb: FormBuilder
-  ): FormGroup | null {
+  buildFormFromOptions(currentQuestion: QuizQuestion | null, fb: FormBuilder): FormGroup | null {
     if (!currentQuestion?.options?.length) return null;
 
     const controls = currentQuestion.options.reduce(
@@ -295,7 +280,7 @@ export class QqcInitializerService {
     if (questionForm.invalid) return false;
 
     const selectedOption = questionForm.get('selectedOption')?.value;
-    return selectedOption != null;  // form is valid and option is selected
+    return selectedOption != null; // form is valid and option is selected
   }
 
   /**
@@ -312,10 +297,9 @@ export class QqcInitializerService {
 
     if (
       !selectedOption ||
-      !currentQuestion?.options?.find(
-        (opt) => opt.optionId === selectedOption.optionId
-      )
-    ) return false;   // invalid or unselected option
+      !currentQuestion?.options?.find((opt) => opt.optionId === selectedOption.optionId)
+    )
+      return false; // invalid or unselected option
 
     answers.push({
       question: currentQuestion,
@@ -336,9 +320,7 @@ export class QqcInitializerService {
     // Update the state to include the selected option and adjust the number of correct answers
     const selectedOptions = currentQuestion?.selectedOptions || [];
     selectedOptions.push(selectedOption); // add the newly selected option
-    const numberOfCorrectAnswers = selectedOptions.filter(
-      (opt) => opt.correct
-    ).length;
+    const numberOfCorrectAnswers = selectedOptions.filter((opt) => opt.correct).length;
 
     this.quizStateService.setQuestionState(quizId, currentQuestionIndex, {
       isAnswered: true,
@@ -374,12 +356,10 @@ export class QqcInitializerService {
             quizQuestion.selectedOptions = [];
 
             if (Array.isArray(quizQuestion.options)) {
-              quizQuestion.options = quizQuestion.options.map(
-                (option, index) => ({
-                  ...option,
-                  optionId: index
-                })
-              );
+              quizQuestion.options = quizQuestion.options.map((option, index) => ({
+                ...option,
+                optionId: index
+              }));
             } else {
               // Options are not properly defined for this question
               quizQuestion.options = [];
@@ -392,16 +372,14 @@ export class QqcInitializerService {
       .subscribe({
         next: (questions: QuizQuestion[]) => {
           if (questions && questions.length > 0) {
-            const selectedOptions =
-              this.selectedOptionService.getSelectedOptions();
-            const hasAnswered =
-              Array.isArray(selectedOptions) && selectedOptions.length > 0;
+            const selectedOptions = this.selectedOptionService.getSelectedOptions();
+            const hasAnswered = Array.isArray(selectedOptions) && selectedOptions.length > 0;
             if (hasAnswered) this.selectedOptionService.setAnsweredState(true);
 
             params.onQuestionsLoaded(questions);
           }
         },
-        error: () => { }
+        error: () => {}
       });
   }
 
@@ -410,9 +388,7 @@ export class QqcInitializerService {
    * Returns the subscription for cleanup.
    * Extracted from initializeSelectedQuiz().
    */
-  initializeSelectedQuiz(params: {
-    onQuizSelected: (quiz: Quiz) => void;
-  }): Subscription | null {
+  initializeSelectedQuiz(params: { onQuizSelected: (quiz: Quiz) => void }): Subscription | null {
     if (!this.quizDataService.selectedQuiz$) return null;
 
     return this.quizDataService.selectedQuiz$.subscribe((quiz: Quiz | null) => {

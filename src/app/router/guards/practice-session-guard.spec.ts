@@ -47,7 +47,10 @@ function componentFor(path: string): unknown {
 }
 
 describe('PracticeSessionGuard', () => {
-  beforeEach(() => { hasSession.set(false); hasResult.set(false); });
+  beforeEach(() => {
+    hasSession.set(false);
+    hasResult.set(false);
+  });
 
   it('REJECTS direct navigation when no session has been generated', () => {
     const result = sessionGuard().canActivate();
@@ -82,7 +85,10 @@ describe('PracticeSessionGuard', () => {
 });
 
 describe('PracticeResultGuard', () => {
-  beforeEach(() => { hasSession.set(false); hasResult.set(false); });
+  beforeEach(() => {
+    hasSession.set(false);
+    hasResult.set(false);
+  });
 
   it('ALLOWS Results when a submitted result exists', () => {
     hasResult.set(true);

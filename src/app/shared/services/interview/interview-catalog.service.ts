@@ -101,7 +101,9 @@ export class InterviewCatalogService {
     const wanted = new Set(topicIds);
     const counted = new Set<string>();
     const byDifficulty: Record<string, number> = {
-      beginner: 0, intermediate: 0, advanced: 0
+      beginner: 0,
+      intermediate: 0,
+      advanced: 0
     };
 
     for (const topic of this._topics()) {

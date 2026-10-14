@@ -1,7 +1,6 @@
-﻿import { Service, inject } from '@angular/core';
+import { Service, inject } from '@angular/core';
 
 import { FeedbackProps, Option, OptionBindings, QuestionType, QuizQuestion } from '@shared/models';
-
 
 import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
@@ -128,7 +127,7 @@ export class OptionClickHandlerService {
 
     // SOURCE 1: Current question options
     const fromCurrentQ = questionOpts
-      .map((o: any, idx: number) => isCorrectFlag(o) ? idx : -1)
+      .map((o: any, idx: number) => (isCorrectFlag(o) ? idx : -1))
       .filter((idx: number) => idx >= 0);
 
     // SOURCE 2: Raw _questions data for cross-reference
@@ -141,7 +140,7 @@ export class OptionClickHandlerService {
           (rq.options ?? []).filter((o: any) => isOptionCorrect(o)).map((o: any) => norm(o.text))
         );
         fromRaw = questionOpts
-          .map((o: any, idx: number) => rawCorrectTexts.has(norm(o.text)) ? idx : -1)
+          .map((o: any, idx: number) => (rawCorrectTexts.has(norm(o.text)) ? idx : -1))
           .filter((idx: number) => idx >= 0);
         break;
       }
@@ -165,12 +164,13 @@ export class OptionClickHandlerService {
     // `correctIndices`/`correctCount` are still the answer key and stay as they
     // are — this migration only stops TYPE being derived from them.
     const declared = declaredIsMultiAnswer(question);
-    const isMultiMode = declared !== null
-      ? declared
-      // Undeclared should not occur in production (the DTO requires+validates
-      // `type`); this fallback stays as the conservative, locally-derived
-      // default for that theoretical case.
-      : (isMultiModeFromComponent || typeFromComponent === 'multiple' || correctCount > 1);
+    const isMultiMode =
+      declared !== null
+        ? declared
+        : // Undeclared should not occur in production (the DTO requires+validates
+          // `type`); this fallback stays as the conservative, locally-derived
+          // default for that theoretical case.
+          isMultiModeFromComponent || typeFromComponent === 'multiple' || correctCount > 1;
 
     return { correctIndices, correctCount, isMultiMode };
   }
@@ -207,10 +207,9 @@ export class OptionClickHandlerService {
     // answers are outstanding. `0 - 0 = 0` used to read as "complete" the
     // instant a multi-answer question saw its first click, before the check
     // had even reached the server.
-    const remaining = correctIndices.length === 0
-      ? null
-      : Math.max(correctIndices.length - correctSelected, 0);
-    const correctIndices1Based = correctIndices.map(i => i + 1);
+    const remaining =
+      correctIndices.length === 0 ? null : Math.max(correctIndices.length - correctSelected, 0);
+    const correctIndices1Based = correctIndices.map((i) => i + 1);
 
     return {
       clickedIndex,
@@ -240,14 +239,18 @@ export class OptionClickHandlerService {
     if (state.isClickedCorrect === null) return '';
     if (state.isClickedCorrect) {
       if (state.remaining === 0) {
-        const optsList = state.correctIndices1Based.length > 1
-          ? `Options ${state.correctIndices1Based.slice(0, -1).join(', ')}${state.correctIndices1Based.length > 2 ? ',' : ''} and ${state.correctIndices1Based[state.correctIndices1Based.length - 1]}`
-          : `Option ${state.correctIndices1Based[0]}`;
+        const optsList =
+          state.correctIndices1Based.length > 1
+            ? `Options ${state.correctIndices1Based.slice(0, -1).join(', ')}${state.correctIndices1Based.length > 2 ? ',' : ''} and ${state.correctIndices1Based[state.correctIndices1Based.length - 1]}`
+            : `Option ${state.correctIndices1Based[0]}`;
         return state.correctIndices1Based.length > 1
           ? `You're right! The correct answers are ${optsList}.`
           : `You're right! The correct answer is ${optsList}.`;
       } else {
-        const remTxt = state.remaining === 1 ? '1 more correct answer' : `${state.remaining} more correct answers`;
+        const remTxt =
+          state.remaining === 1
+            ? '1 more correct answer'
+            : `${state.remaining} more correct answers`;
         return `That's correct! Please select ${remTxt}.`;
       }
     } else {
@@ -365,17 +368,20 @@ export class OptionClickHandlerService {
 
     if (isClickedCorrect) {
       if (remaining === 0 && incorrectSelected === 0) {
-        const optionsList = correctIdxs.length > 1
-          ? `Options ${correctIdxs.slice(0, -1).join(', ')}${correctIdxs.length > 2 ? ',' : ''} and ${correctIdxs[correctIdxs.length - 1]}`
-          : `Option ${correctIdxs[0]}`;
+        const optionsList =
+          correctIdxs.length > 1
+            ? `Options ${correctIdxs.slice(0, -1).join(', ')}${correctIdxs.length > 2 ? ',' : ''} and ${correctIdxs[correctIdxs.length - 1]}`
+            : `Option ${correctIdxs[0]}`;
         return {
           ...cfg,
-          feedback: correctIdxs.length > 1
-            ? `You're right! The correct answers are ${optionsList}.`
-            : `You're right! The correct answer is ${optionsList}.`
+          feedback:
+            correctIdxs.length > 1
+              ? `You're right! The correct answers are ${optionsList}.`
+              : `You're right! The correct answer is ${optionsList}.`
         };
       } else if (remaining > 0) {
-        const remText = remaining === 1 ? '1 more correct answer' : `${remaining} more correct answers`;
+        const remText =
+          remaining === 1 ? '1 more correct answer' : `${remaining} more correct answers`;
         return { ...cfg, feedback: `That's correct! Please select ${remText}.` };
       }
     } else {
@@ -393,15 +399,15 @@ export class OptionClickHandlerService {
    * Computes whether an option should be disabled, given the component's
    * current state context. Pure decision logic — no side effects.
    */
-  computeDisabledState(
-    option: Option,
-    index: number,
-    ctx: DisabledStateContext
-  ): boolean {
-    const { currentQuestionIndex: qIndex, isMultiMode, forceDisableAll,
-            disabledOptionsPerQuestion } = ctx;
-    const lockId = (option?.optionId != null && Number(option.optionId) !== -1)
-      ? option.optionId : index;
+  computeDisabledState(option: Option, index: number, ctx: DisabledStateContext): boolean {
+    const {
+      currentQuestionIndex: qIndex,
+      isMultiMode,
+      forceDisableAll,
+      disabledOptionsPerQuestion
+    } = ctx;
+    const lockId =
+      option?.optionId != null && Number(option.optionId) !== -1 ? option.optionId : index;
 
     const effectiveMulti = this.resolveEffectiveMulti(isMultiMode, qIndex);
 
@@ -428,21 +434,21 @@ export class OptionClickHandlerService {
     let effectiveMulti = isMultiMode;
     if (!effectiveMulti) {
       try {
-        const isShuffledChk = this.quizService?.isShuffleEnabled?.() &&
-          this.quizService?.shuffledQuestions?.length > 0;
+        const isShuffledChk =
+          this.quizService?.isShuffleEnabled?.() && this.quizService?.shuffledQuestions?.length > 0;
         const qSrc = isShuffledChk
-          ? this.quizService?.getQuestionsInDisplayOrder?.() ?? this.quizService.shuffledQuestions
+          ? (this.quizService?.getQuestionsInDisplayOrder?.() ?? this.quizService.shuffledQuestions)
           : this.quizService?.questions;
         const chkQ = qSrc?.[qIndex] ?? null;
-        const chkCorrectCount = (chkQ?.options ?? []).filter(
-          (o: any) => isOptionCorrect(o)
-        ).length;
+        const chkCorrectCount = (chkQ?.options ?? []).filter((o: any) => isOptionCorrect(o)).length;
         // DECLARED TYPE FIRST — `chkQ` was resolved through the display-order
         // source above, so this is the question on screen. A declared SINGLE
         // question is no longer promoted to multi by a drifting answer key.
         // REMOVE THE COUNT IN /questions CONTENT CUTOVER.
         effectiveMulti = resolveIsMultiAnswer(chkQ, chkCorrectCount > 1);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
     return effectiveMulti;
   }
@@ -456,14 +462,14 @@ export class OptionClickHandlerService {
   ): boolean | undefined {
     const isCorrectOpt = isOptionCorrect(option);
     if (isCorrectOpt && !forceDisableAll) {
-      const isShuffled = this.quizService?.isShuffleEnabled?.() &&
-        this.quizService?.shuffledQuestions?.length > 0;
+      const isShuffled =
+        this.quizService?.isShuffleEnabled?.() && this.quizService?.shuffledQuestions?.length > 0;
       const questionSource = isShuffled
         ? this.quizService.shuffledQuestions
         : this.quizService?.questions;
       const currentQ = questionSource?.[qIndex] ?? null;
-      const questionCorrectCount = (currentQ?.options ?? []).filter(
-        (o: any) => isOptionCorrect(o)
+      const questionCorrectCount = (currentQ?.options ?? []).filter((o: any) =>
+        isOptionCorrect(o)
       ).length;
       // DECLARED TYPE FIRST. `currentQ` came from shuffledQuestions when
       // shuffle is on, so it is the displayed question. The count survives only
@@ -493,16 +499,18 @@ export class OptionClickHandlerService {
   // "Has a correct option been selected?" is answered by the verdict for the
   // player's own picks, and the question's shape by its declared type. Neither
   // asks the bank, and neither asks about an option nobody selected.
-  private singleAnswerStaysClickable(qIndex: number, forceDisableAll: boolean): boolean | undefined {
+  private singleAnswerStaysClickable(
+    qIndex: number,
+    forceDisableAll: boolean
+  ): boolean | undefined {
     if (!forceDisableAll) {
       try {
-        const saSelections =
-          this.selectedOptionService.getSelectedOptionsForQuestion(qIndex) ?? [];
-        const isShuffledSA = this.quizService?.isShuffleEnabled?.() &&
-          this.quizService?.shuffledQuestions?.length > 0;
+        const saSelections = this.selectedOptionService.getSelectedOptionsForQuestion(qIndex) ?? [];
+        const isShuffledSA =
+          this.quizService?.isShuffleEnabled?.() && this.quizService?.shuffledQuestions?.length > 0;
         const liveSAQ = isShuffledSA
-          ? this.quizService?.getQuestionsInDisplayOrder?.()?.[qIndex]
-            ?? this.quizService?.shuffledQuestions?.[qIndex]
+          ? (this.quizService?.getQuestionsInDisplayOrder?.()?.[qIndex] ??
+            this.quizService?.shuffledQuestions?.[qIndex])
           : this.quizService?.questions?.[qIndex];
         // THE VERDICT ON THE USER'S OWN PICKS DECIDES THIS.
         //
@@ -529,7 +537,9 @@ export class OptionClickHandlerService {
         // multi-answer question too, where clicking must continue anyway.
         const isSingleAnswer = declaredIsMultiAnswer(liveSAQ) !== true;
         if (!anyCorrectSelected && isSingleAnswer) return false;
-      } catch { /* ignore — fall through to legacy lock checks */ }
+      } catch {
+        /* ignore — fall through to legacy lock checks */
+      }
     }
     return undefined;
   }
@@ -542,7 +552,12 @@ export class OptionClickHandlerService {
     qIndex: number,
     ctx: DisabledStateContext
   ): boolean {
-    const { disabledOptionsPerQuestion, lockedIncorrectOptionIds, flashDisabledSet, forceDisableAll } = ctx;
+    const {
+      disabledOptionsPerQuestion,
+      lockedIncorrectOptionIds,
+      flashDisabledSet,
+      forceDisableAll
+    } = ctx;
     const disabledSet = disabledOptionsPerQuestion.get(qIndex);
     const disabledBySet = disabledSet && (disabledSet.has(index) || disabledSet.has(lockId));
     const forceDisabled = forceDisableAll;
@@ -551,21 +566,36 @@ export class OptionClickHandlerService {
     try {
       questionLocked = this.selectedOptionService.isQuestionLocked(qIndex);
     } catch (err: unknown) {
-      console.error('OptionClickHandlerService.computeDisabledState questionLocked check failed:', err);
+      console.error(
+        'OptionClickHandlerService.computeDisabledState questionLocked check failed:',
+        err
+      );
     }
 
     let optionLocked = false;
     try {
-      optionLocked = this.selectedOptionService.isOptionLocked(qIndex, index) ||
+      optionLocked =
+        this.selectedOptionService.isOptionLocked(qIndex, index) ||
         this.selectedOptionService.isOptionLocked(qIndex, lockId);
     } catch (err: unknown) {
-      console.error('OptionClickHandlerService.computeDisabledState optionLocked check failed:', err);
+      console.error(
+        'OptionClickHandlerService.computeDisabledState optionLocked check failed:',
+        err
+      );
     }
 
-    const lockedIncorrect = lockedIncorrectOptionIds.has(index) || lockedIncorrectOptionIds.has(lockId);
+    const lockedIncorrect =
+      lockedIncorrectOptionIds.has(index) || lockedIncorrectOptionIds.has(lockId);
     const flashDisabled = flashDisabledSet.has(index) || flashDisabledSet.has(lockId);
 
-    return !!(disabledBySet || forceDisabled || questionLocked || optionLocked || lockedIncorrect || flashDisabled);
+    return !!(
+      disabledBySet ||
+      forceDisabled ||
+      questionLocked ||
+      optionLocked ||
+      lockedIncorrect ||
+      flashDisabled
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -588,7 +618,7 @@ export class OptionClickHandlerService {
     // Undeclared should not occur in production; this fallback stays as the
     // conservative, locally-derived default for that theoretical case.
     if (input && Array.isArray(input.options)) {
-      const correctOptionsCount = input.options.filter(o => isOptionCorrect(o)).length;
+      const correctOptionsCount = input.options.filter((o) => isOptionCorrect(o)).length;
       if (correctOptionsCount > 1 || (input as any).multipleAnswer === true) {
         return 'multiple';
       }
@@ -600,11 +630,7 @@ export class OptionClickHandlerService {
    * Detects multi-answer mode from question data, text keywords, and fallback type.
    * Returns the cached result if provided (for CD-cycle performance).
    */
-  detectMultiMode(
-    question: QuizQuestion | null,
-    typeInput: string,
-    configType?: string
-  ): boolean {
+  detectMultiMode(question: QuizQuestion | null, typeInput: string, configType?: string): boolean {
     // DECLARED TYPE FIRST — and that also retires the question-TEXT heuristic
     // below, which is a second proxy for a fact the API now states outright.
     const declared = declaredIsMultiAnswer(question);
@@ -615,7 +641,11 @@ export class OptionClickHandlerService {
     let result = false;
 
     const qText = (question?.questionText || '').toLowerCase();
-    if (qText.includes('select all') || qText.includes('all that apply') || qText.includes('multiple')) {
+    if (
+      qText.includes('select all') ||
+      qText.includes('all that apply') ||
+      qText.includes('multiple')
+    ) {
       result = true;
     }
 
@@ -632,5 +662,4 @@ export class OptionClickHandlerService {
 
     return result;
   }
-
 }

@@ -46,19 +46,18 @@ export class NextButtonStateService {
       isNavigating$,
       ready$
     ])
-    .pipe(
-      takeUntilDestroyed(destroyRef), // Cleanup when component is destroyed
-      distinctUntilChanged(
-        ([a1, b1, c1, d1], [a2, b2, c2, d2]) =>
-          a1 === a2 && b1 === b2 && c1 === c2 && d1 === d2
-      ),
-    )
-    .subscribe(([isAnswered, isLoading, isNavigating, ready]) => {
-      const enabled = isAnswered && !isLoading && !isNavigating && !!ready;
-      // If the button was force-held enabled, don't let the stream disable it
-      if (!enabled && Date.now() < this._forceHoldUntil) return;
-      this.updateAndSyncNextButtonState(enabled);
-    });
+      .pipe(
+        takeUntilDestroyed(destroyRef), // Cleanup when component is destroyed
+        distinctUntilChanged(
+          ([a1, b1, c1, d1], [a2, b2, c2, d2]) => a1 === a2 && b1 === b2 && c1 === c2 && d1 === d2
+        )
+      )
+      .subscribe(([isAnswered, isLoading, isNavigating, ready]) => {
+        const enabled = isAnswered && !isLoading && !isNavigating && !!ready;
+        // If the button was force-held enabled, don't let the stream disable it
+        if (!enabled && Date.now() < this._forceHoldUntil) return;
+        this.updateAndSyncNextButtonState(enabled);
+      });
   }
 
   public cleanupNextButtonStateStream(): void {
@@ -74,7 +73,7 @@ export class NextButtonStateService {
   ): boolean {
     const shouldEnable = isAnswered && !isLoading && !isNavigating;
     if (!shouldEnable && Date.now() < this._forceHoldUntil) return true;
-    
+
     this.updateAndSyncNextButtonState(shouldEnable);
     return shouldEnable;
   }

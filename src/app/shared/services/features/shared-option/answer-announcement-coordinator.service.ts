@@ -2,7 +2,10 @@ import { Service, inject, signal } from '@angular/core';
 
 import { buildHeadingInputs, HeadingInputDeps } from '@shared/utils/heading-inputs';
 import { HeadingInputs, shouldShowFet } from '@shared/utils/heading-model';
-import { composeAnswerAnnouncement, htmlToAnnouncementText } from '@shared/utils/compose-answer-announcement';
+import {
+  composeAnswerAnnouncement,
+  htmlToAnnouncementText
+} from '@shared/utils/compose-answer-announcement';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { FeedbackPolicyService } from '@shared/services/features/interview/feedback-policy.service';
@@ -102,7 +105,7 @@ export class AnswerAnnouncementCoordinatorService {
       quizQuestionManagerService: this.quizQuestionManagerService,
       feedbackPolicyService: this.feedbackPolicyService,
       questionVerdictService: this.questionVerdictService,
-      topicQuizTypeRegistry: this.topicQuizTypeRegistry,
+      topicQuizTypeRegistry: this.topicQuizTypeRegistry
     };
     return buildHeadingInputs(deps);
   }
@@ -126,7 +129,7 @@ export class AnswerAnnouncementCoordinatorService {
       isCorrect,
       fetDue,
       fetText,
-      progressGuidance,
+      progressGuidance
     });
   }
 

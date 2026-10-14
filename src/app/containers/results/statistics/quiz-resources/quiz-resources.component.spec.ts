@@ -35,8 +35,7 @@ function expand() {
   fixture.detectChanges();
 }
 
-const items = (): HTMLElement[] =>
-  Array.from(fixture.nativeElement.querySelectorAll('li'));
+const items = (): HTMLElement[] => Array.from(fixture.nativeElement.querySelectorAll('li'));
 
 beforeEach(async () => {
   await TestBed.configureTestingModule({ imports: [QuizResourcesComponent] }).compileComponents();
@@ -52,8 +51,11 @@ describe('rendering API-sourced resources', () => {
   it('PRESERVES THE GIVEN ORDER', () => {
     render(RESOURCES);
     expand();
-    expect(items().map((li) => li.querySelector('.resource-title')!.textContent!.trim()))
-      .toEqual(['Angular docs', 'RxJS docs', 'A third link']);
+    expect(items().map((li) => li.querySelector('.resource-title')!.textContent!.trim())).toEqual([
+      'Angular docs',
+      'RxJS docs',
+      'A third link'
+    ]);
   });
 
   it('links to the resource url and opens safely in a new tab', () => {
@@ -91,6 +93,9 @@ describe('a quiz with no resources', () => {
   });
 
   it('does not throw when the list is empty', () => {
-    expect(() => { render([]); expand(); }).not.toThrow();
+    expect(() => {
+      render([]);
+      expand();
+    }).not.toThrow();
   });
 });

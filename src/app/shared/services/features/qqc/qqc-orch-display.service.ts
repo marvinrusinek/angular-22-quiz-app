@@ -15,7 +15,6 @@ type Host = QuizQuestionComponent;
  */
 @Service()
 export class QqcOrchDisplayService {
-
   runUpdateOptionsSafely(host: Host, newOptions: Option[]): void {
     const result = host.displayStateManager.prepareOptionSwap({
       newOptions,
@@ -99,22 +98,32 @@ export class QqcOrchDisplayService {
   }
 
   runSetQuestionOptions(host: Host): void {
-    host.quizService.getQuestionByIndex(host.currentQuestionIndex()).pipe(take(1)).subscribe((currentQuestion: QuizQuestion | null) => {
-      if (!currentQuestion) return;
-      host.currentQuestion.set(currentQuestion);
-      host.currentOptions = host.displayStateManager.buildOptionsWithCorrectness(currentQuestion);
-      if (host.currentOptions.length === 0) return;
-      if (host.shuffleOptions) ArrayUtils.shuffleArray(host.currentOptions);
-      host.currentOptions = host.displayStateManager.applyDisplayOrder(host.currentOptions);
-      host.optionsToDisplay.set(host.currentOptions.map((o: any) => ({ ...o })));
-      host.updateShouldRenderOptions(host.optionsToDisplay());
-      host.quizService.nextOptionsSig.set(host.optionsToDisplay().map((o: any) => ({ ...o })));
-      host.cdRef.markForCheck();
-    });
+    host.quizService
+      .getQuestionByIndex(host.currentQuestionIndex())
+      .pipe(take(1))
+      .subscribe((currentQuestion: QuizQuestion | null) => {
+        if (!currentQuestion) return;
+        host.currentQuestion.set(currentQuestion);
+        host.currentOptions = host.displayStateManager.buildOptionsWithCorrectness(currentQuestion);
+        if (host.currentOptions.length === 0) return;
+        if (host.shuffleOptions) ArrayUtils.shuffleArray(host.currentOptions);
+        host.currentOptions = host.displayStateManager.applyDisplayOrder(host.currentOptions);
+        host.optionsToDisplay.set(host.currentOptions.map((o: any) => ({ ...o })));
+        host.updateShouldRenderOptions(host.optionsToDisplay());
+        host.quizService.nextOptionsSig.set(host.optionsToDisplay().map((o: any) => ({ ...o })));
+        host.cdRef.markForCheck();
+      });
   }
 
   runUpdateOptionHighlighting(host: Host, selectedKeys: Set<string | number>): void {
-    host.optionsToDisplay.set(host.feedbackManager.updateOptionHighlighting(host.optionsToDisplay(), selectedKeys, host.currentQuestionIndex(), host.question()?.type));
+    host.optionsToDisplay.set(
+      host.feedbackManager.updateOptionHighlighting(
+        host.optionsToDisplay(),
+        selectedKeys,
+        host.currentQuestionIndex(),
+        host.question()?.type
+      )
+    );
     host.cdRef.markForCheck();
   }
 
@@ -122,13 +131,22 @@ export class QqcOrchDisplayService {
     const soc = host.sharedOptionComponent?.();
     if (!soc) return;
     if (opt.optionId !== undefined) soc.lastFeedbackOptionId = opt.optionId;
-    const cfg = host.feedbackManager.buildFeedbackConfigForOption(opt, host.optionBindings(), host.currentQuestion()!, soc.feedbackConfigs);
+    const cfg = host.feedbackManager.buildFeedbackConfigForOption(
+      opt,
+      host.optionBindings(),
+      host.currentQuestion()!,
+      soc.feedbackConfigs
+    );
     soc.feedbackConfigs = { ...soc.feedbackConfigs, [opt.optionId!]: cfg };
     host.cdRef.markForCheck();
   }
 
   runPopulateOptionsToDisplay(host: Host): Option[] {
-    const result = host.questionLoader.populateOptionsToDisplay(host.currentQuestion(), host.optionsToDisplay(), host.lastOptionsQuestionSignature);
+    const result = host.questionLoader.populateOptionsToDisplay(
+      host.currentQuestion(),
+      host.optionsToDisplay(),
+      host.lastOptionsQuestionSignature
+    );
     host.optionsToDisplay.set(result.options);
     host.lastOptionsQuestionSignature = result.signature;
     return host.optionsToDisplay();
@@ -141,7 +159,11 @@ export class QqcOrchDisplayService {
     }
   }
 
-  async runResolveFormatted(host: Host, index: number, opts: { useCache?: boolean; setCache?: boolean; timeoutMs?: number } = {}): Promise<string> {
+  async runResolveFormatted(
+    host: Host,
+    index: number,
+    opts: { useCache?: boolean; setCache?: boolean; timeoutMs?: number } = {}
+  ): Promise<string> {
     return host.timerEffect.resolveFormatted({
       index,
       normalizeIndex: (idx: number) => host.normalizeIndex(idx),
@@ -153,15 +175,25 @@ export class QqcOrchDisplayService {
     });
   }
 
-  runDisableAllBindingsAndOptions(host: Host): { optionBindings: any[]; optionsToDisplay: Option[] } {
-    const result = host.displayStateManager.disableAllBindingsAndOptions(host.optionBindings(), host.optionsToDisplay());
+  runDisableAllBindingsAndOptions(host: Host): {
+    optionBindings: any[];
+    optionsToDisplay: Option[];
+  } {
+    const result = host.displayStateManager.disableAllBindingsAndOptions(
+      host.optionBindings(),
+      host.optionsToDisplay()
+    );
     host.optionBindings.set(result.optionBindings);
     host.optionsToDisplay.set(result.optionsToDisplay);
     return result;
   }
 
   runRevealFeedbackForAllOptions(host: Host, canonicalOpts: Option[]): void {
-    const result = host.feedbackManager.revealFeedbackForAllOptions(canonicalOpts, host.feedbackConfigs, host.showFeedbackForOption);
+    const result = host.feedbackManager.revealFeedbackForAllOptions(
+      canonicalOpts,
+      host.feedbackConfigs,
+      host.showFeedbackForOption
+    );
     host.feedbackConfigs = result.feedbackConfigs;
     host.showFeedbackForOption = result.showFeedbackForOption;
 
@@ -183,11 +215,16 @@ export class QqcOrchDisplayService {
     }
   }
 
-  runSafeSetDisplayState(host: Host, state: { mode: 'question' | 'explanation'; answered: boolean }): void {
-    if (host.displayStateManager.shouldSuppressDisplayState({
-      visibilityRestoreInProgress: host._visibilityRestoreInProgress,
-      suppressDisplayStateUntil: host._suppressDisplayStateUntil
-    })) {
+  runSafeSetDisplayState(
+    host: Host,
+    state: { mode: 'question' | 'explanation'; answered: boolean }
+  ): void {
+    if (
+      host.displayStateManager.shouldSuppressDisplayState({
+        visibilityRestoreInProgress: host._visibilityRestoreInProgress,
+        suppressDisplayStateUntil: host._suppressDisplayStateUntil
+      })
+    ) {
       return;
     }
     host.displayMode.set(state.mode);

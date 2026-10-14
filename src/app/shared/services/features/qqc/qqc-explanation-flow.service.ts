@@ -5,7 +5,6 @@ import { PROMISE_RACE_TIMEOUT_MS } from '@shared/constants/timing';
 
 import { FormattedExplanation, QuestionState, QuestionType, QuizQuestion } from '@shared/models';
 
-
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QqcExplanationDisplayService } from './qqc-explanation-display.service';
 import { QqcExplanationManagerService } from './qqc-explanation-manager.service';
@@ -42,9 +41,7 @@ export class QqcExplanationFlowService {
     }
 
     try {
-      const questionData = await firstValueFrom(
-        this.quizService.getQuestionByIndex(questionIndex)
-      );
+      const questionData = await firstValueFrom(this.quizService.getQuestionByIndex(questionIndex));
 
       if (this.quizQuestionManagerService.isValidQuestionData(questionData!)) {
         const formattedExplanationObservable =
@@ -95,10 +92,7 @@ export class QqcExplanationFlowService {
    * The component applies the result to its own state and emits events.
    * Extracted from resetExplanation().
    */
-  computeResetExplanation(params: {
-    force: boolean;
-    questionIndex: number;
-  }): {
+  computeResetExplanation(params: { force: boolean; questionIndex: number }): {
     blocked: boolean;
     displayExplanation?: false;
     explanationToDisplay?: '';
@@ -128,22 +122,24 @@ export class QqcExplanationFlowService {
     quizId: string | null | undefined;
     quizServiceQuizId: string | null;
     currentQuizId: string | null;
-  }): {
-    shouldSkip: false;
-    explanationText: string;
-    displayMode: 'explanation';
-    displayState: { mode: 'explanation'; answered: true };
-    forceQuestionDisplay: false;
-    readyForExplanationDisplay: true;
-    isExplanationReady: true;
-    isExplanationLocked: false;
-    explanationLocked: true;
-    explanationVisible: true;
-    displayExplanation: true;
-    shouldDisplayExplanation: true;
-    isExplanationTextDisplayed: true;
-    resolvedQuizId: string | null;
-  } | { shouldSkip: true } {
+  }):
+    | {
+        shouldSkip: false;
+        explanationText: string;
+        displayMode: 'explanation';
+        displayState: { mode: 'explanation'; answered: true };
+        forceQuestionDisplay: false;
+        readyForExplanationDisplay: true;
+        isExplanationReady: true;
+        isExplanationLocked: false;
+        explanationLocked: true;
+        explanationVisible: true;
+        displayExplanation: true;
+        shouldDisplayExplanation: true;
+        isExplanationTextDisplayed: true;
+        resolvedQuizId: string | null;
+      }
+    | { shouldSkip: true } {
     const normalized = (args.explanationText ?? '').trim();
     if (!normalized) return { shouldSkip: true };
 
@@ -155,13 +151,18 @@ export class QqcExplanationFlowService {
     this.explanationTextService.lockExplanation();
 
     const resolvedQuizId =
-      [args.quizId, args.currentQuizId, args.quizServiceQuizId]
-        .find((id) => typeof id === 'string' && id.trim().length > 0) ?? null;
+      [args.quizId, args.currentQuizId, args.quizServiceQuizId].find(
+        (id) => typeof id === 'string' && id.trim().length > 0
+      ) ?? null;
 
     if (resolvedQuizId && args.questionState) {
       args.questionState.isAnswered = true;
       args.questionState.explanationDisplayed = true;
-      this.quizStateService.setQuestionState(resolvedQuizId, args.questionIndex, args.questionState);
+      this.quizStateService.setQuestionState(
+        resolvedQuizId,
+        args.questionIndex,
+        args.questionState
+      );
     }
 
     return {
@@ -187,10 +188,7 @@ export class QqcExplanationFlowService {
    * Returns null if update should be skipped.
    * Extracted from updateExplanationUI().
    */
-  validateForExplanationUI(params: {
-    questionsArray: QuizQuestion[];
-    questionIndex: number;
-  }): {
+  validateForExplanationUI(params: { questionsArray: QuizQuestion[]; questionIndex: number }): {
     adjustedIndex: number;
     currentQuestion: QuizQuestion;
   } | null {
@@ -204,7 +202,7 @@ export class QqcExplanationFlowService {
     );
     const currentQuestion = params.questionsArray[adjustedIndex];
 
-    if (!currentQuestion) return null;  // question not found at adjusted index
+    if (!currentQuestion) return null; // question not found at adjusted index
 
     return { adjustedIndex, currentQuestion };
   }
@@ -226,12 +224,11 @@ export class QqcExplanationFlowService {
   }> {
     try {
       // Await the explanation text to ensure it resolves to a string
-      const explanationText: string = await params.getExplanationText(
-        params.currentQuestionIndex
-      );
+      const explanationText: string = await params.getExplanationText(params.currentQuestionIndex);
 
-      const totalCorrectAnswers =
-        this.quizService.quizOptions.getTotalCorrectAnswers(params.currentQuestion);
+      const totalCorrectAnswers = this.quizService.quizOptions.getTotalCorrectAnswers(
+        params.currentQuestion
+      );
 
       // Update the quiz state with the latest question information
       this.quizStateService.updateQuestionState(
@@ -290,9 +287,7 @@ export class QqcExplanationFlowService {
    * Returns formatted text, correct answer info, and display flags.
    * Extracted from onSubmitMultiple().
    */
-  computeSubmitMultipleExplanation(params: {
-    currentQuestionIndex: number;
-  }): {
+  computeSubmitMultipleExplanation(params: { currentQuestionIndex: number }): {
     formatted: string;
     correctIdxs: number[];
     questionType: QuestionType | undefined;
@@ -358,7 +353,7 @@ export class QqcExplanationFlowService {
     try {
       this.explanationTextService._activeIndex = idx;
       this.explanationTextService.resetForIndex(idx);
-      await new Promise(res => requestAnimationFrame(() => setTimeout(res, 60)));
+      await new Promise((res) => requestAnimationFrame(() => setTimeout(res, 60)));
 
       this.explanationTextService.openExclusive(idx, params.formatted);
 
@@ -367,12 +362,12 @@ export class QqcExplanationFlowService {
         requestAnimationFrame(() => {
           try {
             this.quizService.updateCorrectAnswersText(params.correctAnswersText);
-          } catch { }
+          } catch {}
         });
       } else {
         this.quizService.updateCorrectAnswersText('');
       }
-    } catch { }
+    } catch {}
   }
 
   /**
@@ -414,7 +409,7 @@ export class QqcExplanationFlowService {
       if (await params.isAnyOptionSelected(params.questionIndex)) {
         return {
           explanationToDisplay: explanationText || 'No explanation available',
-          success: true,
+          success: true
         };
       } else {
         return { explanationToDisplay: '', success: false };
@@ -472,15 +467,19 @@ export class QqcExplanationFlowService {
     question: QuizQuestion;
     shouldDisplayExplanation: boolean;
     isAnyOptionSelected: (idx: number) => Promise<boolean>;
-    getFormattedExplanation: (q: QuizQuestion, idx: number) => Promise<{ questionIndex: number; explanation: string }>;
+    getFormattedExplanation: (
+      q: QuizQuestion,
+      idx: number
+    ) => Promise<{ questionIndex: number; explanation: string }>;
   }): Promise<{
     shouldUpdate: boolean;
     explanationText: string;
   }> {
-    if (await params.isAnyOptionSelected(params.index) && params.shouldDisplayExplanation) {
+    if ((await params.isAnyOptionSelected(params.index)) && params.shouldDisplayExplanation) {
       const formatted = await params.getFormattedExplanation(params.question, params.index);
-      const explanationText = formatted?.explanation
-        || this.explanationTextService.prepareExplanationText(params.question);
+      const explanationText =
+        formatted?.explanation ||
+        this.explanationTextService.prepareExplanationText(params.question);
       return { shouldUpdate: true, explanationText };
     } else {
       return { shouldUpdate: false, explanationText: '' };
@@ -513,9 +512,10 @@ export class QqcExplanationFlowService {
       // SHUFFLED FIX: params.lockedIndex is a DISPLAY index. In shuffled
       // mode, quizService.questions[] is original order — use
       // getQuestionsInDisplayOrder() to get the correct displayed question.
-      const canonicalQ = this.quizService?.getQuestionsInDisplayOrder?.()?.[params.lockedIndex]
-        ?? this.quizService?.questions?.[params.lockedIndex]
-        ?? params.question;
+      const canonicalQ =
+        this.quizService?.getQuestionsInDisplayOrder?.()?.[params.lockedIndex] ??
+        this.quizService?.questions?.[params.lockedIndex] ??
+        params.question;
       const raw = (canonicalQ?.explanation ?? '').trim();
       const correctIdxs = svc.getCorrectOptionIndices(canonicalQ);
       const formatted = svc.formatExplanation(canonicalQ, correctIdxs, raw).trim();
@@ -532,7 +532,9 @@ export class QqcExplanationFlowService {
             idx: params.lockedIndex
           };
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
 
       // Bypass the ETS pristine gates by calling displayState directly.
       // The caller (orchestrator) already verified all correct answers are
@@ -554,10 +556,7 @@ export class QqcExplanationFlowService {
    * Returns state for the component to apply.
    * Extracted from resetExplanation() in QuizQuestionComponent.
    */
-  performResetExplanation(params: {
-    force: boolean;
-    questionIndex: number;
-  }): {
+  performResetExplanation(params: { force: boolean; questionIndex: number }): {
     blocked: boolean;
     displayExplanation: boolean;
     explanationToDisplay: string;

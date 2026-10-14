@@ -42,7 +42,9 @@ describe('PerformanceTrendsComponent', () => {
 
   it('19. first-attempt empty state renders (no chart)', () => {
     const el = render(trendsFor([85]));
-    expect(el.querySelector('.perf-trends__empty')?.textContent).toContain('first recorded interview');
+    expect(el.querySelector('.perf-trends__empty')?.textContent).toContain(
+      'first recorded interview'
+    );
     expect(el.querySelector('.perf-chart')).toBeNull();
     expect(el.querySelector('.perf-metrics')).toBeNull();
   });

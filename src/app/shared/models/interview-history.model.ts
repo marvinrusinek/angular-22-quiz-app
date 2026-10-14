@@ -37,7 +37,7 @@ export interface InterviewTopicHistoryEntry {
   topicName: string;
   correct: number;
   total: number;
-  percentage: number;    // 0–100
+  percentage: number; // 0–100
   // v2 additions. Optional so migrated v1 topics stay valid.
   incorrect?: number;
   unanswered?: number;
@@ -60,10 +60,10 @@ export interface InterviewReviewOptionSnapshot {
 export interface InterviewReviewQuestionSnapshot {
   questionText: string;
   explanation: string;
-  type?: QuestionType;          // preserved when known; else inferred at render
-  sourceQuizId?: string;        // topic attribution (maps to topicPerformance id)
+  type?: QuestionType; // preserved when known; else inferred at render
+  sourceQuizId?: string; // topic attribution (maps to topicPerformance id)
   options: InterviewReviewOptionSnapshot[];
-  selectedOptionIds: number[];  // the user's picks (may be empty)
+  selectedOptionIds: number[]; // the user's picks (may be empty)
 }
 
 /**
@@ -74,7 +74,7 @@ export interface InterviewReviewQuestionSnapshot {
  * the backend from the frozen result and is never written to localStorage.
  */
 export interface InterviewAttemptHistoryEntry {
-  id: string;                    // stable, unique per attempt
+  id: string; // stable, unique per attempt
   /**
    * Backend session id — the DEDUPLICATION key.
    *
@@ -90,10 +90,10 @@ export interface InterviewAttemptHistoryEntry {
   // retained list. Optional for backward compatibility; legacy records without it
   // are assigned numbers by chronological position on first load.
   attemptNumber?: number;
-  completedAt: string;           // ISO 8601 timestamp
-  score: number;                 // correct count
+  completedAt: string; // ISO 8601 timestamp
+  score: number; // correct count
   totalQuestions: number;
-  percentage: number;            // 0–100 (normalised so counts stay comparable)
+  percentage: number; // 0–100 (normalised so counts stay comparable)
   completionReason: InterviewCompletionReason;
   durationSeconds?: number;
   configuredDifficulty?: string;
@@ -101,7 +101,7 @@ export interface InterviewAttemptHistoryEntry {
   // LEGACY entries have neither field and are treated as Custom Interview.
   configKind?: 'custom' | 'preset';
   presetId?: string;
-  presetName?: string;              // snapshot of the label at completion time
+  presetName?: string; // snapshot of the label at completion time
   selectedTopicIds: string[];
   topicPerformance: InterviewTopicHistoryEntry[];
 
@@ -132,7 +132,7 @@ export interface InterviewAttemptHistoryStore {
 /** One plotted point on the score trend, chronological. */
 export interface InterviewTrendPoint {
   id: string;
-  index: number;                 // 1-based position within the retained window
+  index: number; // 1-based position within the retained window
   completedAt: string;
   score: number;
   totalQuestions: number;
@@ -148,13 +148,13 @@ export type InterviewTrendDirection = 'improving' | 'steady' | 'declining' | 'no
 /** Everything the Performance Trends UI needs — derived purely from the retained
  *  attempts, so the Results component stays presentation-only. */
 export interface InterviewTrends {
-  points: InterviewTrendPoint[];   // chronological (oldest → latest)
+  points: InterviewTrendPoint[]; // chronological (oldest → latest)
   count: number;
-  latest: number | null;           // latest attempt %
-  best: number | null;             // highest retained %
-  average: number | null;          // arithmetic mean of retained %, rounded
-  change: number | null;           // latest − previous, in percentage points (null if <2)
+  latest: number | null; // latest attempt %
+  best: number | null; // highest retained %
+  average: number | null; // arithmetic mean of retained %, rounded
+  change: number | null; // latest − previous, in percentage points (null if <2)
   direction: InterviewTrendDirection;
-  interpretation: string;          // canonical (English) message; '' when direction === 'none'
-  isPersonalBest: boolean;         // latest STRICTLY exceeds every previous attempt (needs ≥2, no ties)
+  interpretation: string; // canonical (English) message; '' when direction === 'none'
+  isPersonalBest: boolean; // latest STRICTLY exceeds every previous attempt (needs ≥2, no ties)
 }

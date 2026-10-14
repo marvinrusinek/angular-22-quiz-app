@@ -45,17 +45,18 @@ const q = (
   type: QuestionType | undefined,
   correctCount: number,
   questionText = 'Which of these?'
-): QuizQuestion => ({
-  questionText,
-  explanation: 'e',
-  type,
-  options: Array.from({ length: 4 }, (_, i) => ({
-    optionId: i + 1,
-    text: `opt${i + 1}`,
-    value: i + 1,
-    correct: i < correctCount
-  }))
-} as unknown as QuizQuestion);
+): QuizQuestion =>
+  ({
+    questionText,
+    explanation: 'e',
+    type,
+    options: Array.from({ length: 4 }, (_, i) => ({
+      optionId: i + 1,
+      text: `opt${i + 1}`,
+      value: i + 1,
+      correct: i < correctCount
+    }))
+  }) as unknown as QuizQuestion;
 
 // ══════════════════════════════════════════════════════════════════════
 // option-click-handler — determineQuestionType (radio vs checkbox)
@@ -70,7 +71,10 @@ describe('determineQuestionType: interaction mode follows the DECLARED type', ()
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test/api' },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
       ]
     });
     handler = TestBed.inject(OptionClickHandlerService);
@@ -278,7 +282,10 @@ describe('selection-message: the message type follows the DECLARED type', () => 
         },
         { provide: SelectedOptionService, useValue: { selectedOptionsMap: new Map() } },
         { provide: QuizDotStatusService, useValue: { timedOutFetForced: new Set<number>() } },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) } }
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, params: of({}) }
+        }
       ]
     });
     service = TestBed.inject(SelectionMessageService);

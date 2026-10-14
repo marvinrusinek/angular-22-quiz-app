@@ -44,5 +44,4 @@ export class CqcFetGuardService {
       return false;
     }
   }
-
 }

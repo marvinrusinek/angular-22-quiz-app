@@ -21,43 +21,80 @@ const TOKEN = 'a'.repeat(43);
 
 /** Key names that must never appear anywhere in persisted state. */
 const FORBIDDEN_KEYS = [
-  'questions', 'options', 'selectedOptionIds', 'correctOptionIds',
-  'explanation', 'review', 'answerKey', 'answers', 'isCorrect', 'is_correct',
-  'assessment', 'result'
+  'questions',
+  'options',
+  'selectedOptionIds',
+  'correctOptionIds',
+  'explanation',
+  'review',
+  'answerKey',
+  'answers',
+  'isCorrect',
+  'is_correct',
+  'assessment',
+  'result'
 ];
 
 /** Distinctive VALUES from the answer key, to catch renamed fields. */
-const FORBIDDEN_VALUES = [
-  'switchMap cancels', 'Which operator flattens', 'A reactive primitive'
-];
+const FORBIDDEN_VALUES = ['switchMap cancels', 'Which operator flattens', 'A reactive primitive'];
 
 function result(): InterviewResultViewModel {
   return {
     sessionId: 'is_1',
     submittedAtMs: Date.parse('2026-08-01T12:00:00.000Z'),
     submittedByExpiry: false,
-    total: 2, answered: 2, unanswered: 0, correct: 1, incorrect: 1, percentage: 50,
-    durationSeconds: 900, timeUsedSeconds: 400,
+    total: 2,
+    answered: 2,
+    unanswered: 0,
+    correct: 1,
+    incorrect: 1,
+    percentage: 50,
+    durationSeconds: 900,
+    timeUsedSeconds: 400,
     config: { mode: 'custom', difficulty: 'beginner', topicIds: ['rxjs'], questionCount: 2 },
     byTopic: [
-      { topicId: 'rxjs', title: 'RxJS', correct: 1, incorrect: 1, unanswered: 0, total: 2, percentage: 50 }
+      {
+        topicId: 'rxjs',
+        title: 'RxJS',
+        correct: 1,
+        incorrect: 1,
+        unanswered: 0,
+        total: 2,
+        percentage: 50
+      }
     ],
     review: [
       {
-        questionId: 'rxjs:q:0', sourceQuizId: 'rxjs',
-        questionText: 'Which operator flattens?', type: 'single',
-        options: [{ optionId: 1, text: 'switchMap' }, { optionId: 2, text: 'tap' }],
-        selectedOptionIds: [1], correctOptionIds: [1],
+        questionId: 'rxjs:q:0',
+        sourceQuizId: 'rxjs',
+        questionText: 'Which operator flattens?',
+        type: 'single',
+        options: [
+          { optionId: 1, text: 'switchMap' },
+          { optionId: 2, text: 'tap' }
+        ],
+        selectedOptionIds: [1],
+        correctOptionIds: [1],
         explanation: 'switchMap cancels the previous inner observable.',
-        isCorrect: true, isAnswered: true, flagged: false
+        isCorrect: true,
+        isAnswered: true,
+        flagged: false
       },
       {
-        questionId: 'signals:q:0', sourceQuizId: 'signals',
-        questionText: 'What is a signal?', type: 'single',
-        options: [{ optionId: 3, text: 'A reactive primitive' }, { optionId: 4, text: 'A pipe' }],
-        selectedOptionIds: [4], correctOptionIds: [3],
+        questionId: 'signals:q:0',
+        sourceQuizId: 'signals',
+        questionText: 'What is a signal?',
+        type: 'single',
+        options: [
+          { optionId: 3, text: 'A reactive primitive' },
+          { optionId: 4, text: 'A pipe' }
+        ],
+        selectedOptionIds: [4],
+        correctOptionIds: [3],
         explanation: 'A reactive primitive that notifies consumers.',
-        isCorrect: false, isAnswered: true, flagged: false
+        isCorrect: false,
+        isAnswered: true,
+        flagged: false
       }
     ]
   };
@@ -94,12 +131,22 @@ function parsedEntries(store: Storage): Array<{ key: string; value: unknown }> {
 }
 
 let service: BackendInterviewResultService;
-let api: { getResult: jest.Mock; submitSession: jest.Mock; resumeSession: jest.Mock; saveAnswer: jest.Mock };
+let api: {
+  getResult: jest.Mock;
+  submitSession: jest.Mock;
+  resumeSession: jest.Mock;
+  saveAnswer: jest.Mock;
+};
 
 beforeEach(async () => {
   sessionStorage.clear();
   localStorage.clear();
-  api = { getResult: jest.fn(), submitSession: jest.fn(), resumeSession: jest.fn(), saveAnswer: jest.fn() };
+  api = {
+    getResult: jest.fn(),
+    submitSession: jest.fn(),
+    resumeSession: jest.fn(),
+    saveAnswer: jest.fn()
+  };
 
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
@@ -131,8 +178,12 @@ describe('after a completed interview', () => {
     expect(keys.filter((k) => k !== 'assessmentIntegrity')).toEqual(['interviewSessionRef:v2']);
 
     const reference = JSON.parse(sessionStorage.getItem('interviewSessionRef:v2')!);
-    expect(Object.keys(reference).sort())
-      .toEqual(['currentIndex', 'sessionId', 'sessionToken', 'version']);
+    expect(Object.keys(reference).sort()).toEqual([
+      'currentIndex',
+      'sessionId',
+      'sessionToken',
+      'version'
+    ]);
   });
 
   it('localStorage holds the sanitized history and no answer key', () => {

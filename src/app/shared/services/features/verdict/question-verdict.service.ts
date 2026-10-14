@@ -15,7 +15,7 @@ import {
   type QuestionCheckResult,
   type QuestionExpiredResult,
   type QuestionVerdictState,
-  type TerminalVerdictArrival,
+  type TerminalVerdictArrival
 } from './question-verdict.types';
 
 /**
@@ -262,7 +262,7 @@ export class QuestionVerdictService {
             correctOptionTexts: result.correctOptionTexts,
             explanation: result.explanation,
             // Expiry reveals the answer; it does not claim the user got it right.
-            isResolvedCorrect: existing.isResolvedCorrect,
+            isResolvedCorrect: existing.isResolvedCorrect
           });
         }
         return result;
@@ -310,9 +310,7 @@ export class QuestionVerdictService {
    * session and another quiz's leftovers must not block this one.
    */
   hasBlockingVerdicts(quizId?: string): boolean {
-    const prefix = quizId
-      ? `${quizId}${QuestionVerdictService.KEY_SEPARATOR}`
-      : null;
+    const prefix = quizId ? `${quizId}${QuestionVerdictService.KEY_SEPARATOR}` : null;
 
     for (const [key, state] of this._states()) {
       if (prefix !== null && !key.startsWith(prefix)) continue;
@@ -407,10 +405,10 @@ export class QuestionVerdictService {
     let restored = 0;
 
     for (const entry of entries) {
-      if (!known.has(canonicalize(entry.questionText))) continue;   // fail closed
+      if (!known.has(canonicalize(entry.questionText))) continue; // fail closed
 
       const mapKey = this.key(quizId, entry.questionText);
-      if (next.has(mapKey)) continue;   // a live verdict is authoritative
+      if (next.has(mapKey)) continue; // a live verdict is authoritative
 
       next.set(mapKey, {
         phase: entry.phase,
@@ -447,7 +445,7 @@ export class QuestionVerdictService {
     this.write(quizId, questionText, {
       ...this.verdictFor(quizId, questionText),
       phase: 'checking',
-      selectedOptionTexts: [...selectedOptionTexts],
+      selectedOptionTexts: [...selectedOptionTexts]
     });
   }
 
@@ -456,7 +454,7 @@ export class QuestionVerdictService {
     // must never be displayed as though it were a recorded answer.
     this.write(quizId, questionText, {
       ...this.verdictFor(quizId, questionText),
-      phase: 'error',
+      phase: 'error'
     });
   }
 
@@ -541,7 +539,7 @@ export class QuestionVerdictService {
         remainingCorrectCount: result.remainingCorrectCount,
         correctOptionTexts: alreadyRevealed ? previous.correctOptionTexts : [],
         explanation: alreadyRevealed ? previous.explanation : null,
-        isResolvedCorrect: null,
+        isResolvedCorrect: null
       });
       return;
     }
@@ -555,13 +553,13 @@ export class QuestionVerdictService {
             canonicalize(text),
             result.correctOptionTexts.some(
               (correct) => canonicalize(correct) === canonicalize(text)
-            ),
+            )
           ])
         ),
         remainingCorrectCount: 0,
         correctOptionTexts: result.correctOptionTexts,
         explanation: result.explanation,
-        isResolvedCorrect: result.correct,
+        isResolvedCorrect: result.correct
       });
       return;
     }
@@ -571,7 +569,7 @@ export class QuestionVerdictService {
       phase: 'expired',
       selectedOptionTexts: selected,
       correctOptionTexts: result.correctOptionTexts,
-      explanation: result.explanation,
+      explanation: result.explanation
     });
   }
 }

@@ -1,4 +1,4 @@
-﻿import { Service, inject } from '@angular/core';
+import { Service, inject } from '@angular/core';
 
 import { FeedbackProps, OptionBindings, SelectedOption } from '@shared/models';
 
@@ -65,9 +65,10 @@ export class SharedOptionClickService {
     // arrives — see `SelectedOptionService.playAuthorizedSelectionSounds`.
 
     const now = Date.now();
-    const isRapidDuplicate = comp._lastHandledIndex === index &&
+    const isRapidDuplicate =
+      comp._lastHandledIndex === index &&
       comp._lastHandledTime &&
-      (now - comp._lastHandledTime < 100);
+      now - comp._lastHandledTime < 100;
 
     if (ev.kind === 'change') {
       this.handleChangeEvent(comp, binding, index, ev, now, isRapidDuplicate);
@@ -84,7 +85,14 @@ export class SharedOptionClickService {
    * The mat-radio/checkbox (change) branch of onOptionUI: dedup rapid
    * duplicates, mark interaction, and run the click. Extracted verbatim.
    */
-  private handleChangeEvent(comp: any, binding: any, index: number, ev: any, now: number, isRapidDuplicate: any): void {
+  private handleChangeEvent(
+    comp: any,
+    binding: any,
+    index: number,
+    ev: any,
+    now: number,
+    isRapidDuplicate: any
+  ): void {
     const native = ev.nativeEvent;
 
     if (isRapidDuplicate) return;
@@ -103,7 +111,14 @@ export class SharedOptionClickService {
    * and already-selected guards, form-value sync, then run the click. Extracted
    * verbatim — do not alter the backstop logic.
    */
-  private handleContentClick(comp: any, binding: any, index: number, ev: any, now: number, isRapidDuplicate: any): void {
+  private handleContentClick(
+    comp: any,
+    binding: any,
+    index: number,
+    ev: any,
+    now: number,
+    isRapidDuplicate: any
+  ): void {
     const event = ev.nativeEvent as MouseEvent;
 
     if (comp.isDisabled(binding, index)) {
@@ -137,7 +152,12 @@ export class SharedOptionClickService {
 
     if (isRapidDuplicate) return;
 
-    if (comp.type === 'single' && !comp.isMultiMode && binding.option.selected && comp.showFeedback()) {
+    if (
+      comp.type === 'single' &&
+      !comp.isMultiMode &&
+      binding.option.selected &&
+      comp.showFeedback()
+    ) {
       return;
     }
 
@@ -225,13 +245,13 @@ export class SharedOptionClickService {
       if (!canonicalQ) canonicalQ = allQs[qIdx] ?? comp.currentQuestion();
       const rawOpts = canonicalQ?.options ?? [];
       allCorrectIdxs = rawOpts
-        .map((o: any, i: number) => isOptionCorrect(o) ? i : -1)
+        .map((o: any, i: number) => (isOptionCorrect(o) ? i : -1))
         .filter((n: number) => n >= 0);
       if (allCorrectIdxs.length === 0 && effectiveCorrectIndices?.length) {
         allCorrectIdxs = effectiveCorrectIndices;
       }
       if (allCorrectIdxs.length > 0) {
-        const allSelected = allCorrectIdxs.every(ci => durableSet.has(ci));
+        const allSelected = allCorrectIdxs.every((ci) => durableSet.has(ci));
         if (allSelected) {
           this.timerService.stopTimer?.(undefined, { force: true, bypassAntiThrash: true });
         }
@@ -265,15 +285,24 @@ export class SharedOptionClickService {
    * and a shuffle-aware emitExplanation (no-op in shuffled mode, where the SOC
    * owns FET). Extracted verbatim from runOptionContentClick.
    */
-  private delegateToHandleOptionClick(comp: any, binding: any, index: number, event: any, state: any): void {
+  private delegateToHandleOptionClick(
+    comp: any,
+    binding: any,
+    index: number,
+    event: any,
+    state: any
+  ): void {
     comp.freezeOptionBindings.set(true);
     state.freezeOptionBindings = true;
 
-    const _isShuffledForFET = this.quizService?.isShuffleEnabled?.()
-      && Array.isArray(this.quizService?.shuffledQuestions)
-      && this.quizService?.shuffledQuestions?.length > 0;
+    const _isShuffledForFET =
+      this.quizService?.isShuffleEnabled?.() &&
+      Array.isArray(this.quizService?.shuffledQuestions) &&
+      this.quizService?.shuffledQuestions?.length > 0;
     const emitExplanationFn = _isShuffledForFET
-      ? (_idx: number, _skip?: boolean) => { /* no-op in shuffled mode */ }
+      ? (_idx: number, _skip?: boolean) => {
+          /* no-op in shuffled mode */
+        }
       : (idx: number, skipGuard?: boolean) => comp.emitExplanation(idx, skipGuard);
 
     try {
@@ -335,12 +364,16 @@ export class SharedOptionClickService {
         if (displayQs.length) {
           const atDisplayIdx = norm(displayQs[displayIdx]?.questionText);
           if (liveQText !== atDisplayIdx) {
-            const fixedDisplay = displayQs.findIndex((q: any) => norm(q?.questionText) === liveQText);
+            const fixedDisplay = displayQs.findIndex(
+              (q: any) => norm(q?.questionText) === liveQText
+            );
             if (fixedDisplay >= 0) displayIdx = fixedDisplay;
           }
         }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     if (!comp._multiSelectByQuestion.has(qIdx)) {
       comp._multiSelectByQuestion.set(qIdx, new Set<number>());
     }
@@ -364,7 +397,10 @@ export class SharedOptionClickService {
 
     if (!comp._correctIndicesByQuestion.has(qIdx)) {
       const result = this.clickHandler.resolveCorrectIndices(
-        liveQuestion, qIdx, comp.isMultiMode, comp.type
+        liveQuestion,
+        qIdx,
+        comp.isMultiMode,
+        comp.type
       );
       comp._correctIndicesByQuestion.set(qIdx, result.correctIndices);
     }
@@ -374,9 +410,10 @@ export class SharedOptionClickService {
     // Resolve correct indices from the AUTHORIZED reveal (verdict-backed),
     // never quizInitialState.
     let effectiveCorrectIndices = correctIndicesFromQ;
-    const isShuffled = this.quizService?.isShuffleEnabled?.()
-      && Array.isArray(this.quizService?.shuffledQuestions)
-      && this.quizService?.shuffledQuestions?.length > 0;
+    const isShuffled =
+      this.quizService?.isShuffleEnabled?.() &&
+      Array.isArray(this.quizService?.shuffledQuestions) &&
+      this.quizService?.shuffledQuestions?.length > 0;
 
     try {
       // Prefer the live displayed question — it is shuffle-correct without any
@@ -385,13 +422,13 @@ export class SharedOptionClickService {
       // question, poisoning the pristine-correct count and the single/multi
       // routing.
       const qTextForLookup = isShuffled
-        ? (comp.currentQuestion()?.questionText
-          ?? this.quizService?.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText
-          ?? this.quizService?.shuffledQuestions?.[qIdx]?.questionText
-          ?? comp.getQuestionAtDisplayIndex?.(qIdx)?.questionText)
-        : (comp.currentQuestion()?.questionText
-          ?? this.quizService?.questions?.[qIdx]?.questionText
-          ?? comp.getQuestionAtDisplayIndex?.(qIdx)?.questionText);
+        ? (comp.currentQuestion()?.questionText ??
+          this.quizService?.getQuestionsInDisplayOrder?.()?.[qIdx]?.questionText ??
+          this.quizService?.shuffledQuestions?.[qIdx]?.questionText ??
+          comp.getQuestionAtDisplayIndex?.(qIdx)?.questionText)
+        : (comp.currentQuestion()?.questionText ??
+          this.quizService?.questions?.[qIdx]?.questionText ??
+          comp.getQuestionAtDisplayIndex?.(qIdx)?.questionText);
       // AUTHORIZED REVEAL ONLY (S5-pre). Empty until the verdict is terminal,
       // so before the reveal there is no correct set to rebuild from and the
       // existing indices are left exactly as they were.
@@ -427,16 +464,19 @@ export class SharedOptionClickService {
     // is deliberately NOT treated as single — that would silently downgrade
     // multi-answer questions while the request is in flight.
     const declaredMulti = this.typeRegistry.isMultiAnswer(liveQuestion?.questionText);
-    const isMultiFromQ = declaredMulti !== null
-      ? declaredMulti
-      : (comp.isMultiMode || comp.type === 'multiple');
+    const isMultiFromQ =
+      declaredMulti !== null ? declaredMulti : comp.isMultiMode || comp.type === 'multiple';
 
     return { effectiveCorrectIndices, effectiveCorrectCount, isShuffled, isMultiFromQ };
   }
 
   runOptionContentClick(comp: any, binding: any, index: number, event: any): void {
     const now = Date.now();
-    if (comp._lastRunClickIndex === index && comp._lastRunClickTime && (now - comp._lastRunClickTime) < 200) {
+    if (
+      comp._lastRunClickIndex === index &&
+      comp._lastRunClickTime &&
+      now - comp._lastRunClickTime < 200
+    ) {
       return;
     }
     comp._lastRunClickIndex = index;
@@ -485,16 +525,28 @@ export class SharedOptionClickService {
       // multi-answer question shows a sad face instead of smiley.
       const freshBinding = comp.optionBindings()?.[index] ?? binding;
       this.answerProcessing.processMultiAnswerClick({
-        comp, index, binding: freshBinding, qIdx, displayIdx, durableSet,
-        effectiveCorrectIndices, effectiveCorrectCount, isShuffled
+        comp,
+        index,
+        binding: freshBinding,
+        qIdx,
+        displayIdx,
+        durableSet,
+        effectiveCorrectIndices,
+        effectiveCorrectCount,
+        isShuffled
       });
       return;
     }
 
     if (!isMultiFromQ) {
       this.answerProcessing.processSingleAnswerClick({
-        comp, index, qIdx, displayIdx, durableSet,
-        effectiveCorrectIndices, isShuffled
+        comp,
+        index,
+        qIdx,
+        displayIdx,
+        durableSet,
+        effectiveCorrectIndices,
+        isShuffled
       });
     }
 
@@ -531,12 +583,18 @@ export class SharedOptionClickService {
 
         if (cfg?.showFeedback) {
           cfg = this.clickHandler.overrideMultiAnswerFeedback(
-            cfg, clickedBinding, comp.optionBindings()
+            cfg,
+            clickedBinding,
+            comp.optionBindings()
           );
         }
 
         if (cfg?.showFeedback) {
-          comp._feedbackDisplay = { idx: index, optionId: clickedBinding.option?.optionId, config: cfg };
+          comp._feedbackDisplay = {
+            idx: index,
+            optionId: clickedBinding.option?.optionId,
+            config: cfg
+          };
         }
       }
     }
@@ -564,25 +622,31 @@ export class SharedOptionClickService {
   ): void {
     if (!isMultiFromQ) {
       const histSet = new Set<number>(durableSet ?? []);
-      comp.optionBindings.set((comp.optionBindings() ?? []).map((b: any, bi: number) => {
-        const isClicked = bi === index;
-        const inHistory = histSet.has(bi);
-        return {
-          ...b,
-          isSelected: isClicked,
-          option: b.option ? {
-            ...b.option,
-            selected: isClicked,
-            highlight: isClicked || inHistory,
-            showIcon: isClicked || inHistory
-          } : b.option
-        };
-      }));
+      comp.optionBindings.set(
+        (comp.optionBindings() ?? []).map((b: any, bi: number) => {
+          const isClicked = bi === index;
+          const inHistory = histSet.has(bi);
+          return {
+            ...b,
+            isSelected: isClicked,
+            option: b.option
+              ? {
+                  ...b.option,
+                  selected: isClicked,
+                  highlight: isClicked || inHistory,
+                  showIcon: isClicked || inHistory
+                }
+              : b.option
+          };
+        })
+      );
     } else {
-      comp.optionBindings.set((comp.optionBindings() ?? []).map((b: any) => ({
-        ...b,
-        option: b.option ? { ...b.option } : b.option
-      })));
+      comp.optionBindings.set(
+        (comp.optionBindings() ?? []).map((b: any) => ({
+          ...b,
+          option: b.option ? { ...b.option } : b.option
+        }))
+      );
     }
   }
 
@@ -618,8 +682,13 @@ export class SharedOptionClickService {
 
   // â”€â”€â”€ Remaining inline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  updateOptionAndUI(comp: any, optionBinding: any, index: number, event: any, 
-    existingCtx?: any): void {
+  updateOptionAndUI(
+    comp: any,
+    optionBinding: any,
+    index: number,
+    event: any,
+    existingCtx?: any
+  ): void {
     const ctx = existingCtx ?? comp.buildOptionUiSyncContext();
 
     this.optionUiSyncService.updateOptionAndUI(optionBinding, index, event, ctx);
@@ -639,7 +708,13 @@ export class SharedOptionClickService {
    * fields) and, when the clicked option's config is showing feedback, set it
    * as the active config + last-click feedback. Extracted verbatim.
    */
-  private applyFeedbackStateFromCtx(comp: any, ctx: any, optionBinding: any, index: number, event: any): void {
+  private applyFeedbackStateFromCtx(
+    comp: any,
+    ctx: any,
+    optionBinding: any,
+    index: number,
+    event: any
+  ): void {
     comp.feedbackConfigs = { ...ctx.feedbackConfigs };
     comp.showFeedbackForOption = { ...ctx.showFeedbackForOption };
     comp.showFeedback.set(ctx.showFeedback);
@@ -679,12 +754,14 @@ export class SharedOptionClickService {
     if (ctx.optionBindings) {
       comp.optionBindings.set([...ctx.optionBindings]);
     } else {
-      comp.optionBindings.set(comp.optionBindings().map((b: any) => ({
-        ...b,
-        showFeedbackForOption: { ...comp.showFeedbackForOption },
-        showFeedback: comp.showFeedback(),
-        disabled: comp.computeDisabledState(b.option, b.index)
-      })));
+      comp.optionBindings.set(
+        comp.optionBindings().map((b: any) => ({
+          ...b,
+          showFeedbackForOption: { ...comp.showFeedbackForOption },
+          showFeedback: comp.showFeedback(),
+          disabled: comp.computeDisabledState(b.option, b.index)
+        }))
+      );
     }
   }
 
@@ -703,9 +780,9 @@ export class SharedOptionClickService {
         for (let bi = 0; bi < (comp.optionBindings() ?? []).length; bi++) {
           const ob = comp.optionBindings()[bi];
           if (!ob) continue;
-          ob.isSelected = (bi === index);
+          ob.isSelected = bi === index;
           if (ob.option) {
-            ob.option.selected = (bi === index);
+            ob.option.selected = bi === index;
           }
         }
       }

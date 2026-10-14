@@ -53,16 +53,18 @@ describe('ProgressSummaryComponent', () => {
   });
 
   it('shows partial completion with difficulty rows', () => {
-    set(summary({
-      completedCount: 3,
-      totalCount: 5,
-      completionPercentage: 60,
-      byDifficulty: [
-        { difficulty: 'beginner', completed: 2, total: 2 },
-        { difficulty: 'intermediate', completed: 1, total: 2 }
-      ],
-      strongestQuiz: { quizId: 'b1', milestone: 'Dependency Injection', bestScore: 100 }
-    }));
+    set(
+      summary({
+        completedCount: 3,
+        totalCount: 5,
+        completionPercentage: 60,
+        byDifficulty: [
+          { difficulty: 'beginner', completed: 2, total: 2 },
+          { difficulty: 'intermediate', completed: 1, total: 2 }
+        ],
+        strongestQuiz: { quizId: 'b1', milestone: 'Dependency Injection', bestScore: 100 }
+      })
+    );
     expect(text()).toContain('3 / 5');
     expect(text()).toContain('60%');
     expect(text()).toContain('Beginner');
@@ -74,26 +76,30 @@ describe('ProgressSummaryComponent', () => {
   // percentage. With no reliable topic-performance data it shows the
   // insufficient-data message rather than hiding.
   it('shows strongest, and the insufficient-data message under Needs Review', () => {
-    set(summary({
-      completedCount: 1,
-      completionPercentage: 20,
-      strongestQuiz: { quizId: 'b1', milestone: 'RxJS', bestScore: 60 },
-      weakestQuiz: null
-    }));
+    set(
+      summary({
+        completedCount: 1,
+        completionPercentage: 20,
+        strongestQuiz: { quizId: 'b1', milestone: 'RxJS', bestScore: 60 },
+        weakestQuiz: null
+      })
+    );
     expect(text()).toContain('Strongest');
     expect(text()).toContain('RxJS');
     expect(text()).toContain('Needs Review');
     expect(text()).toContain('Complete a quiz or interview to identify weak areas.');
-    expect(text()).not.toContain('Practice Weak Areas');   // no action without weak topics
+    expect(text()).not.toContain('Practice Weak Areas'); // no action without weak topics
   });
 
   it('shows both strongest and needs-review when both present', () => {
-    set(summary({
-      completedCount: 2,
-      completionPercentage: 40,
-      strongestQuiz: { quizId: 'a1', milestone: 'DI', bestScore: 100 },
-      weakestQuiz: { quizId: 'r1', milestone: 'RxJS', bestScore: 55 }
-    }));
+    set(
+      summary({
+        completedCount: 2,
+        completionPercentage: 40,
+        strongestQuiz: { quizId: 'a1', milestone: 'DI', bestScore: 100 },
+        weakestQuiz: { quizId: 'r1', milestone: 'RxJS', bestScore: 55 }
+      })
+    );
     expect(text()).toContain('Strongest');
     expect(text()).toContain('Needs Review');
     // The old best-score weakness (55%) is deliberately NOT used here any more.
@@ -135,14 +141,16 @@ describe('ProgressSummaryComponent', () => {
     };
 
     it('renders the full bar-graph breakdown (overall + difficulty + highlights) without the header-owned heading/Completed row', () => {
-      setDetails(summary({
-        completedCount: 3,
-        totalCount: 5,
-        completionPercentage: 60,
-        byDifficulty: [{ difficulty: 'beginner', completed: 2, total: 2 }],
-        strongestQuiz: { quizId: 'b1', milestone: 'Dependency Injection', bestScore: 100 },
-        weakestQuiz: { quizId: 'r1', milestone: 'RxJS', bestScore: 40 }
-      }));
+      setDetails(
+        summary({
+          completedCount: 3,
+          totalCount: 5,
+          completionPercentage: 60,
+          byDifficulty: [{ difficulty: 'beginner', completed: 2, total: 2 }],
+          strongestQuiz: { quizId: 'b1', milestone: 'Dependency Injection', bestScore: 100 },
+          weakestQuiz: { quizId: 'r1', milestone: 'RxJS', bestScore: 40 }
+        })
+      );
       // Bar-graph detail content present, including the overall progress bar:
       expect(text()).toContain('Overall Progress');
       expect(text()).toContain('60%');

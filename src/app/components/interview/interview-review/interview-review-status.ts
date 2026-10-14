@@ -13,13 +13,16 @@ import { ReviewStatus } from './interview-review-filters';
 
 /** State of a single option within a reviewed question. */
 export type InterviewReviewOptionState =
-  | 'correct-selected'    // the user picked it, and it is correct
-  | 'incorrect-selected'  // the user picked it, but it is wrong
-  | 'correct-missed'      // correct, but the user did NOT pick it
-  | 'neutral';            // a distractor the user (correctly) left unpicked
+  | 'correct-selected' // the user picked it, and it is correct
+  | 'incorrect-selected' // the user picked it, but it is wrong
+  | 'correct-missed' // correct, but the user did NOT pick it
+  | 'neutral'; // a distractor the user (correctly) left unpicked
 
 /** Per-option state from its correctness + whether it was selected. */
-export function getReviewOptionState(correct: boolean, selected: boolean): InterviewReviewOptionState {
+export function getReviewOptionState(
+  correct: boolean,
+  selected: boolean
+): InterviewReviewOptionState {
   if (correct && selected) return 'correct-selected';
   if (!correct && selected) return 'incorrect-selected';
   if (correct && !selected) return 'correct-missed';

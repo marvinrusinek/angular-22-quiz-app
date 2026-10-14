@@ -6,7 +6,11 @@ describe('CodeSnippetComponent', () => {
   let fixture: ComponentFixture<CodeSnippetComponent>;
   let component: CodeSnippetComponent;
 
-  function setup(code: string, language: 'typescript' | 'html' | 'css' | 'json', filename?: string) {
+  function setup(
+    code: string,
+    language: 'typescript' | 'html' | 'css' | 'json',
+    filename?: string
+  ) {
     fixture = TestBed.createComponent(CodeSnippetComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('code', code);
@@ -31,7 +35,9 @@ describe('CodeSnippetComponent', () => {
 
   it('shows the filename only when provided', () => {
     setup('const x = 1;', 'typescript', 'counter.component.ts');
-    expect(el().querySelector('.code-snippet__filename')!.textContent).toContain('counter.component.ts');
+    expect(el().querySelector('.code-snippet__filename')!.textContent).toContain(
+      'counter.component.ts'
+    );
   });
 
   it('omits the filename element when not provided', () => {
@@ -65,7 +71,10 @@ describe('CodeSnippetComponent', () => {
   });
 
   it('shows Angular interpolation and template syntax LITERALLY, never interpreted', () => {
-    setup('template: `<button (click)="count.update(v => v + 1)">{{ count() }}</button>`', 'typescript');
+    setup(
+      'template: `<button (click)="count.update(v => v + 1)">{{ count() }}</button>`',
+      'typescript'
+    );
     // Rendered as visible text — never bound/interpreted by Angular a second time.
     expect(el().querySelector('code')!.textContent).toContain('{{ count() }}');
     expect(el().querySelector('code')!.textContent).toContain('(click)="count.update(v => v + 1)"');
@@ -85,7 +94,9 @@ describe('CodeSnippetComponent', () => {
 
     it('never executes the script', () => {
       setup(malicious, 'html');
-      expect((window as unknown as Record<string, unknown>)['__CODE_SNIPPET_XSS__']).toBeUndefined();
+      expect(
+        (window as unknown as Record<string, unknown>)['__CODE_SNIPPET_XSS__']
+      ).toBeUndefined();
     });
 
     it('never inserts a live <script> element into the rendered DOM', () => {
@@ -96,23 +107,34 @@ describe('CodeSnippetComponent', () => {
     it('shows the script tag as literal, visible text', () => {
       setup(malicious, 'html');
       expect(el().querySelector('code')!.textContent).toContain('<script>');
-      expect(el().querySelector('code')!.textContent).toContain('window.__CODE_SNIPPET_XSS__ = true');
+      expect(el().querySelector('code')!.textContent).toContain(
+        'window.__CODE_SNIPPET_XSS__ = true'
+      );
     });
 
     it('is inert across every supported language, not just HTML', () => {
       for (const language of ['typescript', 'html', 'css', 'json'] as const) {
         setup(malicious, language);
-        expect((window as unknown as Record<string, unknown>)['__CODE_SNIPPET_XSS__']).toBeUndefined();
+        expect(
+          (window as unknown as Record<string, unknown>)['__CODE_SNIPPET_XSS__']
+        ).toBeUndefined();
         expect(el().querySelectorAll('script').length).toBe(0);
       }
     });
 
     it('other HTML-shaped code (button/div/event handlers) never becomes live markup', () => {
-      setup('<div onclick="window.__CODE_SNIPPET_XSS__ = true"><button>Click</button></div>', 'html');
-      expect(el().querySelectorAll('button').length).toBe(0);   // no REAL button was created
+      setup(
+        '<div onclick="window.__CODE_SNIPPET_XSS__ = true"><button>Click</button></div>',
+        'html'
+      );
+      expect(el().querySelectorAll('button').length).toBe(0); // no REAL button was created
       expect(el().querySelector('code')!.textContent).toContain('<button>Click</button>');
-      el().querySelector('code')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect((window as unknown as Record<string, unknown>)['__CODE_SNIPPET_XSS__']).toBeUndefined();
+      el()
+        .querySelector('code')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(
+        (window as unknown as Record<string, unknown>)['__CODE_SNIPPET_XSS__']
+      ).toBeUndefined();
     });
   });
 });

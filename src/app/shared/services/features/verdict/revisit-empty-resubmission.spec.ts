@@ -31,16 +31,26 @@ const QUIZ = 'fixture-gadgets';
 const Q1 = 'Which gadget mode uses the least power?';
 
 const RESOLVED_CORRECT: QuestionCheckResult = {
-  status: 'resolved', correct: true, correctOptionTexts: ['sleep'], explanation: 'e'
+  status: 'resolved',
+  correct: true,
+  correctOptionTexts: ['sleep'],
+  explanation: 'e'
 } as QuestionCheckResult;
 const RESOLVED_INCORRECT: QuestionCheckResult = {
-  status: 'resolved', correct: false, correctOptionTexts: ['sleep'], explanation: 'e'
+  status: 'resolved',
+  correct: false,
+  correctOptionTexts: ['sleep'],
+  explanation: 'e'
 } as QuestionCheckResult;
 const EMPTY_INCOMPLETE: QuestionCheckResult = {
-  status: 'incomplete', selectedVerdicts: [], remainingCorrectCount: 1
+  status: 'incomplete',
+  selectedVerdicts: [],
+  remainingCorrectCount: 1
 } as QuestionCheckResult;
 const REAL_PARTIAL_INCOMPLETE: QuestionCheckResult = {
-  status: 'incomplete', selectedVerdicts: [{ text: 'a', correct: true }], remainingCorrectCount: 1
+  status: 'incomplete',
+  selectedVerdicts: [{ text: 'a', correct: true }],
+  remainingCorrectCount: 1
 } as QuestionCheckResult;
 
 let verdicts: QuestionVerdictService;
@@ -87,7 +97,7 @@ describe('an empty resubmission on an already resolved-correct question', () => 
     resolveLatest(EMPTY_INCOMPLETE);
 
     const state = verdicts.verdictFor(QUIZ, Q1);
-    expect(state.phase).toBe('resolved');                          // NOT 'incomplete'
+    expect(state.phase).toBe('resolved'); // NOT 'incomplete'
     expect(state.isResolvedCorrect).toBe(true);
     expect(blocksIntermediateProgression(state.phase, state.isResolvedCorrect)).toBe(false); // Next/forward-nav stays unblocked
   });

@@ -32,7 +32,8 @@ describe('AppComponent — ThemeService is constructed at the application root',
   /** `data-theme` writes and persisted-theme writes made since the spies were installed. */
   let attrWrites: jest.SpyInstance;
   let storageWrites: jest.SpyInstance;
-  const themeAttrWrites = () => attrWrites.mock.calls.filter(([name]) => name === 'data-theme').length;
+  const themeAttrWrites = () =>
+    attrWrites.mock.calls.filter(([name]) => name === 'data-theme').length;
   const themeStorageWrites = () => storageWrites.mock.calls.filter(([key]) => key === KEY).length;
 
   async function configure(): Promise<void> {
@@ -51,9 +52,16 @@ describe('AppComponent — ThemeService is constructed at the application root',
         { provide: INTERVIEW_API_BASE_URL, useValue: 'http://test.local/api' },
         {
           provide: InterviewApiService,
-          useValue: { getQuizMetadata: () => of([]), createSession: jest.fn(), warmUp: jest.fn(() => of(undefined)) }
+          useValue: {
+            getQuizMetadata: () => of([]),
+            createSession: jest.fn(),
+            warmUp: jest.fn(() => of(undefined))
+          }
         },
-        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
+        {
+          provide: InterviewWarmupCoordinatorService,
+          useValue: { warmUp: jest.fn(() => of(undefined)) }
+        }
       ]
     }).compileComponents();
   }
@@ -72,13 +80,13 @@ describe('AppComponent — ThemeService is constructed at the application root',
   it('applies a saved DARK theme on startup, before any ThemeToggleComponent is created', async () => {
     localStorage.setItem(KEY, 'dark');
     await configure();
-    expect(dataTheme()).toBeNull();          // nothing has run yet
+    expect(dataTheme()).toBeNull(); // nothing has run yet
 
     fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     TestBed.tick();
 
-    expect(hasToggle()).toBe(false);         // no toggle anywhere on this page
+    expect(hasToggle()).toBe(false); // no toggle anywhere on this page
     expect(dataTheme()).toBe('dark');
   });
 
@@ -109,12 +117,12 @@ describe('AppComponent — ThemeService is constructed at the application root',
     fixture.detectChanges();
 
     await TestBed.inject(Router).navigateByUrl('/interview');
-    await new Promise((resolve) => setTimeout(resolve, 10));   // AppComponent re-creates its outlet on NavigationEnd
+    await new Promise((resolve) => setTimeout(resolve, 10)); // AppComponent re-creates its outlet on NavigationEnd
     fixture.detectChanges();
     TestBed.tick();
 
-    expect(fixture.nativeElement.querySelector('codelab-build-your-interview')).not.toBeNull();   // Builder really rendered
-    expect(hasToggle()).toBe(false);                                                                // …with no toggle on it
+    expect(fixture.nativeElement.querySelector('codelab-build-your-interview')).not.toBeNull(); // Builder really rendered
+    expect(hasToggle()).toBe(false); // …with no toggle on it
     expect(dataTheme()).toBe('dark');
   });
 
@@ -165,7 +173,7 @@ describe('AppComponent — ThemeService is constructed at the application root',
       (a.nativeElement.querySelector('button') as HTMLButtonElement).click();
       TestBed.tick();
 
-      expect(themeAttrWrites()).toBe(2);      // startup + this one toggle
+      expect(themeAttrWrites()).toBe(2); // startup + this one toggle
       expect(themeStorageWrites()).toBe(2);
       expect(dataTheme()).toBe('light');
     });

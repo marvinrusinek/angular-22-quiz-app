@@ -10,7 +10,7 @@ import {
 const EMPTY: InterviewAnalytics = Object.freeze({
   topics: Object.freeze([]),
   strongestTopics: Object.freeze([]),
-  weakestTopics: Object.freeze([]),
+  weakestTopics: Object.freeze([])
 }) as InterviewAnalytics;
 
 /**
@@ -44,7 +44,7 @@ export class InterviewAnalyticsService {
         correct: t.correct,
         total: t.total,
         percentage: t.percentage,
-        band: this.bandFor(t.percentage),
+        band: this.bandFor(t.percentage)
       }));
 
     if (topics.length === 0) return EMPTY;
@@ -64,7 +64,7 @@ export class InterviewAnalyticsService {
     return Object.freeze({
       topics: Object.freeze(byBest),
       strongestTopics: Object.freeze(byBest.slice(0, k)),
-      weakestTopics: Object.freeze(byWorst.slice(0, k)),
+      weakestTopics: Object.freeze(byWorst.slice(0, k))
     }) as InterviewAnalytics;
   }
 

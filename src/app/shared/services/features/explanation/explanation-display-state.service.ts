@@ -1,11 +1,7 @@
 import { inject, Service, Injector, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import {
-  BehaviorSubject, firstValueFrom, Observable, ReplaySubject, Subject
-} from 'rxjs';
-import {
-  distinctUntilChanged, filter, map, take, timeout
-} from 'rxjs/operators';
+import { BehaviorSubject, firstValueFrom, Observable, ReplaySubject, Subject } from 'rxjs';
+import { distinctUntilChanged, filter, map, take, timeout } from 'rxjs/operators';
 
 import { FET_UNLOCK_WATCHDOG_MS } from '@shared/constants/timing';
 
@@ -122,9 +118,7 @@ export class ExplanationDisplayStateService {
 
   constructor() {
     // Always clear stale FET payloads when switching to a new question index.
-    this.activeIndex$.pipe(
-      distinctUntilChanged()
-    ).subscribe((idx: number) => {
+    this.activeIndex$.pipe(distinctUntilChanged()).subscribe((idx: number) => {
       this.latestExplanation = '';
       this.latestExplanationIndex = idx;
       this.formatter.formattedExplanationSig.set('');
@@ -214,9 +208,7 @@ export class ExplanationDisplayStateService {
         const activeIdx = targetIdx ?? quizSvc.getCurrentQuestionIndex?.() ?? 0;
         const rawQ: any = quizSvc?.questions?.[activeIdx];
         const rawOpts: any[] = rawQ?.options ?? [];
-        const correctCount = rawOpts.filter(
-          (o: any) => isOptionCorrect(o)
-        ).length;
+        const correctCount = rawOpts.filter((o: any) => isOptionCorrect(o)).length;
         if (correctCount > 1) {
           const correctTexts = rawOpts
             .filter((o: any) => isOptionCorrect(o))
@@ -229,13 +221,16 @@ export class ExplanationDisplayStateService {
               .map((s: any) => norm(s?.text))
               .filter((t: string) => !!t)
           );
-          const allCorrectSelected = correctTexts.length > 0
-            && correctTexts.every((t: string) => selTexts.has(t));
+          const allCorrectSelected =
+            correctTexts.length > 0 && correctTexts.every((t: string) => selTexts.has(t));
           if (!allCorrectSelected) return true;
         }
       }
     } catch (err: unknown) {
-      console.error('ExplanationDisplayStateService.setExplanationText multi-answer guard failed:', err);
+      console.error(
+        'ExplanationDisplayStateService.setExplanationText multi-answer guard failed:',
+        err
+      );
     }
     return false;
   }
@@ -320,7 +315,10 @@ export class ExplanationDisplayStateService {
       text$.next(trimmedFinal);
       this._byIndex.get(qIdx)?.next(trimmedFinal);
     } catch (err: unknown) {
-      console.error('ExplanationDisplayStateService.setExplanationText indexed-subject notify failed:', err);
+      console.error(
+        'ExplanationDisplayStateService.setExplanationText indexed-subject notify failed:',
+        err
+      );
     }
 
     // Broadcast the change to the collection
@@ -353,9 +351,7 @@ export class ExplanationDisplayStateService {
    * Sister methods (see `getLatestFormattedExplanation`, `getFormattedExplanation`)
    * have different shapes / fallbacks and are NOT interchangeable.
    */
-  public getFormattedExplanationTextForQuestion(
-    questionIndex: number
-  ): Observable<string | null> {
+  public getFormattedExplanationTextForQuestion(questionIndex: number): Observable<string | null> {
     const FALLBACK = null;
 
     if (this._fetLocked) {
@@ -368,13 +364,22 @@ export class ExplanationDisplayStateService {
           this.latestExplanationIndex = questionIndex;
           this.setGate(questionIndex, true);
         } catch (err: unknown) {
-          console.error('ExplanationDisplayStateService.getFormattedExplanationTextForQuestion locked-emit failed:', err);
+          console.error(
+            'ExplanationDisplayStateService.getFormattedExplanationTextForQuestion locked-emit failed:',
+            err
+          );
         }
 
-        return new Observable(sub => { sub.next(lockedExplanation); sub.complete(); });
+        return new Observable((sub) => {
+          sub.next(lockedExplanation);
+          sub.complete();
+        });
       }
 
-      return new Observable(sub => { sub.next(FALLBACK); sub.complete(); });
+      return new Observable((sub) => {
+        sub.next(FALLBACK);
+        sub.complete();
+      });
     }
 
     // Step 1: Fully purge cached FET state if switching question
@@ -396,7 +401,10 @@ export class ExplanationDisplayStateService {
         this.shouldDisplayExplanationSig.set(false);
         this.isExplanationTextDisplayedSig.set(false);
       } catch (err: unknown) {
-        console.error('ExplanationDisplayStateService.getFormattedExplanationTextForQuestion FET-state purge failed:', err);
+        console.error(
+          'ExplanationDisplayStateService.getFormattedExplanationTextForQuestion FET-state purge failed:',
+          err
+        );
       }
 
       this._activeIndex = questionIndex;
@@ -410,12 +418,15 @@ export class ExplanationDisplayStateService {
     if (!Number.isFinite(idx)) {
       try {
         this.emitFormatted(0, null);
-      } catch { }
+      } catch {}
       try {
         this.setGate(0, false);
-      } catch { }
+      } catch {}
 
-      return new Observable(sub => { sub.next(FALLBACK); sub.complete(); });
+      return new Observable((sub) => {
+        sub.next(FALLBACK);
+        sub.complete();
+      });
     }
 
     // Allow rehydration after restore: refresh active index
@@ -425,21 +436,28 @@ export class ExplanationDisplayStateService {
     if (!entry) {
       try {
         this.emitFormatted(questionIndex, null);
-      } catch { }
+      } catch {}
       try {
         this.setGate(questionIndex, false);
-      } catch { }
-      return new Observable(sub => { sub.next(null); sub.complete(); });
+      } catch {}
+      return new Observable((sub) => {
+        sub.next(null);
+        sub.complete();
+      });
     }
 
     const explanation = (entry.explanation ?? '').trim();
-    if (!explanation) {      try {
+    if (!explanation) {
+      try {
         this.emitFormatted(questionIndex, null);
-      } catch { }
+      } catch {}
       try {
         this.setGate(questionIndex, false);
-      } catch { }
-      return new Observable(sub => { sub.next(FALLBACK); sub.complete(); });
+      } catch {}
+      return new Observable((sub) => {
+        sub.next(FALLBACK);
+        sub.complete();
+      });
     }
     if (this._activeIndex !== questionIndex) this._activeIndex = questionIndex;
 
@@ -448,13 +466,16 @@ export class ExplanationDisplayStateService {
       this.emitFormatted(questionIndex, explanation);
       this.latestExplanation = explanation;
       this.latestExplanationIndex = questionIndex;
-    } catch { }
+    } catch {}
 
     try {
       this.setGate(questionIndex, true);
-    } catch { }
+    } catch {}
 
-    return new Observable(sub => { sub.next(explanation); sub.complete(); });
+    return new Observable((sub) => {
+      sub.next(explanation);
+      sub.complete();
+    });
   }
 
   /**
@@ -472,7 +493,10 @@ export class ExplanationDisplayStateService {
     try {
       return this.formatter.formattedExplanationSig();
     } catch (err: unknown) {
-      console.error('ExplanationDisplayStateService.getLatestFormattedExplanation signal read failed:', err);
+      console.error(
+        'ExplanationDisplayStateService.getLatestFormattedExplanation signal read failed:',
+        err
+      );
       return null;
     }
   }
@@ -494,7 +518,10 @@ export class ExplanationDisplayStateService {
    */
   getFormattedExplanation(questionIndex: number): Observable<string> {
     if (!this.formatter.explanationsInitializedSig()) {
-      return new Observable(sub => { sub.next('No explanation available'); sub.complete(); });
+      return new Observable((sub) => {
+        sub.next('No explanation available');
+        sub.complete();
+      });
     }
 
     // Clear any stale formatted text whenever index changes
@@ -505,10 +532,10 @@ export class ExplanationDisplayStateService {
     ) {
       try {
         this.emitFormatted(this._activeIndex, null);
-      } catch { }
+      } catch {}
       try {
         this.setGate(this._activeIndex, false);
-      } catch { }
+      } catch {}
     }
 
     // Now safely update active index to current question
@@ -544,10 +571,7 @@ export class ExplanationDisplayStateService {
 
     if (!options.force) {
       const previous = this.displayedByContext.get(contextKey);
-      if (
-        previous === isDisplayed &&
-        signature === this.lastDisplayedSignature
-      ) return;
+      if (previous === isDisplayed && signature === this.lastDisplayedSignature) return;
     }
 
     if (isDisplayed) {
@@ -561,10 +585,7 @@ export class ExplanationDisplayStateService {
     this.lastDisplayedSignature = signature;
     const aggregated = this.computeContextualFlag(this.displayedByContext);
 
-    if (
-      !options.force &&
-      aggregated === this.isExplanationTextDisplayedSig()
-    ) return;
+    if (!options.force && aggregated === this.isExplanationTextDisplayedSig()) return;
 
     // Update the canonical BehaviorSubject
     this.isExplanationTextDisplayedSig.set(aggregated);
@@ -582,7 +603,8 @@ export class ExplanationDisplayStateService {
     options: { force?: boolean; context?: string } = {}
   ): void {
     // Visibility lock: prevent any reactive writes while restoring visibility
-    if ((this as any)._visibilityLocked) {      return;
+    if ((this as any)._visibilityLocked) {
+      return;
     }
 
     // ── CENTRALIZED MULTI-ANSWER GUARD ──────────────────────────────
@@ -598,17 +620,14 @@ export class ExplanationDisplayStateService {
           const activeIdx = this._activeIndexValue ?? quizSvc.getCurrentQuestionIndex?.() ?? 0;
 
           // SHUFFLED FIX: use display-order question source
-          const _isShufG = quizSvc?.isShuffleEnabled?.()
-            && quizSvc?.shuffledQuestions?.length > 0;
+          const _isShufG = quizSvc?.isShuffleEnabled?.() && quizSvc?.shuffledQuestions?.length > 0;
           const rawQ: any = _isShufG
-            ? (quizSvc?.getQuestionsInDisplayOrder?.()?.[activeIdx]
-              ?? quizSvc?.shuffledQuestions?.[activeIdx]
-              ?? quizSvc?.questions?.[activeIdx])
+            ? (quizSvc?.getQuestionsInDisplayOrder?.()?.[activeIdx] ??
+              quizSvc?.shuffledQuestions?.[activeIdx] ??
+              quizSvc?.questions?.[activeIdx])
             : quizSvc?.questions?.[activeIdx];
           const rawOpts: any[] = rawQ?.options ?? [];
-          const correctCount = rawOpts.filter(
-            (o: any) => isOptionCorrect(o)
-          ).length;
+          const correctCount = rawOpts.filter((o: any) => isOptionCorrect(o)).length;
           if (correctCount > 1) {
             const correctTexts = rawOpts
               .filter((o: any) => isOptionCorrect(o))
@@ -621,8 +640,8 @@ export class ExplanationDisplayStateService {
                 .map((s: any) => norm(s?.text))
                 .filter((t: string) => !!t)
             );
-            const allCorrectSelected = correctTexts.length > 0
-              && correctTexts.every((t: string) => selTexts.has(t));
+            const allCorrectSelected =
+              correctTexts.length > 0 && correctTexts.every((t: string) => selTexts.has(t));
             if (!allCorrectSelected) {
               // Check questionCorrectness override before blocking
               const scoringSvc = quizSvc?.scoringService;
@@ -633,7 +652,9 @@ export class ExplanationDisplayStateService {
             }
           }
         }
-      } catch { /* fall through if injection fails */ }
+      } catch {
+        /* fall through if injection fails */
+      }
     }
 
     const contextKey = this.normalizeContext(options.context);
@@ -641,10 +662,7 @@ export class ExplanationDisplayStateService {
 
     if (!options.force) {
       const previous = this.shouldDisplayByContext.get(contextKey);
-      if (
-        previous === shouldDisplay &&
-        signature === this.lastDisplaySignature
-      ) return;
+      if (previous === shouldDisplay && signature === this.lastDisplaySignature) return;
     }
 
     if (shouldDisplay) {
@@ -658,10 +676,7 @@ export class ExplanationDisplayStateService {
     this.lastDisplaySignature = signature;
     const aggregated = this.computeContextualFlag(this.shouldDisplayByContext);
 
-    if (
-      !options.force &&
-      aggregated === this.shouldDisplayExplanationSig()
-    ) return;
+    if (!options.force && aggregated === this.shouldDisplayExplanationSig()) return;
 
     // Normal reactive push (this is your main subject)
     this.shouldDisplayExplanationSig.set(aggregated);
@@ -739,7 +754,7 @@ export class ExplanationDisplayStateService {
     // FET is definitely NOT ready after a full reset
     try {
       this.qss.setExplanationReady(false);
-    } catch { }
+    } catch {}
   }
 
   setResetComplete(value: boolean): void {
@@ -803,12 +818,8 @@ export class ExplanationDisplayStateService {
 
       if (quizSvc) {
         const isShuffled = quizSvc.isShuffleEnabled?.() ?? false;
-        const shuffled = Array.isArray(quizSvc.shuffledQuestions)
-          ? quizSvc.shuffledQuestions
-          : [];
-        const baseQuestions = isShuffled && shuffled.length > 0
-          ? shuffled
-          : quizSvc.questions;
+        const shuffled = Array.isArray(quizSvc.shuffledQuestions) ? quizSvc.shuffledQuestions : [];
+        const baseQuestions = isShuffled && shuffled.length > 0 ? shuffled : quizSvc.questions;
 
         // Prefer display-order accessor when available
         const displayQuestions =
@@ -820,17 +831,13 @@ export class ExplanationDisplayStateService {
         let correctCount = 0;
 
         if (question && Array.isArray(question.options)) {
-          correctCount = question.options.filter(
-            (o: any) => isOptionCorrect(o)
-          ).length;
+          correctCount = question.options.filter((o: any) => isOptionCorrect(o)).length;
         }
 
         // Determine authoritative correct count from RAW questions (unmutated).
         const rawQs = quizSvc.questions ?? [];
         const rawQ: any = rawQs[index] ?? question;
-        const rawCorrectCount = (rawQ?.options ?? []).filter(
-          (o: any) => isOptionCorrect(o)
-        ).length;
+        const rawCorrectCount = (rawQ?.options ?? []).filter((o: any) => isOptionCorrect(o)).length;
         const effectiveCorrectCount = Math.max(correctCount, rawCorrectCount);
 
         if (!bypassGuard && effectiveCorrectCount > 1) {
@@ -838,13 +845,16 @@ export class ExplanationDisplayStateService {
           const selections = sos?.selectedOptionsMap?.get(index) ?? [];
           const rawOpts: any[] = rawQ?.options ?? [];
           const rawCorrectTexts = new Set(
-            rawOpts.filter((o: any) => isOptionCorrect(o))
-              .map((o: any) => norm(o?.text)).filter((t: string) => !!t)
+            rawOpts
+              .filter((o: any) => isOptionCorrect(o))
+              .map((o: any) => norm(o?.text))
+              .filter((t: string) => !!t)
           );
           const selTexts = new Set(
             (selections as any[]).map((s: any) => norm(s?.text)).filter((t: string) => !!t)
           );
-          const allCorrectSel = rawCorrectTexts.size > 0 && [...rawCorrectTexts].every(t => selTexts.has(t));
+          const allCorrectSel =
+            rawCorrectTexts.size > 0 && [...rawCorrectTexts].every((t) => selTexts.has(t));
 
           const oisPerfect = quizSvc.isQuestionResolved(index);
 
@@ -886,11 +896,11 @@ export class ExplanationDisplayStateService {
     try {
       this.getOrCreate(index).text$.next(validatedText);
       this._byIndex.get(index)?.next(validatedText);
-    } catch { }
+    } catch {}
 
     try {
       this.qss.setExplanationReady(true);
-    } catch { }
+    } catch {}
   }
 
   public setGate(index: number, show: boolean): void {
@@ -902,11 +912,7 @@ export class ExplanationDisplayStateService {
     const token = this._currentGateToken;
 
     // Pre-guards
-    if (
-      this._fetLocked ||
-      index !== this._activeIndex ||
-      token !== this._gateToken
-    ) return;
+    if (this._fetLocked || index !== this._activeIndex || token !== this._gateToken) return;
 
     const trimmed = (text ?? '').trim();
     if (!trimmed || trimmed === this.latestExplanation?.trim()) return;
@@ -915,11 +921,8 @@ export class ExplanationDisplayStateService {
 
     // One-frame emit with re-checks
     requestAnimationFrame(() => {
-      if (
-        this._fetLocked ||
-        index !== this._activeIndex ||
-        token !== this._currentGateToken
-      ) return;
+      if (this._fetLocked || index !== this._activeIndex || token !== this._currentGateToken)
+        return;
       this.formatter.formattedExplanationSig.set(trimmed);
       this.shouldDisplayExplanationSig.set(true);
       this.isExplanationTextDisplayedSig.set(true);
@@ -927,7 +930,7 @@ export class ExplanationDisplayStateService {
       // FET now open and visible for this index
       try {
         this.qss.setExplanationReady(true);
-      } catch { }
+      } catch {}
     });
   }
 
@@ -943,11 +946,7 @@ export class ExplanationDisplayStateService {
 
   // Reset explanation state cleanly for a new index
   public resetForIndex(index: number): void {
-    if (
-      this._activeIndex !== null &&
-      this._activeIndex !== -1 &&
-      this._activeIndex !== index
-    ) {
+    if (this._activeIndex !== null && this._activeIndex !== -1 && this._activeIndex !== index) {
       this.gate.closePrimaryGate(this._activeIndex);
 
       this.latestExplanation = '';
@@ -959,15 +958,16 @@ export class ExplanationDisplayStateService {
 
     // Ensure and hard-emit for new index
     const { text$, gate$ } = this.getOrCreate(index);
-    const cachedFet = this.formatter.formattedExplanations[index]?.explanation?.trim()
-      || this.formatter.fetByIndex.get(index)?.trim()
-      || '';
+    const cachedFet =
+      this.formatter.formattedExplanations[index]?.explanation?.trim() ||
+      this.formatter.fetByIndex.get(index)?.trim() ||
+      '';
     try {
       text$.next(cachedFet || '');
-    } catch { }
+    } catch {}
     try {
       gate$.next(false);
-    } catch { }
+    } catch {}
 
     this._activeIndex = index;
     this.latestExplanationIndex = index;
@@ -979,12 +979,13 @@ export class ExplanationDisplayStateService {
     }
     try {
       this.qss.setExplanationReady(false);
-    } catch { }
+    } catch {}
   }
 
   // Set readiness flag
   public setReadyForExplanation(ready: boolean): void {
-    this._readyForExplanationSig.set(ready);  }
+    this._readyForExplanationSig.set(ready);
+  }
 
   public async waitUntilQuestionRendered(timeoutMs = 500): Promise<void> {
     try {
@@ -1013,7 +1014,10 @@ export class ExplanationDisplayStateService {
       this.setShouldDisplayExplanation(false, { force: true });
       this.setIsExplanationTextDisplayed(false);
     } catch (err: unknown) {
-      console.error('ExplanationDisplayStateService.closeAllGates display-state reset failed:', err);
+      console.error(
+        'ExplanationDisplayStateService.closeAllGates display-state reset failed:',
+        err
+      );
     }
   }
 
@@ -1056,9 +1060,10 @@ export class ExplanationDisplayStateService {
     this.gate.deleteText(newIndex);
 
     // Preserve cached FET for back-navigation.
-    const hasCachedFet = 
-      !!(this.formatter.formattedExplanations[newIndex]?.explanation?.trim()
-      || this.formatter.fetByIndex.get(newIndex)?.trim());
+    const hasCachedFet = !!(
+      this.formatter.formattedExplanations[newIndex]?.explanation?.trim() ||
+      this.formatter.fetByIndex.get(newIndex)?.trim()
+    );
     if (!hasCachedFet) {
       this.formatter.fetByIndex.delete(newIndex);
       this.formatter.lockedFetIndices.delete(newIndex);
@@ -1070,7 +1075,7 @@ export class ExplanationDisplayStateService {
     // Navigation in progress -> explanation not ready
     try {
       this.qss.setExplanationReady(false);
-    } catch { }
+    } catch {}
 
     // Cancel any pending unlocks from older cycles
     this.cancelPendingUnlock();

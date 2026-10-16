@@ -83,8 +83,124 @@
 
                Confirmed by a real localhost Narrator retest: the "space"
                announcement is gone specifically with fix 2 in place, not
-               merely fix 1. -->
-          <span>
+               merely fix 1.
+
+               PAUSED 2026-10-13, handoff: a real Narrator retest found this
+               still takes 2 Down Arrow presses (two StaticText nodes either
+               side of the <br>). FOUR replacement candidates were tried,
+               across TWO different Narrator navigation mechanisms, and NONE
+               were approved to ship:
+
+               Scan-mode Down Arrow (3 candidates):
+                 - ONE text node, literal "\n" + white-space:pre-line →
+                   still 2 presses.
+                 - ONE text node, ordinary space + unconstrained wrap →
+                   read as 1 press, but collapsed to 1 visual line, losing
+                   the required two-line layout (not a controlled test).
+                 - ONE text node, ordinary space + width constrained to
+                   reproduce the SAME two lines as the "\n" version → still
+                   failed (isolates line-break mechanism from line count).
+
+               Tab/focus (1 candidate): `tabindex="0"` on this whole
+               element, confirmed via an installed focus-trace listener
+               (removed after use) to fire exactly ONE real `focusin` event
+               — for BOTH a real Tab press and a real mouse click — landing
+               on this one element whose accessible text already contains
+               both sentences combined. Speech was STILL reported split,
+               one sentence per Tab, unchanged from the scan-mode result.
+
+               Net finding, now evidenced across BOTH scan-mode Down Arrow
+               AND Tab/focus: every variant that visually renders as 2
+               lines fails, regardless of DOM/AX node count (always 1),
+               focus-event count (always 1), or line-break mechanism (<br>,
+               "\n"+pre-line, or constrained wrap). The only passing variant
+               collapsed to 1 visual line, changing the design. This is no
+               longer explainable by scan-mode-specific line navigation —
+               it held for keyboard-focus and mouse-click-focus too — so
+               the next step is NOT another markup/ARIA variant: inspect
+               the actual Windows UIA tree for this element while Narrator
+               is running (e.g. via Microsoft's Accessibility Insights for
+               Windows) to see whether the OS-level UIA TextPattern already
+               exposes 2 separate text ranges for this content — something
+               never directly checked, since every prior diagnostic in this
+               file only inspected Chromium's OWN internal accessibility
+               tree (via CDP), not the actual UIA layer Narrator consumes.
+               Reverted to the deployed fix 1+2 above; do not re-attempt a
+               markup-only fix without that UIA evidence.
+
+               RESOLVED 2026-10-14+, FOR TAB NAVIGATION ONLY: `tabindex="0"`
+               added directly to this element (no other markup change —
+               same two sentences, same `<br aria-hidden>` line break as
+               the fix above) makes the whole subtitle ONE Tab stop. A
+               real Narrator retest, on the local production build, in
+               this actual app (not a standalone page — an earlier
+               standalone-page version of this comparison was discarded
+               because BOTH candidate designs passed there, which didn't
+               establish anything about this app's real conditions)
+               CONFIRMED: Tab onto this element reads BOTH sentences
+               together while the two-line visual appearance is
+               preserved. An alternative `role="group"` +
+               `aria-labelledby`-named design passed the same real retest
+               equally; this plainer one was chosen as the simpler of two
+               equally-working designs (no extra role, no aria-labelledby,
+               no extra ids).
+
+               SCAN MODE IS NOT FIXED — DO NOT CONFLATE THE TWO: the SAME
+               retest found Down Arrow (Narrator scan-mode reading, a
+               different navigation mechanism from Tab — see the FOUR
+               rejected candidates above) STILL reads the two sentences as
+               separate stops on this exact markup. This fix resolves the
+               Tab-reading requirement only; scan-mode line-by-line
+               reading of this element is unchanged from the "every 2-line
+               variant fails" finding above.
+
+               CLARIFIED GOAL, 2026-10-14+ (supersedes earlier framing of
+               this as a defect to eliminate): Tab provides logical
+               keyboard navigation through controls; scan mode should
+               reach all meaningful content without omission or repeat,
+               in sensible order. Tab and Down Arrow do NOT need to chunk
+               content identically. A two-line subtitle taking two
+               scan-mode steps is, BY ITSELF, not an accessibility defect
+               under this goal — do not re-open scan-mode work on this
+               element on that basis alone; the earlier "every 2-line
+               variant fails under scan mode" finding above is historical
+               context, not an open problem to keep solving.
+
+               Tab skips the topic image below (expected, unchanged — it
+               has no tabindex and none was added; it stays a
+               non-interactive, non-focusable image, by design, not an
+               oversight of this fix).
+
+               Narrator also says "group" right after landing here, on
+               BOTH the chosen design and the alternative equally. A CDP
+               ancestor-chain inspection found `<mat-card-subtitle>` (the
+               wrapping ancestor, identical for both designs) has no ARIA
+               role override, so its default "generic" role is one that
+               Chromium is known to map to Windows UIA's ControlType.Group
+               elsewhere in this exact app (see #introTitle's own history
+               above) — a plausible, consistent explanation, NOT something
+               that CDP ancestry inspection proves is the actual cause of
+               what Narrator chooses to speak; Narrator's speech logic
+               itself was never directly observed. Recording the
+               observation, not the explanation, as the confirmed fact.
+               Not fixed here — out of this task's scope (reading both
+               sentences together via Tab, which IS met) — recorded in
+               case it's worth addressing separately later.
+
+               Issue #18 (the topic image's own repeated-announcement
+               behavior) is unresolved and UNRELATED to any of the above —
+               paused separately, not investigated or touched here.
+
+               #introTitle above REMAINS `tabindex="-1"` — unchanged by
+               any of this work, still not a normal Tab stop, still only
+               reachable via its own scripted arrival `.focus()`. An
+               earlier request in this investigation asked for the title
+               AND the subtitle to be separate Tab stops; only the
+               subtitle became one. Do not describe this implementation as
+               satisfying that earlier request for the title — it does
+               not; the title's arrival-focus behavior was deliberately
+               preserved as-is, not converted to a Tab stop. -->
+          <span class="intro-subtitle-text" tabindex="0">
             How well versed are you in {{ quiz.milestone }}?<br aria-hidden="true" />Take the quiz and find out!
           </span>
         </mat-card-subtitle>
@@ -93,6 +209,20 @@
 
     <!-- Quiz image with the meta (difficulty · # questions · ~time) on its right -->
     <div class="image-meta-row">
+      <!-- CONFIRMED, 2026-10-15: `tabindex="0"` added directly to this
+           SAME `<img>` — no wrapper element, so there is only ONE
+           focusable, ONE named object here, not a second one duplicating
+           this image's own announcement. `alt` is unchanged ("Quiz topic
+           image" — Narrator's own "graphic" role suffix is automatic, not
+           something this adds). Real Narrator retests, on both
+           localhost:4200 and a local production build served at
+           localhost:8104, confirmed this is reached by Tab in the
+           requested order with no duplicate/garbled announcement.
+
+           Issue #18 (repeated announcements on scan-mode Down Arrow) is a
+           SEPARATE, still-unresolved problem — this Tab-stop fix does
+           not fix, claim to fix, or depend on that; it remains open and
+           was deliberately NOT retested or touched here. -->
       <img
         mat-card-image
         class="quiz-topic-image"
@@ -101,31 +231,115 @@
         width="400"
         height="270"
         priority
+        tabindex="0"
       />
 
-      <div class="quiz-meta">
+      <!-- CONFIRMED, 2026-10-15: `role="group"` + `tabindex="0"` make this
+           whole row one Tab stop. Layout, icons (already aria-hidden,
+           unchanged), difficulty colors, responsive behavior, and all
+           VISIBLE dynamic values are completely unchanged from the
+           deployed baseline — only the wrapper's own attributes are new.
+           No live region, no button/role misuse, no keyboard handler
+           added.
+
+           A real Narrator retest, on both localhost:4200 and a local
+           production build served at localhost:8104, confirmed this is
+           reached by Tab in the requested order and announces difficulty
+           + count + the "approximately N minutes" wording below as one
+           combined utterance — `role="group"` + `aria-labelledby` DOES
+           work here, unlike the earlier, separately-noted uncertainty
+           about whether a computed name is strictly required (the
+           subtitle's own comparison found a plain element with no name
+           also passed, for different content).
+
+           Narrator also says "group" right after landing here, same
+           observation as the subtitle's own history — recorded, not
+           claimed to be explained, and not something this task set out
+           to change.
+
+           TRIED AND REVERTED, 2026-10-15: an `aria-label` replacement
+           (English wording "approximately N minutes" written directly
+           in the attribute, marked `i18n-aria-label`) was tried here to
+           diverge the spoken wording from the visible "~N min" text.
+           `ng extract-i18n` confirmed the words were extractable, but a
+           real Narrator retest found it announced NO text at all —
+           worse than the aria-labelledby version it replaced, which did
+           correctly announce difficulty/count/time (just verbatim
+           "~N min", not "approximately N minutes"). Reverted to the
+           method below, then separately fixed to carry the new wording
+           too — see the FIXED comments on the time span and in the .ts
+           file's own `quizMetaLabelIdsSig`/`quizMetaTimeAccessibleLabelSig`
+           for the root cause and the actual fix. -->
+      <div
+        class="quiz-meta"
+        role="group"
+        tabindex="0"
+        [attr.aria-labelledby]="quizMetaLabelIdsSig()"
+      >
         @if (quiz.difficulty; as difficulty) {
           <span class="meta-item meta-difficulty" [ngClass]="'difficulty-' + difficulty">
             <mat-icon aria-hidden="true">signal_cellular_alt</mat-icon>
-            <span>{{ difficulty | titlecase }}</span>
+            <span id="quiz-meta-difficulty-text">{{ difficulty | titlecase }}</span>
           </span>
         }
 
         <span class="meta-item">
-          <mat-icon aria-hidden="true">quiz</mat-icon>
-          <span>{{ questionCountSig() }} {{ questionLabelSig() | titlecase }}</span>
+          <!-- FIXED, 2026-10-15: the `quiz` ligature is absent from the
+               self-hosted font subset (see question-count-icon.ts for the
+               confirmed-by-real-pixels diagnosis). Swapped for the same
+               locally-registered-SVG mechanism already used by the theme
+               toggle, scoped to this one icon. -->
+          <mat-icon [svgIcon]="questionCountIcon" aria-hidden="true"></mat-icon>
+          <span id="quiz-meta-count-text">{{ questionCountSig() }} {{ questionLabelSig() | titlecase }}</span>
         </span>
 
         <span class="meta-item">
           <mat-icon aria-hidden="true">schedule</mat-icon>
-          <span>~{{ estimatedMinutesSig() }} min</span>
+          <!-- CONFIRMED, 2026-10-15: narrower retry of the earlier
+               reverted change. The GROUP's own naming mechanism
+               (`aria-labelledby` on `.quiz-meta` above) is UNCHANGED —
+               still references this span by id, same as before. Only
+               THIS leaf gets its own `aria-label`, which the accessible-
+               name algorithm uses in place of its text content when it's
+               resolved as an aria-labelledby reference — so the group's
+               computed name picks up "approximately N minutes" for just
+               this piece, while every other piece (difficulty, count) is
+               completely unaffected. VISIBLE text ("~N min") is
+               untouched.
+
+               FIXED, 2026-10-15: the FIRST version of this (template
+               `i18n-aria-label` + `{{ }}` interpolation directly on a
+               plain attribute) never actually rendered the attribute at
+               all — confirmed via a direct DOM check
+               (`getAttribute('aria-label') === null`) — which is why the
+               earlier group-level attempt announced nothing. Fixed by
+               moving the localized, dynamic string into
+               `quizMetaTimeAccessibleLabelSig()` (TypeScript, via
+               `$localize`, already used elsewhere in this codebase) and
+               binding it as a plain `[attr.aria-label]`, which does not
+               depend on that broken template path. A real Narrator
+               retest, on both localhost:4200 and a local production
+               build served at localhost:8104, confirmed the group now
+               announces "approximately N minutes" for this piece while
+               the visible "~N min" text is unaffected. -->
+          <span
+            id="quiz-meta-time-text"
+            [attr.aria-label]="quizMetaTimeAccessibleLabelSig()"
+          >~{{ estimatedMinutesSig() }} min</span>
         </span>
       </div>
     </div>
 
     <mat-card-content>
       <div class="intro-text" i18n>
-        <p>
+        <!-- CONFIRMED, 2026-10-15: `tabindex="0"` added to make this its
+             own Tab stop (requested Tab order: image → metadata → THIS
+             summary paragraph → the "Test your wits" paragraph below →
+             Shuffle). No change to its own markup/text structure — still
+             exactly one `<strong>`, one DOM text node. A real Narrator
+             retest, on both localhost:4200 and a local production build
+             served at localhost:8104, confirmed this order. -->
+        <p tabindex="0">
           <strong class="bold-text">{{ quiz.summary }}</strong>
         </p>
 
@@ -143,8 +357,16 @@
              ordinary prose Narrator already reads as one unit. Trade-off:
              the question count is no longer individually bolded — any
              wrapping element around just the count reintroduces a second
-             leaf node, which is the exact defect being removed here. -->
-        <p class="intro-centered-text">{{ introDetailsTextSig() }}</p>
+             leaf node, which is the exact defect being removed here.
+
+             DEPLOYED AND CONFIRMED by live Narrator testing — preserve
+             this text structure. CONFIRMED, 2026-10-15: `tabindex="0"`
+             added below to also make this its own Tab stop, same
+             reasoning as the summary paragraph above; the text structure
+             itself is unchanged. A real Narrator retest, on both
+             localhost:4200 and a local production build served at
+             localhost:8104, confirmed this order. -->
+        <p class="intro-centered-text" tabindex="0">{{ introDetailsTextSig() }}</p>
       </div>
     </mat-card-content>
 

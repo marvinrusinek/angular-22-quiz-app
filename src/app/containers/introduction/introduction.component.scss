@@ -41,6 +41,20 @@ mat-card-header {
 
   mat-card-subtitle {
     text-align: center;
+
+    // RESOLVED 2026-10-14+: this span is now a Tab stop (see the
+    // template's own comment for the full history). `inline-block` is
+    // needed for a focus outline to render tightly around inline text
+    // like this rather than the browser's own line-box-wide fallback.
+    // Same visible-focus convention as elsewhere in this file/app.
+    .intro-subtitle-text {
+      display: inline-block;
+
+      &:focus-visible {
+        outline: 2px solid vars.$dodger-blue;
+        outline-offset: 2px;
+      }
+    }
   }
 }
 
@@ -50,6 +64,19 @@ mat-card-header {
   width: 400px;
   height: 270px;
   margin: 0 auto;
+
+  // CONFIRMED, 2026-10-15: `tabindex="0"` added in the template.
+  // `--intro-accent` (not a static blue) because the outline sits on the
+  // surrounding card background, not on the image content — same
+  // verified theme-aware token as the metadata group's own outline
+  // (6.77:1 light / 4.94:1 dark against --bg-card, both clear the 3:1
+  // WCAG non-text minimum). Real Narrator retests, on both localhost:4200
+  // and a local production build served at localhost:8104, confirmed
+  // this element is reached by Tab in the requested order.
+  &:focus-visible {
+    outline: 2px solid var(--intro-accent);
+    outline-offset: 2px;
+  }
 }
 
 mat-card-content {
@@ -72,6 +99,17 @@ mat-card-content {
     max-width: 680px;
     margin: 0 auto;
     text-align: center;
+
+    // CONFIRMED, 2026-10-15: covers both paragraphs here (the
+    // quiz-summary <p> and .intro-centered-text), each now `tabindex="0"`
+    // in the template. Same theme-aware token as above. Real Narrator
+    // retests, on both localhost:4200 and a local production build
+    // served at localhost:8104, confirmed both are reached by Tab in
+    // the requested order.
+    p:focus-visible {
+      outline: 2px solid var(--intro-accent);
+      outline-offset: 2px;
+    }
   }
 }
 
@@ -299,11 +337,35 @@ mat-card-actions {
 // theme-aware text color for subtitle/intro-text without a separate override.
 
 // Quiz meta: difficulty · # of questions · estimated time (stacked)
+//
+// 2026-10-13: an earlier merged-single-text-node redesign here failed a
+// real Narrator retest and was reverted to this deployed baseline.
+//
+// CONFIRMED, 2026-10-15: resumed with a DIFFERENT, much smaller change —
+// the baseline layout/icons/colors below are completely untouched; only
+// `role="group"` + `tabindex="0"` + `aria-labelledby` were added to the
+// wrapper (see the template's own comment). `outline-color:
+// var(--intro-accent)` (not the static `vars.$dodger-blue` used for the
+// title/subtitle focus outlines elsewhere in this file) because
+// `$dodger-blue` was computed to clear only ~2.70:1 against the dark
+// theme's card background (`--bg-card: #3a3d46`) — below the 3:1 WCAG
+// non-text contrast minimum for a focus indicator. `--intro-accent` is
+// already verified theme-aware in this exact file (6.77:1 light, 4.94:1
+// dark — see its own definition above), comfortably clearing 3:1 in both
+// themes. Real Narrator retests, on both localhost:4200 and a local
+// production build served at localhost:8104, confirmed this group is
+// reached by Tab in the requested order and announces difficulty, count,
+// and the "approximately N minutes" wording as one combined utterance.
 .quiz-meta {
   display: flex;
   flex-direction: column;   // each item on its own line
   align-items: center;
   gap: 8px;
+
+  &:focus-visible {
+    outline: 2px solid var(--intro-accent);
+    outline-offset: 2px;
+  }
 
   .meta-item {
     display: inline-flex;

@@ -1,9 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { of, ReplaySubject, Subject } from 'rxjs';
+import { firstValueFrom, of, ReplaySubject, Subject } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatIconRegistry } from '@angular/material/icon';
 
 import { IntroductionComponent } from './introduction.component';
+import { QUESTION_COUNT_ICON } from './question-count-icon';
 import { Quiz, QuizDifficulty, QuizQuestion } from '@shared/models';
 import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
@@ -138,8 +140,23 @@ describe('IntroductionComponent — API-backed question count (Stage 14 regressi
    * This asserts the actual markup shape (text node boundaries), not just
    * the flattened/trimmed textContent, which would pass even with the
    * stray space present.
+   *
+   * RESOLVED 2026-10-14+, FOR TAB NAVIGATION ONLY: three scan-mode Down
+   * Arrow candidates and one earlier Tab/focus attempt all failed a real
+   * retest (see introduction.component.html's own comment for that full
+   * history). What finally worked: `tabindex="0"` added directly to this
+   * SAME element — no other markup change — making it a normal Tab stop.
+   * A real Narrator retest, on the local production build, confirmed
+   * both sentences read together from one Tab press, with the two-line
+   * layout preserved. Scan-mode Down Arrow reading of this SAME element
+   * was retested at the same time and STILL reads the two sentences
+   * separately — do not read this test (or this fix) as having resolved
+   * that; it hasn't, and isn't claimed to. This test now also asserts the
+   * Tab-stop shape; the original text-node/whitespace assertions below
+   * are unchanged since the underlying markup (text, `<br>` placement)
+   * never changed.
    */
-  it('has no leading-space text node after the subtitle line break, while keeping the line break, wording, and reading order intact', () => {
+  it('has no leading-space text node after the subtitle line break; is a Tab stop reading both sentences together (Tab navigation only — scan-mode Down Arrow reading is unchanged and still separate)', () => {
     configureTestBed();
     const fixture = TestBed.createComponent(IntroductionComponent);
     fixture.detectChanges();
@@ -166,6 +183,14 @@ describe('IntroductionComponent — API-backed question count (Stage 14 regressi
     // level — exactly the point of this fix.
     const fullText = (subtitleSpan!.textContent ?? '').replace(/\s+/g, ' ').trim();
     expect(fullText).toBe('How well versed are you in TypeScript?Take the quiz and find out!');
+
+    // The Tab-stop fix: this exact element is keyboard-focusable, and
+    // carries the class the SCSS uses for its visible :focus-visible
+    // outline (that outline itself can't be asserted in jsdom, which has
+    // no real layout/pseudo-elements — confirmed separately via CDP
+    // against a real browser).
+    expect(subtitleSpan!.getAttribute('tabindex')).toBe('0');
+    expect(subtitleSpan!.classList.contains('intro-subtitle-text')).toBe(true);
   });
 
   /**
@@ -1008,5 +1033,158 @@ describe('IntroductionComponent — browser tab title (document-title fix)', () 
     expect(document.title).toBe(ORIGINAL_TITLE);
     fixture.destroy();
     expect(document.title).toBe(ORIGINAL_TITLE);
+  });
+});
+
+/**
+ * Narrator/keyboard accessibility candidate, real-Narrator-confirmed
+ * 2026-10-15 (localhost:4200 and the local production build served at
+ * localhost:8104 — metadata wording, Tab order, subtitle, and the visible
+ * question-count icon all passed). Covers what a real AT retest can't
+ * assert for itself in CI: the exact attribute/signal shape those passes
+ * depended on, so a future change that silently breaks one of them fails
+ * a test instead of only being caught by another manual retest.
+ *
+ * Deliberately NOT covered here (jsdom has no real layout, pseudo-elements,
+ * or screen reader): the actual :focus-visible outline rendering, and
+ * anything about what Narrator itself chooses to speak (e.g. "group",
+ * the duplicated "heading level 1" on arrival) — those remain real-AT-only
+ * observations, recorded in the template's own comments, not asserted here.
+ */
+describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 candidate)', () => {
+  const questionCountMap = new Map<string, number | null>([['typescript', 10]]);
+  const milestoneMap = new Map<string, string>([['typescript', 'TypeScript']]);
+  const difficultyMap = new Map<string, string | null>([['typescript', 'beginner']]);
+  const imageMap = new Map<string, string>();
+  const factsMap = new Map<string, readonly string[]>();
+  const summaryMap = new Map<string, string>([['typescript', 'TypeScript summary.']]);
+
+  const makeMetadataApi = (): any => ({
+    load: jest.fn(() => of([{ quizId: 'typescript' }])),
+    questionCountByQuiz: signal(questionCountMap),
+    milestoneByQuiz: signal(milestoneMap),
+    difficultyByQuiz: signal(difficultyMap),
+    imageByQuiz: signal(imageMap),
+    factsByQuiz: signal(factsMap),
+    summaryByQuiz: signal(summaryMap),
+    milestoneFor: (id: string) => milestoneMap.get(id) ?? id,
+    imageFor: (id: string) => imageMap.get(id) ?? '',
+    factsFor: (id: string) => factsMap.get(id) ?? [],
+    summaryFor: (id: string) => summaryMap.get(id) ?? ''
+  });
+
+  function configureTestBed(): void {
+    TestBed.configureTestingModule({
+      imports: [IntroductionComponent],
+      providers: [
+        { provide: QuizDotStatusService, useValue: {} },
+        { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
+        { provide: QuizDataService, useValue: { clearQuizQuestionCache: jest.fn() } },
+        { provide: QuizNavigationService, useValue: {} },
+        { provide: QuizPersistenceService, useValue: {} },
+        {
+          provide: QuizService,
+          useValue: { clearStoredCorrectAnswersText: jest.fn(), setCheckedShuffle: jest.fn() }
+        },
+        { provide: QuizShuffleService, useValue: {} },
+        { provide: SelectedOptionService, useValue: {} },
+        { provide: TimerService, useValue: { timePerQuestion: 30 } },
+        { provide: QuizStartSpinnerService, useValue: {} },
+        { provide: ActivatedRoute, useValue: { params: of({ quizId: 'typescript' }) } },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+      ]
+    });
+  }
+
+  it('has exactly the requested Tab sequence: subtitle, image, metadata group, summary paragraph, "wits" paragraph, Shuffle toggle — title stays out of the Tab order', () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const title = root.querySelector('h1');
+    expect(title?.getAttribute('tabindex')).toBe('-1');
+
+    // mat-slide-toggle's own internal <button role="switch"> carries its
+    // OWN `tabindex="0"` (Angular Material's doing, confirmed via a real
+    // browser Tab-order check — see introduction.component.html's own
+    // history), so it legitimately shows up in this same query; the Start
+    // button after it does not (a plain <button> needs no explicit
+    // tabindex to be focusable), so it correctly does NOT appear here.
+    const tabStops = Array.from(root.querySelectorAll('[tabindex="0"]'));
+    const identify = (el: Element) => {
+      if (el.classList.contains('intro-subtitle-text')) return 'subtitle';
+      if (el.classList.contains('quiz-topic-image')) return 'image';
+      if (el.classList.contains('quiz-meta')) return 'metadata';
+      if (el.querySelector('.bold-text')) return 'summary';
+      if (el.classList.contains('intro-centered-text')) return 'wits';
+      if (el.getAttribute('role') === 'switch') return 'toggle';
+      return el.outerHTML.slice(0, 60);
+    };
+    expect(tabStops.map(identify)).toEqual([
+      'subtitle',
+      'image',
+      'metadata',
+      'summary',
+      'wits',
+      'toggle'
+    ]);
+  });
+
+  it('the metadata group is role="group", aria-labelledby the difficulty/count/time spans in reading order, and announces difficulty + count + "approximately N minutes"', () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const group = root.querySelector('.quiz-meta');
+    expect(group?.getAttribute('role')).toBe('group');
+    expect(group?.getAttribute('tabindex')).toBe('0');
+    expect(group?.getAttribute('aria-labelledby')).toBe(
+      'quiz-meta-difficulty-text quiz-meta-count-text quiz-meta-time-text'
+    );
+
+    const difficultyEl = root.querySelector('#quiz-meta-difficulty-text');
+    const countEl = root.querySelector('#quiz-meta-count-text');
+    const timeEl = root.querySelector('#quiz-meta-time-text');
+    expect(difficultyEl?.textContent?.trim()).toBe('Beginner');
+    expect(countEl?.textContent?.trim()).toBe('10 Questions');
+
+    // Visible text stays the short "~N min" form; the spoken wording is
+    // carried separately via aria-label, not the element's own text.
+    expect(timeEl?.textContent?.trim()).toBe('~5 min');
+    expect(timeEl?.getAttribute('aria-label')).toBe('approximately 5 minutes');
+  });
+
+  it('omits the difficulty id from aria-labelledby when the quiz has no difficulty (the @if branch never renders that span)', () => {
+    difficultyMap.set('typescript', null as unknown as string);
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('#quiz-meta-difficulty-text')).toBeNull();
+    expect(root.querySelector('.quiz-meta')?.getAttribute('aria-labelledby')).toBe(
+      'quiz-meta-count-text quiz-meta-time-text'
+    );
+    difficultyMap.set('typescript', 'beginner'); // restore for later tests in this file
+  });
+
+  it('the question-count icon is a registered SVG icon (the official "quiz" glyph), not the absent font ligature', async () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const countIcon = root.querySelector('#quiz-meta-count-text')?.previousElementSibling;
+    expect(countIcon?.tagName.toLowerCase()).toBe('mat-icon');
+    // No ligature text left behind — svgIcon mode renders an inline <svg>,
+    // never the literal word "quiz" as text content.
+    expect(countIcon?.textContent?.trim()).toBe('');
+    expect(countIcon?.getAttribute('aria-hidden')).toBe('true');
+
+    const svg = await firstValueFrom(TestBed.inject(MatIconRegistry).getNamedSvgIcon(QUESTION_COUNT_ICON));
+    expect(svg.tagName.toLowerCase()).toBe('svg');
+    expect(svg.querySelector('path')).not.toBeNull();
   });
 });

@@ -362,12 +362,9 @@ export class QuizSelectionComponent implements OnInit {
    * The single source of truth for the search-results announcement
    * text — '' at rest, "N quiz(zes) found" while actively searching
    * and/or difficulty-filtering with results present. Read by
-   * `writeSearchAnnouncement()` (below `searchStatusSpan`), never bound
-   * via template interpolation (confirmed, real Narrator retest: an
-   * interpolation-bound version of this exact span was never announced;
-   * a direct imperative write to the same span was — see
-   * `onSearchTermChange`'s own comment for that history and what's
-   * still unverified).
+   * `announceSearchResultEffect` (above), which hands it to Angular
+   * CDK's `LiveAnnouncer` — see that effect's own comment for why.
+   * Never bound via template interpolation.
    */
   readonly searchResultAnnouncementSig = computed(() => {
     const announceable =

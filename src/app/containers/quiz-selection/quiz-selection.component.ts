@@ -3,13 +3,12 @@ import {
   Component,
   computed,
   effect,
-  ElementRef,
   inject,
   OnInit,
   signal,
-  viewChild,
   ViewEncapsulation
 } from '@angular/core';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { NgClass, NgOptimizedImage, TitleCasePipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
@@ -120,6 +119,7 @@ export class QuizSelectionComponent implements OnInit {
   private readonly metadataApi = inject(TopicQuizMetadataService);
   private readonly warmupCoordinator = inject(InterviewWarmupCoordinatorService);
   private readonly router = inject(Router);
+  private readonly liveAnnouncer = inject(LiveAnnouncer);
 
   // Gates the progress-driven pieces on THIS screen. Shown whenever the user has
   // ACTUAL progress — engaged this session (tile click), OR has accessed quizzes
@@ -240,99 +240,80 @@ export class QuizSelectionComponent implements OnInit {
   });
 
   /**
-   * CONFIRMED (real Narrator retest, localhost:4200, 2026-10-17):
-   * typing a search term announces "N quiz found"/"N quizzes found";
-   * clearing the search (keyboard or the clear button) restores silence
-   * correctly; selecting a difficulty announces the new count. This
-   * replaced an Angular-interpolation-bound version of this exact span
-   * that was never announced across many retests — a diagnostic that
-   * wrote to the SAME span directly, synchronously, from inside a
-   * native DOM event listener, was the one that got announced. That
-   * result is manually verified by ear; it is NOT a proven explanation
-   * of Narrator's own internal behavior, only an observed difference
-   * between what worked and what didn't.
+   * HISTORY (2026-10-17): a hand-rolled, persistent `role="status"
+   * aria-live="polite"` span, written to imperatively from
+   * `onSearchTermChange`/`onDifficultyFilterChange`, was reported as
+   * CONFIRMED working by an earlier real Narrator retest the same day —
+   * but every subsequent retest of that exact, byte-identical mechanism
+   * came back silent, across a long series of controlled comparisons
+   * (listener type, span creation timing/placement, DOM churn near and
+   * far from the input, the clear button's own structural insertion, the
+   * controlled input's native value-setter calls, and a fully-connected
+   * incremental integration of an otherwise-isolated-and-working
+   * diagnostic). None of those individually explained the silence. The
+   * original "CONFIRMED" claim is NOT trustworthy and should not be
+   * treated as evidence either way.
    *
-   * That diagnostic itself had two real problems, both fixed in this
-   * production version:
-   *   1. It depended on DOM listener REGISTRATION ORDER (its own
-   *      `afterNextRender`-attached listener firing after
-   *      QuizSearchComponent's own, so `searchTerm` was already updated
-   *      by the time it read `searchResultAnnouncementSig()`) — fragile,
-   *      not a guaranteed contract.
-   *   2. It only listened to the search `<input>`'s own native event, so
-   *      changing the DIFFICULTY FILTER never updated the announcement —
-   *      confirmed as a real regression against the existing Jest suite.
+   * There were also always TWO separate, competing live regions for
+   * search state: this span (the "N found" count) and the visible
+   * `.no-results` span's OWN `role="status"`/`aria-live="polite"` (the
+   * "no matches" message) — never tested as a variable on its own.
    *
-   * FIX: no raw DOM listener at all. The two state-changing handlers
-   * that already own `searchTerm`/`difficultyFilter` write to the span
-   * directly, in the same synchronous call as the signal update —
-   * `searchResultAnnouncementSig()` recomputes fresh at that read
-   * (signals are pull-based: `.set()` only marks it stale), so there is
-   * no event-order dependency. No `ElementRef` host query, no
-   * `AbortController`/`DestroyRef` cleanup needed — `viewChild()`
-   * returns `undefined` gracefully (not an NG0201 throw) when no view
-   * exists, safe under the `TestBed.inject()`-without-a-view Jest
-   * pattern that broke the earlier diagnostic.
+   * FIX: Angular CDK's `LiveAnnouncer` (`@angular/cdk/a11y`, already a
+   * project dependency) replaces BOTH hand-rolled regions with ONE
+   * announcer. It differs from every hand-rolled version tried in three
+   * concrete, previously-untested ways: its live element lives in a
+   * single `<div>` appended directly to `document.body` — outside this
+   * (or any) component's view entirely, with zero ancestor/structural-
+   * directive coupling; it sets `aria-atomic="true"`, which was never
+   * tried; and its actual DOM write happens inside
+   * `NgZone.runOutsideAngular`, on a deliberate 100ms timer that also
+   * clears any pending prior announcement first — so the write is never
+   * part of the same zone-tracked turn as Angular's own change-detection
+   * cascade (grid re-render, etc.), and rapid repeated calls (fast
+   * typing) naturally coalesce to the LAST settled value instead of
+   * announcing every keystroke. This 100ms delay is CDK's own, not one
+   * introduced here.
    *
-   * `{{ searchResultAnnouncementSig() }}` interpolation stays removed
-   * from the template permanently. See `syncSearchAnnouncementEffect`
-   * below for the paths these two handlers don't cover (restored state,
-   * async catalog load) — NOT yet manually retested.
+   * ONE reactive effect now covers every path (interactive typing/
+   * filtering AND restored-state/async-catalog loading) — the old
+   * handler+fallback-effect split existed only because the previous
+   * mechanism needed a synchronous native DOM event to write from
+   * reliably; `LiveAnnouncer.announce()` carries no such constraint, so
+   * a single signal-driven effect is both sufficient and simpler.
    */
-  private readonly searchStatusSpan = viewChild<ElementRef<HTMLElement>>('searchStatusSpan');
+  private readonly announceSearchResultEffect = effect(() => {
+    const matchCount = this.displayedQuizzes().length;
+    if (matchCount > 0) {
+      // '' when not actively searching/filtering (searchResultAnnouncementSig's
+      // own "announceable" guard) — explicitly clear rather than announce
+      // nothing, so the region never holds a stale prior message (e.g.
+      // after the search is cleared) that a later AT inspection could
+      // still read back.
+      const next = this.searchResultAnnouncementSig();
+      if (next) {
+        this.liveAnnouncer.announce(next, 'polite');
+      } else {
+        this.liveAnnouncer.clear();
+      }
+      return;
+    }
+    const catalogLoaded = this.quizzes().length > 0;
+    const narrowing = this.searchTerm().trim().length > 0 || this.isDifficultyFiltered();
+    if (catalogLoaded && narrowing) {
+      this.liveAnnouncer.announce(this.noResultsMessage(), 'polite');
+    } else {
+      this.liveAnnouncer.clear();
+    }
+  });
 
-  // Idempotent: only touches the DOM when the value actually changed.
-  // Assigning `.textContent` unconditionally always replaces the text
-  // node, even when the new string equals the old one — this guard is
-  // what makes it safe to call from BOTH the direct handlers below AND
-  // the reactive effect further down without ever double-writing the
-  // same announcement twice.
-  private writeSearchAnnouncement(): void {
-    const span = this.searchStatusSpan()?.nativeElement;
-    if (!span) return;
-    const next = this.searchResultAnnouncementSig();
-    if (span.textContent !== next) span.textContent = next;
-  }
-
-  // Direct, synchronous writes for the two interactive paths — manually
-  // verified with real Narrator: typing (announces "N quiz found"),
-  // clearing via keyboard, clearing via the search box's clear button
-  // (routes through the same `searchTermChange` emission), and
-  // selecting a difficulty (announces the new count). This is the exact
-  // mechanism confirmed working; preserved unchanged.
   onSearchTermChange(value: string): void {
     this.searchTerm.set(value);
-    this.writeSearchAnnouncement();
   }
 
   onDifficultyFilterChange(value: DifficultyFilter): void {
     this.difficultyFilter.set(value);
-    this.writeSearchAnnouncement();
   }
-
-  /**
-   * Covers paths NOT verified above and NOT reachable through either
-   * handler: `restoreSortPreference()` restores a saved search term
-   * from sessionStorage via `searchTerm.set()` directly (confirmed by
-   * reading that method — it bypasses `onSearchTermChange` entirely),
-   * and the catalog itself loads asynchronously, so a restored search
-   * term can be set before real quiz data exists, leaving
-   * `displayedQuizzes()` — and this announcement — stale once the
-   * catalog actually arrives. Neither path fires from a user gesture,
-   * so there's no native event to write from synchronously the way the
-   * two handlers do; this effect is the reactive fallback for those
-   * background changes only. The idempotent guard above means this
-   * never produces an extra DOM write during normal typing/filtering —
-   * by the time this effect's own turn comes, the handler has already
-   * written the same value, so this is a no-op on every interactive
-   * path. NOT manually Narrator-retested (restoring a search term /
-   * catalog timing isn't something a live retest naturally exercises);
-   * flagged for a focused retest before being treated as confirmed.
-   */
-  private readonly syncSearchAnnouncementEffect = effect(() => {
-    this.searchResultAnnouncementSig();
-    this.writeSearchAnnouncement();
-  });
 
   // S6d: re-run achievement evaluation whenever the metadata-backed catalog
   // (quizId + difficulty) changes — not just once on init. The catalog is

@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
@@ -1746,9 +1747,34 @@ describe('QuizSelectionComponent — difficulty filter', () => {
     advanced: 'Advanced'
   };
 
+  // Test double for Angular CDK's LiveAnnouncer (2026-10-17): the real
+  // service appends its own singleton element to `document.body`, outside
+  // any component's template, and writes to it asynchronously (its own
+  // internal 100ms timer, run outside the Angular zone) — not something a
+  // synchronous `fixture.detectChanges()` can observe directly. Mocking it
+  // lets tests assert exactly what the COMPONENT is responsible for (did
+  // it ask to announce the right message, at the right time, and never a
+  // stale one) without claiming anything about whether an AT actually
+  // speaks it — that remains a manual-only claim.
+  function createLiveAnnouncerMock() {
+    const calls: Array<{ type: 'announce' | 'clear'; message?: string }> = [];
+    return {
+      announce: jest.fn((message: string) => {
+        calls.push({ type: 'announce', message });
+        return Promise.resolve();
+      }),
+      clear: jest.fn(() => {
+        calls.push({ type: 'clear' });
+      }),
+      _calls: calls
+    };
+  }
+  type LiveAnnouncerMock = ReturnType<typeof createLiveAnnouncerMock>;
+
   async function render(catalog: ReadonlyArray<Row> = CATALOG) {
     sessionStorage.clear();
     localStorage.clear();
+    const liveAnnouncer = createLiveAnnouncerMock();
 
     const metadataApi: any = {
       load: jest.fn(() => of(catalog.map(([quizId]) => ({ quizId })))),
@@ -1809,7 +1835,8 @@ describe('QuizSelectionComponent — difficulty filter', () => {
         {
           provide: InterviewWarmupCoordinatorService,
           useValue: { warmUp: jest.fn(() => of(undefined)) }
-        }
+        },
+        { provide: LiveAnnouncer, useValue: liveAnnouncer }
       ]
     });
 
@@ -1817,7 +1844,7 @@ describe('QuizSelectionComponent — difficulty filter', () => {
     fixture.detectChanges();
     await fixture.whenStable(); // MatSelect applies its initial selection in a microtask
     fixture.detectChanges();
-    return { fixture, comp: fixture.componentInstance, catalog };
+    return { fixture, comp: fixture.componentInstance, catalog, liveAnnouncer };
   }
 
   type Ctx = Awaited<ReturnType<typeof render>>;
@@ -1839,19 +1866,15 @@ describe('QuizSelectionComponent — difficulty filter', () => {
     titles(c).map((title) => c.catalog.find(([, ttl]) => ttl === title)![0]);
   const noResults = (c: Ctx): HTMLElement[] =>
     Array.from(el(c).querySelectorAll<HTMLElement>('.no-results'));
-  // CONFIRMED DEFECT fixed 2026-10-16: the span is now ALWAYS mounted
-  // (present from first render, before any search/filter — the live
-  // region must already exist in the DOM before its content changes for
-  // most ATs to announce the change; see the template's own comment).
-  // Only its TEXT toggles. So "not announcing" now means the span exists
-  // with EMPTY text, not that the span is absent — `?? null` only
-  // catches null/undefined, not "", so it would have returned "" here
-  // instead of null. `|| null` catches the empty string too.
-  const announcement = (c: Ctx): string | null =>
-    el(c)
-      .querySelector('.visually-hidden[role="status"]')
-      ?.textContent?.replace(/\s+/g, ' ')
-      .trim() || null;
+  // The CURRENT announcement state (2026-10-17): the component now calls
+  // Angular CDK's LiveAnnouncer, mocked above, instead of writing to its
+  // own DOM span. "Not announcing" means the LAST call was `.clear()` (or
+  // nothing has been called yet), not that some element's text is empty.
+  const announcement = (c: Ctx): string | null => {
+    const calls = c.liveAnnouncer._calls;
+    const last = calls[calls.length - 1];
+    return last && last.type === 'announce' ? (last.message ?? '').replace(/\s+/g, ' ').trim() || null : null;
+  };
 
   async function settle(c: Ctx): Promise<void> {
     c.fixture.detectChanges();
@@ -2101,7 +2124,7 @@ describe('QuizSelectionComponent — difficulty filter', () => {
   });
 
   describe('empty results use the ONE existing no-results element', () => {
-    it('search AND filter together: names both, and the search-status span stays empty (no competing announcement for the same event)', async () => {
+    it('search AND filter together: names both in the VISIBLE text, and the SAME announcer (LiveAnnouncer) carries that message — no second, competing live region', async () => {
       const c = await render();
       await chooseDifficulty(c, 'beginner');
       await search(c, 'perf');
@@ -2111,20 +2134,23 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       expect(noResults(c)[0].textContent!.trim()).toBe(
         'No quizzes match your search and difficulty filter.'
       );
-      // The two live regions are mutually exclusive by construction:
-      // searchResultAnnouncementSig() requires displayedQuizzes().length
-      // > 0, so going to zero results silences it exactly as
-      // .no-results becomes the one that speaks.
-      expect(announcement(c)).toBeNull();
+      // .no-results is no longer its own live region (no role/aria-live) —
+      // it's purely the visible text. The ONE announcer says the same
+      // message, consolidating what used to be two competing regions.
+      expect([noResults(c)[0].getAttribute('role'), noResults(c)[0].getAttribute('aria-live')]).toEqual([
+        null,
+        null
+      ]);
+      expect(announcement(c)).toBe('No quizzes match your search and difficulty filter.');
     });
 
-    it('search alone: the existing message, unchanged, and the search-status span stays silent', async () => {
+    it('search alone: the existing visible message, unchanged, and the announcer carries it too', async () => {
       const c = await render();
       await search(c, 'zzz-no-such-topic');
 
       expect(noResults(c)).toHaveLength(1);
       expect(noResults(c)[0].textContent!.trim()).toBe('No quizzes match your search.');
-      expect(announcement(c)).toBeNull();
+      expect(announcement(c)).toBe('No quizzes match your search.');
     });
 
     it('filter alone (a difficulty with no quizzes): names the difficulty filter', async () => {
@@ -2134,21 +2160,20 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       expect(renderedIds(c)).toEqual([]);
       expect(noResults(c)).toHaveLength(1);
       expect(noResults(c)[0].textContent!.trim()).toBe('No quizzes match the selected difficulty.');
+      expect(announcement(c)).toBe('No quizzes match the selected difficulty.');
     });
 
-    it('keeps its existing live-region semantics, and goes away when the results come back', async () => {
+    it('is purely visible text now (no role/aria-live of its own), and goes away when the results come back', async () => {
       const c = await render();
       await chooseDifficulty(c, 'beginner');
       await search(c, 'perf');
       const message = noResults(c)[0];
-      expect([message.getAttribute('role'), message.getAttribute('aria-live')]).toEqual([
-        'status',
-        'polite'
-      ]);
+      expect([message.getAttribute('role'), message.getAttribute('aria-live')]).toEqual([null, null]);
 
       await chooseDifficulty(c, 'all'); // "perf" now matches Performance Tuning
       expect(noResults(c)).toHaveLength(0);
       expect(renderedIds(c)).toEqual(['performance']);
+      expect(announcement(c)).toBe('1 quiz found');
     });
 
     it('is not shown when there is simply nothing to filter yet (catalog empty)', async () => {
@@ -2179,33 +2204,19 @@ describe('QuizSelectionComponent — difficulty filter', () => {
     });
 
     /**
-     * CONFIRMED DEFECT, found 2026-10-16: a real Narrator retest typing
-     * "RxJS" into an empty search box got NO result-count announcement.
-     * Root cause: the status span was wrapped in a top-level `@if`, so
-     * going from "nothing typed" to "something typed" INSERTED the whole
-     * `role="status"`/`aria-live="polite"` element into the DOM WITH its
-     * content already populated — a documented ARIA gotcha where most
-     * ATs don't announce a live region's very first content if the
-     * region didn't already exist beforehand. DOM assertions can't prove
-     * what Narrator actually speaks (only a real retest can — this is
-     * the user's own next step), but THIS asserts the structural
-     * precondition that failure required: the span's own DOM node must
-     * now persist across the transition, not be destroyed and recreated.
+     * HISTORY, 2026-10-17: the previous hand-rolled span's own DOM-node
+     * identity (destroyed/recreated vs. persistent) was tested directly
+     * here, because that span lived in THIS component's own template and
+     * an earlier confirmed defect involved exactly that (an `@if`-wrapped
+     * span getting its first content inserted atomically). Angular CDK's
+     * `LiveAnnouncer` makes that defect class structurally impossible:
+     * its live element is a singleton appended directly to
+     * `document.body` by the SERVICE itself, never part of ANY Angular
+     * component's template — there is nothing for this component's own
+     * change detection to destroy or recreate. That guarantee now comes
+     * from the library, not from an assertion in this file.
      */
-    it('the status span itself persists across the empty→non-empty search transition (does not get destroyed and recreated)', async () => {
-      const c = await render();
-      const before = el(c).querySelector('.visually-hidden[role="status"]');
-      expect(before).not.toBeNull();
-      expect(announcement(c)).toBeNull(); // present, but empty — the correct baseline
-
-      await search(c, 'sig');
-
-      const after = el(c).querySelector('.visually-hidden[role="status"]');
-      expect(after).toBe(before); // SAME node identity, not a fresh insertion
-      expect(announcement(c)).toBe('1 quiz found');
-    });
-
-    it('preserves input focus while typing (the fix only changes the status span, not the toolbar)', async () => {
+    it('preserves input focus while typing', async () => {
       const c = await render();
       const input = searchInput(c);
       input.focus();
@@ -2216,20 +2227,19 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       expect(document.activeElement).toBe(input);
     });
 
-    it('does not re-render the announcement text when an unrelated signal changes without affecting the result count', async () => {
+    it('announces exactly once for a single search, not once per unrelated change-detection pass', async () => {
       const c = await render();
       await search(c, 'sig');
-      const span = el(c).querySelector('.visually-hidden[role="status"]') as HTMLElement;
-      const textNodeBefore = span.firstChild;
+      expect(announcement(c)).toBe('1 quiz found');
+      const announceCallsAfterSearch = c.liveAnnouncer.announce.mock.calls.length;
 
       // Trigger a change-detection pass with nothing relevant different
-      // (same search term, same results) — the interpolated text content
-      // must not be rewritten (Angular only touches the DOM when the
-      // bound VALUE changes, never on every CD cycle for an unchanged
-      // value), so the same text node identity should remain.
+      // (same search term, same results) — effect()s only re-run when a
+      // TRACKED signal's value actually changes, so this must not add
+      // another announce() call.
       c.fixture.detectChanges();
 
-      expect(el(c).querySelector('.visually-hidden[role="status"]')!.firstChild).toBe(textNodeBefore);
+      expect(c.liveAnnouncer.announce.mock.calls.length).toBe(announceCallsAfterSearch);
       expect(announcement(c)).toBe('1 quiz found');
     });
 
@@ -2264,16 +2274,20 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       expect(renderedIds(c)).toEqual(['components']);
     });
 
-    it('does not rewrite the DOM when typing changes the term but not the resulting count (idempotent guard)', async () => {
+    it('re-announces the same text when the search term changes but the resulting count does not — intentional with LiveAnnouncer, unlike the old raw-span idempotent guard', async () => {
       const c = await render();
       await search(c, 'sig'); // matches exactly 'signals'
-      const span = el(c).querySelector('.visually-hidden[role="status"]') as HTMLElement;
-      const textNodeBefore = span.firstChild;
       expect(announcement(c)).toBe('1 quiz found');
+      const callsAfterFirst = c.liveAnnouncer.announce.mock.calls.length;
 
       await search(c, 'signa'); // still matches exactly 'signals' — same count, same text
       expect(announcement(c)).toBe('1 quiz found');
-      expect(span.firstChild).toBe(textNodeBefore);
+      // `searchTerm` itself changed value, so the effect re-runs and calls
+      // announce() again with the identical message — CDK's own
+      // clear-then-set pattern is specifically designed to make even a
+      // repeated, unchanged message reliably re-announced by ATs that
+      // might not notice an unchanged live-region text node.
+      expect(c.liveAnnouncer.announce.mock.calls.length).toBeGreaterThan(callsAfterFirst);
     });
 
     it('preserves input focus when selecting a difficulty too', async () => {
@@ -2340,7 +2354,8 @@ describe('QuizSelectionComponent — difficulty filter', () => {
           { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
           { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
           { provide: TopicQuizMetadataService, useValue: metadataApi },
-          { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
+          { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
+          { provide: LiveAnnouncer, useValue: createLiveAnnouncerMock() }
         ]
       });
 
@@ -2351,10 +2366,11 @@ describe('QuizSelectionComponent — difficulty filter', () => {
 
       const root = fixture.nativeElement as HTMLElement;
       const input = root.querySelector('.toolbar app-quiz-search input') as HTMLInputElement;
-      const span = root.querySelector('.visually-hidden[role="status"]') as HTMLElement;
+      const liveAnnouncer = TestBed.inject(LiveAnnouncer) as unknown as LiveAnnouncerMock;
 
       expect(input.value).toBe('sig');
-      expect(span.textContent).toBe('1 quiz found');
+      const last = liveAnnouncer._calls[liveAnnouncer._calls.length - 1];
+      expect(last).toEqual({ type: 'announce', message: '1 quiz found' });
     });
 
     /**
@@ -2404,20 +2420,21 @@ describe('QuizSelectionComponent — difficulty filter', () => {
           { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
           { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
           { provide: TopicQuizMetadataService, useValue: metadataApi },
-          { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
+          { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
+          { provide: LiveAnnouncer, useValue: createLiveAnnouncerMock() }
         ]
       });
 
       const fixture = TestBed.createComponent(QuizSelectionComponent);
       fixture.detectChanges();
+      const liveAnnouncer = TestBed.inject(LiveAnnouncer) as unknown as LiveAnnouncerMock;
 
       // Catalog is still empty at this point — restored search term, but
       // no matching quizzes exist yet, so the announcement is correctly
-      // silent (not a wrong non-zero count).
-      const span = (fixture.nativeElement as HTMLElement).querySelector(
-        '.visually-hidden[role="status"]'
-      ) as HTMLElement;
-      expect(span.textContent).toBe('');
+      // silent (not a wrong non-zero count): the last call, if any, must
+      // not be an `announce()` with real text.
+      const lastBefore = liveAnnouncer._calls[liveAnnouncer._calls.length - 1];
+      expect(lastBefore?.type).not.toBe('announce');
 
       // The catalog "arrives" now.
       metadataApi.difficultyByQuiz.set(new Map(CATALOG.map(([id, , d]) => [id, d])));
@@ -2427,10 +2444,11 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(span.textContent).toBe('1 quiz found');
+      const lastAfter = liveAnnouncer._calls[liveAnnouncer._calls.length - 1];
+      expect(lastAfter).toEqual({ type: 'announce', message: '1 quiz found' });
     });
 
-    it('navigate-away/back safety: destroying and recreating the component leaves exactly one correct, working span (no leak, no duplicate, no stale text)', async () => {
+    it('navigate-away/back safety: destroying and recreating the component leaves a correct, working announcer (fresh state, no stale carryover)', async () => {
       const first = await render();
       await search(first, 'sig');
       expect(announcement(first)).toBe('1 quiz found');
@@ -2439,14 +2457,10 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       TestBed.resetTestingModule();
 
       const second = await render();
-      expect(announcement(second)).toBeNull(); // fresh instance, fresh state
+      expect(announcement(second)).toBeNull(); // fresh instance, fresh mock, fresh state
 
       await search(second, 'sig');
       expect(announcement(second)).toBe('1 quiz found');
-
-      // Only ONE status span should exist on the page at a time — the
-      // destroyed first instance's view is gone, not leaked alongside it.
-      expect(document.querySelectorAll('.visually-hidden[role="status"]').length).toBe(1);
     });
   });
 

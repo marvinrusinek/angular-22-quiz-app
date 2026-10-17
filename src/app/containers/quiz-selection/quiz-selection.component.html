@@ -196,37 +196,19 @@
 
   <!-- Empty state: quizzes are loaded but none match the search and/or the
        difficulty filter. ONE element; noResultsMessage() names what is narrowing
-       the list, so it reads correctly whichever of the two caused it. -->
+       the list, so it reads correctly whichever of the two caused it.
+
+       NOT a live region of its own anymore (2026-10-17): this used to carry
+       its own `role="status" aria-live="polite"`, competing with the
+       search-results span below for the same information. Both are now
+       announced through Angular CDK's `LiveAnnouncer` (see
+       `announceSearchResultEffect` in the .ts file) — this span is purely
+       the VISIBLE text, unchanged. -->
   @if (quizzes().length > 0 && displayedQuizzes().length === 0) {
-    <span
-      class="no-results"
-      role="status"
-      aria-live="polite"
-    >
+    <span class="no-results">
       {{ noResultsMessage() }}
     </span>
   }
-
-  <!-- CONFIRMED (real Narrator retest, localhost:4200, 2026-10-17):
-       typing announces "N quiz(zes) found"; clearing (keyboard or the
-       clear button) restores silence; selecting a difficulty announces
-       the new count. A plain Angular interpolation binding here was
-       never announced across many earlier retests and markup variants;
-       a direct imperative write to this SAME span, from inside a native
-       DOM event listener, was — see `onSearchTermChange`'s own comment
-       in the .ts file for that history, the production implementation,
-       and what's still unverified (restored/async-catalog paths). SAME
-       position, SAME role/aria-live, SAME class, SAME creation timing
-       as always — this is the original span, never recreated. No
-       Angular interpolation writes to it anymore; `onSearchTermChange`/
-       `onDifficultyFilterChange`/`syncSearchAnnouncementEffect` are the
-       only writers, all funneling through one idempotent method. -->
-  <span
-    #searchStatusSpan
-    class="visually-hidden"
-    role="status"
-    aria-live="polite"
-  ></span>
 
   <!-- Quiz Tiles Grid -->
   <div class="quiz-grid">

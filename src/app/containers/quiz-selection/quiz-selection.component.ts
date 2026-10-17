@@ -3,9 +3,11 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
   inject,
   OnInit,
   signal,
+  viewChild,
   ViewEncapsulation
 } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
@@ -237,6 +239,101 @@ export class QuizSelectionComponent implements OnInit {
     writeSessionString(SK_QUIZ_SEARCH_TERM, this.searchTerm());
   });
 
+  /**
+   * CONFIRMED (real Narrator retest, localhost:4200, 2026-10-17):
+   * typing a search term announces "N quiz found"/"N quizzes found";
+   * clearing the search (keyboard or the clear button) restores silence
+   * correctly; selecting a difficulty announces the new count. This
+   * replaced an Angular-interpolation-bound version of this exact span
+   * that was never announced across many retests — a diagnostic that
+   * wrote to the SAME span directly, synchronously, from inside a
+   * native DOM event listener, was the one that got announced. That
+   * result is manually verified by ear; it is NOT a proven explanation
+   * of Narrator's own internal behavior, only an observed difference
+   * between what worked and what didn't.
+   *
+   * That diagnostic itself had two real problems, both fixed in this
+   * production version:
+   *   1. It depended on DOM listener REGISTRATION ORDER (its own
+   *      `afterNextRender`-attached listener firing after
+   *      QuizSearchComponent's own, so `searchTerm` was already updated
+   *      by the time it read `searchResultAnnouncementSig()`) — fragile,
+   *      not a guaranteed contract.
+   *   2. It only listened to the search `<input>`'s own native event, so
+   *      changing the DIFFICULTY FILTER never updated the announcement —
+   *      confirmed as a real regression against the existing Jest suite.
+   *
+   * FIX: no raw DOM listener at all. The two state-changing handlers
+   * that already own `searchTerm`/`difficultyFilter` write to the span
+   * directly, in the same synchronous call as the signal update —
+   * `searchResultAnnouncementSig()` recomputes fresh at that read
+   * (signals are pull-based: `.set()` only marks it stale), so there is
+   * no event-order dependency. No `ElementRef` host query, no
+   * `AbortController`/`DestroyRef` cleanup needed — `viewChild()`
+   * returns `undefined` gracefully (not an NG0201 throw) when no view
+   * exists, safe under the `TestBed.inject()`-without-a-view Jest
+   * pattern that broke the earlier diagnostic.
+   *
+   * `{{ searchResultAnnouncementSig() }}` interpolation stays removed
+   * from the template permanently. See `syncSearchAnnouncementEffect`
+   * below for the paths these two handlers don't cover (restored state,
+   * async catalog load) — NOT yet manually retested.
+   */
+  private readonly searchStatusSpan = viewChild<ElementRef<HTMLElement>>('searchStatusSpan');
+
+  // Idempotent: only touches the DOM when the value actually changed.
+  // Assigning `.textContent` unconditionally always replaces the text
+  // node, even when the new string equals the old one — this guard is
+  // what makes it safe to call from BOTH the direct handlers below AND
+  // the reactive effect further down without ever double-writing the
+  // same announcement twice.
+  private writeSearchAnnouncement(): void {
+    const span = this.searchStatusSpan()?.nativeElement;
+    if (!span) return;
+    const next = this.searchResultAnnouncementSig();
+    if (span.textContent !== next) span.textContent = next;
+  }
+
+  // Direct, synchronous writes for the two interactive paths — manually
+  // verified with real Narrator: typing (announces "N quiz found"),
+  // clearing via keyboard, clearing via the search box's clear button
+  // (routes through the same `searchTermChange` emission), and
+  // selecting a difficulty (announces the new count). This is the exact
+  // mechanism confirmed working; preserved unchanged.
+  onSearchTermChange(value: string): void {
+    this.searchTerm.set(value);
+    this.writeSearchAnnouncement();
+  }
+
+  onDifficultyFilterChange(value: DifficultyFilter): void {
+    this.difficultyFilter.set(value);
+    this.writeSearchAnnouncement();
+  }
+
+  /**
+   * Covers paths NOT verified above and NOT reachable through either
+   * handler: `restoreSortPreference()` restores a saved search term
+   * from sessionStorage via `searchTerm.set()` directly (confirmed by
+   * reading that method — it bypasses `onSearchTermChange` entirely),
+   * and the catalog itself loads asynchronously, so a restored search
+   * term can be set before real quiz data exists, leaving
+   * `displayedQuizzes()` — and this announcement — stale once the
+   * catalog actually arrives. Neither path fires from a user gesture,
+   * so there's no native event to write from synchronously the way the
+   * two handlers do; this effect is the reactive fallback for those
+   * background changes only. The idempotent guard above means this
+   * never produces an extra DOM write during normal typing/filtering —
+   * by the time this effect's own turn comes, the handler has already
+   * written the same value, so this is a no-op on every interactive
+   * path. NOT manually Narrator-retested (restoring a search term /
+   * catalog timing isn't something a live retest naturally exercises);
+   * flagged for a focused retest before being treated as confirmed.
+   */
+  private readonly syncSearchAnnouncementEffect = effect(() => {
+    this.searchResultAnnouncementSig();
+    this.writeSearchAnnouncement();
+  });
+
   // S6d: re-run achievement evaluation whenever the metadata-backed catalog
   // (quizId + difficulty) changes — not just once on init. The catalog is
   // empty until metadataApi.load()'s response lands, so a single synchronous
@@ -280,6 +377,26 @@ export class QuizSelectionComponent implements OnInit {
     return $localize`No quizzes match your search.`;
   });
 
+  /**
+   * The single source of truth for the search-results announcement
+   * text — '' at rest, "N quiz(zes) found" while actively searching
+   * and/or difficulty-filtering with results present. Read by
+   * `writeSearchAnnouncement()` (below `searchStatusSpan`), never bound
+   * via template interpolation (confirmed, real Narrator retest: an
+   * interpolation-bound version of this exact span was never announced;
+   * a direct imperative write to the same span was — see
+   * `onSearchTermChange`'s own comment for that history and what's
+   * still unverified).
+   */
+  readonly searchResultAnnouncementSig = computed(() => {
+    const announceable =
+      (this.searchTerm().trim().length > 0 || this.isDifficultyFiltered()) &&
+      this.displayedQuizzes().length > 0;
+    if (!announceable) return '';
+    const n = this.displayedQuizzes().length;
+    return n === 1 ? $localize`${n} quiz found` : $localize`${n} quizzes found`;
+  });
+
   // Summary stats for the catalog row: total quizzes, total questions, and a
   // difficulty breakdown (e.g. "4 Beginner / 5 Intermediate"). Computed from the
   // FULL catalog (not the filtered/searched view).
@@ -311,6 +428,63 @@ export class QuizSelectionComponent implements OnInit {
 
     return { quizCount, questionCount, levels };
   });
+
+  /**
+   * CONFIRMED (real Narrator scan-mode retest, localhost:4200, 2026-10-16):
+   * spoken phrase for the "Quizzes" stat — number and label as one
+   * coherent utterance (e.g. "12 Quizzes"), matching the visible text's
+   * own wording exactly (unlike the Introduction duration piece, there's
+   * no wording mismatch to reconcile here).
+   *
+   * Narrator read `.stat-num` and `.stat-label` as two separate stops
+   * because they are two separate DOM/AX leaf nodes. The fix that
+   * actually shipped is NOT a `role="group"` + `aria-label` on the
+   * `.stat` wrapper (that candidate was tried and reverted — a direct,
+   * controlled comparison against this exact codebase's own pre-existing
+   * `.visually-hidden[role="status"]` span found a BARE, roleless
+   * `.visually-hidden` span's real text gets pruned from the
+   * accessibility tree entirely (`ignored: true`), even though the
+   * identically-styled, already-shipped span with `role="status"` is
+   * not pruned — the role, not the CSS, is what keeps a span's content
+   * in the tree). The shipped fix instead renders this phrase as REAL
+   * TEXT inside a `.visually-hidden role="group"` span in the template
+   * (confirmed via CDP: a non-ignored `group` node with a `StaticText`
+   * child reading the full phrase) — `.stat-num`/`.stat-label` get
+   * `aria-hidden="true"` so the same information isn't ALSO announced
+   * separately, not because it's redundant to remove.
+   *
+   * `$localize` because the visible label ("Quizzes") is `i18n`-marked
+   * in the template; composing the same word via TS keeps the spoken
+   * phrase in sync with a number value the directive-owned `.stat-num`
+   * span can't be read from directly (CountUpDirective writes its target
+   * textContent imperatively, bypassing template binding — this reads
+   * the same signal value the directive is given, not the DOM, so it's
+   * always the settled target, never a mid-animation value).
+   */
+  readonly quizCountAccessibleLabelSig = computed(() =>
+    $localize`${this.quizStats().quizCount} Quizzes`
+  );
+
+  /** Same rationale as `quizCountAccessibleLabelSig`, for "Questions". */
+  readonly questionCountAccessibleLabelSig = computed(() =>
+    $localize`${this.quizStats().questionCount} Questions`
+  );
+
+  /**
+   * Same rationale, for each difficulty-level stat in the `@for` loop
+   * below. A plain method, not a signal, because it's evaluated per
+   * array element rather than once. NOT wrapped in `$localize`:
+   * `level.label` itself (built a few lines above via plain
+   * `difficulty[0].toUpperCase() + difficulty.slice(1)`) is not
+   * localized today — composing a localized wrapper around an
+   * unlocalized source string would only be misleading, not a real fix,
+   * and localizing `level.label` itself is a separate, unrequested change.
+   * (Pre-existing gap, not introduced here — see the handoff report for
+   * this change.)
+   */
+  levelAccessibleLabel(level: { label: string; count: number }): string {
+    return `${level.count} ${level.label}`;
+  }
 
   // ── per-tile progress (derived; reuses the shared best-score store) ─────
   // The aggregate "Your Progress" dashboard no longer lives here — it is the

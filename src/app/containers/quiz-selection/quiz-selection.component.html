@@ -52,14 +52,48 @@
       role="status"
       aria-live="polite"
     >
+      <!-- CONFIRMED (real Narrator scan-mode retest, localhost:4200,
+           2026-10-16): supersedes TWO earlier candidates, both reverted.
+
+           Candidate 1 (reverted): `role="group"` + `aria-label` on the
+           `.stat` wrapper itself, with no visible-text equivalent. CDP
+           confirmed it WAS exposed (named, not ignored) — the open
+           question was whether Narrator's non-focusable scan-mode
+           reading cursor actually speaks an attribute-only name with no
+           underlying text, which several sources report as unreliable
+           for plain/non-interactive elements.
+
+           Candidate 2 (reverted): a BARE, roleless `.visually-hidden`
+           span holding the real phrase as text, with `.stat` itself
+           left alone. A direct, controlled comparison against this
+           exact file's own PRE-EXISTING `.visually-hidden[role="status"]`
+           span (the search-results announcement below) found the bare
+           version's real text gets pruned from the accessibility tree
+           entirely (`ignored: true`) — identical CSS, only the role
+           differed, and the one with no role was the one that vanished.
+
+           SHIPPED: the `.visually-hidden` span keeps the real phrase as
+           actual rendered text AND gets `role="group"` (confirmed via
+           CDP: a non-ignored `group` node with a `StaticText` child
+           reading the full phrase, e.g. "20 Quizzes") — real text, not
+           an attribute, inside a role that's confirmed not pruned.
+           `.stat-num`/`.stat-label` get `aria-hidden="true"` so the same
+           information isn't ALSO announced separately — not lost, just
+           carried by the new node instead; both stay fully VISIBLE
+           (aria-hidden only affects the accessibility tree), and
+           `appCountUp` keeps owning `.stat-num`'s visible text exactly
+           as before, untouched. `.stat` itself carries no role and no
+           tabindex — no new Tab stop anywhere in this row. -->
       <span class="stat">
-        <span class="stat-num" [appCountUp]="quizStats().quizCount" [countUpDelay]="0"></span>
-        <span class="stat-label" i18n>Quizzes</span>
+        <span class="visually-hidden" role="group">{{ quizCountAccessibleLabelSig() }}</span>
+        <span class="stat-num" aria-hidden="true" [appCountUp]="quizStats().quizCount" [countUpDelay]="0"></span>
+        <span class="stat-label" aria-hidden="true" i18n>Quizzes</span>
       </span>
       <span class="stat-divider" aria-hidden="true"></span>
       <span class="stat">
-        <span class="stat-num" [appCountUp]="quizStats().questionCount" [countUpDelay]="140"></span>
-        <span class="stat-label" i18n>Questions</span>
+        <span class="visually-hidden" role="group">{{ questionCountAccessibleLabelSig() }}</span>
+        <span class="stat-num" aria-hidden="true" [appCountUp]="quizStats().questionCount" [countUpDelay]="140"></span>
+        <span class="stat-label" aria-hidden="true" i18n>Questions</span>
       </span>
       <span class="stat-divider stat-divider--before-levels" aria-hidden="true"></span>
       <!-- Grouped so the three difficulty levels stay together on their own row
@@ -70,8 +104,9 @@
             <span class="stat-divider" aria-hidden="true"></span>
           }
           <span class="stat" [class]="'level-' + level.key">
-            <span class="stat-num" [appCountUp]="level.count" [countUpDelay]="(i + 2) * 140"></span>
-            <span class="stat-label">{{ level.label }}</span>
+            <span class="visually-hidden" role="group">{{ levelAccessibleLabel(level) }}</span>
+            <span class="stat-num" aria-hidden="true" [appCountUp]="level.count" [countUpDelay]="(i + 2) * 140"></span>
+            <span class="stat-label" aria-hidden="true">{{ level.label }}</span>
           </span>
         }
       </div>
@@ -141,13 +176,13 @@
   <div class="toolbar">
     <app-quiz-search
       [searchTerm]="searchTerm()"
-      (searchTermChange)="searchTerm.set($event)"
+      (searchTermChange)="onSearchTermChange($event)"
     ></app-quiz-search>
 
     <div class="toolbar-controls">
       <app-quiz-difficulty-filter
         [difficulty]="difficultyFilter()"
-        (difficultyChange)="difficultyFilter.set($event)"
+        (difficultyChange)="onDifficultyFilterChange($event)"
       ></app-quiz-difficulty-filter>
 
       <app-quiz-sort
@@ -172,22 +207,26 @@
     </span>
   }
 
-  <!-- Announces the updated count while actively searching OR filtering by
-       difficulty. Not shown when neither is active (avoids a spurious
-       announcement on every page load) and not shown for zero results (the
-       "no quizzes match" message above already covers that, so this never
-       duplicates it). Visually hidden — the tile grid itself already shows the
-       count to sighted users. -->
-  @if ((searchTerm().trim().length > 0 || isDifficultyFiltered()) && displayedQuizzes().length > 0) {
-    <span
-      class="visually-hidden"
-      role="status"
-      aria-live="polite"
-      i18n
-    >
-      {{ displayedQuizzes().length }} {{ displayedQuizzes().length === 1 ? 'quiz found' : 'quizzes found' }}
-    </span>
-  }
+  <!-- CONFIRMED (real Narrator retest, localhost:4200, 2026-10-17):
+       typing announces "N quiz(zes) found"; clearing (keyboard or the
+       clear button) restores silence; selecting a difficulty announces
+       the new count. A plain Angular interpolation binding here was
+       never announced across many earlier retests and markup variants;
+       a direct imperative write to this SAME span, from inside a native
+       DOM event listener, was — see `onSearchTermChange`'s own comment
+       in the .ts file for that history, the production implementation,
+       and what's still unverified (restored/async-catalog paths). SAME
+       position, SAME role/aria-live, SAME class, SAME creation timing
+       as always — this is the original span, never recreated. No
+       Angular interpolation writes to it anymore; `onSearchTermChange`/
+       `onDifficultyFilterChange`/`syncSearchAnnouncementEffect` are the
+       only writers, all funneling through one idempotent method. -->
+  <span
+    #searchStatusSpan
+    class="visually-hidden"
+    role="status"
+    aria-live="polite"
+  ></span>
 
   <!-- Quiz Tiles Grid -->
   <div class="quiz-grid">

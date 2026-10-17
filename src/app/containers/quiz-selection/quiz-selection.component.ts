@@ -312,6 +312,63 @@ export class QuizSelectionComponent implements OnInit {
     return { quizCount, questionCount, levels };
   });
 
+  /**
+   * CONFIRMED (real Narrator scan-mode retest, localhost:4200, 2026-10-16):
+   * spoken phrase for the "Quizzes" stat — number and label as one
+   * coherent utterance (e.g. "12 Quizzes"), matching the visible text's
+   * own wording exactly (unlike the Introduction duration piece, there's
+   * no wording mismatch to reconcile here).
+   *
+   * Narrator read `.stat-num` and `.stat-label` as two separate stops
+   * because they are two separate DOM/AX leaf nodes. The fix that
+   * actually shipped is NOT a `role="group"` + `aria-label` on the
+   * `.stat` wrapper (that candidate was tried and reverted — a direct,
+   * controlled comparison against this exact codebase's own pre-existing
+   * `.visually-hidden[role="status"]` span found a BARE, roleless
+   * `.visually-hidden` span's real text gets pruned from the
+   * accessibility tree entirely (`ignored: true`), even though the
+   * identically-styled, already-shipped span with `role="status"` is
+   * not pruned — the role, not the CSS, is what keeps a span's content
+   * in the tree). The shipped fix instead renders this phrase as REAL
+   * TEXT inside a `.visually-hidden role="group"` span in the template
+   * (confirmed via CDP: a non-ignored `group` node with a `StaticText`
+   * child reading the full phrase) — `.stat-num`/`.stat-label` get
+   * `aria-hidden="true"` so the same information isn't ALSO announced
+   * separately, not because it's redundant to remove.
+   *
+   * `$localize` because the visible label ("Quizzes") is `i18n`-marked
+   * in the template; composing the same word via TS keeps the spoken
+   * phrase in sync with a number value the directive-owned `.stat-num`
+   * span can't be read from directly (CountUpDirective writes its target
+   * textContent imperatively, bypassing template binding — this reads
+   * the same signal value the directive is given, not the DOM, so it's
+   * always the settled target, never a mid-animation value).
+   */
+  readonly quizCountAccessibleLabelSig = computed(() =>
+    $localize`${this.quizStats().quizCount} Quizzes`
+  );
+
+  /** Same rationale as `quizCountAccessibleLabelSig`, for "Questions". */
+  readonly questionCountAccessibleLabelSig = computed(() =>
+    $localize`${this.quizStats().questionCount} Questions`
+  );
+
+  /**
+   * Same rationale, for each difficulty-level stat in the `@for` loop
+   * below. A plain method, not a signal, because it's evaluated per
+   * array element rather than once. NOT wrapped in `$localize`:
+   * `level.label` itself (built a few lines above via plain
+   * `difficulty[0].toUpperCase() + difficulty.slice(1)`) is not
+   * localized today — composing a localized wrapper around an
+   * unlocalized source string would only be misleading, not a real fix,
+   * and localizing `level.label` itself is a separate, unrequested change.
+   * (Pre-existing gap, not introduced here — see the handoff report for
+   * this change.)
+   */
+  levelAccessibleLabel(level: { label: string; count: number }): string {
+    return `${level.count} ${level.label}`;
+  }
+
   // ── per-tile progress (derived; reuses the shared best-score store) ─────
   // The aggregate "Your Progress" dashboard no longer lives here — it is the
   // /progress page (ProgressPageComponent), which builds its own summary.

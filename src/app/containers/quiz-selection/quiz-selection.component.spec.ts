@@ -1839,11 +1839,19 @@ describe('QuizSelectionComponent — difficulty filter', () => {
     titles(c).map((title) => c.catalog.find(([, ttl]) => ttl === title)![0]);
   const noResults = (c: Ctx): HTMLElement[] =>
     Array.from(el(c).querySelectorAll<HTMLElement>('.no-results'));
+  // CONFIRMED DEFECT fixed 2026-10-16: the span is now ALWAYS mounted
+  // (present from first render, before any search/filter — the live
+  // region must already exist in the DOM before its content changes for
+  // most ATs to announce the change; see the template's own comment).
+  // Only its TEXT toggles. So "not announcing" now means the span exists
+  // with EMPTY text, not that the span is absent — `?? null` only
+  // catches null/undefined, not "", so it would have returned "" here
+  // instead of null. `|| null` catches the empty string too.
   const announcement = (c: Ctx): string | null =>
     el(c)
       .querySelector('.visually-hidden[role="status"]')
       ?.textContent?.replace(/\s+/g, ' ')
-      .trim() ?? null;
+      .trim() || null;
 
   async function settle(c: Ctx): Promise<void> {
     c.fixture.detectChanges();
@@ -2163,6 +2171,61 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       await search(c, 'sig');
       expect(announcement(c)).toBe('1 quiz found');
     });
+
+    /**
+     * CONFIRMED DEFECT, found 2026-10-16: a real Narrator retest typing
+     * "RxJS" into an empty search box got NO result-count announcement.
+     * Root cause: the status span was wrapped in a top-level `@if`, so
+     * going from "nothing typed" to "something typed" INSERTED the whole
+     * `role="status"`/`aria-live="polite"` element into the DOM WITH its
+     * content already populated — a documented ARIA gotcha where most
+     * ATs don't announce a live region's very first content if the
+     * region didn't already exist beforehand. DOM assertions can't prove
+     * what Narrator actually speaks (only a real retest can — this is
+     * the user's own next step), but THIS asserts the structural
+     * precondition that failure required: the span's own DOM node must
+     * now persist across the transition, not be destroyed and recreated.
+     */
+    it('the status span itself persists across the empty→non-empty search transition (does not get destroyed and recreated)', async () => {
+      const c = await render();
+      const before = el(c).querySelector('.visually-hidden[role="status"]');
+      expect(before).not.toBeNull();
+      expect(announcement(c)).toBeNull(); // present, but empty — the correct baseline
+
+      await search(c, 'sig');
+
+      const after = el(c).querySelector('.visually-hidden[role="status"]');
+      expect(after).toBe(before); // SAME node identity, not a fresh insertion
+      expect(announcement(c)).toBe('1 quiz found');
+    });
+
+    it('preserves input focus while typing (the fix only changes the status span, not the toolbar)', async () => {
+      const c = await render();
+      const input = searchInput(c);
+      input.focus();
+      expect(document.activeElement).toBe(input);
+
+      await search(c, 'sig');
+
+      expect(document.activeElement).toBe(input);
+    });
+
+    it('does not re-render the announcement text when an unrelated signal changes without affecting the result count', async () => {
+      const c = await render();
+      await search(c, 'sig');
+      const span = el(c).querySelector('.visually-hidden[role="status"]') as HTMLElement;
+      const textNodeBefore = span.firstChild;
+
+      // Trigger a change-detection pass with nothing relevant different
+      // (same search term, same results) — the interpolated text content
+      // must not be rewritten (Angular only touches the DOM when the
+      // bound VALUE changes, never on every CD cycle for an unchanged
+      // value), so the same text node identity should remain.
+      c.fixture.detectChanges();
+
+      expect(el(c).querySelector('.visually-hidden[role="status"]')!.firstChild).toBe(textNodeBefore);
+      expect(announcement(c)).toBe('1 quiz found');
+    });
   });
 
   describe('persistence', () => {
@@ -2226,5 +2289,211 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       );
       expect(order.slice(0, 4)).toEqual(focusable);
     });
+  });
+});
+
+/**
+ * Catalog stats accessible phrase — real Narrator scan-mode retest
+ * CONFIRMED PASSING, localhost:4200, 2026-10-16 (see quiz-selection.
+ * component.ts's own comment on `quizCountAccessibleLabelSig` for the
+ * two reverted candidates and why this is the one that shipped).
+ */
+describe('QuizSelectionComponent — catalog stats accessible phrase (2026-10-16 candidate)', () => {
+  const difficultyMap = new Map<string, string | null>([
+    ['create-first-app', 'beginner'],
+    ['dependency-injection', 'intermediate'],
+    ['performance', 'advanced']
+  ]);
+  const milestoneMap = new Map<string, string>([
+    ['create-first-app', 'Create Your First App'],
+    ['dependency-injection', 'Dependency Injection'],
+    ['performance', 'Performance']
+  ]);
+  const summaryMap = new Map<string, string>([
+    ['create-first-app', 'Get started with Angular.'],
+    ['dependency-injection', 'Learn DI.'],
+    ['performance', 'Optimize your app.']
+  ]);
+  const questionCountMap = new Map<string, number | null>([
+    ['create-first-app', 5],
+    ['dependency-injection', 7],
+    ['performance', 9]
+  ]);
+  const imageMap = new Map<string, string>();
+  const factsMap = new Map<string, readonly string[]>();
+
+  function render(): {
+    fixture: ComponentFixture<QuizSelectionComponent>;
+    comp: QuizSelectionComponent;
+    metadataApi: any;
+  } {
+    sessionStorage.clear();
+    localStorage.clear();
+
+    const metadataApi: any = {
+      load: jest.fn(() =>
+        of([
+          { quizId: 'create-first-app' },
+          { quizId: 'dependency-injection' },
+          { quizId: 'performance' }
+        ])
+      ),
+      difficultyByQuiz: signal(difficultyMap),
+      milestoneByQuiz: signal(milestoneMap),
+      summaryByQuiz: signal(summaryMap),
+      imageByQuiz: signal(imageMap),
+      factsByQuiz: signal(factsMap),
+      questionCountByQuiz: signal(questionCountMap),
+      imageFor: (id: string) => imageMap.get(id) ?? '',
+      factsFor: (id: string) => factsMap.get(id) ?? []
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: QuizService,
+          useValue: {
+            setQuizId: jest.fn(),
+            setQuizStatus: jest.fn(),
+            setCompletedQuizId: jest.fn(),
+            setCheckedShuffle: jest.fn(),
+            returnQuizSelectionParams: () => ({
+              startedQuizId: '',
+              continueQuizId: '',
+              quizCompleted: false
+            }),
+            quizCompleted: false
+          }
+        },
+        {
+          provide: AchievementService,
+          useValue: {
+            evaluate: jest.fn(() => []),
+            summary: () => ({ earned: 0, total: 6 }),
+            earnedIds: () => new Set()
+          }
+        },
+        {
+          provide: ProgressService,
+          useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) }
+        },
+        { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+        {
+          provide: LearningPathService,
+          useValue: {
+            recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 }))
+          }
+        },
+        { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+        {
+          provide: SessionEngagementService,
+          useValue: { engaged: () => false, markEngaged: jest.fn() }
+        },
+        { provide: TopicQuizMetadataService, useValue: metadataApi },
+        {
+          provide: InterviewWarmupCoordinatorService,
+          useValue: { warmUp: jest.fn(() => of(undefined)) }
+        }
+      ]
+    });
+
+    const fixture = TestBed.createComponent(QuizSelectionComponent);
+    fixture.detectChanges();
+    return { fixture, comp: fixture.componentInstance, metadataApi };
+  }
+
+  function statEl(fixture: ComponentFixture<QuizSelectionComponent>, labelText: string): HTMLElement {
+    const stats = Array.from(fixture.nativeElement.querySelectorAll('.quiz-stats .stat')) as HTMLElement[];
+    const match = stats.find((s) => s.querySelector('.stat-label')?.textContent?.trim() === labelText);
+    if (!match) throw new Error(`No .stat found with label "${labelText}"`);
+    return match;
+  }
+
+  it('exposes each number+label as one real, non-hidden, readable text node — not merely an attribute name', () => {
+    const { fixture } = render();
+
+    const quizzesStat = statEl(fixture, 'Quizzes');
+    const hidden = quizzesStat.querySelector('.visually-hidden');
+    expect(hidden).not.toBeNull();
+    expect(hidden!.getAttribute('role')).toBe('group');
+    expect(hidden!.getAttribute('aria-hidden')).not.toBe('true');
+    expect(hidden!.textContent).toBe('3 Quizzes');
+
+    const questionsStat = statEl(fixture, 'Questions');
+    expect(questionsStat.querySelector('.visually-hidden')!.textContent).toBe('21 Questions');
+
+    const beginnerStat = statEl(fixture, 'Beginner');
+    expect(beginnerStat.querySelector('.visually-hidden')!.textContent).toBe('1 Beginner');
+  });
+
+  it('excludes the visible duplicate text from the accessibility tree via aria-hidden, without hiding it visually', () => {
+    const { fixture } = render();
+    const quizzesStat = statEl(fixture, 'Quizzes');
+
+    const num = quizzesStat.querySelector('.stat-num') as HTMLElement;
+    const label = quizzesStat.querySelector('.stat-label') as HTMLElement;
+    expect(num.getAttribute('aria-hidden')).toBe('true');
+    expect(label.getAttribute('aria-hidden')).toBe('true');
+    // Visually present: no display:none/visibility:hidden on either —
+    // only the duplicate TEXT is excluded from the accessibility tree,
+    // never the real rendered content sighted users see.
+    expect(num.style.display).not.toBe('none');
+    expect(label.style.display).not.toBe('none');
+    expect(num.hasAttribute('hidden')).toBe(false);
+    expect(label.hasAttribute('hidden')).toBe(false);
+  });
+
+  it('adds no new Tab stop anywhere in the stats row', () => {
+    const { fixture } = render();
+    const focusable = fixture.nativeElement.querySelectorAll('.quiz-stats [tabindex]');
+    expect(focusable.length).toBe(0);
+    const groupRoles = Array.from(
+      fixture.nativeElement.querySelectorAll('.quiz-stats [role="group"]')
+    ) as HTMLElement[];
+    // role="group" exists (on the visually-hidden text spans) but none of
+    // them carry a tabindex — a role alone never adds focusability.
+    expect(groupRoles.length).toBeGreaterThan(0);
+    expect(groupRoles.every((el) => !el.hasAttribute('tabindex'))).toBe(true);
+  });
+
+  it('stays synchronized when the underlying catalog changes after first render', () => {
+    const { fixture, metadataApi } = render();
+    expect(statEl(fixture, 'Quizzes').querySelector('.visually-hidden')!.textContent).toBe('3 Quizzes');
+
+    // Simulate a catalog update: a NEW quiz lands in the metadata signals.
+    const newDifficulty = new Map(difficultyMap);
+    newDifficulty.set('rxjs', 'advanced');
+    const newQuestionCount = new Map(questionCountMap);
+    newQuestionCount.set('rxjs', 12);
+    const newMilestone = new Map(milestoneMap);
+    newMilestone.set('rxjs', 'RxJS');
+    metadataApi.difficultyByQuiz.set(newDifficulty);
+    metadataApi.questionCountByQuiz.set(newQuestionCount);
+    metadataApi.milestoneByQuiz.set(newMilestone);
+    fixture.detectChanges();
+
+    expect(statEl(fixture, 'Quizzes').querySelector('.visually-hidden')!.textContent).toBe('4 Quizzes');
+    expect(statEl(fixture, 'Questions').querySelector('.visually-hidden')!.textContent).toBe('33 Questions');
+    const advancedStats = Array.from(
+      fixture.nativeElement.querySelectorAll('.quiz-stats .stat.level-advanced')
+    ) as HTMLElement[];
+    expect(advancedStats).toHaveLength(1);
+    expect(advancedStats[0].querySelector('.visually-hidden')!.textContent).toBe('2 Advanced');
+  });
+
+  it('preserves appCountUp ownership of the visible .stat-num text', () => {
+    const { fixture } = render();
+    const quizzesStat = statEl(fixture, 'Quizzes');
+    const num = quizzesStat.querySelector('.stat-num');
+    expect(num?.getAttribute('appCountUp')).toBeNull(); // Angular input, not a static attr
+    // appCountUp is still bound on the same element — confirmed by the
+    // directive's own selector matching; the element wasn't replaced or
+    // moved by this change (same two visible children, same order).
+    const childFirstClass = Array.from(quizzesStat.children).map(
+      (c) => c.className.split(' ')[0]
+    );
+    expect(childFirstClass).toEqual(['visually-hidden', 'stat-num', 'stat-label']);
   });
 });

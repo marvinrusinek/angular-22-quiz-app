@@ -8,6 +8,7 @@ import {
   signal,
   ViewEncapsulation
 } from '@angular/core';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { NgClass, NgOptimizedImage, TitleCasePipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
@@ -118,6 +119,7 @@ export class QuizSelectionComponent implements OnInit {
   private readonly metadataApi = inject(TopicQuizMetadataService);
   private readonly warmupCoordinator = inject(InterviewWarmupCoordinatorService);
   private readonly router = inject(Router);
+  private readonly liveAnnouncer = inject(LiveAnnouncer);
 
   // Gates the progress-driven pieces on THIS screen. Shown whenever the user has
   // ACTUAL progress — engaged this session (tile click), OR has accessed quizzes
@@ -237,6 +239,82 @@ export class QuizSelectionComponent implements OnInit {
     writeSessionString(SK_QUIZ_SEARCH_TERM, this.searchTerm());
   });
 
+  /**
+   * HISTORY (2026-10-17): a hand-rolled, persistent `role="status"
+   * aria-live="polite"` span, written to imperatively from
+   * `onSearchTermChange`/`onDifficultyFilterChange`, was reported as
+   * CONFIRMED working by an earlier real Narrator retest the same day —
+   * but every subsequent retest of that exact, byte-identical mechanism
+   * came back silent, across a long series of controlled comparisons
+   * (listener type, span creation timing/placement, DOM churn near and
+   * far from the input, the clear button's own structural insertion, the
+   * controlled input's native value-setter calls, and a fully-connected
+   * incremental integration of an otherwise-isolated-and-working
+   * diagnostic). None of those individually explained the silence. The
+   * original "CONFIRMED" claim is NOT trustworthy and should not be
+   * treated as evidence either way.
+   *
+   * There were also always TWO separate, competing live regions for
+   * search state: this span (the "N found" count) and the visible
+   * `.no-results` span's OWN `role="status"`/`aria-live="polite"` (the
+   * "no matches" message) — never tested as a variable on its own.
+   *
+   * FIX: Angular CDK's `LiveAnnouncer` (`@angular/cdk/a11y`, already a
+   * project dependency) replaces BOTH hand-rolled regions with ONE
+   * announcer. It differs from every hand-rolled version tried in three
+   * concrete, previously-untested ways: its live element lives in a
+   * single `<div>` appended directly to `document.body` — outside this
+   * (or any) component's view entirely, with zero ancestor/structural-
+   * directive coupling; it sets `aria-atomic="true"`, which was never
+   * tried; and its actual DOM write happens inside
+   * `NgZone.runOutsideAngular`, on a deliberate 100ms timer that also
+   * clears any pending prior announcement first — so the write is never
+   * part of the same zone-tracked turn as Angular's own change-detection
+   * cascade (grid re-render, etc.), and rapid repeated calls (fast
+   * typing) naturally coalesce to the LAST settled value instead of
+   * announcing every keystroke. This 100ms delay is CDK's own, not one
+   * introduced here.
+   *
+   * ONE reactive effect now covers every path (interactive typing/
+   * filtering AND restored-state/async-catalog loading) — the old
+   * handler+fallback-effect split existed only because the previous
+   * mechanism needed a synchronous native DOM event to write from
+   * reliably; `LiveAnnouncer.announce()` carries no such constraint, so
+   * a single signal-driven effect is both sufficient and simpler.
+   */
+  private readonly announceSearchResultEffect = effect(() => {
+    const matchCount = this.displayedQuizzes().length;
+    if (matchCount > 0) {
+      // '' when not actively searching/filtering (searchResultAnnouncementSig's
+      // own "announceable" guard) — explicitly clear rather than announce
+      // nothing, so the region never holds a stale prior message (e.g.
+      // after the search is cleared) that a later AT inspection could
+      // still read back.
+      const next = this.searchResultAnnouncementSig();
+      if (next) {
+        this.liveAnnouncer.announce(next, 'polite');
+      } else {
+        this.liveAnnouncer.clear();
+      }
+      return;
+    }
+    const catalogLoaded = this.quizzes().length > 0;
+    const narrowing = this.searchTerm().trim().length > 0 || this.isDifficultyFiltered();
+    if (catalogLoaded && narrowing) {
+      this.liveAnnouncer.announce(this.noResultsMessage(), 'polite');
+    } else {
+      this.liveAnnouncer.clear();
+    }
+  });
+
+  onSearchTermChange(value: string): void {
+    this.searchTerm.set(value);
+  }
+
+  onDifficultyFilterChange(value: DifficultyFilter): void {
+    this.difficultyFilter.set(value);
+  }
+
   // S6d: re-run achievement evaluation whenever the metadata-backed catalog
   // (quizId + difficulty) changes — not just once on init. The catalog is
   // empty until metadataApi.load()'s response lands, so a single synchronous
@@ -280,6 +358,23 @@ export class QuizSelectionComponent implements OnInit {
     return $localize`No quizzes match your search.`;
   });
 
+  /**
+   * The single source of truth for the search-results announcement
+   * text — '' at rest, "N quiz(zes) found" while actively searching
+   * and/or difficulty-filtering with results present. Read by
+   * `announceSearchResultEffect` (above), which hands it to Angular
+   * CDK's `LiveAnnouncer` — see that effect's own comment for why.
+   * Never bound via template interpolation.
+   */
+  readonly searchResultAnnouncementSig = computed(() => {
+    const announceable =
+      (this.searchTerm().trim().length > 0 || this.isDifficultyFiltered()) &&
+      this.displayedQuizzes().length > 0;
+    if (!announceable) return '';
+    const n = this.displayedQuizzes().length;
+    return n === 1 ? $localize`${n} quiz found` : $localize`${n} quizzes found`;
+  });
+
   // Summary stats for the catalog row: total quizzes, total questions, and a
   // difficulty breakdown (e.g. "4 Beginner / 5 Intermediate"). Computed from the
   // FULL catalog (not the filtered/searched view).
@@ -311,6 +406,63 @@ export class QuizSelectionComponent implements OnInit {
 
     return { quizCount, questionCount, levels };
   });
+
+  /**
+   * CONFIRMED (real Narrator scan-mode retest, localhost:4200, 2026-10-16):
+   * spoken phrase for the "Quizzes" stat — number and label as one
+   * coherent utterance (e.g. "12 Quizzes"), matching the visible text's
+   * own wording exactly (unlike the Introduction duration piece, there's
+   * no wording mismatch to reconcile here).
+   *
+   * Narrator read `.stat-num` and `.stat-label` as two separate stops
+   * because they are two separate DOM/AX leaf nodes. The fix that
+   * actually shipped is NOT a `role="group"` + `aria-label` on the
+   * `.stat` wrapper (that candidate was tried and reverted — a direct,
+   * controlled comparison against this exact codebase's own pre-existing
+   * `.visually-hidden[role="status"]` span found a BARE, roleless
+   * `.visually-hidden` span's real text gets pruned from the
+   * accessibility tree entirely (`ignored: true`), even though the
+   * identically-styled, already-shipped span with `role="status"` is
+   * not pruned — the role, not the CSS, is what keeps a span's content
+   * in the tree). The shipped fix instead renders this phrase as REAL
+   * TEXT inside a `.visually-hidden role="group"` span in the template
+   * (confirmed via CDP: a non-ignored `group` node with a `StaticText`
+   * child reading the full phrase) — `.stat-num`/`.stat-label` get
+   * `aria-hidden="true"` so the same information isn't ALSO announced
+   * separately, not because it's redundant to remove.
+   *
+   * `$localize` because the visible label ("Quizzes") is `i18n`-marked
+   * in the template; composing the same word via TS keeps the spoken
+   * phrase in sync with a number value the directive-owned `.stat-num`
+   * span can't be read from directly (CountUpDirective writes its target
+   * textContent imperatively, bypassing template binding — this reads
+   * the same signal value the directive is given, not the DOM, so it's
+   * always the settled target, never a mid-animation value).
+   */
+  readonly quizCountAccessibleLabelSig = computed(() =>
+    $localize`${this.quizStats().quizCount} Quizzes`
+  );
+
+  /** Same rationale as `quizCountAccessibleLabelSig`, for "Questions". */
+  readonly questionCountAccessibleLabelSig = computed(() =>
+    $localize`${this.quizStats().questionCount} Questions`
+  );
+
+  /**
+   * Same rationale, for each difficulty-level stat in the `@for` loop
+   * below. A plain method, not a signal, because it's evaluated per
+   * array element rather than once. NOT wrapped in `$localize`:
+   * `level.label` itself (built a few lines above via plain
+   * `difficulty[0].toUpperCase() + difficulty.slice(1)`) is not
+   * localized today — composing a localized wrapper around an
+   * unlocalized source string would only be misleading, not a real fix,
+   * and localizing `level.label` itself is a separate, unrequested change.
+   * (Pre-existing gap, not introduced here — see the handoff report for
+   * this change.)
+   */
+  levelAccessibleLabel(level: { label: string; count: number }): string {
+    return `${level.count} ${level.label}`;
+  }
 
   // ── per-tile progress (derived; reuses the shared best-score store) ─────
   // The aggregate "Your Progress" dashboard no longer lives here — it is the

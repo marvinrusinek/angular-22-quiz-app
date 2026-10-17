@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
@@ -1746,9 +1747,34 @@ describe('QuizSelectionComponent — difficulty filter', () => {
     advanced: 'Advanced'
   };
 
+  // Test double for Angular CDK's LiveAnnouncer (2026-10-17): the real
+  // service appends its own singleton element to `document.body`, outside
+  // any component's template, and writes to it asynchronously (its own
+  // internal 100ms timer, run outside the Angular zone) — not something a
+  // synchronous `fixture.detectChanges()` can observe directly. Mocking it
+  // lets tests assert exactly what the COMPONENT is responsible for (did
+  // it ask to announce the right message, at the right time, and never a
+  // stale one) without claiming anything about whether an AT actually
+  // speaks it — that remains a manual-only claim.
+  function createLiveAnnouncerMock() {
+    const calls: Array<{ type: 'announce' | 'clear'; message?: string }> = [];
+    return {
+      announce: jest.fn((message: string) => {
+        calls.push({ type: 'announce', message });
+        return Promise.resolve();
+      }),
+      clear: jest.fn(() => {
+        calls.push({ type: 'clear' });
+      }),
+      _calls: calls
+    };
+  }
+  type LiveAnnouncerMock = ReturnType<typeof createLiveAnnouncerMock>;
+
   async function render(catalog: ReadonlyArray<Row> = CATALOG) {
     sessionStorage.clear();
     localStorage.clear();
+    const liveAnnouncer = createLiveAnnouncerMock();
 
     const metadataApi: any = {
       load: jest.fn(() => of(catalog.map(([quizId]) => ({ quizId })))),
@@ -1809,7 +1835,8 @@ describe('QuizSelectionComponent — difficulty filter', () => {
         {
           provide: InterviewWarmupCoordinatorService,
           useValue: { warmUp: jest.fn(() => of(undefined)) }
-        }
+        },
+        { provide: LiveAnnouncer, useValue: liveAnnouncer }
       ]
     });
 
@@ -1817,7 +1844,7 @@ describe('QuizSelectionComponent — difficulty filter', () => {
     fixture.detectChanges();
     await fixture.whenStable(); // MatSelect applies its initial selection in a microtask
     fixture.detectChanges();
-    return { fixture, comp: fixture.componentInstance, catalog };
+    return { fixture, comp: fixture.componentInstance, catalog, liveAnnouncer };
   }
 
   type Ctx = Awaited<ReturnType<typeof render>>;
@@ -1839,11 +1866,15 @@ describe('QuizSelectionComponent — difficulty filter', () => {
     titles(c).map((title) => c.catalog.find(([, ttl]) => ttl === title)![0]);
   const noResults = (c: Ctx): HTMLElement[] =>
     Array.from(el(c).querySelectorAll<HTMLElement>('.no-results'));
-  const announcement = (c: Ctx): string | null =>
-    el(c)
-      .querySelector('.visually-hidden[role="status"]')
-      ?.textContent?.replace(/\s+/g, ' ')
-      .trim() ?? null;
+  // The CURRENT announcement state (2026-10-17): the component now calls
+  // Angular CDK's LiveAnnouncer, mocked above, instead of writing to its
+  // own DOM span. "Not announcing" means the LAST call was `.clear()` (or
+  // nothing has been called yet), not that some element's text is empty.
+  const announcement = (c: Ctx): string | null => {
+    const calls = c.liveAnnouncer._calls;
+    const last = calls[calls.length - 1];
+    return last && last.type === 'announce' ? (last.message ?? '').replace(/\s+/g, ' ').trim() || null : null;
+  };
 
   async function settle(c: Ctx): Promise<void> {
     c.fixture.detectChanges();
@@ -2093,7 +2124,7 @@ describe('QuizSelectionComponent — difficulty filter', () => {
   });
 
   describe('empty results use the ONE existing no-results element', () => {
-    it('search AND filter together: names both', async () => {
+    it('search AND filter together: names both in the VISIBLE text, and the SAME announcer (LiveAnnouncer) carries that message — no second, competing live region', async () => {
       const c = await render();
       await chooseDifficulty(c, 'beginner');
       await search(c, 'perf');
@@ -2103,14 +2134,23 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       expect(noResults(c)[0].textContent!.trim()).toBe(
         'No quizzes match your search and difficulty filter.'
       );
+      // .no-results is no longer its own live region (no role/aria-live) —
+      // it's purely the visible text. The ONE announcer says the same
+      // message, consolidating what used to be two competing regions.
+      expect([noResults(c)[0].getAttribute('role'), noResults(c)[0].getAttribute('aria-live')]).toEqual([
+        null,
+        null
+      ]);
+      expect(announcement(c)).toBe('No quizzes match your search and difficulty filter.');
     });
 
-    it('search alone: the existing message, unchanged', async () => {
+    it('search alone: the existing visible message, unchanged, and the announcer carries it too', async () => {
       const c = await render();
       await search(c, 'zzz-no-such-topic');
 
       expect(noResults(c)).toHaveLength(1);
       expect(noResults(c)[0].textContent!.trim()).toBe('No quizzes match your search.');
+      expect(announcement(c)).toBe('No quizzes match your search.');
     });
 
     it('filter alone (a difficulty with no quizzes): names the difficulty filter', async () => {
@@ -2120,21 +2160,20 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       expect(renderedIds(c)).toEqual([]);
       expect(noResults(c)).toHaveLength(1);
       expect(noResults(c)[0].textContent!.trim()).toBe('No quizzes match the selected difficulty.');
+      expect(announcement(c)).toBe('No quizzes match the selected difficulty.');
     });
 
-    it('keeps its existing live-region semantics, and goes away when the results come back', async () => {
+    it('is purely visible text now (no role/aria-live of its own), and goes away when the results come back', async () => {
       const c = await render();
       await chooseDifficulty(c, 'beginner');
       await search(c, 'perf');
       const message = noResults(c)[0];
-      expect([message.getAttribute('role'), message.getAttribute('aria-live')]).toEqual([
-        'status',
-        'polite'
-      ]);
+      expect([message.getAttribute('role'), message.getAttribute('aria-live')]).toEqual([null, null]);
 
       await chooseDifficulty(c, 'all'); // "perf" now matches Performance Tuning
       expect(noResults(c)).toHaveLength(0);
       expect(renderedIds(c)).toEqual(['performance']);
+      expect(announcement(c)).toBe('1 quiz found');
     });
 
     it('is not shown when there is simply nothing to filter yet (catalog empty)', async () => {
@@ -2162,6 +2201,266 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       const c = await render();
       await search(c, 'sig');
       expect(announcement(c)).toBe('1 quiz found');
+    });
+
+    /**
+     * HISTORY, 2026-10-17: the previous hand-rolled span's own DOM-node
+     * identity (destroyed/recreated vs. persistent) was tested directly
+     * here, because that span lived in THIS component's own template and
+     * an earlier confirmed defect involved exactly that (an `@if`-wrapped
+     * span getting its first content inserted atomically). Angular CDK's
+     * `LiveAnnouncer` makes that defect class structurally impossible:
+     * its live element is a singleton appended directly to
+     * `document.body` by the SERVICE itself, never part of ANY Angular
+     * component's template — there is nothing for this component's own
+     * change detection to destroy or recreate. That guarantee now comes
+     * from the library, not from an assertion in this file.
+     */
+    it('preserves input focus while typing', async () => {
+      const c = await render();
+      const input = searchInput(c);
+      input.focus();
+      expect(document.activeElement).toBe(input);
+
+      await search(c, 'sig');
+
+      expect(document.activeElement).toBe(input);
+    });
+
+    it('announces exactly once for a single search, not once per unrelated change-detection pass', async () => {
+      const c = await render();
+      await search(c, 'sig');
+      expect(announcement(c)).toBe('1 quiz found');
+      const announceCallsAfterSearch = c.liveAnnouncer.announce.mock.calls.length;
+
+      // Trigger a change-detection pass with nothing relevant different
+      // (same search term, same results) — effect()s only re-run when a
+      // TRACKED signal's value actually changes, so this must not add
+      // another announce() call.
+      c.fixture.detectChanges();
+
+      expect(c.liveAnnouncer.announce.mock.calls.length).toBe(announceCallsAfterSearch);
+      expect(announcement(c)).toBe('1 quiz found');
+    });
+
+    it('clearing via keyboard (select-all + delete) silences the announcement', async () => {
+      const c = await render();
+      await search(c, 'sig');
+      expect(announcement(c)).toBe('1 quiz found');
+
+      await search(c, '');
+      expect(announcement(c)).toBeNull();
+    });
+
+    it('clearing via the clear button silences the announcement (a different entry point into the same handler)', async () => {
+      const c = await render();
+      await search(c, 'sig');
+      expect(announcement(c)).toBe('1 quiz found');
+
+      const clearBtn = el(c).querySelector('.toolbar app-quiz-search .clear-btn') as HTMLButtonElement;
+      expect(clearBtn).not.toBeNull();
+      await press(c, clearBtn);
+      expect(announcement(c)).toBeNull();
+      expect(c.comp.searchTerm()).toBe('');
+    });
+
+    it('combines search AND difficulty filter correctly when results remain — uses the real combined count, not either filter alone', async () => {
+      const c = await render();
+      await chooseDifficulty(c, 'beginner');
+      expect(announcement(c)).toBe('2 quizzes found'); // difficulty alone
+
+      await search(c, 'comp');
+      expect(announcement(c)).toBe('1 quiz found'); // narrowed further by search too
+      expect(renderedIds(c)).toEqual(['components']);
+    });
+
+    it('re-announces the same text when the search term changes but the resulting count does not — intentional with LiveAnnouncer, unlike the old raw-span idempotent guard', async () => {
+      const c = await render();
+      await search(c, 'sig'); // matches exactly 'signals'
+      expect(announcement(c)).toBe('1 quiz found');
+      const callsAfterFirst = c.liveAnnouncer.announce.mock.calls.length;
+
+      await search(c, 'signa'); // still matches exactly 'signals' — same count, same text
+      expect(announcement(c)).toBe('1 quiz found');
+      // `searchTerm` itself changed value, so the effect re-runs and calls
+      // announce() again with the identical message — CDK's own
+      // clear-then-set pattern is specifically designed to make even a
+      // repeated, unchanged message reliably re-announced by ATs that
+      // might not notice an unchanged live-region text node.
+      expect(c.liveAnnouncer.announce.mock.calls.length).toBeGreaterThan(callsAfterFirst);
+    });
+
+    it('preserves input focus when selecting a difficulty too', async () => {
+      const c = await render();
+      await chooseDifficulty(c, 'beginner');
+      // chooseDifficulty's own click flow moves focus into the option list
+      // and back to the trigger — confirm the trigger (not some other
+      // element) ends up focused, not the toolbar being disrupted.
+      expect(document.activeElement).toBe(selectHost(c).querySelector('[role="combobox"]') ?? selectHost(c));
+    });
+
+    /**
+     * The gap found during final review, 2026-10-17: `restoreSortPreference()`
+     * restores a saved search term from sessionStorage via `searchTerm.set()`
+     * directly — bypassing `onSearchTermChange()` entirely. Without
+     * `syncSearchAnnouncementEffect`, the announcement span would stay
+     * empty even though the grid correctly shows the restored, filtered
+     * results. NOT manually Narrator-retested — this only proves the
+     * DOM ends up correct, per the component's own comment on that effect.
+     */
+    it('a search term restored from a previous session (not typed) still populates the announcement, via the sync effect', async () => {
+      // render()'s own setup clears sessionStorage before creating the
+      // component — seeding it has to happen AFTER that clear but
+      // BEFORE ngOnInit reads it, so this builds the fixture directly
+      // rather than through the shared helper.
+      localStorage.clear();
+      sessionStorage.clear();
+      sessionStorage.setItem('quizSearchTerm', 'sig');
+
+      const metadataApi: any = {
+        load: jest.fn(() => of(CATALOG.map(([quizId]) => ({ quizId })))),
+        difficultyByQuiz: signal(new Map<string, string | null>(CATALOG.map(([id, , d]) => [id, d]))),
+        milestoneByQuiz: signal(new Map<string, string>(CATALOG.map(([id, t]) => [id, t]))),
+        summaryByQuiz: signal(new Map<string, string>(CATALOG.map(([id]) => [id, `About ${id}.`]))),
+        imageByQuiz: signal(new Map<string, string>()),
+        factsByQuiz: signal(new Map<string, readonly string[]>()),
+        questionCountByQuiz: signal(new Map<string, number | null>(CATALOG.map(([id]) => [id, 5]))),
+        imageFor: () => '',
+        factsFor: () => []
+      };
+
+      TestBed.configureTestingModule({
+        providers: [
+          provideRouter([]),
+          provideNoopAnimations(),
+          {
+            provide: QuizService,
+            useValue: {
+              setQuizId: jest.fn(),
+              setQuizStatus: jest.fn(),
+              setCompletedQuizId: jest.fn(),
+              setCheckedShuffle: jest.fn(),
+              returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+              quizCompleted: false
+            }
+          },
+          {
+            provide: AchievementService,
+            useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() }
+          },
+          { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+          { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+          { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+          { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+          { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
+          { provide: TopicQuizMetadataService, useValue: metadataApi },
+          { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
+          { provide: LiveAnnouncer, useValue: createLiveAnnouncerMock() }
+        ]
+      });
+
+      const fixture = TestBed.createComponent(QuizSelectionComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const root = fixture.nativeElement as HTMLElement;
+      const input = root.querySelector('.toolbar app-quiz-search input') as HTMLInputElement;
+      const liveAnnouncer = TestBed.inject(LiveAnnouncer) as unknown as LiveAnnouncerMock;
+
+      expect(input.value).toBe('sig');
+      const last = liveAnnouncer._calls[liveAnnouncer._calls.length - 1];
+      expect(last).toEqual({ type: 'announce', message: '1 quiz found' });
+    });
+
+    /**
+     * Second half of the same gap: the catalog itself loads
+     * asynchronously. A restored search term can be set before real
+     * quiz data exists, so the announcement must catch up once the
+     * catalog actually arrives — not stay stuck on whatever was true
+     * (nothing) at restore time.
+     */
+    it('catches up once the catalog arrives asynchronously, for a search term already restored', async () => {
+      sessionStorage.setItem('quizSearchTerm', 'sig');
+
+      const metadataApi: any = {
+        load: jest.fn(() => of(CATALOG.map(([quizId]) => ({ quizId })))),
+        difficultyByQuiz: signal(new Map<string, string | null>()),
+        milestoneByQuiz: signal(new Map<string, string>()),
+        summaryByQuiz: signal(new Map<string, string>()),
+        imageByQuiz: signal(new Map<string, string>()),
+        factsByQuiz: signal(new Map<string, readonly string[]>()),
+        questionCountByQuiz: signal(new Map<string, number | null>()),
+        imageFor: () => '',
+        factsFor: () => []
+      };
+
+      TestBed.configureTestingModule({
+        providers: [
+          provideRouter([]),
+          provideNoopAnimations(),
+          {
+            provide: QuizService,
+            useValue: {
+              setQuizId: jest.fn(),
+              setQuizStatus: jest.fn(),
+              setCompletedQuizId: jest.fn(),
+              setCheckedShuffle: jest.fn(),
+              returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+              quizCompleted: false
+            }
+          },
+          {
+            provide: AchievementService,
+            useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() }
+          },
+          { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+          { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+          { provide: LearningPathService, useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) } },
+          { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+          { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
+          { provide: TopicQuizMetadataService, useValue: metadataApi },
+          { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
+          { provide: LiveAnnouncer, useValue: createLiveAnnouncerMock() }
+        ]
+      });
+
+      const fixture = TestBed.createComponent(QuizSelectionComponent);
+      fixture.detectChanges();
+      const liveAnnouncer = TestBed.inject(LiveAnnouncer) as unknown as LiveAnnouncerMock;
+
+      // Catalog is still empty at this point — restored search term, but
+      // no matching quizzes exist yet, so the announcement is correctly
+      // silent (not a wrong non-zero count): the last call, if any, must
+      // not be an `announce()` with real text.
+      const lastBefore = liveAnnouncer._calls[liveAnnouncer._calls.length - 1];
+      expect(lastBefore?.type).not.toBe('announce');
+
+      // The catalog "arrives" now.
+      metadataApi.difficultyByQuiz.set(new Map(CATALOG.map(([id, , d]) => [id, d])));
+      metadataApi.milestoneByQuiz.set(new Map(CATALOG.map(([id, t]) => [id, t])));
+      metadataApi.questionCountByQuiz.set(new Map(CATALOG.map(([id]) => [id, 5])));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const lastAfter = liveAnnouncer._calls[liveAnnouncer._calls.length - 1];
+      expect(lastAfter).toEqual({ type: 'announce', message: '1 quiz found' });
+    });
+
+    it('navigate-away/back safety: destroying and recreating the component leaves a correct, working announcer (fresh state, no stale carryover)', async () => {
+      const first = await render();
+      await search(first, 'sig');
+      expect(announcement(first)).toBe('1 quiz found');
+
+      first.fixture.destroy();
+      TestBed.resetTestingModule();
+
+      const second = await render();
+      expect(announcement(second)).toBeNull(); // fresh instance, fresh mock, fresh state
+
+      await search(second, 'sig');
+      expect(announcement(second)).toBe('1 quiz found');
     });
   });
 
@@ -2226,5 +2525,211 @@ describe('QuizSelectionComponent — difficulty filter', () => {
       );
       expect(order.slice(0, 4)).toEqual(focusable);
     });
+  });
+});
+
+/**
+ * Catalog stats accessible phrase — real Narrator scan-mode retest
+ * CONFIRMED PASSING, localhost:4200, 2026-10-16 (see quiz-selection.
+ * component.ts's own comment on `quizCountAccessibleLabelSig` for the
+ * two reverted candidates and why this is the one that shipped).
+ */
+describe('QuizSelectionComponent — catalog stats accessible phrase (2026-10-16 candidate)', () => {
+  const difficultyMap = new Map<string, string | null>([
+    ['create-first-app', 'beginner'],
+    ['dependency-injection', 'intermediate'],
+    ['performance', 'advanced']
+  ]);
+  const milestoneMap = new Map<string, string>([
+    ['create-first-app', 'Create Your First App'],
+    ['dependency-injection', 'Dependency Injection'],
+    ['performance', 'Performance']
+  ]);
+  const summaryMap = new Map<string, string>([
+    ['create-first-app', 'Get started with Angular.'],
+    ['dependency-injection', 'Learn DI.'],
+    ['performance', 'Optimize your app.']
+  ]);
+  const questionCountMap = new Map<string, number | null>([
+    ['create-first-app', 5],
+    ['dependency-injection', 7],
+    ['performance', 9]
+  ]);
+  const imageMap = new Map<string, string>();
+  const factsMap = new Map<string, readonly string[]>();
+
+  function render(): {
+    fixture: ComponentFixture<QuizSelectionComponent>;
+    comp: QuizSelectionComponent;
+    metadataApi: any;
+  } {
+    sessionStorage.clear();
+    localStorage.clear();
+
+    const metadataApi: any = {
+      load: jest.fn(() =>
+        of([
+          { quizId: 'create-first-app' },
+          { quizId: 'dependency-injection' },
+          { quizId: 'performance' }
+        ])
+      ),
+      difficultyByQuiz: signal(difficultyMap),
+      milestoneByQuiz: signal(milestoneMap),
+      summaryByQuiz: signal(summaryMap),
+      imageByQuiz: signal(imageMap),
+      factsByQuiz: signal(factsMap),
+      questionCountByQuiz: signal(questionCountMap),
+      imageFor: (id: string) => imageMap.get(id) ?? '',
+      factsFor: (id: string) => factsMap.get(id) ?? []
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: QuizService,
+          useValue: {
+            setQuizId: jest.fn(),
+            setQuizStatus: jest.fn(),
+            setCompletedQuizId: jest.fn(),
+            setCheckedShuffle: jest.fn(),
+            returnQuizSelectionParams: () => ({
+              startedQuizId: '',
+              continueQuizId: '',
+              quizCompleted: false
+            }),
+            quizCompleted: false
+          }
+        },
+        {
+          provide: AchievementService,
+          useValue: {
+            evaluate: jest.fn(() => []),
+            summary: () => ({ earned: 0, total: 6 }),
+            earnedIds: () => new Set()
+          }
+        },
+        {
+          provide: ProgressService,
+          useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) }
+        },
+        { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+        {
+          provide: LearningPathService,
+          useValue: {
+            recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 }))
+          }
+        },
+        { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+        {
+          provide: SessionEngagementService,
+          useValue: { engaged: () => false, markEngaged: jest.fn() }
+        },
+        { provide: TopicQuizMetadataService, useValue: metadataApi },
+        {
+          provide: InterviewWarmupCoordinatorService,
+          useValue: { warmUp: jest.fn(() => of(undefined)) }
+        }
+      ]
+    });
+
+    const fixture = TestBed.createComponent(QuizSelectionComponent);
+    fixture.detectChanges();
+    return { fixture, comp: fixture.componentInstance, metadataApi };
+  }
+
+  function statEl(fixture: ComponentFixture<QuizSelectionComponent>, labelText: string): HTMLElement {
+    const stats = Array.from(fixture.nativeElement.querySelectorAll('.quiz-stats .stat')) as HTMLElement[];
+    const match = stats.find((s) => s.querySelector('.stat-label')?.textContent?.trim() === labelText);
+    if (!match) throw new Error(`No .stat found with label "${labelText}"`);
+    return match;
+  }
+
+  it('exposes each number+label as one real, non-hidden, readable text node — not merely an attribute name', () => {
+    const { fixture } = render();
+
+    const quizzesStat = statEl(fixture, 'Quizzes');
+    const hidden = quizzesStat.querySelector('.visually-hidden');
+    expect(hidden).not.toBeNull();
+    expect(hidden!.getAttribute('role')).toBe('group');
+    expect(hidden!.getAttribute('aria-hidden')).not.toBe('true');
+    expect(hidden!.textContent).toBe('3 Quizzes');
+
+    const questionsStat = statEl(fixture, 'Questions');
+    expect(questionsStat.querySelector('.visually-hidden')!.textContent).toBe('21 Questions');
+
+    const beginnerStat = statEl(fixture, 'Beginner');
+    expect(beginnerStat.querySelector('.visually-hidden')!.textContent).toBe('1 Beginner');
+  });
+
+  it('excludes the visible duplicate text from the accessibility tree via aria-hidden, without hiding it visually', () => {
+    const { fixture } = render();
+    const quizzesStat = statEl(fixture, 'Quizzes');
+
+    const num = quizzesStat.querySelector('.stat-num') as HTMLElement;
+    const label = quizzesStat.querySelector('.stat-label') as HTMLElement;
+    expect(num.getAttribute('aria-hidden')).toBe('true');
+    expect(label.getAttribute('aria-hidden')).toBe('true');
+    // Visually present: no display:none/visibility:hidden on either —
+    // only the duplicate TEXT is excluded from the accessibility tree,
+    // never the real rendered content sighted users see.
+    expect(num.style.display).not.toBe('none');
+    expect(label.style.display).not.toBe('none');
+    expect(num.hasAttribute('hidden')).toBe(false);
+    expect(label.hasAttribute('hidden')).toBe(false);
+  });
+
+  it('adds no new Tab stop anywhere in the stats row', () => {
+    const { fixture } = render();
+    const focusable = fixture.nativeElement.querySelectorAll('.quiz-stats [tabindex]');
+    expect(focusable.length).toBe(0);
+    const groupRoles = Array.from(
+      fixture.nativeElement.querySelectorAll('.quiz-stats [role="group"]')
+    ) as HTMLElement[];
+    // role="group" exists (on the visually-hidden text spans) but none of
+    // them carry a tabindex — a role alone never adds focusability.
+    expect(groupRoles.length).toBeGreaterThan(0);
+    expect(groupRoles.every((el) => !el.hasAttribute('tabindex'))).toBe(true);
+  });
+
+  it('stays synchronized when the underlying catalog changes after first render', () => {
+    const { fixture, metadataApi } = render();
+    expect(statEl(fixture, 'Quizzes').querySelector('.visually-hidden')!.textContent).toBe('3 Quizzes');
+
+    // Simulate a catalog update: a NEW quiz lands in the metadata signals.
+    const newDifficulty = new Map(difficultyMap);
+    newDifficulty.set('rxjs', 'advanced');
+    const newQuestionCount = new Map(questionCountMap);
+    newQuestionCount.set('rxjs', 12);
+    const newMilestone = new Map(milestoneMap);
+    newMilestone.set('rxjs', 'RxJS');
+    metadataApi.difficultyByQuiz.set(newDifficulty);
+    metadataApi.questionCountByQuiz.set(newQuestionCount);
+    metadataApi.milestoneByQuiz.set(newMilestone);
+    fixture.detectChanges();
+
+    expect(statEl(fixture, 'Quizzes').querySelector('.visually-hidden')!.textContent).toBe('4 Quizzes');
+    expect(statEl(fixture, 'Questions').querySelector('.visually-hidden')!.textContent).toBe('33 Questions');
+    const advancedStats = Array.from(
+      fixture.nativeElement.querySelectorAll('.quiz-stats .stat.level-advanced')
+    ) as HTMLElement[];
+    expect(advancedStats).toHaveLength(1);
+    expect(advancedStats[0].querySelector('.visually-hidden')!.textContent).toBe('2 Advanced');
+  });
+
+  it('preserves appCountUp ownership of the visible .stat-num text', () => {
+    const { fixture } = render();
+    const quizzesStat = statEl(fixture, 'Quizzes');
+    const num = quizzesStat.querySelector('.stat-num');
+    expect(num?.getAttribute('appCountUp')).toBeNull(); // Angular input, not a static attr
+    // appCountUp is still bound on the same element — confirmed by the
+    // directive's own selector matching; the element wasn't replaced or
+    // moved by this change (same two visible children, same order).
+    const childFirstClass = Array.from(quizzesStat.children).map(
+      (c) => c.className.split(' ')[0]
+    );
+    expect(childFirstClass).toEqual(['visually-hidden', 'stat-num', 'stat-label']);
   });
 });

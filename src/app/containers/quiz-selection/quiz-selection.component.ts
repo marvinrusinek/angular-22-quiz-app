@@ -3,9 +3,11 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
   inject,
   OnInit,
   signal,
+  viewChild,
   ViewEncapsulation
 } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
@@ -237,6 +239,101 @@ export class QuizSelectionComponent implements OnInit {
     writeSessionString(SK_QUIZ_SEARCH_TERM, this.searchTerm());
   });
 
+  /**
+   * CONFIRMED (real Narrator retest, localhost:4200, 2026-10-17):
+   * typing a search term announces "N quiz found"/"N quizzes found";
+   * clearing the search (keyboard or the clear button) restores silence
+   * correctly; selecting a difficulty announces the new count. This
+   * replaced an Angular-interpolation-bound version of this exact span
+   * that was never announced across many retests — a diagnostic that
+   * wrote to the SAME span directly, synchronously, from inside a
+   * native DOM event listener, was the one that got announced. That
+   * result is manually verified by ear; it is NOT a proven explanation
+   * of Narrator's own internal behavior, only an observed difference
+   * between what worked and what didn't.
+   *
+   * That diagnostic itself had two real problems, both fixed in this
+   * production version:
+   *   1. It depended on DOM listener REGISTRATION ORDER (its own
+   *      `afterNextRender`-attached listener firing after
+   *      QuizSearchComponent's own, so `searchTerm` was already updated
+   *      by the time it read `searchResultAnnouncementSig()`) — fragile,
+   *      not a guaranteed contract.
+   *   2. It only listened to the search `<input>`'s own native event, so
+   *      changing the DIFFICULTY FILTER never updated the announcement —
+   *      confirmed as a real regression against the existing Jest suite.
+   *
+   * FIX: no raw DOM listener at all. The two state-changing handlers
+   * that already own `searchTerm`/`difficultyFilter` write to the span
+   * directly, in the same synchronous call as the signal update —
+   * `searchResultAnnouncementSig()` recomputes fresh at that read
+   * (signals are pull-based: `.set()` only marks it stale), so there is
+   * no event-order dependency. No `ElementRef` host query, no
+   * `AbortController`/`DestroyRef` cleanup needed — `viewChild()`
+   * returns `undefined` gracefully (not an NG0201 throw) when no view
+   * exists, safe under the `TestBed.inject()`-without-a-view Jest
+   * pattern that broke the earlier diagnostic.
+   *
+   * `{{ searchResultAnnouncementSig() }}` interpolation stays removed
+   * from the template permanently. See `syncSearchAnnouncementEffect`
+   * below for the paths these two handlers don't cover (restored state,
+   * async catalog load) — NOT yet manually retested.
+   */
+  private readonly searchStatusSpan = viewChild<ElementRef<HTMLElement>>('searchStatusSpan');
+
+  // Idempotent: only touches the DOM when the value actually changed.
+  // Assigning `.textContent` unconditionally always replaces the text
+  // node, even when the new string equals the old one — this guard is
+  // what makes it safe to call from BOTH the direct handlers below AND
+  // the reactive effect further down without ever double-writing the
+  // same announcement twice.
+  private writeSearchAnnouncement(): void {
+    const span = this.searchStatusSpan()?.nativeElement;
+    if (!span) return;
+    const next = this.searchResultAnnouncementSig();
+    if (span.textContent !== next) span.textContent = next;
+  }
+
+  // Direct, synchronous writes for the two interactive paths — manually
+  // verified with real Narrator: typing (announces "N quiz found"),
+  // clearing via keyboard, clearing via the search box's clear button
+  // (routes through the same `searchTermChange` emission), and
+  // selecting a difficulty (announces the new count). This is the exact
+  // mechanism confirmed working; preserved unchanged.
+  onSearchTermChange(value: string): void {
+    this.searchTerm.set(value);
+    this.writeSearchAnnouncement();
+  }
+
+  onDifficultyFilterChange(value: DifficultyFilter): void {
+    this.difficultyFilter.set(value);
+    this.writeSearchAnnouncement();
+  }
+
+  /**
+   * Covers paths NOT verified above and NOT reachable through either
+   * handler: `restoreSortPreference()` restores a saved search term
+   * from sessionStorage via `searchTerm.set()` directly (confirmed by
+   * reading that method — it bypasses `onSearchTermChange` entirely),
+   * and the catalog itself loads asynchronously, so a restored search
+   * term can be set before real quiz data exists, leaving
+   * `displayedQuizzes()` — and this announcement — stale once the
+   * catalog actually arrives. Neither path fires from a user gesture,
+   * so there's no native event to write from synchronously the way the
+   * two handlers do; this effect is the reactive fallback for those
+   * background changes only. The idempotent guard above means this
+   * never produces an extra DOM write during normal typing/filtering —
+   * by the time this effect's own turn comes, the handler has already
+   * written the same value, so this is a no-op on every interactive
+   * path. NOT manually Narrator-retested (restoring a search term /
+   * catalog timing isn't something a live retest naturally exercises);
+   * flagged for a focused retest before being treated as confirmed.
+   */
+  private readonly syncSearchAnnouncementEffect = effect(() => {
+    this.searchResultAnnouncementSig();
+    this.writeSearchAnnouncement();
+  });
+
   // S6d: re-run achievement evaluation whenever the metadata-backed catalog
   // (quizId + difficulty) changes — not just once on init. The catalog is
   // empty until metadataApi.load()'s response lands, so a single synchronous
@@ -278,6 +375,26 @@ export class QuizSelectionComponent implements OnInit {
       return $localize`No quizzes match the selected difficulty.`;
     }
     return $localize`No quizzes match your search.`;
+  });
+
+  /**
+   * The single source of truth for the search-results announcement
+   * text — '' at rest, "N quiz(zes) found" while actively searching
+   * and/or difficulty-filtering with results present. Read by
+   * `writeSearchAnnouncement()` (below `searchStatusSpan`), never bound
+   * via template interpolation (confirmed, real Narrator retest: an
+   * interpolation-bound version of this exact span was never announced;
+   * a direct imperative write to the same span was — see
+   * `onSearchTermChange`'s own comment for that history and what's
+   * still unverified).
+   */
+  readonly searchResultAnnouncementSig = computed(() => {
+    const announceable =
+      (this.searchTerm().trim().length > 0 || this.isDifficultyFiltered()) &&
+      this.displayedQuizzes().length > 0;
+    if (!announceable) return '';
+    const n = this.displayedQuizzes().length;
+    return n === 1 ? $localize`${n} quiz found` : $localize`${n} quizzes found`;
   });
 
   // Summary stats for the catalog row: total quizzes, total questions, and a

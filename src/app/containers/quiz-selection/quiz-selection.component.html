@@ -176,13 +176,13 @@
   <div class="toolbar">
     <app-quiz-search
       [searchTerm]="searchTerm()"
-      (searchTermChange)="searchTerm.set($event)"
+      (searchTermChange)="onSearchTermChange($event)"
     ></app-quiz-search>
 
     <div class="toolbar-controls">
       <app-quiz-difficulty-filter
         [difficulty]="difficultyFilter()"
-        (difficultyChange)="difficultyFilter.set($event)"
+        (difficultyChange)="onDifficultyFilterChange($event)"
       ></app-quiz-difficulty-filter>
 
       <app-quiz-sort
@@ -207,42 +207,26 @@
     </span>
   }
 
-  <!-- STRUCTURAL FIX APPLIED, 2026-10-16 — but NOT CONFIRMED to resolve
-       the actual Narrator silence; see the status report for this work.
-       This span used to be wrapped in a top-level `@if`, so Angular
-       mounted/unmounted the WHOLE element (not just its text) as the
-       condition toggled — a well-documented ARIA live-region gotcha
-       (a live region must already exist in the DOM before its content
-       changes for most ATs to pick up the change). That precondition IS
-       now fixed: the span is ALWAYS mounted (present from first page
-       load, before any search/filter), and only its TEXT toggles via a
-       NESTED `@if`. Confirmed via Jest (same DOM node identity across
-       the empty→non-empty transition) and live on localhost:4200 (text
-       updates correctly, input focus preserved, no redundant re-render).
-
-       DESPITE THIS FIX, a real Narrator retest (typing "RxJS" on a
-       fresh load, and again after letting the page fully settle first)
-       still heard NO announcement. A separate, zero-app-code minimal
-       page using the identical CSS/role/aria-live/event-path DID
-       announce correctly, isolating the cause to something about the
-       real app specifically, not this live-region technique in general.
-       Root cause NOT yet found — do not claim this span's own fix
-       resolves the silence. Count comes from `displayedQuizzes()`, the
-       SAME signal that drives the actual rendered tile grid, so it is
-       never out of sync with what's visible; not shown for zero results
-       (the "no quizzes match" message above already covers that).
-       Visually hidden — the tile grid itself already shows the count to
-       sighted users. -->
+  <!-- CONFIRMED (real Narrator retest, localhost:4200, 2026-10-17):
+       typing announces "N quiz(zes) found"; clearing (keyboard or the
+       clear button) restores silence; selecting a difficulty announces
+       the new count. A plain Angular interpolation binding here was
+       never announced across many earlier retests and markup variants;
+       a direct imperative write to this SAME span, from inside a native
+       DOM event listener, was — see `onSearchTermChange`'s own comment
+       in the .ts file for that history, the production implementation,
+       and what's still unverified (restored/async-catalog paths). SAME
+       position, SAME role/aria-live, SAME class, SAME creation timing
+       as always — this is the original span, never recreated. No
+       Angular interpolation writes to it anymore; `onSearchTermChange`/
+       `onDifficultyFilterChange`/`syncSearchAnnouncementEffect` are the
+       only writers, all funneling through one idempotent method. -->
   <span
+    #searchStatusSpan
     class="visually-hidden"
     role="status"
     aria-live="polite"
-    i18n
-  >
-    @if ((searchTerm().trim().length > 0 || isDifficultyFiltered()) && displayedQuizzes().length > 0) {
-      {{ displayedQuizzes().length }} {{ displayedQuizzes().length === 1 ? 'quiz found' : 'quizzes found' }}
-    }
-  </span>
+  ></span>
 
   <!-- Quiz Tiles Grid -->
   <div class="quiz-grid">

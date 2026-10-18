@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   HostListener,
   inject,
@@ -84,6 +85,7 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
   private readonly host = inject(ElementRef<HTMLElement>);
 
   private readonly shortcutsBtn = viewChild<ElementRef<HTMLButtonElement>>('shortcutsBtn');
+  private readonly questionHeading = viewChild<ElementRef<HTMLElement>>('questionHeading');
 
   // ── session state ─────────────────────────────────────────────────
   readonly questions = this.session.questions;
@@ -91,6 +93,35 @@ export class InterviewSessionComponent implements OnInit, OnDestroy {
   readonly total = this.session.questionCount;
   readonly currentQuestion = this.session.currentQuestion;
   readonly status = this.session.status;
+
+  /**
+   * CONFIRMED (2026-10-17, traced via real focus/mutation events, not
+   * assumed): arriving here from a route whose own focused control
+   * triggers the navigation (e.g. the Builder's "View Certificate" link)
+   * leaves `document.activeElement` on `document.body` — no `focusin`
+   * ever fires on this page, because nothing here claimed focus. Narrator
+   * then finishes whatever it had queued for the element that WAS
+   * focused on the previous screen (its own focus-announcement for that
+   * link), which plays out sounding like it "belongs" to this page,
+   * since nothing interrupted it. `aria-live="polite"` on the heading
+   * below does NOT fix this — a live-region text change only queues
+   * politely behind whatever Narrator is already speaking; it never
+   * interrupts it. An explicit DOM focus event does. This moves focus,
+   * ONCE, to the question heading (`tabindex="-1"`, not a real Tab stop)
+   * the first time a real question renders — giving Narrator a genuine
+   * new focus target to interrupt stale queued speech with. Only once:
+   * normal in-session Next/Previous navigation keeps focus on the
+   * paginator button that was clicked (never lost to `body`), so it
+   * must not be re-focused on every question change.
+   */
+  private hasFocusedFirstQuestion = false;
+  private readonly focusFirstQuestionEffect = effect(() => {
+    if (this.hasFocusedFirstQuestion || !this.currentQuestion()) return;
+    const heading = this.questionHeading()?.nativeElement;
+    if (!heading) return;
+    this.hasFocusedFirstQuestion = true;
+    heading.focus();
+  });
   /** Which message the retry card shows: service unreachable vs. status unconfirmed. */
   readonly errorReason = this.session.errorReason;
   readonly retrying = signal(false);

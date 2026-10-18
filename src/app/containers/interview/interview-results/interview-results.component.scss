@@ -168,6 +168,54 @@
   }
 }
 
+// HISTORY (2026-10-18): the usual 1x1px clip-based hiding caused
+// Narrator's highlight to land away from the card (its own CSS "static
+// position" fell wherever it would sit in normal flow). Moving it
+// off-screen (`left: -10000px`) fixed that but then made the highlight
+// ABSENT, confirmed by manual report — Narrator's reading target is this
+// text-bearing element itself, not necessarily its `role="group"`
+// ancestor, so moving IT off-screen moved the highlight off-screen too.
+//
+// FOURTH CONFIRMED DEFECT (manual report, same day): the `inset:0`
+// overlay's own CSS box matched the card, but Chrome resolves `inset:0`
+// against the PARENT's padding-box edge — which bypasses the parent's
+// own padding entirely, so the overlay (and anything centered inside it)
+// never lined up with where the padding pushes the real label to start.
+// Flex-centering within that full box landed the highlight mostly over
+// the VALUE, not the label.
+//
+// FIFTH, MORE RELIABLE FIX (measured via CDP before shipping, not
+// assumed): this span is already a normal-flow sibling placed
+// immediately BEFORE the visible label in the markup. `height: 0;
+// overflow: visible;` makes its own box take ZERO vertical space (no
+// layout impact, confirmed — this is what makes it safe to leave in
+// normal flow at all) while its TEXT still renders at its natural flow
+// position, which — being a normal-flow sibling right before the label
+// — is now exactly where the label itself starts, automatically
+// respecting whatever padding/margin each card happens to have, with no
+// hardcoded offsets. `opacity: 0` (not `display:none`,
+// `visibility:hidden`, or `aria-hidden`) keeps it invisible to sighted
+// users and fully exposed to assistive technology; `pointer-events: none`
+// so it can never intercept a click.
+// SIXTH DEFECT (manual report, 2026-10-18): "Time used" specifically could
+// still misalign, because its value-dependent length (e.g. "2 minutes 43
+// seconds" vs "30 seconds") wraps to a second line inside the narrow
+// stat-grid card while the single-line visible label doesn't -- confirmed
+// via measured line-box rects in a faithful reproduction of this exact
+// CSS. `white-space: nowrap` forces this hidden phrase to stay one line
+// regardless of value length, so it can't drift from the label purely
+// because a particular number happens to render long. `overflow: visible`
+// above already lets a wide, invisible, non-interactive line extend past
+// the box with no visual or layout effect.
+.visually-hidden-overlay {
+  display: block;
+  height: 0;
+  overflow: visible;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 .score-hero {
   text-align: center;
   margin-bottom: 18px;

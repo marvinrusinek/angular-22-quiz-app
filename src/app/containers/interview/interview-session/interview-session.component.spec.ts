@@ -223,6 +223,38 @@ describe('rendering', () => {
     expect(component.answeredCount()).toBe(1);
     expect([...component.answeredIndices()]).toEqual([1]);
   });
+
+  /**
+   * CONFIRMED, 2026-10-17: arriving here from a route whose own focused
+   * control triggers the navigation (e.g. the Builder's "View Certificate"
+   * link) leaves focus on `document.body` with nothing claiming it —
+   * traced via real focus events, not assumed. Narrator then finishes
+   * whatever it had queued for the PREVIOUS screen's focused element,
+   * since nothing here issues a real focus event to interrupt it
+   * (`aria-live="polite"` only queues politely; it never interrupts).
+   * This asserts the fix: the question heading receives DOM focus once a
+   * real question renders, giving Narrator a genuine new target.
+   */
+  it('moves focus to the question heading once the first question renders', () => {
+    render();
+    const heading = fixture.nativeElement.querySelector('.interview-question');
+    expect(document.activeElement).toBe(heading);
+    expect(heading.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('does not re-steal focus on subsequent question navigation', () => {
+    render();
+    const otherEl = document.createElement('button');
+    document.body.appendChild(otherEl);
+    otherEl.focus();
+    expect(document.activeElement).toBe(otherEl);
+
+    component.onNavigate(1);
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(otherEl);
+    otherEl.remove();
+  });
 });
 
 describe('code snippet', () => {

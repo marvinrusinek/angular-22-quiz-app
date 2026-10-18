@@ -1,7 +1,12 @@
 @if (result(); as r) {
   <div class="interview-results">
     <header class="interview-results__bar">
-      <h1 class="interview-results__title" i18n>Assessment Complete</h1>
+      <h1
+        #resultsHeading
+        class="interview-results__title"
+        tabindex="-1"
+        i18n
+      >Assessment Complete</h1>
       <codelab-theme-toggle />
     </header>
 
@@ -17,26 +22,85 @@
     }
 
     <div class="interview-results__card">
-      <div class="score-hero">
-        <div class="score-pct">{{ r.percentage }}%</div>
-        <div class="score-sub">{{ r.correct }} / {{ r.total }} <span i18n>correct</span></div>
+      <!-- CONFIRMED (manual Narrator Scan Mode report, 2026-10-18): each
+           piece below was read as a separate line (e.g. "Answered" then,
+           separately, "10"). Fix: one combined phrase, as REAL text,
+           exposed through the EXISTING, already-correctly-sized wrapper
+           (see scoreAccessibleSummary's own comment in the .ts file for
+           the full history). The visible pieces stay exactly as
+           rendered (unchanged layout), now `aria-hidden="true"` so they
+           aren't ALSO read separately — one source, no duplicate speech.
+           Static text only: no tabindex, no aria-live.
+
+           score-hero SPECIFICALLY (see scoreAccessibleSummary's own
+           comment): FIVE rounds of hidden-text-geometry fixes confirmed
+           the highlighted object is always the leaf that holds the
+           accessible NAME, and a hidden text node's own element box never
+           reliably spans two visually distinct lines without yet another
+           value-dependent hack. `role="img"` sidesteps that entirely —
+           its name comes from `aria-label`, not a text descendant, so
+           there is no hidden leaf at all; the highlighted object is this
+           DIV itself, whose own box already spans both visible lines
+           (measured via CDP: y:132.98, height:79, covering score-pct AND
+           score-sub). UNVERIFIED: whether Narrator speaks this as one
+           phrase without an added "graphic"/"image" prefix — needs a
+           manual retest. Every OTHER stat below keeps the proven
+           hidden-span technique; this is scoped to score-hero only. -->
+      <div class="score-hero" role="img" [attr.aria-label]="scoreAccessibleSummary()">
+        <div class="score-pct" aria-hidden="true">{{ r.percentage }}%</div>
+        <div class="score-sub" aria-hidden="true">
+          {{ r.correct }} / {{ r.total }} <span i18n>correct</span>
+        </div>
       </div>
 
       <dl class="stat-grid">
-        <div><dt i18n>Answered</dt><dd>{{ r.answered }}</dd></div>
-        <div><dt i18n>Unanswered</dt><dd>{{ r.unanswered }}</dd></div>
-        <div><dt i18n>Correct</dt><dd>{{ r.correct }}</dd></div>
-        <div><dt i18n>Incorrect</dt><dd>{{ r.incorrect }}</dd></div>
-        <div><dt i18n>Time used</dt><dd>{{ timeUsed() }}</dd></div>
+        <div role="group">
+          <span class="visually-hidden-overlay">{{ answeredAccessibleLabel() }}</span>
+          <dt aria-hidden="true" i18n>Answered</dt><dd aria-hidden="true">{{ r.answered }}</dd>
+        </div>
+        <div role="group">
+          <span class="visually-hidden-overlay">{{ unansweredAccessibleLabel() }}</span>
+          <dt aria-hidden="true" i18n>Unanswered</dt><dd aria-hidden="true">{{ r.unanswered }}</dd>
+        </div>
+        <div role="group">
+          <span class="visually-hidden-overlay">{{ correctAccessibleLabel() }}</span>
+          <dt aria-hidden="true" i18n>Correct</dt><dd aria-hidden="true">{{ r.correct }}</dd>
+        </div>
+        <div role="group">
+          <span class="visually-hidden-overlay">{{ incorrectAccessibleLabel() }}</span>
+          <dt aria-hidden="true" i18n>Incorrect</dt><dd aria-hidden="true">{{ r.incorrect }}</dd>
+        </div>
+        <div role="group">
+          <span class="visually-hidden-overlay">{{ timeUsedAccessibleLabel() }}</span>
+          <dt aria-hidden="true" i18n>Time used</dt><dd aria-hidden="true">{{ timeUsed() }}</dd>
+        </div>
         @if (difficultyLabel(); as difficulty) {
-          <div><dt i18n>Difficulty</dt><dd>{{ difficulty | titlecase }}</dd></div>
+          <div role="group">
+            <span class="visually-hidden-overlay">{{ difficultyAccessibleLabel() }}</span>
+            <dt aria-hidden="true" i18n>Difficulty</dt><dd aria-hidden="true">{{ difficulty | titlecase }}</dd>
+          </div>
         }
       </dl>
 
       <!-- Assessment Integrity Mode: neutral/informational only — NEVER affects
-           the score. Interview Results only (not shown in Topic Quiz Results). -->
-      <p class="interview-results__focus" role="status">
-        <ng-container i18n>Focus changes:</ng-container> {{ focusChanges() }}
+           the score. Interview Results only (not shown in Topic Quiz Results).
+
+           CONFIRMED (manual Narrator report, 2026-10-18): "Focus changes:"
+           and its value were read as two separate stops. Verified first
+           that this paragraph is not an unintended Tab stop (no tabindex,
+           confirmed via a full Tab-cycle trace in the real page) — the
+           split was a reading artifact. Fixed the same confirmed way as
+           the stat-grid above: role="group" (replacing role="status",
+           which never did anything — nothing here live-updates after the
+           frozen result loads) on THIS existing paragraph, which already
+           has the correct, real visible bounding box; the always-visible
+           text is aria-hidden so it isn't ALSO read, and one real-text
+           span supplies the single combined phrase. -->
+      <p class="interview-results__focus" role="group">
+        <span class="visually-hidden-overlay">{{ focusChangesAccessibleLabel() }}</span>
+        <span aria-hidden="true">
+          <ng-container i18n>Focus changes:</ng-container> {{ focusChanges() }}
+        </span>
       </p>
 
       <app-topic-performance-list [analytics]="analytics()" />

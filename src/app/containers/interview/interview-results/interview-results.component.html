@@ -118,6 +118,25 @@
       <a routerLink="/interview/history" fragment="topic-trends" i18n>View Topic Trends</a>
     </p>
 
+    <!-- KNOWN ISSUE, UNRESOLVED (2026-10-18, pre-existing — not introduced
+         by this change): manual Narrator testing found the Interview
+         Readiness heading right after this link reads as one clean
+         phrase via Shift+H, but fragments ("Interview" / repeated
+         "heading level 2" / "Readiness") via sequential Down Arrow
+         reading. Isolated via CDP + a controlled diagnostic: this
+         heading's immediate preceding accessibility-tree object, with
+         nothing else between them, is the link above — confirmed by a
+         temporary swap (link replaced with plain non-interactive text)
+         that made the heading read cleanly. Two production candidates
+         were tried and FAILED: (1) exposing the existing `.ir-rule`
+         divider right after this paragraph as a real role="separator"
+         — Narrator never announced a separator at all, and the heading
+         split again anyway; (2) a `<figure>` wrapper around the
+         Readiness summary mirroring Performance Trends' own structure —
+         no effect. No working fix preserving both real navigation and
+         clean sequential reading has been found yet. Left as a known,
+         documented limitation rather than disabling this link or
+         shipping an unconfirmed guess. -->
     <hr class="ir-rule" aria-hidden="true" />
 
     <!-- Interview Readiness — coaching estimate. After Performance Trends, before

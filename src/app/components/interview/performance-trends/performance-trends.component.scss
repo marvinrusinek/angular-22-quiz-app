@@ -53,6 +53,30 @@
 }
 
 // Latest / Best / Average / Change — wraps cleanly on narrow screens.
+// Combined "Label, value" phrase per stat row (see .perf-metrics' own
+// comment in the .html file) — the Interview Results stat-grid's own
+// confirmed technique, defined locally (not relied on via global style
+// leakage from another component) since this component can render
+// standalone. A normal-flow sibling placed FIRST, immediately before the
+// visible label, so its own box's top-left corner coincides with where
+// the label starts: `height: 0; overflow: visible;` keeps its reported
+// box zero-size (no layout impact — `> div` below is plain block flow,
+// not a grid/flex container, so this placement is a direct block-level
+// stack, the same shape already proven correct). `opacity: 0` (not
+// `display:none`/`visibility:hidden`/`aria-hidden`) keeps it invisible to
+// sighted users while staying exposed to assistive tech; `white-space:
+// nowrap` keeps it one line regardless of value length (confirmed
+// necessary for Results' own "Time used" entry, same class of bug);
+// `pointer-events: none` so it can never intercept a click.
+.visually-hidden-overlay {
+  display: block;
+  height: 0;
+  overflow: visible;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 .perf-metrics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

@@ -72,13 +72,36 @@ export class PerformanceTrendsComponent {
     return `${sign}${c} pts`;
   });
 
-  readonly changeAria = computed(() => {
+  /**
+   * CONFIRMED (manual Narrator Scan Mode report, 2026-10-18): each metric's
+   * label and value were separate stops — "Latest" (dt) then "100%" (dd);
+   * for Change specifically, "Change" (dt) then a full standalone sentence
+   * (previously the dd's own `aria-label`, which overrode its "+6 pts"
+   * text) as a second stop. Fix, reusing the exact technique already
+   * confirmed working for Interview Results' stat-grid entries: one
+   * combined "Label, value" phrase per row (see the .html file's own
+   * comment), with the real dt/dd marked aria-hidden so the label isn't
+   * spoken twice. Deliberately concise — "Change, up 6 points" — matching
+   * the "Label, value" shape of every other grouped stat on this page and
+   * in Results, not a sentence; the dd's standalone `aria-label` this
+   * replaced is removed, not left dead, since nothing reads it in
+   * isolation any more.
+   */
+  readonly latestAccessibleLabel = computed(() =>
+    $localize`Latest, ${this.trends()?.latest ?? 0} percent`
+  );
+  readonly bestAccessibleLabel = computed(() =>
+    $localize`Best, ${this.trends()?.best ?? 0} percent`
+  );
+  readonly averageAccessibleLabel = computed(() =>
+    $localize`Average, ${this.trends()?.average ?? 0} percent`
+  );
+  readonly changeAccessibleLabel = computed(() => {
     const c = this.trends()?.change;
-    if (c === null || c === undefined)
-      return $localize`No previous interview to compare against yet`;
-    if (c > 0) return $localize`Up ${c} percentage points since the previous interview`;
-    if (c < 0) return $localize`Down ${Math.abs(c)} percentage points since the previous interview`;
-    return $localize`No change since the previous interview`;
+    if (c === null || c === undefined) return $localize`Change, not available`;
+    if (c > 0) return $localize`Change, up ${c} points`;
+    if (c < 0) return $localize`Change, down ${Math.abs(c)} points`;
+    return $localize`Change, 0 points`;
   });
 
   // Pure SVG geometry for the score line. Null until there are ≥ 2 points.
@@ -152,5 +175,29 @@ export class PerformanceTrendsComponent {
   /** SVG point tooltip (native <title>). */
   pointTitle(p: InterviewTrendPoint): string {
     return this.srLine(p);
+  }
+
+  /**
+   * CONFIRMED (manual Narrator report, 2026-10-18): the chart's accessible
+   * data alternative was a `<ul>`/`<li>` list. Narrator announced "bullet"
+   * for each attempt and, per the report, read only the date — not the
+   * score/percentage that followed. The "Recommended focus" list
+   * elsewhere on this page (single short clause per item, no internal
+   * colon/comma) was never reported to have this problem, so the issue
+   * is specific to THIS list's multi-clause content (date, then a colon,
+   * then a fraction, then a comma, then a percentage) combined with
+   * list-item reading — not list markup in general. Fix: drop the list
+   * entirely (see the .html file's own comment) for a plain, one-clause
+   * sentence per attempt — no `role="listitem"`, so no "bullet" prefix,
+   * and nothing for a mid-sentence pause to stop at. Deliberately
+   * separate from `srLine()` above, which still serves the SVG point
+   * tooltips (native `<title>`, unaffected by this list-specific issue,
+   * left with its richer "X out of Y" phrasing untouched).
+   */
+  srAttemptPhrase(p: InterviewTrendPoint): string {
+    if (p.completionReason === 'time-expired') {
+      return $localize`${this.formatDate(p.completedAt)}, score ${p.percentage} percent, time expired.`;
+    }
+    return $localize`${this.formatDate(p.completedAt)}, score ${p.percentage} percent.`;
   }
 }

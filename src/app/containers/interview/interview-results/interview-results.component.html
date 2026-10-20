@@ -112,31 +112,6 @@
 
     <app-performance-trends class="interview-results__trends" [trends]="trends()" />
 
-    <!-- Small link to the per-topic breakdown on the History page (not the full
-         Topic Trends dashboard, which would crowd this page). -->
-    <p class="interview-results__topic-trends-link">
-      <a routerLink="/interview/history" fragment="topic-trends" i18n>View Topic Trends</a>
-    </p>
-
-    <!-- KNOWN ISSUE, UNRESOLVED (2026-10-18, pre-existing — not introduced
-         by this change): manual Narrator testing found the Interview
-         Readiness heading right after this link reads as one clean
-         phrase via Shift+H, but fragments ("Interview" / repeated
-         "heading level 2" / "Readiness") via sequential Down Arrow
-         reading. Isolated via CDP + a controlled diagnostic: this
-         heading's immediate preceding accessibility-tree object, with
-         nothing else between them, is the link above — confirmed by a
-         temporary swap (link replaced with plain non-interactive text)
-         that made the heading read cleanly. Two production candidates
-         were tried and FAILED: (1) exposing the existing `.ir-rule`
-         divider right after this paragraph as a real role="separator"
-         — Narrator never announced a separator at all, and the heading
-         split again anyway; (2) a `<figure>` wrapper around the
-         Readiness summary mirroring Performance Trends' own structure —
-         no effect. No working fix preserving both real navigation and
-         clean sequential reading has been found yet. Left as a known,
-         documented limitation rather than disabling this link or
-         shipping an unconfirmed guess. -->
     <hr class="ir-rule" aria-hidden="true" />
 
     <!-- Interview Readiness — coaching estimate. After Performance Trends, before
@@ -144,6 +119,23 @@
     <app-interview-readiness class="interview-results__readiness" [readiness]="readiness()" />
 
     <hr class="ir-rule" aria-hidden="true" />
+
+    <!-- CONFIRMED (manual Narrator retest, 2026-10-19). "View Topic Trends"
+         used to sit here as a bare paragraph directly before the Interview
+         Readiness heading above, with nothing else between them — isolated
+         via CDP as the cause of that heading fragmenting under sequential
+         Down Arrow reading. Moved the REAL link to AFTER the complete
+         Readiness section (past
+         its own closing hr above) — normal document flow, no CSS
+         reordering — so it no longer precedes that heading in DOM or
+         accessibility order at all. Same destination, same keyboard
+         operation, same visible text/styling — only its position changed.
+         Manually confirmed: the link reads together on its own, and the
+         Readiness heading again reads as one clean phrase under Down
+         Arrow. -->
+    <p class="interview-results__topic-trends-link">
+      <a routerLink="/interview/history" fragment="topic-trends" i18n>View Topic Trends</a>
+    </p>
 
     <!-- Angular Interview Master Certificate — progress checklist, or the unlock
          celebration + "View Certificate" once every requirement is satisfied. -->

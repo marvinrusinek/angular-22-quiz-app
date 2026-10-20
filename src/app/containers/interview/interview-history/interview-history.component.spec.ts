@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { InterviewAttemptHistoryEntry, InterviewCompletionReason } from '@shared/models';
 import { SK_INTERVIEW_HISTORY } from '@shared/constants/session-keys';
 import { InterviewReadinessService } from '@shared/services/features/interview/interview-readiness.service';
@@ -35,11 +35,15 @@ function seed(attempts: InterviewAttemptHistoryEntry[]): void {
   localStorage.setItem(SK_INTERVIEW_HISTORY, JSON.stringify({ version: 2, attempts }));
 }
 
-function render(): ComponentFixture<InterviewHistoryComponent> {
+function render(fragment?: string): ComponentFixture<InterviewHistoryComponent> {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [InterviewHistoryComponent],
-    providers: [provideRouter([]), { provide: InterviewReadinessService, useValue: readinessStub }]
+    providers: [
+      provideRouter([]),
+      { provide: InterviewReadinessService, useValue: readinessStub },
+      { provide: ActivatedRoute, useValue: { snapshot: { fragment: fragment ?? null } } }
+    ]
   });
   const fixture = TestBed.createComponent(InterviewHistoryComponent);
   fixture.detectChanges();
@@ -300,5 +304,96 @@ describe('InterviewHistoryComponent — filter Angular Aria Toolbar prototype', 
 
     expect(spy).toHaveBeenCalledWith('time-expired');
     expect(comp.filter()).toBe('time-expired');
+  });
+});
+
+/**
+ * CONFIRMED (manual Narrator reports, 2026-10-19), two separate issues:
+ * (1) activating "View Topic Trends" (fragment="topic-trends") landed
+ * here with Narrator reading the entire page from the top instead of
+ * announcing the Topic Trends section — FIXED and manually confirmed.
+ * (2) normal entry (no fragment) opened at the top correctly, but
+ * Narrator then automatically read the entire page with no further key
+ * presses — nothing here ever focused anything on a plain entry either.
+ * See ngOnInit's and focusEntryTarget()'s own comments in the component
+ * for the full trace of both. The two entry paths are mutually exclusive
+ * by construction: exactly one branch in focusEntryTarget() ever moves
+ * focus.
+ */
+describe('InterviewHistoryComponent — entry focus (normal vs. topic-trends fragment)', () => {
+  // jsdom does not implement Element.scrollIntoView at all (confirmed by
+  // this file's own jumpToInterviews test, which stubs it per-element) —
+  // the property doesn't exist, so jest.spyOn can't wrap it; it has to be
+  // assigned directly. Defined on the prototype since the target element
+  // doesn't exist until after render.
+  beforeEach(() => {
+    localStorage.clear();
+    HTMLElement.prototype.scrollIntoView = jest.fn();
+  });
+  afterEach(() => {
+    localStorage.clear();
+    delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+
+  async function renderWithFragment(
+    fragment?: string
+  ): Promise<ComponentFixture<InterviewHistoryComponent>> {
+    const fixture = render(fragment);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('focuses the real Topic Trends heading once, without adding a new Tab stop', async () => {
+    seed([entry(70, 1), entry(80, 2)]);
+    const fixture = await renderWithFragment('topic-trends');
+    const heading = fixture.nativeElement.querySelector('#topic-trends-heading') as HTMLElement;
+    expect(document.activeElement).toBe(heading);
+    expect(heading.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('skips the scroll-to-top call specifically when targeting the topic-trends fragment', async () => {
+    seed([entry(70, 1), entry(80, 2)]);
+    const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    await renderWithFragment('topic-trends');
+    expect(scrollSpy).not.toHaveBeenCalled();
+    scrollSpy.mockRestore();
+  });
+
+  it('never leaves focus on the page heading when the topic-trends fragment was targeted (mutually exclusive)', async () => {
+    seed([entry(70, 1), entry(80, 2)]);
+    const fixture = await renderWithFragment('topic-trends');
+    const pageHeading = fixture.nativeElement.querySelector('.interview-history__title');
+    expect(document.activeElement).not.toBe(pageHeading);
+  });
+
+  it('focuses this page\'s own real heading once on normal entry (no fragment), without adding a new Tab stop', async () => {
+    seed([entry(70, 1), entry(80, 2)]);
+    const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const fixture = await renderWithFragment(undefined);
+    const pageHeading = fixture.nativeElement.querySelector('.interview-history__title') as HTMLElement;
+    expect(document.activeElement).toBe(pageHeading);
+    expect(pageHeading.getAttribute('tabindex')).toBe('-1');
+    expect(scrollSpy).toHaveBeenCalledWith({ top: 0, left: 0 });
+    scrollSpy.mockRestore();
+  });
+
+  it('never focuses the Topic Trends heading on normal entry (mutually exclusive)', async () => {
+    seed([entry(70, 1), entry(80, 2)]);
+    const fixture = await renderWithFragment(undefined);
+    const topicTrendsHeading = fixture.nativeElement.querySelector('#topic-trends-heading');
+    expect(document.activeElement).not.toBe(topicTrendsHeading);
+  });
+
+  it('focuses this page\'s own heading (not Topic Trends) for an unrelated fragment, and still scrolls to top', async () => {
+    seed([entry(70, 1), entry(80, 2)]);
+    const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const fixture = await renderWithFragment('some-other-fragment');
+    const pageHeading = fixture.nativeElement.querySelector('.interview-history__title') as HTMLElement;
+    const topicTrendsHeading = fixture.nativeElement.querySelector('#topic-trends-heading');
+    expect(document.activeElement).toBe(pageHeading);
+    expect(document.activeElement).not.toBe(topicTrendsHeading);
+    expect(scrollSpy).toHaveBeenCalledWith({ top: 0, left: 0 });
+    scrollSpy.mockRestore();
   });
 });

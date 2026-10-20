@@ -73,15 +73,125 @@ describe('InterviewTopicTrendsComponent', () => {
     expect(signals?.querySelector('.tt-up')?.textContent).toContain('+');
   });
 
-  it('45. provides an accessible summary (strength + direction + scores); chart itself is hidden', () => {
+  it('45. the sparkline chart is hidden from AT to avoid a duplicate readout', () => {
     const el = render(MULTI);
-    const sr = el.querySelector('.tt-card__sr')?.textContent ?? '';
-    expect(sr).toContain('Needs Review'); // strength announced
-    expect(sr).toContain('improving'); // direction announced
-    expect(sr).toContain('latest score');
-    // The sparkline is decorative — hidden from AT to avoid a duplicate readout.
     expect(el.querySelector('.tt-spark')?.getAttribute('aria-hidden')).toBe('true');
     expect(el.querySelector('.tt-spark')?.getAttribute('aria-label')).toBeNull();
+  });
+
+  /**
+   * CONFIRMED (manual Narrator Scan Mode report, 2026-10-19): entering a
+   * card announced a full combined sentence (the former .tt-card__sr),
+   * then Down Arrow read the heading, badges, and metrics a second time.
+   * Fix: remove the combined sentence; each piece reads once, grouped
+   * with its own label, via role="img" on the badges wrapper and
+   * role="group" + a hidden-overlay span per metric row.
+   */
+  describe('each card reads once — no combined summary, no duplicate readout', () => {
+    it('no longer renders a combined per-card summary sentence', () => {
+      const el = render(MULTI);
+      expect(el.querySelector('.tt-card__sr')).toBeNull();
+    });
+
+    it('strength + direction are one name on the existing badges wrapper (no new element)', () => {
+      const el = render(MULTI);
+      const badges = el.querySelector('.tt-card__badges') as HTMLElement;
+      expect(badges.getAttribute('role')).toBe('img');
+      expect(badges.getAttribute('aria-label')).toBe('Strength, Needs Review. Direction, Improving.');
+      // Visible badge spans are untouched — still two real <span> elements.
+      expect(badges.querySelectorAll('.tt-badge')).toHaveLength(2);
+    });
+
+    it('groups each metric row with its real, dynamic value', () => {
+      const el = render(MULTI);
+      const signalsCard = el.querySelector('.tt-card') as HTMLElement;
+      const rows = signalsCard.querySelectorAll('.tt-card__metrics > div');
+      expect(rows.length).toBe(4);
+      rows.forEach((row) => expect(row.getAttribute('role')).toBe('group'));
+      const phrase = (i: number) =>
+        rows[i].querySelector('.visually-hidden-overlay')?.textContent?.trim();
+      expect(phrase(0)).toBe('Latest, 60 percent');
+      expect(phrase(1)).toBe('Previous, 50 percent'); // Signals: 50% -> 60%
+      expect(phrase(2)).toBe('Change, up 10 points');
+      expect(phrase(3)).toBe('Overall, 55 percent');
+    });
+
+    it('says "no previous attempt" rather than a number when there is none', () => {
+      const el = render(SINGLE);
+      const rows = el.querySelectorAll('.tt-card__metrics > div');
+      expect(rows[1].querySelector('.visually-hidden-overlay')?.textContent?.trim()).toBe(
+        'Previous, no previous attempt'
+      );
+    });
+
+    it('hides the real metric dt/dd from the accessibility tree so nothing is spoken twice', () => {
+      const el = render(MULTI);
+      el.querySelectorAll('.tt-card__metrics dt, .tt-card__metrics dd').forEach((node) => {
+        expect(node.getAttribute('aria-hidden')).toBe('true');
+      });
+    });
+
+    it('does not change the visible metric text', () => {
+      const el = render(MULTI);
+      const rows = el.querySelectorAll('.tt-card__metrics > div');
+      expect(rows[0].querySelector('dd')?.textContent?.trim()).toBe('60%');
+    });
+
+    it('introduces no new tabindex or live regions on the card', () => {
+      const el = render(MULTI);
+      el.querySelectorAll(
+        '.tt-card [role="group"], .tt-card [role="img"], .tt-card .visually-hidden-overlay'
+      ).forEach((node) => {
+        expect(node.getAttribute('tabindex')).toBeNull();
+        expect(node.getAttribute('aria-live')).toBeNull();
+      });
+    });
+  });
+
+  /**
+   * CONFIRMED (manual Narrator Scan Mode report, 2026-10-19): right after
+   * the Topic Trends heading, Down Arrow read each of these four stats'
+   * label and value as two separate stops. Fix: one combined "Label,
+   * value" phrase per stat — same technique already confirmed working
+   * for Interview Results' stat-grid and Performance Trends' statistics.
+   */
+  describe('the compact summary reads as one combined "Label, value" phrase per stat', () => {
+    const groupPhrase = (el: HTMLElement, i: number): string | null =>
+      el.querySelectorAll('.tt-summary > div')[i]
+        ?.querySelector('.visually-hidden-overlay')?.textContent?.trim() ?? null;
+
+    it('groups each stat with its real, dynamic count', () => {
+      const el = render(MULTI);
+      const rows = el.querySelectorAll('.tt-summary > div');
+      expect(rows.length).toBe(4);
+      rows.forEach((row) => expect(row.getAttribute('role')).toBe('group'));
+      expect(groupPhrase(el, 0)).toBe('Topics Tracked, 2');
+      expect(groupPhrase(el, 1)).toBe('Improving, 1');
+      expect(groupPhrase(el, 2)).toBe('Holding Steady, 1');
+      expect(groupPhrase(el, 3)).toBe('Needs Attention, 1');
+    });
+
+    it('hides the real dt/dd from the accessibility tree so nothing is spoken twice', () => {
+      const el = render(MULTI);
+      el.querySelectorAll('.tt-summary dt, .tt-summary dd').forEach((node) => {
+        expect(node.getAttribute('aria-hidden')).toBe('true');
+      });
+    });
+
+    it('does not change the visible stat text', () => {
+      const el = render(MULTI);
+      expect(el.querySelector('.tt-summary dd')?.textContent?.trim()).toBe('2'); // Topics Tracked
+    });
+
+    it('introduces no new tabindex or live regions on the grouped stats', () => {
+      const el = render(MULTI);
+      el.querySelectorAll('.tt-summary [role="group"], .tt-summary .visually-hidden-overlay').forEach(
+        (node) => {
+          expect(node.getAttribute('tabindex')).toBeNull();
+          expect(node.getAttribute('aria-live')).toBeNull();
+        }
+      );
+    });
   });
 
   it('46/47. expands and collapses topic history with aria-expanded', () => {

@@ -365,6 +365,46 @@ describe('InterviewResultsComponent — statistics read as one coherent group ea
     const stats = el.querySelectorAll('.stat-grid > div');
     expect(stats.length).toBe(5); // no Difficulty entry at all, same as before
   });
+
+  /**
+   * CONFIRMED (manual Narrator retest, 2026-10-19). "View Topic Trends"
+   * used to sit directly before the Interview Readiness heading, with
+   * nothing else between them, which caused that heading to fragment
+   * under sequential Down Arrow reading. Moved the real link to AFTER the
+   * complete Readiness section — normal document flow, no CSS reordering
+   * — so it no longer precedes that heading in DOM/AX order at all. These
+   * assertions confirm the structural facts a browser can verify; actual
+   * Narrator speech was confirmed separately via manual retest.
+   */
+  describe('"View Topic Trends" link — relocated after Interview Readiness', () => {
+    it('is a single real, keyboard-operable link to the per-topic breakdown — no duplicate text anywhere', () => {
+      render(RESULT);
+      // Count only leaf text matches (elements with no element children of
+      // their own) so a wrapping <p> around the <a> isn't double-counted
+      // as a second occurrence of the same text.
+      const matches = Array.from(el.querySelectorAll('*')).filter(
+        (node) => node.children.length === 0 && node.textContent?.trim() === 'View Topic Trends'
+      );
+      expect(matches.length).toBe(1);
+      const link = el.querySelector('.interview-results__topic-trends-link a') as HTMLAnchorElement;
+      expect(link).not.toBeNull();
+      expect(link).toBe(matches[0]);
+      expect(link.getAttribute('tabindex')).not.toBe('-1');
+    });
+
+    it('comes after the complete Readiness section and before the Certificate section, in real DOM order', () => {
+      render(RESULT);
+      const readiness = el.querySelector('.interview-results__readiness')!;
+      const linkWrapper = el.querySelector('.interview-results__topic-trends-link')!;
+      const certificate = el.querySelector('.interview-results__certificate')!;
+      expect(
+        readiness.compareDocumentPosition(linkWrapper) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      expect(
+        linkWrapper.compareDocumentPosition(certificate) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    });
+  });
 });
 
 /**

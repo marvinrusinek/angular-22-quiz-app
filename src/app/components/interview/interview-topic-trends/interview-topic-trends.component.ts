@@ -66,6 +66,28 @@ export class InterviewTopicTrendsComponent {
     return !!t && t.topics.length > 0 && t.topics.every((x) => x.direction === 'insufficient');
   });
 
+  /**
+   * CONFIRMED (manual Narrator report, 2026-10-19): right after the Topic
+   * Trends heading, Down Arrow read each of these four stats' label and
+   * value as two separate stops. Fix: one combined "Label, value" phrase
+   * per stat (see .tt-summary's own comment in the .html file for the
+   * full reasoning) — matching the "Label, value" comma convention
+   * already used for Interview Results' and Performance Trends' own
+   * grouped statistics.
+   */
+  readonly trackedAccessibleLabel = computed(() =>
+    $localize`Topics Tracked, ${this.trends()?.trackedCount ?? 0}`
+  );
+  readonly improvingAccessibleLabel = computed(() =>
+    $localize`Improving, ${this.trends()?.improvingCount ?? 0}`
+  );
+  readonly steadyAccessibleLabel = computed(() =>
+    $localize`Holding Steady, ${this.trends()?.steadyCount ?? 0}`
+  );
+  readonly needsAttentionAccessibleLabel = computed(() =>
+    $localize`Needs Attention, ${this.trends()?.needsAttentionCount ?? 0}`
+  );
+
   readonly filters = computed<{ id: TopicTrendFilter; label: string; count: number }[]>(() => {
     const t = this.trends();
     if (!t) return [];
@@ -118,19 +140,40 @@ export class InterviewTopicTrendsComponent {
     return `Based on ${t.appearances} appearances and ${t.totalQuestions} questions`;
   }
 
-  /** Full accessible summary sentence for a topic (chart alternative). Plain
-   *  string (not $localize) — a placeholder immediately before ":" would be
-   *  misread as $localize metadata, and these dynamic sentences aren't extracted. */
-  ariaSummary(t: TopicTrend): string {
-    // Announce strength AND direction (the two separate visible badges are
-    // aria-hidden), then the numeric scores.
-    const band = this.bandLabel(t.strengthBand);
-    if (t.direction === 'insufficient') {
-      return `${t.topicName}: ${band}, more data needed. Latest score ${t.latestPercentage} percent, overall score ${t.aggregatePercentage} percent.`;
-    }
-    const dir = this.directionLabel(t.direction).toLowerCase();
-    const pts = Math.abs(t.change ?? 0);
-    return `${t.topicName}: ${band} and ${dir} by ${pts} percentage points, latest score ${t.latestPercentage} percent, overall score ${t.aggregatePercentage} percent.`;
+  /**
+   * CONFIRMED (manual Narrator Scan Mode report, 2026-10-19): entering a
+   * topic card announced a full combined sentence (the former
+   * `ariaSummary()` / `.tt-card__sr`), then Down Arrow read the heading,
+   * badges, and metrics a SECOND time — genuine duplication across several
+   * real text nodes, not one misunderstood mechanism. Removed the combined
+   * sentence; each piece now reads once, grouped with its own label, via
+   * the methods below (same "Label, value" plain-string convention —
+   * $localize would misparse the literal ":" these dynamic sentences use).
+   */
+  badgesAccessibleLabel(t: TopicTrend): string {
+    return `Strength, ${this.bandLabel(t.strengthBand)}. Direction, ${this.directionLabel(t.direction)}.`;
+  }
+
+  latestAccessibleLabel(t: TopicTrend): string {
+    return `Latest, ${t.latestPercentage} percent`;
+  }
+
+  previousAccessibleLabel(t: TopicTrend): string {
+    return t.previousPercentage === null
+      ? 'Previous, no previous attempt'
+      : `Previous, ${t.previousPercentage} percent`;
+  }
+
+  changeAccessibleLabel(t: TopicTrend): string {
+    const change = t.change;
+    if (change === null || change === undefined) return 'Change, not available';
+    if (change > 0) return `Change, up ${change} points`;
+    if (change < 0) return `Change, down ${Math.abs(change)} points`;
+    return 'Change, 0 points';
+  }
+
+  overallAccessibleLabel(t: TopicTrend): string {
+    return `Overall, ${t.aggregatePercentage} percent`;
   }
 
   formatDate(iso: string): string {

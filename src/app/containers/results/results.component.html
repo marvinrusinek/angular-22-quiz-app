@@ -95,7 +95,10 @@
     </div>
 
     <!-- TITLE (Center) -->
-    <h1 class="results-title" i18n>Results</h1>
+    <!-- tabindex="-1": programmatically focusable only, never a Tab stop.
+         Focused once per quiz result, when the real result is actually
+         ready (see focusResultsHeadingOnce()'s own comment). -->
+    <h1 #resultsHeading class="results-title" tabindex="-1" i18n>Results</h1>
 
     <!-- LOGO (Right) -->
     <div class="logo">

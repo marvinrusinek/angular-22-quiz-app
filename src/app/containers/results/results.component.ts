@@ -5,9 +5,11 @@ import {
   computed,
   DestroyRef,
   effect,
+  ElementRef,
   inject,
   OnInit,
-  signal
+  signal,
+  viewChild
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NgOptimizedImage, NgTemplateOutlet } from '@angular/common';
@@ -127,6 +129,19 @@ export class ResultsComponent implements OnInit {
   readonly finalResult = signal<FinalResult | null>(null);
   readonly scoreAnalysis = computed<ScoreAnalysisItem[]>(() => this.finalResult()?.analysis ?? []);
 
+  // This page's own heading — the entry-focus target (see
+  // focusResultsHeadingOnce()'s own comment in the constructor).
+  private readonly resultsHeading = viewChild<ElementRef<HTMLElement>>('resultsHeading');
+  // Guards focusResultsHeadingOnce()'s effect: the quizId most recently
+  // focused for, NOT a one-shot boolean (see that effect's own comment).
+  private lastFocusedResultsQuizId: string | null = null;
+  // CONFIRMED via live measurement (2026-10-20): `mat-card`'s own entrance
+  // animation (`animation: slideUp 0.5s ease-out`, translateY(30px) → 0)
+  // keeps every element inside it — including this page's headings — at a
+  // CONTINUOUSLY CHANGING bounding rect for roughly its first 500ms. See
+  // focusResultsHeadingOnce()'s own comment for why that matters here.
+  private readonly mountTimeMs = performance.now();
+
   // Achievements newly earned by THIS completed quiz (shown once, not after refresh).
   readonly newlyEarnedAchievements = signal<AchievementDefinition[]>([]);
   // Every achievement + earned/locked state, for the expandable catalog section.
@@ -217,6 +232,87 @@ export class ResultsComponent implements OnInit {
       this.achievementsCatalog.set(this.achievementService.catalog());
       this.cdRef.markForCheck();
     });
+
+    /**
+     * CONFIRMED (manual Narrator report, 2026-10-20): after completing a
+     * Topic Quiz, Narrator announced "Results" / "Score Analysis" then,
+     * with no further input, read the entire page. Traced: this
+     * component never moved focus anywhere on entry — ngOnInit's only
+     * DOM-facing call was an unconditional `window.scrollTo(0, 0)`, no
+     * `.focus()` call existed in the file at all. With nothing new ever
+     * receiving focus, Narrator's cursor simply continued reading
+     * sequentially from wherever it was — the same missing-focus-target
+     * class of issue already fixed for Interview History's entry.
+     *
+     * Not `afterNextRender()`: `<h1 #resultsHeading>` above is always
+     * rendered unconditionally (so the element itself exists from the
+     * first render, same as Interview History's own `<h1>`), but unlike
+     * that page, THIS page's real result can still be loading at that
+     * point — a fresh completion's `finalResult` often arrives
+     * asynchronously via the finalResultStream effect above, not
+     * synchronously in ngOnInit (only a REVISIT with an existing snapshot
+     * sets it synchronously). Focusing before real content exists would
+     * announce an essentially empty page, so this watches `finalResult`
+     * itself and only focuses once a genuine result is actually present.
+     *
+     * Guarded by quizId, not a one-shot boolean: QuizResultGuard's
+     * `runGuardsAndResolvers: 'always'` plus fetchQuizIdFromParams()'s
+     * paramMap subscription mean this SAME component instance can be
+     * reused across a later, DIFFERENT completed quiz's results (no full
+     * recreate) — that genuinely new arrival must still get its own
+     * one-time focus. A one-shot boolean would silently skip it. What
+     * must never repeat is re-focusing for a LATER re-emission of the
+     * SAME quiz's finalResult (e.g. a stream replay, or any review
+     * interaction that happens to touch this signal) — keyed on quizId,
+     * never re-fires for that.
+     *
+     * This does not and cannot guarantee suppressing Narrator's own
+     * automatic "read the whole screen" setting — it gives Narrator a
+     * genuine new focus target to redirect to, which is what resolved
+     * this same class of issue everywhere else it was tried. Flag
+     * separately if auto-read still partially occurs after this fix.
+     *
+     * CONFIRMED FIX (manual Narrator retest, 2026-10-20): a separate
+     * manual report found "Score Analysis" announced with a repeated
+     * heading-level split under Down Arrow. Several theories were
+     * tested and ruled out (the preceding header link; negative-margin
+     * box overlap) via live diagnostics. Live measurement then found
+     * `mat-card`'s own entrance animation keeps every element inside
+     * it, including this heading, at a continuously changing bounding
+     * rect for ~500ms after mount — exactly the window a focus-
+     * triggered Narrator announcement would fire in.
+     * `focusResultsHeadingOnce()` below delays the actual `.focus()`
+     * call until that animation has settled, without changing the
+     * animation, the heading, or the guard logic above. Manually
+     * retested and confirmed: the split no longer occurs. NOT claimed
+     * as a proven root cause — only that this delay eliminates the
+     * symptom in testing; exactly how it affected Narrator's Scan Mode
+     * internally remains unconfirmed.
+     */
+    effect(() => {
+      const result = this.finalResult();
+      const id = this.quizId();
+      if (!result || !id || this.lastFocusedResultsQuizId === id) return;
+      this.lastFocusedResultsQuizId = id;
+      this.focusResultsHeadingOnce();
+    });
+  }
+
+  /**
+   * See the constructor effect's own comment for the full trace. Waits out
+   * whatever remains of `mat-card`'s ~500ms entrance animation (measured
+   * from this component's construction, not from now) before moving focus,
+   * so Narrator's focus-triggered announcement never starts while this
+   * page's content is still physically translating into place. Never
+   * delays beyond what's actually left — if the animation already
+   * finished (e.g. a slow async result arrived well after mount), focus
+   * moves immediately.
+   */
+  private focusResultsHeadingOnce(): void {
+    const ENTRANCE_ANIMATION_MS = 500; // matches mat-card's slideUp duration
+    const elapsed = performance.now() - this.mountTimeMs;
+    const remaining = Math.max(0, ENTRANCE_ANIMATION_MS - elapsed);
+    setTimeout(() => this.resultsHeading()?.nativeElement.focus(), remaining);
   }
 
   ngOnInit(): void {

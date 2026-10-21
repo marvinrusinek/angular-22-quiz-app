@@ -220,6 +220,15 @@ mat-card {
     
     text-shadow: none;
     animation: titlePulse 2s ease-in-out infinite alternate;
+
+    // Programmatically focused once per result (see
+    // focusResultsHeadingOnce()'s own comment in results.component.ts) —
+    // same explicit outline convention already used for other
+    // programmatically-focused headings in this codebase.
+    &:focus-visible {
+      outline: 2px solid vars.$dodger-blue;
+      outline-offset: 4px;
+    }
   }
 
   .logo {

@@ -16,35 +16,43 @@
 
            CONFIRMED (manual Narrator report, 2026-10-19): right after the
            Topic Trends heading, Down Arrow read each of these four stats'
-           label and value as two separate stops (e.g. "Topics Tracked"
-           then, separately, the count). Fix, reusing the exact technique
-           confirmed working for Interview Results' stat-grid and
-           Performance Trends' statistics: one combined "Label, value"
-           phrase per stat, as REAL TEXT inside a `role="group"` div (see
-           .visually-hidden-overlay's own comment below) — never an
-           attribute on the group itself, and no aria-label on the `<dl>`
-           either (an outer name there risks announcing a fifth,
-           redundant "Topic trends summary" phrase on entering the list,
-           per the same proven stat-grid pattern, which has no such
-           attribute). The real dt/dd stay exactly as rendered (unchanged
-           layout), now `aria-hidden="true"` so they aren't ALSO read
-           separately. -->
+           label and value as two separate stops. Two earlier candidates
+           fixed the SPEECH grouping but not the HIGHLIGHT: a hidden span
+           (role="group" + text-content phrase) shifted the highlight
+           left of the label (two different-width strings independently
+           centered in the same box — confirmed via Range measurement,
+           not a wrap); moving the phrase to aria-label on that same
+           hidden span kept the highlight pixel-aligned to the label but
+           a manual retest still showed TWO rectangles.
+           Root cause, confirmed via Accessibility.getFullAXTree: a
+           `role="group"` div does not suppress its children from the
+           accessibility tree the way `role="img"` does — so the group
+           itself AND its hidden `<span>` child were BOTH separately
+           exposed, non-ignored accessible objects for what should be one
+           stat. FIX: no more wrapping group, no more hidden span. role
+           "img" + aria-label goes directly on `dt` itself — the same
+           collapse-to-one-leaf technique already proven for the badges
+           wrapper and the score-hero/Readiness summary blocks. dt's own
+           rendered text/box is unchanged (still just the visible label,
+           same CSS), so the highlight should track dt's own box — the
+           LABEL only, not the value, not a wrapping tile. dd stays
+           `aria-hidden="true"` so it's never a second stop. -->
       <dl class="tt-summary">
-        <div role="group">
-          <span class="visually-hidden-overlay">{{ trackedAccessibleLabel() }}</span>
-          <dt aria-hidden="true" i18n>Topics Tracked</dt><dd aria-hidden="true">{{ t.trackedCount }}</dd>
+        <div>
+          <dt role="img" [attr.aria-label]="trackedAccessibleLabel()" i18n>Topics Tracked</dt>
+          <dd aria-hidden="true">{{ t.trackedCount }}</dd>
         </div>
-        <div role="group">
-          <span class="visually-hidden-overlay">{{ improvingAccessibleLabel() }}</span>
-          <dt aria-hidden="true" i18n>Improving</dt><dd aria-hidden="true">{{ t.improvingCount }}</dd>
+        <div>
+          <dt role="img" [attr.aria-label]="improvingAccessibleLabel()" i18n>Improving</dt>
+          <dd aria-hidden="true">{{ t.improvingCount }}</dd>
         </div>
-        <div role="group">
-          <span class="visually-hidden-overlay">{{ steadyAccessibleLabel() }}</span>
-          <dt aria-hidden="true" i18n>Holding Steady</dt><dd aria-hidden="true">{{ t.steadyCount }}</dd>
+        <div>
+          <dt role="img" [attr.aria-label]="steadyAccessibleLabel()" i18n>Holding Steady</dt>
+          <dd aria-hidden="true">{{ t.steadyCount }}</dd>
         </div>
-        <div role="group">
-          <span class="visually-hidden-overlay">{{ needsAttentionAccessibleLabel() }}</span>
-          <dt aria-hidden="true" i18n>Needs Attention</dt><dd aria-hidden="true">{{ t.needsAttentionCount }}</dd>
+        <div>
+          <dt role="img" [attr.aria-label]="needsAttentionAccessibleLabel()" i18n>Needs Attention</dt>
+          <dd aria-hidden="true">{{ t.needsAttentionCount }}</dd>
         </div>
       </dl>
 

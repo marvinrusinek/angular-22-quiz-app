@@ -151,31 +151,50 @@ describe('InterviewTopicTrendsComponent', () => {
   /**
    * CONFIRMED (manual Narrator Scan Mode report, 2026-10-19): right after
    * the Topic Trends heading, Down Arrow read each of these four stats'
-   * label and value as two separate stops. Fix: one combined "Label,
-   * value" phrase per stat — same technique already confirmed working
-   * for Interview Results' stat-grid and Performance Trends' statistics.
+   * label and value as two separate stops. Two earlier candidates fixed
+   * the SPEECH grouping but not the HIGHLIGHT: a `role="group"` div with
+   * a hidden `<span>` child shifted the highlight left of the label
+   * (centering two different-width strings independently); moving the
+   * phrase to the span's aria-label fixed the position but a manual
+   * retest still showed TWO rectangles — confirmed via
+   * Accessibility.getFullAXTree: `role="group"` does not suppress its
+   * children, so the group AND its span child were both separately
+   * exposed accessible objects. Current fix: role="img" + aria-label
+   * directly on `dt` (no wrapping group, no hidden span) — the same
+   * collapse-to-one-leaf technique already proven for the badges wrapper
+   * and the score-hero/Readiness summary blocks. The wrapping `<div>` is
+   * now unexposed (role=none/ignored) and dt's own box is unchanged
+   * (confirmed via live measurement: same box as the original label),
+   * so the one exposed object's bounds are the label's own, not the
+   * value's or the whole tile's.
    */
   describe('the compact summary reads as one combined "Label, value" phrase per stat', () => {
-    const groupPhrase = (el: HTMLElement, i: number): string | null =>
-      el.querySelectorAll('.tt-summary > div')[i]
-        ?.querySelector('.visually-hidden-overlay')?.textContent?.trim() ?? null;
+    const dtFor = (el: HTMLElement, i: number): HTMLElement | null =>
+      el.querySelectorAll<HTMLElement>('.tt-summary dt')[i] ?? null;
 
-    it('groups each stat with its real, dynamic count', () => {
+    it('groups each stat with its real, dynamic count, as one role="img" leaf on dt', () => {
       const el = render(MULTI);
       const rows = el.querySelectorAll('.tt-summary > div');
       expect(rows.length).toBe(4);
-      rows.forEach((row) => expect(row.getAttribute('role')).toBe('group'));
-      expect(groupPhrase(el, 0)).toBe('Topics Tracked, 2');
-      expect(groupPhrase(el, 1)).toBe('Improving, 1');
-      expect(groupPhrase(el, 2)).toBe('Holding Steady, 1');
-      expect(groupPhrase(el, 3)).toBe('Needs Attention, 1');
+      expect(dtFor(el, 0)?.getAttribute('role')).toBe('img');
+      expect(dtFor(el, 0)?.getAttribute('aria-label')).toBe('Topics Tracked, 2');
+      expect(dtFor(el, 1)?.getAttribute('aria-label')).toBe('Improving, 1');
+      expect(dtFor(el, 2)?.getAttribute('aria-label')).toBe('Holding Steady, 1');
+      expect(dtFor(el, 3)?.getAttribute('aria-label')).toBe('Needs Attention, 1');
     });
 
-    it('hides the real dt/dd from the accessibility tree so nothing is spoken twice', () => {
+    it('hides the real dd from the accessibility tree so the value is never a second stop; dt keeps its own visible text', () => {
       const el = render(MULTI);
-      el.querySelectorAll('.tt-summary dt, .tt-summary dd').forEach((node) => {
+      el.querySelectorAll('.tt-summary dd').forEach((node) => {
         expect(node.getAttribute('aria-hidden')).toBe('true');
       });
+      expect(dtFor(el, 0)?.textContent?.trim()).toBe('Topics Tracked');
+    });
+
+    it('does not introduce a wrapping role="group" or a hidden overlay span', () => {
+      const el = render(MULTI);
+      expect(el.querySelector('.tt-summary [role="group"]')).toBeNull();
+      expect(el.querySelector('.tt-summary .visually-hidden-overlay')).toBeNull();
     });
 
     it('does not change the visible stat text', () => {
@@ -185,12 +204,10 @@ describe('InterviewTopicTrendsComponent', () => {
 
     it('introduces no new tabindex or live regions on the grouped stats', () => {
       const el = render(MULTI);
-      el.querySelectorAll('.tt-summary [role="group"], .tt-summary .visually-hidden-overlay').forEach(
-        (node) => {
-          expect(node.getAttribute('tabindex')).toBeNull();
-          expect(node.getAttribute('aria-live')).toBeNull();
-        }
-      );
+      el.querySelectorAll('.tt-summary [role="img"]').forEach((node) => {
+        expect(node.getAttribute('tabindex')).toBeNull();
+        expect(node.getAttribute('aria-live')).toBeNull();
+      });
     });
   });
 

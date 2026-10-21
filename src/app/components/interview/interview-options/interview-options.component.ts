@@ -39,6 +39,12 @@ import type {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class InterviewOptionsComponent {
+  // Unique per component INSTANCE (not per render) — two interview-options
+  // components on the same page must never share an id="" that
+  // aria-describedby could collide on.
+  private static nextHintId = 0;
+  readonly radiogroupHintId = `io-radiogroup-hint-${InterviewOptionsComponent.nextHintId++}`;
+
   readonly options = input.required<readonly InterviewOptionViewModel[]>();
   readonly selectedIds = input<readonly number[]>([]);
 

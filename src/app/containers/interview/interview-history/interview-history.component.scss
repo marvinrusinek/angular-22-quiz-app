@@ -25,6 +25,14 @@
     margin: 0;
     font-size: 26px;
     font-weight: 800;
+
+    // Programmatically focused on normal entry (see focusEntryTarget()'s
+    // own comment) — same explicit outline convention already used for
+    // other programmatically-focused headings in this codebase.
+    &:focus-visible {
+      outline: 2px solid var(--ir-accent, #007aff);
+      outline-offset: 2px;
+    }
   }
 
   &__empty {

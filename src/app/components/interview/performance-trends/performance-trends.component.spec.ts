@@ -65,12 +65,47 @@ describe('PerformanceTrendsComponent', () => {
 
   it('22. accessible text data is available for each attempt', () => {
     const el = render(trendsFor([70, 85]));
-    const items = el.querySelectorAll('.perf-trends__sr li');
-    expect(items).toHaveLength(2);
-    // "out of" phrasing + newest-first ordering (85% listed before 70%).
-    expect(items[0].textContent).toContain('out of');
-    expect(items[0].textContent).toContain('85%');
-    expect(items[1].textContent).toContain('70%');
+    const items = el.querySelectorAll('.perf-trends__sr p');
+    // The lead sentence ("Interview scores, most recent first:") plus one
+    // paragraph per attempt.
+    expect(items).toHaveLength(3);
+    // newest-first ordering (85% listed before 70%).
+    expect(items[1].textContent).toContain('score 85 percent');
+    expect(items[2].textContent).toContain('score 70 percent');
+  });
+
+  /**
+   * CONFIRMED (manual Narrator report, 2026-10-18): the <ul>/<li> version
+   * of this list made Narrator announce "bullet" per attempt and stop
+   * short of the score. Fix: no list markup at all.
+   */
+  it('exposes each attempt as a plain paragraph, not a list item — no "bullet" role to announce', () => {
+    const el = render(trendsFor([70, 85]));
+    expect(el.querySelector('.perf-trends__sr ul')).toBeNull();
+    expect(el.querySelector('.perf-trends__sr li')).toBeNull();
+    const items = el.querySelectorAll('.perf-trends__sr p');
+    items.forEach((p) => {
+      expect(p.getAttribute('role')).toBeNull();
+      expect(p.getAttribute('tabindex')).toBeNull();
+    });
+  });
+
+  it('includes the time-expired qualifier for an attempt that timed out', () => {
+    const el = render(trendsFor([70]));
+    // trendsFor doesn't set completionReason directly; verify the method
+    // itself produces the qualifier for that case.
+    expect(
+      fixture.componentInstance.srAttemptPhrase({
+        id: 'att-x',
+        index: 1,
+        completedAt: '2026-07-20T10:00:00.000Z',
+        score: 14,
+        totalQuestions: 20,
+        percentage: 70,
+        completionReason: 'time-expired',
+        isLatest: false
+      })
+    ).toBe('July 20, 2026, score 70 percent, time expired.');
   });
 
   it('23. the chart scales with its container (viewBox, no fixed pixel width)', () => {
@@ -86,7 +121,72 @@ describe('PerformanceTrendsComponent', () => {
     const el = render(trendsFor([70, 76]));
     const change = el.querySelector('.perf-metrics__change--up');
     expect(change?.textContent).toContain('+6 pts');
-    expect(change?.getAttribute('aria-label')).toContain('percentage points');
+    expect(change?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  /**
+   * CONFIRMED (manual Narrator Scan Mode report, 2026-10-18): each metric's
+   * label and value were read as two separate stops. Fix: one combined
+   * "Label, value" phrase per row — the same technique already confirmed
+   * for Interview Results' stat-grid.
+   */
+  describe('each metric reads as one combined "Label, value" phrase', () => {
+    const groupPhrase = (el: HTMLElement, i: number): string | null =>
+      el.querySelectorAll('.perf-metrics > div')[i]
+        ?.querySelector('.visually-hidden-overlay')?.textContent?.trim() ?? null;
+
+    it('groups Latest/Best/Average with their percentage values', () => {
+      const el = render(trendsFor([70, 76, 82]));
+      const rows = el.querySelectorAll('.perf-metrics > div');
+      expect(rows.length).toBe(4);
+      rows.forEach((row) => expect(row.getAttribute('role')).toBe('group'));
+      expect(groupPhrase(el, 0)).toBe('Latest, 82 percent');
+      expect(groupPhrase(el, 1)).toBe('Best, 82 percent');
+      expect(groupPhrase(el, 2)).toBe('Average, 76 percent');
+    });
+
+    it('groups a positive Change with "up N points"', () => {
+      const el = render(trendsFor([70, 76]));
+      expect(groupPhrase(el, 3)).toBe('Change, up 6 points');
+    });
+
+    it('groups a negative Change with "down N points"', () => {
+      const el = render(trendsFor([76, 70]));
+      expect(groupPhrase(el, 3)).toBe('Change, down 6 points');
+    });
+
+    it('groups a zero Change exactly as "Change, 0 points"', () => {
+      const el = render(trendsFor([70, 70]));
+      expect(groupPhrase(el, 3)).toBe('Change, 0 points');
+    });
+
+    it('hides the real dt/dd from the accessibility tree so nothing is spoken twice', () => {
+      const el = render(trendsFor([70, 76]));
+      el.querySelectorAll('.perf-metrics dt, .perf-metrics dd').forEach((node) => {
+        expect(node.getAttribute('aria-hidden')).toBe('true');
+      });
+    });
+
+    it('does not change the visible metric text', () => {
+      const el = render(trendsFor([70, 76]));
+      expect(el.querySelector('.perf-metrics__latest')?.textContent?.trim()).toBe('76%');
+    });
+
+    it('leaves the New Personal Best badge separately readable (not hidden inside the group)', () => {
+      const el = render(trendsFor([70, 80, 92]));
+      const pb = el.querySelector('.perf-metrics__pb');
+      expect(pb?.getAttribute('aria-hidden')).toBeNull();
+      expect(pb?.getAttribute('role')).toBe('status');
+      expect(pb?.textContent).toContain('New Personal Best!');
+    });
+
+    it('introduces no new tabindex or live regions on the grouped rows', () => {
+      const el = render(trendsFor([70, 76]));
+      el.querySelectorAll('[role="group"], .visually-hidden-overlay').forEach((node) => {
+        expect(node.getAttribute('tabindex')).toBeNull();
+        expect(node.getAttribute('aria-live')).toBeNull();
+      });
+    });
   });
 
   it('shows the improving interpretation for a +5-or-more jump', () => {

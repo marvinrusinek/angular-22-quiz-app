@@ -5,40 +5,84 @@
     [class]="'readiness--' + (r.status === 'ready' ? r.band : 'insufficient')"
     aria-labelledby="readiness-heading"
   >
-    <h2 id="readiness-heading" class="readiness__heading" i18n>Interview Readiness</h2>
+    <!-- 2026-10-18: controlled A/B testing (aria-label present vs absent,
+         Down Arrow only, same page/region as the confirmed-clean
+         Performance Trends heading) found sequential reading splits this
+         heading's announcement EITHER WAY — the aria-label is not the
+         cause, and removing it fixes nothing. Kept here anyway because it
+         has the only confirmed-clean controlled result for Shift+H
+         heading navigation; the content-derived name has no equivalent
+         confirmed result. Sequential (Down Arrow) reading into this
+         heading remains a separate, unresolved issue — see the
+         Performance Trends chart's accessible data list, which is under
+         active investigation as a possible contributor (not yet
+         established). -->
+    <h2 id="readiness-heading" class="readiness__heading" aria-label="Interview Readiness" i18n i18n-aria-label>Interview Readiness</h2>
 
-    <!-- One accessible sentence summarising the whole card. -->
-    <p class="readiness__sr">{{ ariaSummary() }}</p>
+    <!-- CONFIRMED (manual Narrator Scan Mode report, 2026-10-18): the score,
+         band, and explanation below were announced as disconnected
+         fragments — a hidden score/band summary, then a separately-worded
+         visible explanation paragraph as its own stop (and in the
+         limited-data case, two more separate paragraphs covering similar
+         ground again). These are all ONE idea ("here is your readiness and
+         why"), so they get ONE accessible object, reusing the exact
+         technique confirmed working (CDP geometry + live Narrator retest)
+         for Interview Results' score-hero: `role="img"` on the real,
+         already-correctly-sized wrapper around this visible content, named
+         by ariaSummary() (see that computed's own comment in the .ts file
+         for the full history). `role="img"` makes this element a LEAF —
+         its children are not separately exposed — so the real visible
+         pieces inside stay `aria-hidden` only for clarity/defense-in-depth,
+         not because it's load-bearing. The heading above stays OUTSIDE this
+         wrapper, untouched, so "Interview Readiness" remains a real,
+         separately-navigable heading. -->
+    <div class="readiness__summary" role="img" [attr.aria-label]="ariaSummary()">
+      @if (r.status !== 'ready') {
+        <!-- Limited data: exactly one completed interview. -->
+        <p class="readiness__limited" aria-hidden="true" i18n>
+          Complete at least one more interview to calculate your readiness score.
+        </p>
+        <p class="readiness__limited-sub" aria-hidden="true" i18n>Your first result has been recorded.</p>
+      } @else {
+        <div class="readiness__score-row" aria-hidden="true">
+          <span class="readiness__score">{{ r.score }}<span class="readiness__score-max"> / 100</span></span>
+          <span class="readiness__band" [class]="'readiness__band--' + r.band">{{ bandLabel() }}</span>
+        </div>
 
-    @if (r.status !== 'ready') {
-      <!-- Limited data: exactly one completed interview. -->
-      <p class="readiness__limited" i18n>
-        Complete at least one more interview to calculate your readiness score.
-      </p>
-      <p class="readiness__limited-sub" i18n>Your first result has been recorded.</p>
-    } @else {
-      <div class="readiness__score-row" aria-hidden="true">
-        <span class="readiness__score">{{ r.score }}<span class="readiness__score-max"> / 100</span></span>
-        <span class="readiness__band" [class]="'readiness__band--' + r.band">{{ bandLabel() }}</span>
-      </div>
+        <p class="readiness__explanation" aria-hidden="true">{{ r.explanation }}</p>
+      }
+    </div>
 
-      <p class="readiness__explanation">{{ r.explanation }}</p>
-
+    @if (r.status === 'ready') {
       @if (!compact()) {
+        <!-- CONFIRMED (manual Narrator Scan Mode report, 2026-10-18): each
+             factor's label and value/note were announced as two separate
+             stops ("Recent Performance" from `dt`, then "Recent
+             Performance: 82 out of 100" again from the bar's own
+             role="img" — the label spoken TWICE). Fix, reusing the exact
+             technique confirmed working for Interview Results' stat-grid
+             entries: `role="group"` on this real row (its own box already
+             spans the label AND the bar/note, unlike the bar alone, which
+             only covers the thin progress track — so the highlight now
+             aligns with the whole visible row, not just the bar), one
+             hidden `height:0; overflow:visible;` span placed FIRST with
+             the combined "Label: value" (or "Label, note") phrase (see
+             FactorRow.accessibleLabel in the .ts file), and the real
+             visible `dt`/`dd` marked `aria-hidden` so the label isn't
+             spoken a second time. The bar's own `role="img"` is removed
+             (not merely hidden) since it is now inside an aria-hidden
+             subtree and would otherwise still race for scan focus. -->
         <dl class="readiness__factors">
           @for (f of factors(); track f.key) {
-            <div class="readiness__factor">
-              <dt class="readiness__factor-label">{{ f.label }}</dt>
-              <dd class="readiness__factor-value">
+            <div class="readiness__factor" role="group">
+              <span class="readiness__factor-hidden">{{ f.accessibleLabel }}</span>
+              <dt class="readiness__factor-label" aria-hidden="true">{{ f.label }}</dt>
+              <dd class="readiness__factor-value" aria-hidden="true">
                 @if (f.showBar) {
-                  <span
-                    class="readiness__bar"
-                    role="img"
-                    [attr.aria-label]="f.label + ': ' + f.value + ' out of 100'"
-                  >
+                  <span class="readiness__bar">
                     <span class="readiness__bar-fill" [style.width.%]="f.value"></span>
                   </span>
-                  <span class="readiness__factor-num" aria-hidden="true">{{ f.value }}</span>
+                  <span class="readiness__factor-num">{{ f.value }}</span>
                 } @else {
                   <span class="readiness__factor-note">{{ f.note }}</span>
                 }

@@ -13,19 +13,6 @@
     font-weight: 800;
   }
 
-  // Visually-hidden accessible summary of the whole card.
-  &__sr {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
   &__limited {
     margin: 4px 0 2px;
     font-weight: 600;
@@ -99,16 +86,57 @@
     margin: 0;
   }
 
+  // Added alongside &__factor-hidden below: once a THIRD grid child exists,
+  // CSS Grid's implicit auto-placement is no longer safe to rely on (it
+  // could shunt the label/value into unintended cells depending on source
+  // order) — pinning all three explicitly keeps the visible 2-column
+  // layout identical to before.
   &__factor-label {
+    grid-column: 1;
+    grid-row: 1;
     font-size: 13px;
     font-weight: 600;
   }
 
   &__factor-value {
+    grid-column: 2;
+    grid-row: 1;
     display: flex;
     align-items: center;
     gap: 10px;
     margin: 0;
+  }
+
+  // Combined "Label: value" (or "Label, note") phrase for the row — see
+  // this component's own history comment on .readiness__factor in the
+  // .html file. Reuses Interview Results' confirmed technique (that
+  // file's own .visually-hidden-overlay comment has the full history):
+  // Narrator's highlight tracks THIS element's own box, not its
+  // `role="group"` ancestor's, so it must occupy the SAME cell as the
+  // label it needs to align with (confirmed target: the label, not the
+  // value) — `grid-column/row` pin it there explicitly rather than
+  // relying on normal-flow/DOM-order placement, which doesn't apply
+  // inside a grid container. `height: 0; overflow: visible;` keeps its
+  // own box's reported size zero (no layout impact — the row's height
+  // is still set by the label/value alone); `opacity: 0` keeps it
+  // invisible to sighted users while staying exposed to assistive tech;
+  // `pointer-events: none` so it can never intercept a click.
+  &__factor-hidden {
+    grid-column: 1;
+    grid-row: 1;
+    // The container's `align-items: center` (needed for the label/value
+    // row) would otherwise center THIS zero-height box at the row's
+    // vertical MIDPOINT instead of pinning it to the top, where the
+    // label actually starts — confirmed via CDP measurement in a real
+    // session: a ~9px gap between this element's reported box and the
+    // label's own, before this override.
+    align-self: start;
+    display: block;
+    height: 0;
+    overflow: visible;
+    opacity: 0;
+    pointer-events: none;
+    white-space: nowrap;
   }
 
   &__bar {
@@ -182,10 +210,31 @@
 }
 
 // Mobile: stack factor label above its bar; no horizontal scrolling.
+// &__factor-label/&__factor-value are pinned to explicit grid cells above
+// (needed once &__factor-hidden made the container a 3-child grid) — this
+// single-column layout needs its OWN explicit cells too, or the pinned
+// `grid-column: 2` from the 2-column layout would place the value in an
+// implicitly-created second column beside the label instead of stacking
+// below it.
 @media (max-width: 600px) {
   .readiness__factor {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .readiness__factor-label {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .readiness__factor-value {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .readiness__factor-hidden {
+    grid-column: 1;
+    grid-row: 1;
   }
 }
 

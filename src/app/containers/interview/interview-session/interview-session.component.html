@@ -119,7 +119,9 @@
       (dragstart)="blockCopy($event)"
     >
       <h3
+        #questionHeading
         class="interview-question"
+        tabindex="-1"
         aria-live="polite"
         aria-atomic="true"
         [innerHTML]="questionText()"

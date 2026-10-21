@@ -10,11 +10,26 @@
     </p>
   } @else {
     <!-- Compact summary metrics — all normalised to percentages so interviews
-         with different question counts stay comparable. -->
+         with different question counts stay comparable.
+
+         CONFIRMED (manual Narrator Scan Mode report, 2026-10-18): each
+         metric's label and value were read as two separate stops (e.g.
+         "Latest" then, separately, "100%"). Fix, reusing the exact
+         technique confirmed working for Interview Results' stat-grid: one
+         combined "Label, value" phrase per row, as REAL TEXT inside a
+         `role="group"` span (see .visually-hidden-overlay's own comment
+         below) — never an attribute on the group itself. The real
+         dt/dd stay exactly as rendered (unchanged layout), now
+         `aria-hidden="true"` so they aren't ALSO read separately. The
+         "New Personal Best!" badge is deliberately left OUTSIDE the
+         hidden/aria-hidden pair — it's a separate, real, non-hidden
+         `role="status"` announcement in its own right and must keep
+         reading (and re-announcing when it first appears) independently. -->
     <dl class="perf-metrics">
-      <div>
-        <dt i18n>Latest</dt>
-        <dd class="perf-metrics__latest">{{ trends()?.latest }}%</dd>
+      <div role="group">
+        <span class="visually-hidden-overlay">{{ latestAccessibleLabel() }}</span>
+        <dt aria-hidden="true" i18n>Latest</dt>
+        <dd class="perf-metrics__latest" aria-hidden="true">{{ trends()?.latest }}%</dd>
         @if (trends()?.isPersonalBest) {
           <p class="perf-metrics__pb" role="status">
             <span class="perf-metrics__pb-icon" aria-hidden="true">🏆</span>
@@ -22,20 +37,23 @@
           </p>
         }
       </div>
-      <div>
-        <dt i18n>Best</dt>
-        <dd>{{ trends()?.best }}%</dd>
+      <div role="group">
+        <span class="visually-hidden-overlay">{{ bestAccessibleLabel() }}</span>
+        <dt aria-hidden="true" i18n>Best</dt>
+        <dd aria-hidden="true">{{ trends()?.best }}%</dd>
       </div>
-      <div>
-        <dt i18n>Average</dt>
-        <dd>{{ trends()?.average }}%</dd>
+      <div role="group">
+        <span class="visually-hidden-overlay">{{ averageAccessibleLabel() }}</span>
+        <dt aria-hidden="true" i18n>Average</dt>
+        <dd aria-hidden="true">{{ trends()?.average }}%</dd>
       </div>
-      <div>
-        <dt i18n>Change</dt>
+      <div role="group">
+        <span class="visually-hidden-overlay">{{ changeAccessibleLabel() }}</span>
+        <dt aria-hidden="true" i18n>Change</dt>
         <dd
+          aria-hidden="true"
           [class.perf-metrics__change--up]="(trends()?.change ?? 0) > 0"
           [class.perf-metrics__change--down]="(trends()?.change ?? 0) < 0"
-          [attr.aria-label]="changeAria()"
         >{{ changeLabel() }}</dd>
       </div>
     </dl>
@@ -116,15 +134,26 @@
       </figure>
     }
 
-    <!-- Visually-hidden accessible equivalent of the chart: the same data as a
-         plain, screen-reader-friendly list (most recent first). -->
+    <!-- Visually-hidden accessible equivalent of the chart: the same data,
+         most recent first.
+
+         CONFIRMED (manual Narrator report, 2026-10-18): as a `<ul>`/`<li>`
+         list, Narrator announced "bullet" before each attempt and read
+         only the date, not the score that followed (see
+         srAttemptPhrase()'s own comment in the .ts file for the full
+         reasoning). Fixed by dropping the list structure entirely — a
+         plain `<p>` per attempt. A table/row structure was considered and
+         rejected: it would trade "bullet" for "row"/"column" announcements,
+         the same class of problem, not a real fix. Plain paragraphs carry
+         no comparable role-announcement at all. Chronological order
+         (newest first, matching srPoints()) and every attempt's data
+         (date + score, plus the time-expired qualifier when it applies)
+         are unchanged — only the wrapping markup and phrasing are. -->
     <div class="perf-trends__sr">
       <p i18n>Interview scores, most recent first:</p>
-      <ul>
-        @for (p of srPoints(); track p.id) {
-          <li>{{ srLine(p) }}</li>
-        }
-      </ul>
+      @for (p of srPoints(); track p.id) {
+        <p>{{ srAttemptPhrase(p) }}</p>
+      }
     </div>
   }
 </section>

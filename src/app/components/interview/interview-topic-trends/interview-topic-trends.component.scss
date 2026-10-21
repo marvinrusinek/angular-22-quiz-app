@@ -9,6 +9,15 @@
     margin: 0 0 12px;
     font-size: 20px;
     font-weight: 800;
+
+    // Programmatically focused on fragment entry (see
+    // InterviewHistoryComponent's own comment) — same explicit outline
+    // convention already used for other programmatically-focused headings
+    // in this codebase, rather than relying on the browser's UA default.
+    &:focus-visible {
+      outline: 2px solid var(--ir-accent, #007aff);
+      outline-offset: 2px;
+    }
   }
 
   &__empty,
@@ -25,6 +34,28 @@
     border-radius: 8px;
     background: rgba(0, 0, 0, 0.04);
   }
+}
+
+// Combined "Label, value" phrase per stat (see .tt-summary's own comment
+// in the .html file) — the Interview Results stat-grid's own confirmed
+// technique, defined locally (not relied on via global style leakage from
+// another component). A normal-flow sibling placed FIRST, immediately
+// before the visible label, so its own box's top-left corner coincides
+// with where the label starts: `height: 0; overflow: visible;` keeps its
+// reported box zero-size (no layout impact — `.tt-summary > div` below is
+// plain block flow, not a grid/flex container, so this placement is a
+// direct block-level stack, the same shape already proven correct).
+// `opacity: 0` (not `display:none`/`visibility:hidden`/`aria-hidden`)
+// keeps it invisible to sighted users while staying exposed to assistive
+// tech; `white-space: nowrap` keeps it one line regardless of value
+// length; `pointer-events: none` so it can never intercept a click.
+.visually-hidden-overlay {
+  display: block;
+  height: 0;
+  overflow: visible;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .tt-summary {
@@ -102,18 +133,6 @@
   border-radius: 12px;
   background: var(--ir-surface, #fff);
   padding: 16px;
-
-  &__sr {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
 
   &__head {
     display: flex;

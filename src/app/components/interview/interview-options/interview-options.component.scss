@@ -5,6 +5,22 @@
   color: var(--io-muted, #5a5a5a);
 }
 
+// Same clip-based hiding already used elsewhere in this codebase (e.g.
+// shared-option.component.scss, quiz-selection.component.scss) — content
+// stays available to assistive technology, never `display:none`,
+// `visibility:hidden`, or `aria-hidden`.
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .io-list {
   list-style: none;
   margin: 0;
@@ -27,11 +43,25 @@
   &:hover {
     background-color: var(--bg-option-hover, #f0f0f0);
   }
+}
 
-  &:focus-within {
-    outline: 2px solid var(--io-accent, #007aff);
-    outline-offset: 2px;
-  }
+// Visible keyboard-focus indicator surrounds the WHOLE option rectangle.
+// DOM focus itself never moves — it stays on the native radio/checkbox
+// below (no tabindex added here, no outer element made focusable); this
+// is purely :has() reaching up from the real focus target, matching the
+// existing convention for the topic quiz's own options
+// (quiz-question.component.scss: `mat-radio-button:has(input:focus-visible)`).
+// :focus-visible, not :focus-within — shows only for keyboard-triggered
+// focus, not a mouse click. Plain `outline` (not box-shadow): browsers
+// automatically recolor an explicit `outline` under forced-colors
+// (Windows High Contrast) mode; `forced-color-adjust: none` is never used
+// here, so that stays intact. `outline`/`outline-offset` never affect
+// layout (no shift), and the option's own 8px vertical margin plus the
+// question box's own padding comfortably clear the 2px offset (no
+// clipping at the edges).
+.io-option:has(input:focus-visible) {
+  outline: 3px solid var(--io-accent, #007aff);
+  outline-offset: 2px;
 }
 
 .io-input {
@@ -39,6 +69,13 @@
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
+
+  // The wrapper's outline above is the ONE visible focus indicator.
+  // Suppressing the input's own default ring avoids a second, inner ring
+  // stacking with the outer one around the whole rectangle.
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 .io-text {
@@ -67,5 +104,12 @@
   .io-option.io-selected {
     background-color: rgba(76, 157, 255, 0.20);
     box-shadow: inset 3px 0 0 0 #4c9dff;
+  }
+
+  // Same dark-mode-friendly blue already used for the selected state above
+  // (#4c9dff) — the default light-mode outline color (--io-accent / #007aff)
+  // reads lower-contrast against the dark option background.
+  .io-option:has(input:focus-visible) {
+    outline-color: #4c9dff;
   }
 }

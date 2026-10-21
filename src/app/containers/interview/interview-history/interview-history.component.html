@@ -1,6 +1,10 @@
 <div class="interview-history">
   <header class="interview-history__bar">
-    <h1 class="interview-history__title" i18n>Interview History</h1>
+    <!-- tabindex="-1": programmatically focusable only, never a Tab stop.
+         Focused once on NORMAL entry only (see focusEntryTarget()'s own
+         comment) — mutually exclusive with the topic-trends fragment case,
+         which focuses that section's own heading instead. -->
+    <h1 #historyHeading class="interview-history__title" tabindex="-1" i18n>Interview History</h1>
     <codelab-theme-toggle />
   </header>
 

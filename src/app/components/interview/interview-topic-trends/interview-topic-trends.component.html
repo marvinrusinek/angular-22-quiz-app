@@ -1,6 +1,10 @@
 @if (trends(); as t) {
   <section class="topic-trends" aria-labelledby="topic-trends-heading">
-    <h2 id="topic-trends-heading" class="topic-trends__heading" i18n>Topic Trends</h2>
+    <!-- tabindex="-1": programmatically focusable only, never a Tab stop.
+         Interview History's "View Topic Trends" fragment-entry focuses this
+         heading directly once on arrival (see InterviewHistoryComponent's
+         own focusTopicTrendsIfTargeted() comment for the full trace). -->
+    <h2 id="topic-trends-heading" class="topic-trends__heading" tabindex="-1" i18n>Topic Trends</h2>
 
     @if (!hasTopics()) {
       <p class="topic-trends__empty" role="status" i18n>
@@ -8,12 +12,48 @@
         Complete another Interview Mode assessment to begin tracking topic trends.
       </p>
     } @else {
-      <!-- Compact summary. -->
-      <dl class="tt-summary" aria-label="Topic trends summary" i18n-aria-label>
-        <div><dt i18n>Topics Tracked</dt><dd>{{ t.trackedCount }}</dd></div>
-        <div><dt i18n>Improving</dt><dd>{{ t.improvingCount }}</dd></div>
-        <div><dt i18n>Holding Steady</dt><dd>{{ t.steadyCount }}</dd></div>
-        <div><dt i18n>Needs Attention</dt><dd>{{ t.needsAttentionCount }}</dd></div>
+      <!-- Compact summary.
+
+           CONFIRMED (manual Narrator report, 2026-10-19): right after the
+           Topic Trends heading, Down Arrow read each of these four stats'
+           label and value as two separate stops. Two earlier candidates
+           fixed the SPEECH grouping but not the HIGHLIGHT: a hidden span
+           (role="group" + text-content phrase) shifted the highlight
+           left of the label (two different-width strings independently
+           centered in the same box — confirmed via Range measurement,
+           not a wrap); moving the phrase to aria-label on that same
+           hidden span kept the highlight pixel-aligned to the label but
+           a manual retest still showed TWO rectangles.
+           Root cause, confirmed via Accessibility.getFullAXTree: a
+           `role="group"` div does not suppress its children from the
+           accessibility tree the way `role="img"` does — so the group
+           itself AND its hidden `<span>` child were BOTH separately
+           exposed, non-ignored accessible objects for what should be one
+           stat. FIX: no more wrapping group, no more hidden span. role
+           "img" + aria-label goes directly on `dt` itself — the same
+           collapse-to-one-leaf technique already proven for the badges
+           wrapper and the score-hero/Readiness summary blocks. dt's own
+           rendered text/box is unchanged (still just the visible label,
+           same CSS), so the highlight should track dt's own box — the
+           LABEL only, not the value, not a wrapping tile. dd stays
+           `aria-hidden="true"` so it's never a second stop. -->
+      <dl class="tt-summary">
+        <div>
+          <dt role="img" [attr.aria-label]="trackedAccessibleLabel()" i18n>Topics Tracked</dt>
+          <dd aria-hidden="true">{{ t.trackedCount }}</dd>
+        </div>
+        <div>
+          <dt role="img" [attr.aria-label]="improvingAccessibleLabel()" i18n>Improving</dt>
+          <dd aria-hidden="true">{{ t.improvingCount }}</dd>
+        </div>
+        <div>
+          <dt role="img" [attr.aria-label]="steadyAccessibleLabel()" i18n>Holding Steady</dt>
+          <dd aria-hidden="true">{{ t.steadyCount }}</dd>
+        </div>
+        <div>
+          <dt role="img" [attr.aria-label]="needsAttentionAccessibleLabel()" i18n>Needs Attention</dt>
+          <dd aria-hidden="true">{{ t.needsAttentionCount }}</dd>
+        </div>
       </dl>
 
       <!-- Client-side filters. -->
@@ -43,31 +83,59 @@
         <ul class="tt-list">
           @for (topic of visibleTopics(); track topic.topicId) {
             <li class="tt-card" [class]="'tt-card--' + topic.direction">
-              <!-- Accessible one-sentence equivalent of the whole card + chart. -->
-              <p class="tt-card__sr">{{ ariaSummary(topic) }}</p>
-
               <div class="tt-card__head">
                 <h3 class="tt-card__name">{{ topic.topicName }}</h3>
-                <div class="tt-card__badges" aria-hidden="true">
+                <!-- CONFIRMED (manual Narrator Scan Mode report, 2026-10-19):
+                     entering a card announced a full combined .tt-card__sr
+                     sentence (now removed, see the .ts file's comment on the
+                     removed ariaSummary() method), then Down Arrow read the
+                     heading, badges, and metrics a second time. role="img"
+                     makes this existing flex wrapper itself the one AX leaf
+                     (its own box, not a new child, so the badges' flex
+                     layout is untouched) — same technique already proven for
+                     the score-hero and Readiness summary wrappers. -->
+                <div
+                  class="tt-card__badges"
+                  role="img"
+                  [attr.aria-label]="badgesAccessibleLabel(topic)"
+                >
                   <!-- Strength and trend are SEPARATE concepts. -->
                   <span class="tt-badge" [class]="'tt-badge--band-' + topic.strengthBand">{{ bandLabel(topic.strengthBand) }}</span>
                   <span class="tt-badge" [class]="'tt-badge--dir-' + topic.direction">{{ directionLabel(topic.direction) }}</span>
                 </div>
               </div>
 
-              <dl class="tt-card__metrics" aria-hidden="true">
-                <div><dt i18n>Latest</dt><dd>{{ topic.latestPercentage }}%</dd></div>
-                <div>
-                  <dt i18n>Previous</dt>
-                  <dd>{{ topic.previousPercentage === null ? '—' : topic.previousPercentage + '%' }}</dd>
+              <!-- Each row grouped into one "Label, value" phrase — the same
+                   confirmed technique used for .tt-summary above, now applied
+                   per metric instead of hiding the whole dl behind a single
+                   combined sentence. -->
+              <dl class="tt-card__metrics">
+                <div role="group">
+                  <span class="visually-hidden-overlay">{{ latestAccessibleLabel(topic) }}</span>
+                  <dt i18n aria-hidden="true">Latest</dt>
+                  <dd aria-hidden="true">{{ topic.latestPercentage }}%</dd>
                 </div>
-                <div>
-                  <dt i18n>Change</dt>
-                  <dd [class.tt-up]="(topic.change ?? 0) > 0" [class.tt-down]="(topic.change ?? 0) < 0">
+                <div role="group">
+                  <span class="visually-hidden-overlay">{{ previousAccessibleLabel(topic) }}</span>
+                  <dt i18n aria-hidden="true">Previous</dt>
+                  <dd aria-hidden="true">{{ topic.previousPercentage === null ? '—' : topic.previousPercentage + '%' }}</dd>
+                </div>
+                <div role="group">
+                  <span class="visually-hidden-overlay">{{ changeAccessibleLabel(topic) }}</span>
+                  <dt i18n aria-hidden="true">Change</dt>
+                  <dd
+                    aria-hidden="true"
+                    [class.tt-up]="(topic.change ?? 0) > 0"
+                    [class.tt-down]="(topic.change ?? 0) < 0"
+                  >
                     {{ changeLabel(topic.change) }}
                   </dd>
                 </div>
-                <div><dt i18n>Overall</dt><dd>{{ topic.aggregatePercentage }}%</dd></div>
+                <div role="group">
+                  <span class="visually-hidden-overlay">{{ overallAccessibleLabel(topic) }}</span>
+                  <dt i18n aria-hidden="true">Overall</dt>
+                  <dd aria-hidden="true">{{ topic.aggregatePercentage }}%</dd>
+                </div>
               </dl>
 
               @if (sparkline(topic.points); as spark) {

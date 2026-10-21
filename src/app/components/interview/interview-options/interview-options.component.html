@@ -1,10 +1,51 @@
 @if (isMultiSelect()) {
   <p class="io-hint" i18n>Select all that apply.</p>
+} @else {
+  <!-- Keyboard guidance for the radiogroup only — native radio-button
+       navigation (Arrow keys move the selection, Tab leaves the group) is
+       standard behavior, but worth stating explicitly since this list has
+       no visible instructions otherwise. aria-describedby, not aria-live:
+       read once on entering the group, not repeated on every arrow-key
+       move. Never applied to the checkbox (multiple-answer) case above,
+       where Tab (not Arrow keys) moves between options. -->
+  <span
+    [id]="radiogroupHintId"
+    class="visually-hidden"
+    i18n
+  >Use arrow keys to move between answers. Press Tab to leave the answer options.</span>
 }
 
-<ul class="io-list" role="group" aria-label="Answer options" i18n-aria-label>
+<ul
+  class="io-list"
+  [attr.role]="isMultiSelect() ? 'group' : 'radiogroup'"
+  [attr.aria-describedby]="isMultiSelect() ? null : radiogroupHintId"
+  aria-label="Answer options"
+  i18n-aria-label
+>
   @for (option of displayOptions(); track option.optionId) {
     <li>
+      <!--
+        CONFIRMED via CDP (2026-10-17): a native <label> wrapping an
+        <input> computes the input's accessible name correctly from the
+        label's text content ("labelwrapped" source) — but the visible
+        <span> that text came from is NOT pruned from the accessibility
+        tree. It remains a separate, non-ignored StaticText node, sibling
+        to the radio/checkbox, inside the same non-ignored label
+        container — so the option's text is exposed TWICE: once as the
+        control's own name, once again as that independent node. This is
+        what Narrator was reading twice while arrowing between options.
+
+        FIX: the input gets its name from an explicit [attr.aria-label]
+        instead of relying on label-wrapped content, and the visible
+        <span> is marked aria-hidden="true" — removing ONLY its
+        accessibility-tree exposure (confirmed via CDP: the node becomes
+        `ignored: true`, reason `ariaHiddenSubtree`), never its visual
+        rendering or its DOM presence. The exact same text is still what
+        gets announced — now sourced once, from aria-label, instead of
+        twice. Applies to both the radio and checkbox cases: the
+        duplication is structural (this label+input+span shape), not
+        specific to either control type.
+      -->
       <label class="option-row io-option" [class.io-selected]="isSelected(option)">
         <input
           class="io-input"
@@ -12,12 +53,15 @@
           name="interview-answer"
           [checked]="isSelected(option)"
           [disabled]="disabled()"
+          [attr.aria-label]="option.text"
           (change)="onToggle(option)"
         />
         <!-- Plain-text interpolation, consistent with the topic-quiz options
              (option-item.component.html). innerHTML here would parse literal
-             tags in the option (e.g. "<div>") as elements and drop them. -->
-        <span class="io-text">{{ option.text }}</span>
+             tags in the option (e.g. "<div>") as elements and drop them.
+             aria-hidden: see the comment above — the input's aria-label
+             now supplies the accessible name; this span is purely visual. -->
+        <span class="io-text" aria-hidden="true">{{ option.text }}</span>
       </label>
     </li>
   }

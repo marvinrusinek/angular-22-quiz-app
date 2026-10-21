@@ -241,7 +241,7 @@ npm install</code></pre>
 
 <hr>
 
-<h2>⭐ Support</h2>
+<h2 id="support">⭐ Support</h2>
 
 <p>If you enjoyed exploring this project or found it helpful, please consider giving it a ⭐ on GitHub. Your support helps drive continued improvements, new features, and ongoing maintenance.</p>
 <p>The project continues to evolve with new Angular topics, assessment capabilities, and architectural improvements.</p>

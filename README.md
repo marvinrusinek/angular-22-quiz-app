@@ -26,6 +26,8 @@
   <a href="#-architecture-overview">🧭 Architecture</a>
   ·
   <a href="#%EF%B8%8F-getting-started">⚙️ Getting Started</a>
+  ·
+  <a href="#support">❤️ Support</a>
 </p>
 
 <hr>

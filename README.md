@@ -25,7 +25,7 @@
   ·
   <a href="#-architecture-overview">🧭 Architecture</a>
   ·
-  <a href="#%EF%B8%8F-getting-started">⚙️ Getting Started</a>
+  <a href="#getting-started">⚙️ Getting Started</a>
 </p>
 
 <hr>

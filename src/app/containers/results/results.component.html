@@ -102,20 +102,28 @@
 
     <!-- LOGO (Right) -->
     <div class="logo">
-      <a href="https://www.codelab.fun" title="Angular Codelab" i18n-title target="_blank" rel="noopener noreferrer">
+      <!-- Native button (not a link or a clickable image) so the logo has a real name and
+           keyboard behavior. Narrator testing on a standalone reproduction showed that a
+           link around this image made the "Score Analysis" heading's words split under Down
+           Arrow; see docs/accessibility/topic-quiz-results-heading-level-repeat.md. `title`
+           (same text as the name) replaces matTooltip so no extra aria-describedby is added. -->
+      <button
+        type="button"
+        class="logo-btn"
+        [attr.aria-label]="backToQuizSelectionLabel"
+        title="Back to quiz selection"
+        i18n-title
+        (click)="selectQuiz()"
+      >
         <img
           class="header-image"
           ngSrc="assets/images/codelab_logo.jpeg"
           width="100"
           height="56"
-          alt="Angular Codelab logo"
+          alt=""
           loading="lazy"
-          (click)="selectQuiz()"
-          matTooltip="Back to Codelab Quiz Selection"
-          i18n-matTooltip
-          matTooltipPosition="left"
         />
-      </a>
+      </button>
     </div>
   </div>
 

@@ -80,7 +80,10 @@ import { AchievementView } from '@shared/models';
                     }
                     {{ achievement.name }}
                   </span>
-                  <span class="achievements-catalog__desc">{{ achievement.description }}</span>
+                  <!-- Trailing U+00A0 (&nbsp;): a plain/collapsible space between this description and the
+                       Earned/Locked status is dropped from the page's accessible text, so UIA exposed
+                       "...quiz.LOCKED" (Narrator spoke a "dot" there). A non-breaking space survives. -->
+                  <span class="achievements-catalog__desc">{{ achievement.description }}&nbsp;</span>
                 </span>
                 <span class="achievements-catalog__badge">
                   @if (achievement.earned) {

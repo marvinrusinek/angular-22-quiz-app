@@ -67,6 +67,15 @@ describe('AchievementsCatalogComponent', () => {
     expect(toggleBtn()?.getAttribute('aria-expanded')).toBe('true');
   });
 
+  it('keeps the description text and ends it with a non-breaking space before the status', () => {
+    setAchievements(VIEW);
+    toggleBtn()?.click();
+    fixture.detectChanges();
+    const desc = items()[0].querySelector('.achievements-catalog__desc')?.textContent ?? '';
+    expect(desc).toBe('Earn a 100% score on any quiz.\u00a0');
+    expect(items()[0].textContent).toContain('Earned');
+  });
+
   it('distinguishes earned vs locked with state class + text (not color only)', () => {
     setAchievements(VIEW);
     toggleBtn()?.click();

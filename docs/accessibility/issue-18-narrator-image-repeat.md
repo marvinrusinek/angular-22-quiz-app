@@ -8,12 +8,18 @@ With Windows Narrator in scan mode, pressing Down Arrow to reach the
 topic image on the Introduction page:
 
 - After in-app navigation (Quiz Selection → a topic tile → Introduction,
-  a client-side route change): the image's accessible name is announced
-  **4 times** on a single arrival at that element, consistently across
-  many trials.
+  a client-side route change): the image's accessible name has been
+  announced **4 times** on a single arrival at that element, in every
+  trial observed so far.
 - After a direct/fresh navigation straight to the same Introduction URL
-  (no client-side route change involved): the image is announced
-  **once**, consistently across many trials.
+  (no client-side route change involved): the image has been announced
+  **once**, in every trial observed so far.
+
+This contrast is the most consistently observed pattern in the whole
+investigation, but it has not itself been run through a formal
+counterbalanced protocol the way candidate code-level causes were (see
+Limitations). Treat it as a strong, repeated correlation, not a
+confirmed causal mechanism tied to navigation type specifically.
 
 ## Reproduction
 
@@ -25,8 +31,10 @@ topic image on the Introduction page:
 5. Count how many times its name is announced on that single arrival.
 
 Repeating step 1-4 via a fresh browser tab navigated directly to the
-same Introduction URL (skipping Quiz Selection) reliably produces one
-announcement instead.
+same Introduction URL (skipping Quiz Selection) has instead produced one
+announcement in every trial observed so far — a strong, repeated
+correlation, not a confirmed causal guarantee (see Confirmed findings
+and Limitations).
 
 A minimal, framework-free HTML reproduction (two static files plus the
 real image asset, no Angular/router/build tooling) was also built to
@@ -35,8 +43,11 @@ ask if you need it for further investigation.
 
 ## Confirmed findings
 
-- The in-app vs. direct-navigation contrast above has been reproduced
-  consistently across many separate trials and sessions.
+- The in-app vs. direct-navigation contrast above has been observed in
+  every trial run so far, across many separate sessions — but, like
+  every other candidate contrast tested in this investigation, it has
+  not been run through a formal counterbalanced protocol, so it is
+  reported as a strong correlation, not a confirmed cause.
 - Several candidate app-level causes were tested and **ruled out**:
   image format (PNG vs. WebP), a duplicate `introImgSig` write during
   quiz load (confirmed via a live DOM mutation trace to write the image

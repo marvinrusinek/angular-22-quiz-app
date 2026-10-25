@@ -142,6 +142,9 @@ export class ResultsComponent implements OnInit {
   // focusResultsHeadingOnce()'s own comment for why that matters here.
   private readonly mountTimeMs = performance.now();
 
+  // Accessible name for the Results logo button (see results.component.html).
+  readonly backToQuizSelectionLabel = $localize`Back to quiz selection`;
+
   // Achievements newly earned by THIS completed quiz (shown once, not after refresh).
   readonly newlyEarnedAchievements = signal<AchievementDefinition[]>([]);
   // Every achievement + earned/locked state, for the expandable catalog section.

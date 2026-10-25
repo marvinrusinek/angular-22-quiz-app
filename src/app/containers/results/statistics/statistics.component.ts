@@ -93,6 +93,30 @@ export class StatisticsComponent implements OnInit {
 
   readonly minuteLabel = computed(() => (this.elapsedMinutes() === 1 ? 'minute' : 'minutes'));
 
+  /** Congratulations / Not Bad / Try Again — matches the feedback image's wording. */
+  readonly feedbackTitle = computed(() => {
+    const level = this.feedbackLevel();
+    if (level === 'excellent') return $localize`Congratulations`;
+    if (level === 'good') return $localize`Not Bad`;
+    return $localize`Try Again`;
+  });
+
+  // 'all' mode shows the resource links inside the feedback block for low
+  // scores; those are interactive, so that case is never wrapped as one graphic.
+  readonly feedbackGrouped = computed(
+    () => !(this.viewMode() === 'all' && this.feedbackLevel() === 'poor')
+  );
+
+  readonly feedbackAria = computed(
+    () =>
+      $localize`${this.feedbackTitle()}! You scored ${this.correctCount()} out of ${this.totalCount()} ${this.questionLabel()} correctly.`
+  );
+
+  readonly elapsedAria = computed(
+    () =>
+      $localize`Timer. Completed in ${this.elapsedMinutes()} ${this.minuteLabel()} and ${this.elapsedSeconds()} seconds.`
+  );
+
   CONGRATULATIONS =
     'https://raw.githubusercontent.com/marvinrusinek/angular-9-quiz-app/master/src/assets/images/congratulations.jpg';
   NOT_BAD =

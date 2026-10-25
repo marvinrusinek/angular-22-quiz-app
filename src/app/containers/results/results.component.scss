@@ -235,7 +235,23 @@ mat-card {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    
+
+    // Native button wrapping the decorative logo image: reset to look like the
+    // bare image it replaced, with a visible keyboard focus ring.
+    .logo-btn {
+      display: inline-flex;
+      padding: 0;
+      border: 0;
+      background: none;
+      border-radius: 8px;
+      cursor: pointer;
+
+      &:focus-visible {
+        outline: 2px solid vars.$dodger-blue;
+        outline-offset: 4px;
+      }
+    }
+
     img {
       cursor: pointer;
       transition: all 0.3s ease;

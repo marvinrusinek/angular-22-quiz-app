@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 /**
  * Presentational-only score visuals for the results screen: the circular SVG
@@ -23,4 +23,19 @@ export class ScoreVisualComponent {
   readonly incorrectCount = input<number>(0);
   readonly timedOutCount = input<number>(0);
   readonly starCount = input<number>(0);
+  readonly starsAria = computed(() => {
+    const n = this.starCount();
+    return n === 1 ? $localize`${n} Star` : $localize`${n} Stars`;
+  });
+  readonly badgeAria = computed(() => {
+    const level = this.feedbackLevel();
+    if (level === 'excellent') return $localize`Trophy. Excellent Performance!`;
+    if (level === 'good') return $localize`Silver medal. Good Job!`;
+    return $localize`Flexed biceps. Keep Practicing!`;
+  });
+  readonly circleAria = computed(() => $localize`${this.percentage()}% Score`);
+  readonly breakdownAria = computed(
+    () =>
+      $localize`${this.correctCount()} Correct, ${this.incorrectCount()} Incorrect, ${this.timedOutCount()} Timed Out`
+  );
 }

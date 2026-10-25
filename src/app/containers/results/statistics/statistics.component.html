@@ -5,8 +5,12 @@
       <div class="score-view">
         <div class="score-grid">
           <!-- LEFT COLUMN: Feedback Image, Score Text -->
-          <div class="score-col-feedback">
-            <div class="quiz-feedback">
+          <div
+            class="score-col-feedback"
+            [attr.role]="feedbackGrouped() ? 'img' : null"
+            [attr.aria-label]="feedbackGrouped() ? feedbackAria() : null"
+          >
+            <div class="quiz-feedback" [attr.aria-hidden]="feedbackGrouped() ? 'true' : null">
               @if (feedbackLevel() === 'excellent') {
                 <img
                   mat-card-image
@@ -45,18 +49,8 @@
             </div>
 
             <!-- Score Text -->
-            <div class="score-text-container">
-              <span
-                class="your-score"
-                i18n
-              >
-                You scored
-                <span class="result">{{ quizMetadata().correctAnswersCount?.() ?? 0 }}</span>
-                out of
-                <span class="result">{{ quizMetadata().totalQuestions }}</span>
-                {{ questionLabel() }}
-                correctly.
-              </span>
+            <div class="score-text-container" [attr.aria-hidden]="feedbackGrouped() ? 'true' : null">
+              <span class="your-score" i18n>You scored {{ quizMetadata().correctAnswersCount?.() ?? 0 }} out of {{ quizMetadata().totalQuestions }} {{ questionLabel() }} correctly.</span>
             </div>
           </div>
 
@@ -74,19 +68,13 @@
         </div>
 
         <!-- TIME SECTION -->
-        <div class="time-section">
-          <span class="time-icon">⏱️</span>
-          <span
-            class="elapsed-time"
-            i18n
-          >
-            Completed in
-            <span class="result">{{ elapsedMinutes() }}</span>
-            {{ minuteLabel() }}
-            and
-            <span class="result">{{ elapsedSeconds() }}</span>
-            seconds.
-          </span>
+        <div
+          class="time-section"
+          role="img"
+          [attr.aria-label]="elapsedAria()"
+        >
+          <span class="time-icon" aria-hidden="true">⏱️</span>
+          <span class="elapsed-time" aria-hidden="true" i18n>Completed in {{ elapsedMinutes() }} {{ minuteLabel() }} and {{ elapsedSeconds() }} seconds.</span>
         </div>
       </div>
     }

@@ -85,8 +85,13 @@
 .star-rating {
   display: flex;
   justify-content: center;
-  gap: 8px;
   margin: 2px 0 16px;  // pulled up ~14px to line up with the "You scored…" text
+
+  .star-icons {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+  }
 
   .star {
     font-size: 32px;

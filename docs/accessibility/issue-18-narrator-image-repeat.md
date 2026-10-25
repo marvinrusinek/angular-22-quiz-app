@@ -58,19 +58,28 @@ ask if you need it for further investigation.
   not been run through a formal counterbalanced protocol, so it is
   reported as a strong correlation, not a confirmed cause.
 
-**Excluded as causes** (confirmed via direct, instrumented evidence on
+**Excluded as a cause** (confirmed via direct, instrumented evidence on
 the real app, not just repeated-trial correlation):
-- Image format (PNG vs. WebP) does not explain the in-app/direct
-  contrast: switching the real app's image to PNG still produced 4x
-  announcements on in-app navigation, so format is excluded as the
-  explanation for the symptom.
-- A duplicate `introImgSig` write during quiz load is excluded as a
-  mechanism: a live DOM mutation trace on the real app recorded the
-  image `src` being written exactly once, with zero attribute
-  mutations, and a direct comparison of the bundled metadata against
-  the live API response showed both of the component's two write calls
-  produce the byte-identical value — so no real second mutation ever
-  occurs for this quiz.
+- A duplicate `introImgSig` write is excluded as a mechanism, scoped to
+  the exact transitions measured: a live DOM mutation trace captured on
+  the real app during an in-app arrival at the Dependency Injection
+  intro page (Quiz Selection → tile click) recorded the image `src`
+  being written exactly once, with zero attribute mutations, across
+  that transition. A separate, direct comparison of the bundled
+  metadata against the live API response for this same quiz showed the
+  component's two `handleLoadedQuiz()` write calls produce the
+  byte-identical value, so no real second mutation occurs on that
+  specific transition. This has not been measured on any other
+  quiz or transition.
+
+**Tested, not conclusively excluded:**
+- PNG conversion did not resolve repetition; format was not
+  conclusively excluded as a contributing factor. Switching the real
+  app's image to PNG still produced 4x announcements on in-app
+  navigation, so PNG specifically does not fix the symptom, but this is
+  a single real-app retest of one format substitution, not a
+  controlled test that isolates format as a variable the way the
+  excluded finding above does.
 
 **Tested, unsuccessful candidates** (not confirmed exclusions — each
 was only tested in the minimal reproduction or in a small number of

@@ -139,7 +139,10 @@
   // top / reduced bottom margin cancel the padding, so the visible layout is unchanged.
   padding: 4px 12px;
   margin: -4px auto 0;
-  animation: slideInUp 0.5s ease-out 0.5s both;
+  // Opacity-only entrance (same 0.5s duration and 0.5s delay as before). The old slideInUp held this
+  // element at translateY(20px) during the delay, and UI Automation kept that stale offset for the
+  // wrapper's bounding rectangle (~15px low), so Narrator's highlight clipped the top rows.
+  animation: breakdownFadeIn 0.5s ease-out 0.5s both;
 
   .breakdown-item {
     font-size: 17px;
@@ -156,6 +159,15 @@
     &.timed-out {
       color: vars.$gray;
     }
+  }
+}
+
+@keyframes breakdownFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -182,7 +194,10 @@
   font-size: 14px;
   font-weight: 600;
   margin-top: 4px; // Reduced margin (was 12px)
-  animation: badgePopIn 0.5s ease-out 1.2s both;
+  // Opacity-only entrance (same 0.5s duration and 1.2s delay). badgePopIn scaled this from 0.5, and UI
+  // Automation kept a stale, undersized bounding rectangle (~32px tall vs the real 44px), so Narrator's
+  // highlight did not enclose the text.
+  animation: badgeFadeIn 0.5s ease-out 1.2s both;
 
   &.excellent {
     background: linear-gradient(135deg, #ffd700, #ffb700);
@@ -204,6 +219,15 @@
 
   .badge-icon {
     font-size: 20px;
+  }
+}
+
+@keyframes badgeFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

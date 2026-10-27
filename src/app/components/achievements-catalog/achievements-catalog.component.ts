@@ -28,6 +28,7 @@ import { AchievementView } from '@shared/models';
           class="achievements-catalog__toggle"
           [attr.aria-expanded]="expanded()"
           aria-controls="achievements-catalog-list"
+          [attr.aria-label]="toggleLabel()"
           (click)="toggle()"
         >
           <span
@@ -52,12 +53,19 @@ import { AchievementView } from '@shared/models';
         </button>
 
         @if (expanded()) {
+          <!-- role="none" on the <ul>: no list semantics, so no item positions ("2 of 6") are announced. Each row is
+               ONE named graphic (role="img") whose name is "<name>. <description>. <Earned|Locked>."; its visible
+               icon, name, description and status are hidden from assistive technology so nothing is read twice.
+               Nothing interactive lives inside a row. -->
           <ul
             id="achievements-catalog-list"
             class="achievements-catalog__list"
+            role="none"
           >
             @for (achievement of achievements(); track achievement.id) {
               <li
+                role="img"
+                [attr.aria-label]="rowLabel(achievement)"
                 class="achievements-catalog__item"
                 [class.is-earned]="achievement.earned"
                 [class.is-locked]="!achievement.earned"
@@ -68,7 +76,10 @@ import { AchievementView } from '@shared/models';
                 >
                   {{ achievement.earned ? '✓' : '🔒' }}
                 </span>
-                <span class="achievements-catalog__body">
+                <span
+                  class="achievements-catalog__body"
+                  aria-hidden="true"
+                >
                   <span class="achievements-catalog__name">
                     @if (achievement.icon) {
                       <span
@@ -80,12 +91,12 @@ import { AchievementView } from '@shared/models';
                     }
                     {{ achievement.name }}
                   </span>
-                  <!-- Trailing U+00A0 (&nbsp;): a plain/collapsible space between this description and the
-                       Earned/Locked status is dropped from the page's accessible text, so UIA exposed
-                       "...quiz.LOCKED" (Narrator spoke a "dot" there). A non-breaking space survives. -->
-                  <span class="achievements-catalog__desc">{{ achievement.description }}&nbsp;</span>
+                  <span class="achievements-catalog__desc">{{ achievement.description }}</span>
                 </span>
-                <span class="achievements-catalog__badge">
+                <span
+                  class="achievements-catalog__badge"
+                  aria-hidden="true"
+                >
                   @if (achievement.earned) {
                     <ng-container i18n>Earned</ng-container>
                   } @else {
@@ -245,6 +256,21 @@ export class AchievementsCatalogComponent {
 
   readonly total = computed(() => this.achievements().length);
   readonly earnedCount = computed(() => this.achievements().filter((a) => a.earned).length);
+
+  /** One complete accessible name for the toggle: "Achievements, <earned> of <total>". */
+  readonly toggleLabel = computed(
+    () => $localize`Achievements, ${this.earnedCount()} of ${this.total()}`
+  );
+
+  /**
+   * One complete accessible name per achievement row: "<name>. <description>. <Earned|Locked>." The
+   * description's own terminal period is dropped so the sentence does not end "..".
+   */
+  rowLabel(a: AchievementView): string {
+    const description = a.description.replace(/\.$/, '');
+    const status = a.earned ? $localize`Earned` : $localize`Locked`;
+    return $localize`${a.name}. ${description}. ${status}.`;
+  }
 
   toggle(): void {
     this.expanded.update((v) => !v);

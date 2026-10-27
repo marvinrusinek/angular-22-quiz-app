@@ -68,11 +68,28 @@ describe('QuizFactComponent', () => {
     expect(component.fact()).toBe(first);
   });
 
-  it('uses an h3 heading and a note role for accessibility', () => {
+  it('exposes the note as ONE named graphic; the visible label, icon and paragraph are hidden from AT', () => {
     setFacts(['Some fact']);
-    const heading = fixture.nativeElement.querySelector('h3.quiz-fact__heading');
-    expect(heading).toBeTruthy();
-    expect(heading.textContent).toContain('Angular Fact');
-    expect(factSection()!.getAttribute('role')).toBe('note');
+    const sec = factSection()!;
+    expect(sec.getAttribute('role')).toBe('img');
+    expect(sec.getAttribute('aria-label')).toBe('Angular Fact. Some fact');
+    // Visible content is unchanged but hidden from assistive technology.
+    const label = sec.querySelector('.quiz-fact__heading') as HTMLElement;
+    expect(label.textContent).toContain('Angular Fact');
+    expect(label.getAttribute('aria-hidden')).toBe('true');
+    expect(label.querySelector('.quiz-fact__icon')?.getAttribute('aria-hidden')).toBe('true');
+    expect(sec.querySelector('p.quiz-fact__text')?.getAttribute('aria-hidden')).toBe('true');
+    expect(factText()).toBe('Some fact');
+    // No separate heading, nothing interactive hidden inside, no live region.
+    expect(sec.querySelector('h1,h2,h3,h4,h5,h6')).toBeNull();
+    expect(sec.querySelector('a,button,input,select,textarea,[tabindex]')).toBeNull();
+    expect(sec.querySelector('[aria-live]')).toBeNull();
+  });
+
+  it('names the graphic with exactly the fact being displayed (no second random pick)', () => {
+    setFacts(['Fact A', 'Fact B', 'Fact C', 'Fact D', 'Fact E']);
+    for (let i = 0; i < 5; i++) fixture.detectChanges();
+    expect(factSection()!.getAttribute('aria-label')).toBe('Angular Fact. ' + factText());
+    expect(component.ariaLabel()).toBe('Angular Fact. ' + component.fact());
   });
 });

@@ -32,7 +32,14 @@ import { AchievementDefinition } from '@shared/models';
           </span>
           <ng-container i18n>Achievement Unlocked</ng-container>
         </h3>
-        <ul class="achievement-unlocked__list">
+        <!-- The names + descriptions below are visual only for assistive technology: the same achievements are
+             always read, once each (name, description, Earned/Locked), as named rows in the Achievements catalog.
+             Leaving them exposed made newly earned achievements read twice (live announcement + this list, then
+             the catalog). The heading above stays exposed, so the unlock is still announced. -->
+        <ul
+          class="achievement-unlocked__list"
+          aria-hidden="true"
+        >
           @for (achievement of achievements(); track achievement.id) {
             <li class="achievement-unlocked__item">
               <span class="achievement-unlocked__name">

@@ -71,9 +71,9 @@ describe('AchievementsCatalogComponent', () => {
     setAchievements(VIEW);
     toggleBtn()?.click();
     fixture.detectChanges();
-    const desc = items()[0].querySelector('.achievements-catalog__desc')?.textContent ?? '';
-    expect(desc.trim()).toBe('Earn a 100% score on any quiz.');
-    expect(items()[0].textContent).toContain('Earned');
+    const desc = items()[1].querySelector('.achievements-catalog__desc')?.textContent ?? '';
+    expect(desc.trim()).toBe('Complete every available quiz.');
+    expect(items()[1].textContent).toContain('Locked');
   });
 
   it('names the toggle with ONE complete label "Achievements, <earned> of <total>" and keeps its disclosure semantics', () => {
@@ -99,9 +99,16 @@ describe('AchievementsCatalogComponent', () => {
     expect(ul.querySelector('[aria-posinset],[aria-setsize]')).toBeNull();
     const rows = items();
     expect(rows.length).toBe(3);
-    rows.forEach((li) => expect(li.getAttribute('role')).toBe('img'));
-    expect(Array.from(rows).map((li) => li.getAttribute('aria-label'))).toEqual([
-      'Perfect Score. Earn a 100% score on any quiz. Earned.',
+    // EXPERIMENT: the first row is plain text (role none); the others stay named graphics.
+    expect(rows[0].getAttribute('role')).toBe('none');
+    Array.from(rows)
+      .slice(1)
+      .forEach((li) => expect(li.getAttribute('role')).toBe('img'));
+    expect(
+      Array.from(rows)
+        .slice(1)
+        .map((li) => li.getAttribute('aria-label'))
+    ).toEqual([
       'Angular Explorer. Complete every available quiz. Locked.',
       'Beginner Complete. Complete every Beginner quiz. Locked.'
     ]);
@@ -111,7 +118,7 @@ describe('AchievementsCatalogComponent', () => {
     setAchievements(VIEW);
     toggleBtn()?.click();
     fixture.detectChanges();
-    for (const li of items()) {
+    for (const li of Array.from(items()).slice(1)) {
       expect(
         li.querySelector('.achievements-catalog__state-icon')?.getAttribute('aria-hidden')
       ).toBe('true');
@@ -128,6 +135,27 @@ describe('AchievementsCatalogComponent', () => {
     expect(items()[2].textContent).toContain('Beginner Complete');
     expect(items()[2].textContent).toContain('Complete every Beginner quiz.');
     expect(items()[2].textContent).toContain('Locked');
+  });
+
+  it('EXPERIMENT: the first row is ONE paragraph with ONE text node and no role/aria-label/hidden duplicate text', () => {
+    setAchievements(VIEW);
+    toggleBtn()?.click();
+    fixture.detectChanges();
+    const row = items()[0];
+    expect(row.getAttribute('role')).toBe('none');
+    expect(row.hasAttribute('aria-label')).toBe(false);
+    const p = row.querySelector('p.achievements-catalog__exp-text') as HTMLElement;
+    expect(p.textContent).toBe('Perfect Score. Earn a 100% score on any quiz. Earned.');
+    expect([...p.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE)).toHaveLength(1);
+    expect(p.children.length).toBe(0);
+    expect(
+      row.querySelector('.achievements-catalog__state-icon')?.getAttribute('aria-hidden')
+    ).toBe('true');
+    expect(
+      row.querySelector('.achievements-catalog__body, .achievements-catalog__badge')
+    ).toBeNull();
+    expect(row.querySelector('[role="img"],[aria-label],[aria-live]')).toBeNull();
+    expect(row.classList.contains('is-earned')).toBe(true);
   });
 
   it('distinguishes earned vs locked with state class + text (not color only)', () => {

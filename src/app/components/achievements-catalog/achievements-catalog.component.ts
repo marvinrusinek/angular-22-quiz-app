@@ -62,48 +62,78 @@ import { AchievementView } from '@shared/models';
             class="achievements-catalog__list"
             role="none"
           >
-            @for (achievement of achievements(); track achievement.id) {
-              <li
-                role="img"
-                [attr.aria-label]="rowLabel(achievement)"
-                class="achievements-catalog__item"
-                [class.is-earned]="achievement.earned"
-                [class.is-locked]="!achievement.earned"
-              >
-                <span
-                  class="achievements-catalog__state-icon"
-                  aria-hidden="true"
+            @for (achievement of achievements(); track achievement.id; let first = $first) {
+              @if (first) {
+                <!-- EXPERIMENT (local, reversible, NOT a confirmed fix): the FIRST row only is ONE ordinary paragraph with
+                     ONE text node "<name>. <description>. <Earned|Locked>." - no role="img", no aria-label, no hidden duplicate
+                     text, no nested elements. The state icon and emoji stay aria-hidden; list semantics stay suppressed. The
+                     separate bold title / description / status badge styling is intentionally lost on this row (one text
+                     node = one style). Remove this @if branch to restore the named-graphic row. -->
+                <li
+                  role="none"
+                  class="achievements-catalog__item"
+                  [class.is-earned]="achievement.earned"
+                  [class.is-locked]="!achievement.earned"
                 >
-                  {{ achievement.earned ? '✓' : '🔒' }}
-                </span>
-                <span
-                  class="achievements-catalog__body"
-                  aria-hidden="true"
-                >
-                  <span class="achievements-catalog__name">
-                    @if (achievement.icon) {
-                      <span
-                        class="achievements-catalog__emoji"
-                        aria-hidden="true"
-                      >
-                        {{ achievement.icon }}
-                      </span>
-                    }
-                    {{ achievement.name }}
+                  <span
+                    class="achievements-catalog__state-icon"
+                    aria-hidden="true"
+                  >
+                    {{ achievement.earned ? '✓' : '🔒' }}
                   </span>
-                  <span class="achievements-catalog__desc">{{ achievement.description }}</span>
-                </span>
-                <span
-                  class="achievements-catalog__badge"
-                  aria-hidden="true"
-                >
-                  @if (achievement.earned) {
-                    <ng-container i18n>Earned</ng-container>
-                  } @else {
-                    <ng-container i18n>Locked</ng-container>
+                  @if (achievement.icon) {
+                    <span
+                      class="achievements-catalog__emoji"
+                      aria-hidden="true"
+                    >
+                      {{ achievement.icon }}
+                    </span>
                   }
-                </span>
-              </li>
+                  <p class="achievements-catalog__exp-text">{{ rowLabel(achievement) }}</p>
+                </li>
+              } @else {
+                <li
+                  role="img"
+                  [attr.aria-label]="rowLabel(achievement)"
+                  class="achievements-catalog__item"
+                  [class.is-earned]="achievement.earned"
+                  [class.is-locked]="!achievement.earned"
+                >
+                  <span
+                    class="achievements-catalog__state-icon"
+                    aria-hidden="true"
+                  >
+                    {{ achievement.earned ? '✓' : '🔒' }}
+                  </span>
+                  <span
+                    class="achievements-catalog__body"
+                    aria-hidden="true"
+                  >
+                    <span class="achievements-catalog__name">
+                      @if (achievement.icon) {
+                        <span
+                          class="achievements-catalog__emoji"
+                          aria-hidden="true"
+                        >
+                          {{ achievement.icon }}
+                        </span>
+                      }
+                      {{ achievement.name }}
+                    </span>
+                    <span class="achievements-catalog__desc">{{ achievement.description }}</span>
+                  </span>
+                  <span
+                    class="achievements-catalog__badge"
+                    aria-hidden="true"
+                  >
+                    @if (achievement.earned) {
+                      <ng-container i18n>Earned</ng-container>
+                    } @else {
+                      <ng-container i18n>Locked</ng-container>
+                    }
+                  </span>
+                </li>
+              }
             }
           </ul>
         }
@@ -179,6 +209,19 @@ import { AchievementView } from '@shared/models';
         align-items: flex-start;
         gap: 10px;
         padding: 8px 16px;
+      }
+
+      /* EXPERIMENT: one uniform style for the first row's single text node; min-height matches the other rows
+         (55.8px row - 16px vertical padding) so the row keeps its height. */
+      .achievements-catalog__exp-text {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        min-height: 39.8px;
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.4;
+        color: var(--text-primary, #212121);
       }
 
       .achievements-catalog__state-icon {

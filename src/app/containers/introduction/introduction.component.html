@@ -227,11 +227,10 @@
         mat-card-image
         class="quiz-topic-image"
         [ngSrc]="introImgSig() || 'assets/images/quiz-placeholder.svg'"
-        alt="Quiz topic image"
+        [alt]="topicImageAltSig()"
         width="400"
         height="270"
         priority
-        tabindex="0"
       />
 
       <!-- CONFIRMED, 2026-10-15: `role="group"` + `tabindex="0"` make this

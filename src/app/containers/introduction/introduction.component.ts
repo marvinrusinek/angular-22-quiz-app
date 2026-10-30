@@ -159,6 +159,10 @@ export class IntroductionComponent implements OnInit {
   private readonly _startTimedOut = signal(false);
   readonly startTimedOut = this._startTimedOut.asReadonly();
   readonly questionCountSig = signal(0);
+  /** Concise alt for the topic image, e.g. "Dependency Injection quiz". */
+  readonly topicImageAltSig = computed(
+    () => $localize`${this.selectedQuiz()?.milestone ?? ''} quiz`.trim()
+  );
   readonly questionLabelSig = computed(() =>
     this.questionCountSig() === 1 ? 'question' : 'questions'
   );

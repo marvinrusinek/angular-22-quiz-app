@@ -52,12 +52,16 @@ import { AchievementView } from '@shared/models';
         </button>
 
         @if (expanded()) {
+          <!-- role="none" on the ul and li: no list semantics, so Narrator does not announce "enter list" or an
+               item position ("1 of 6"). Text, order, styling and the toggle are unchanged; nothing here is interactive. -->
           <ul
             id="achievements-catalog-list"
             class="achievements-catalog__list"
+            role="none"
           >
             @for (achievement of achievements(); track achievement.id) {
               <li
+                role="none"
                 class="achievements-catalog__item"
                 [class.is-earned]="achievement.earned"
                 [class.is-locked]="!achievement.earned"

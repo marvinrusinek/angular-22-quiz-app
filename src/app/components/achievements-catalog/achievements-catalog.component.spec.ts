@@ -96,4 +96,17 @@ describe('AchievementsCatalogComponent', () => {
     expect(component.expanded()).toBe(false);
     expect(items().length).toBe(0);
   });
+
+  it('suppresses native list semantics (no list/listitem, no "N of M") while keeping every row text', () => {
+    setAchievements(VIEW);
+    toggleBtn()?.click();
+    fixture.detectChanges();
+    const ul = fixture.nativeElement.querySelector('ul') as HTMLElement;
+    expect(ul.getAttribute('role')).toBe('none');
+    expect(ul.querySelector('[aria-posinset],[aria-setsize]')).toBeNull();
+    items().forEach((li) => expect(li.getAttribute('role')).toBe('none'));
+    expect(items()[0].textContent).toContain('Perfect Score');
+    expect(items()[0].textContent).toContain('Earned');
+    expect(items()[1].textContent).toContain('Locked');
+  });
 });

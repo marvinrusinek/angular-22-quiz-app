@@ -1096,7 +1096,7 @@ describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 
     });
   }
 
-  it('has exactly the requested Tab sequence: subtitle, image, metadata group, summary paragraph, "wits" paragraph, Shuffle toggle — title stays out of the Tab order', () => {
+  it('has exactly the requested Tab sequence: subtitle, metadata group, summary paragraph, "wits" paragraph, Shuffle toggle — title stays out of the Tab order', () => {
     configureTestBed();
     const fixture = TestBed.createComponent(IntroductionComponent);
     fixture.detectChanges();
@@ -1114,7 +1114,6 @@ describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 
     const tabStops = Array.from(root.querySelectorAll('[tabindex="0"]'));
     const identify = (el: Element) => {
       if (el.classList.contains('intro-subtitle-text')) return 'subtitle';
-      if (el.classList.contains('quiz-topic-image')) return 'image';
       if (el.classList.contains('quiz-meta')) return 'metadata';
       if (el.querySelector('.bold-text')) return 'summary';
       if (el.classList.contains('intro-centered-text')) return 'wits';
@@ -1123,7 +1122,6 @@ describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 
     };
     expect(tabStops.map(identify)).toEqual([
       'subtitle',
-      'image',
       'metadata',
       'summary',
       'wits',
@@ -1168,6 +1166,18 @@ describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 
       'quiz-meta-count-text quiz-meta-time-text'
     );
     difficultyMap.set('typescript', 'beginner'); // restore for later tests in this file
+  });
+
+  it('the topic image is one named image (dynamic alt), not a Tab stop, with no duplicate naming attributes', () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+    const img = (fixture.nativeElement as HTMLElement).querySelector('.quiz-topic-image');
+    expect(img?.getAttribute('alt')).toBe('TypeScript quiz');
+    expect(img?.hasAttribute('tabindex')).toBe(false);
+    for (const a of ['aria-label', 'aria-labelledby', 'aria-describedby', 'title']) {
+      expect(img?.hasAttribute(a)).toBe(false);
+    }
   });
 
   it('the question-count icon is a registered SVG icon (the official "quiz" glyph), not the absent font ligature', async () => {

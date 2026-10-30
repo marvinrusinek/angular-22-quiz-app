@@ -18,9 +18,17 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
     @if (fact(); as text) {
       <section
         class="quiz-fact"
-        role="note"
+        role="img"
+        [attr.aria-label]="ariaLabel()"
       >
-        <h3 class="quiz-fact__heading">
+        <!-- One named graphic (same pattern as the Results statistics groups): the accessible name is
+             "Angular Fact. <the displayed fact>". The visible label, icon and paragraph keep their
+             appearance but are hidden from assistive technology so they are not also read separately.
+             The label is a div (not an h3) on purpose: no separate heading / H navigation for this note. -->
+        <div
+          class="quiz-fact__heading"
+          aria-hidden="true"
+        >
           <span
             class="quiz-fact__icon"
             aria-hidden="true"
@@ -28,8 +36,13 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
             💡
           </span>
           <ng-container i18n>Angular Fact</ng-container>
-        </h3>
-        <p class="quiz-fact__text">{{ text }}</p>
+        </div>
+        <p
+          class="quiz-fact__text"
+          aria-hidden="true"
+        >
+          {{ text }}
+        </p>
       </section>
     }
   `,
@@ -80,6 +93,15 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 export class QuizFactComponent {
   /** The quiz's facts (1-3). Optional — the component renders nothing if empty. */
   readonly facts = input<readonly string[] | undefined>();
+
+  /**
+   * Accessible name for the note: the label plus exactly the fact being displayed (reads the
+   * same memoized `fact()`; never picks a second random fact).
+   */
+  readonly ariaLabel = computed(() => {
+    const text = this.fact();
+    return text ? $localize`Angular Fact. ${text}` : '';
+  });
 
   /**
    * One random fact, chosen a single time (computed is lazy + memoized, so it is

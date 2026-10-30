@@ -1,103 +1,54 @@
-<ul class="summary-stats">
-  <li>
-    <span
-      class="summary-stats-leader"
-      i18n
-    >
-      Your Score:
-    </span>
-    <span class="result">{{ quizMetadata()?.correctAnswersCount?.() ?? 0 }}</span>
+<!-- Label/value statistics, not a list of 9 peer items: as a native <ul>/<li> Narrator appended its
+     list position ("Your Score: 7, 1 of 9"). role="none" drops the list/listitem semantics (no position or
+     size-of-set); the text, order and layout are unchanged and nothing here is interactive. -->
+<ul
+  class="summary-stats"
+  role="none"
+>
+  <!-- Every row is ONE visible text node ("<label>: <value>") so the label and value are read together.
+       A single text node has a single style, so values take the label styling. -->
+  <li role="none">
+    <!-- prettier-ignore -->
+    <span class="summary-stats-leader" i18n>Your Score: {{ quizMetadata()?.correctAnswersCount?.() ?? 0 }}</span>
   </li>
 
-  <li>
-    <span
-      class="summary-stats-leader"
-      i18n
-    >
-      Total Questions:
-    </span>
-    <span class="result">{{ quizMetadata()?.totalQuestions ?? 0 }}</span>
+  <li role="none">
+    <!-- prettier-ignore -->
+    <span class="summary-stats-leader" i18n>Total Questions: {{ quizMetadata()?.totalQuestions ?? 0 }}</span>
   </li>
 
-  <li>
-    <span
-      class="summary-stats-leader"
-      i18n
-    >
-      Total Questions Attempted:
-    </span>
-    <span class="result">{{ quizMetadata()?.totalQuestionsAttempted ?? 0 }}</span>
+  <li role="none">
+    <!-- prettier-ignore -->
+    <span class="summary-stats-leader" i18n>Total Questions Attempted: {{ quizMetadata()?.totalQuestionsAttempted ?? 0 }}</span>
   </li>
 
-  <li>
-    <span
-      class="summary-stats-leader"
-      i18n
-    >
-      Your Score (percentage):
-    </span>
-    <span class="result">{{ quizMetadata()?.percentage ?? 0 }}%</span>
+  <li role="none">
+    <!-- prettier-ignore -->
+    <span class="summary-stats-leader" i18n>Your Score (percentage): {{ quizMetadata()?.percentage ?? 0 }}%</span>
   </li>
 
-  <li>
-    <span
-      class="summary-stats-leader"
-      i18n
-    >
-      Passing Score:
-    </span>
-    <span class="result">60%</span>
+  <li role="none">
+    <!-- prettier-ignore -->
+    <span class="summary-stats-leader" i18n>Passing Score: 60%</span>
   </li>
 
-  <li>
-    <span
-      class="summary-stats-leader"
-      i18n
-    >
-      Test Status:
-    </span>
-    <span class="result">
-      {{ (quizMetadata()?.percentage ?? 0) > 60 ? 'Passed' : 'Failed' }}
-    </span>
+  <li role="none">
+    <!-- prettier-ignore -->
+    <span class="summary-stats-leader" i18n>Test Status: {{ (quizMetadata()?.percentage ?? 0) > 60 ? 'Passed' : 'Failed' }}</span>
   </li>
 
-  <li>
-    <span
-      class="summary-stats-leader"
-      i18n
-    >
-      Test Mode:
-    </span>
-    <span class="result">{{ isShuffled() ? 'Shuffled' : 'Unshuffled' }}</span>
+  <li role="none">
+    <!-- prettier-ignore -->
+    <span class="summary-stats-leader" i18n>Test Mode: {{ isShuffled() ? 'Shuffled' : 'Unshuffled' }}</span>
   </li>
 
-  <li>
-    <span
-      class="summary-stats-leader"
-      i18n
-    >
-      Time Elapsed:
-    </span>
-    <span class="result">
-      {{ elapsedMinutes() }} {{ elapsedMinutes() === 1 ? 'minute' : 'minutes' }} and
-      {{ elapsedSeconds() }} seconds
-    </span>
+  <li role="none">
+    <!-- prettier-ignore -->
+    <span class="summary-stats-leader" i18n>Time Elapsed: {{ elapsedMinutes() }} {{ elapsedMinutes() === 1 ? 'minute' : 'minutes' }} and {{ elapsedSeconds() }} seconds</span>
   </li>
 
-  <li>
-    <span
-      class="summary-stats-leader"
-      i18n
-    >
-      Date/Time Completed:
-    </span>
-
-    @if (score()?.attemptDateTime) {
-      <span class="result">
-        {{ $safeNavigationMigration(score()?.attemptDateTime) | date: 'medium' }}
-      </span>
-    } @else {
-      <span class="result">N/A</span>
-    }
+  <li role="none">
+    <!-- prettier-ignore -->
+    <span class="summary-stats-leader" i18n>Date/Time Completed: {{ score()?.attemptDateTime ? ($safeNavigationMigration(score()?.attemptDateTime) | date: 'medium') : 'N/A' }}</span>
   </li>
 </ul>

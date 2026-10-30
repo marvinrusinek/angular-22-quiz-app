@@ -104,9 +104,31 @@ describe('AchievementsCatalogComponent', () => {
     const ul = fixture.nativeElement.querySelector('ul') as HTMLElement;
     expect(ul.getAttribute('role')).toBe('none');
     expect(ul.querySelector('[aria-posinset],[aria-setsize]')).toBeNull();
-    items().forEach((li) => expect(li.getAttribute('role')).toBe('none'));
+    Array.from(items()).slice(1).forEach((li) => expect(li.getAttribute('role')).toBe('none')); // row 0 is the Perfect Score experiment
     expect(items()[0].textContent).toContain('Perfect Score');
     expect(items()[0].textContent).toContain('Earned');
     expect(items()[1].textContent).toContain('Locked');
+  });
+
+  it('EXPERIMENT: only Perfect Score is a focusable named group; its content is hidden from AT and other rows are untouched', () => {
+    setAchievements(VIEW);
+    toggleBtn()?.click();
+    fixture.detectChanges();
+    const rows = Array.from(items());
+    const perfect = rows[0];
+    expect(perfect.getAttribute('role')).toBe('group');
+    expect(perfect.getAttribute('tabindex')).toBe('0');
+    expect(perfect.getAttribute('aria-label')).toBe('Perfect Score. Earn a 100% score on any quiz. Earned.');
+    expect(perfect.querySelector('.achievements-catalog__body')?.getAttribute('aria-hidden')).toBe('true');
+    expect(perfect.querySelector('.achievements-catalog__badge')?.getAttribute('aria-hidden')).toBe('true');
+    expect(perfect.querySelector('.achievements-catalog__state-icon')?.getAttribute('aria-hidden')).toBe('true');
+    expect(perfect.querySelector('a,button,input,select,textarea,[tabindex],[role="img"]')).toBeNull();
+    expect(perfect.textContent).toContain('Earned'); // still visible text
+    rows.slice(1).forEach((li) => {
+      expect(li.getAttribute('role')).toBe('none');
+      expect(li.hasAttribute('tabindex')).toBe(false);
+      expect(li.hasAttribute('aria-label')).toBe(false);
+      expect(li.querySelector('[aria-hidden="true"].achievements-catalog__body')).toBeNull();
+    });
   });
 });

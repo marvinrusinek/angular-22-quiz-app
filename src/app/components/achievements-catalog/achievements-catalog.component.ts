@@ -60,8 +60,14 @@ import { AchievementView } from '@shared/models';
             role="none"
           >
             @for (achievement of achievements(); track achievement.id) {
+              <!-- EXPERIMENT (local, NOT a confirmed fix): the Perfect Score row ONLY is one focusable group
+                   (role="group", tabindex="0") named with one complete translated label; its visible icon, text and
+                   badge stay on screen but are hidden from assistive technology so nothing is read twice. Nothing
+                   inside is interactive. Every other row keeps role="none" and its visible text exposed. -->
               <li
-                role="none"
+                [attr.role]="isExperimentalRow(achievement) ? 'group' : 'none'"
+                [attr.tabindex]="isExperimentalRow(achievement) ? 0 : null"
+                [attr.aria-label]="isExperimentalRow(achievement) ? rowLabel(achievement) : null"
                 class="achievements-catalog__item"
                 [class.is-earned]="achievement.earned"
                 [class.is-locked]="!achievement.earned"
@@ -72,7 +78,10 @@ import { AchievementView } from '@shared/models';
                 >
                   {{ achievement.earned ? '✓' : '🔒' }}
                 </span>
-                <span class="achievements-catalog__body">
+                <span
+                  class="achievements-catalog__body"
+                  [attr.aria-hidden]="isExperimentalRow(achievement) ? 'true' : null"
+                >
                   <span class="achievements-catalog__name">
                     @if (achievement.icon) {
                       <span
@@ -89,7 +98,10 @@ import { AchievementView } from '@shared/models';
                        "...quiz.LOCKED" (Narrator spoke a "dot" there). A non-breaking space survives. -->
                   <span class="achievements-catalog__desc">{{ achievement.description }}&nbsp;</span>
                 </span>
-                <span class="achievements-catalog__badge">
+                <span
+                  class="achievements-catalog__badge"
+                  [attr.aria-hidden]="isExperimentalRow(achievement) ? 'true' : null"
+                >
                   @if (achievement.earned) {
                     <ng-container i18n>Earned</ng-container>
                   } @else {
@@ -249,6 +261,18 @@ export class AchievementsCatalogComponent {
 
   readonly total = computed(() => this.achievements().length);
   readonly earnedCount = computed(() => this.achievements().filter((a) => a.earned).length);
+
+  /** Experimental single-row grouping: only Perfect Score. */
+  isExperimentalRow(a: AchievementView): boolean {
+    return a.id === 'perfect-score';
+  }
+
+  /** One complete accessible name: "<name>. <description>. <Earned|Locked>." (description's own final period dropped). */
+  rowLabel(a: AchievementView): string {
+    const description = a.description.replace(/.$/, '');
+    const status = a.earned ? $localize`Earned` : $localize`Locked`;
+    return $localize`${a.name}. ${description}. ${status}.`;
+  }
 
   toggle(): void {
     this.expanded.update((v) => !v);

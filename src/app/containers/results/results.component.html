@@ -201,6 +201,14 @@
       <!-- Expandable catalog of ALL achievements (earned + locked), below the unlock card -->
       <codelab-achievements-catalog [achievements]="achievementsCatalog()" />
 
+      <!-- Print / E-mail / Share on Twitter (Summary Stats only), placed right after the catalog in document AND visual order -->
+      @if (activeSection() === 'report') {
+        <codelab-summary-icons
+          [quizPercentage]="finalResult()?.percentage ?? 0"
+          [codelabUrl]="codelabUrl"
+        />
+      }
+
       <!-- Random Angular Fact for the completed quiz (renders nothing if none) -->
       <codelab-quiz-fact [facts]="currentQuizFacts()" />
 

@@ -245,10 +245,11 @@ npm install</code></pre>
 
 <hr>
 
-<h2>⭐ Support</h2>
+## ⭐ Support
 
-<p>If you enjoyed exploring this project or found it helpful, please consider giving it a ⭐ on GitHub. Your support helps drive continued improvements, new features, and ongoing maintenance.</p>
-<p>The project continues to evolve with new Angular topics, assessment capabilities, and architectural improvements.</p>
+<p>If you find this project useful for learning Angular, practicing your skills, or preparing for technical interviews, please consider giving it a ⭐ on GitHub.</p>
+<p>Your support helps increase the project's visibility and encourages continued development, new features, and ongoing improvements.</p>
+<p>This project continues to evolve, with a focus on modern Angular development, accessibility, interactive assessments, and a better learning experience for the Angular community.</p>
 
 <hr>
 

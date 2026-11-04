@@ -62,7 +62,7 @@ describe('AchievementsCatalogComponent', () => {
 
   it('shows the earned count in the collapsed header (X / N)', () => {
     setAchievements(VIEW);
-    expect(toggleBtn()?.textContent?.replace(/\s+/g, ' ')).toContain('1 / 3');
+    expect(toggleBtn()?.textContent?.replace(/\s+/g, ' ')).toContain('Achievements, 1 of 3');
   });
 
   it('is collapsed by default — the list is not rendered', () => {
@@ -173,20 +173,20 @@ describe('AchievementsCatalogComponent', () => {
     expect(btn.hasAttribute('aria-label')).toBe(false);
     const nameNodes = Array.from(btn.children).filter((c) => c.getAttribute('aria-hidden') !== 'true');
     expect(nameNodes.length).toBe(1);
-    expect(nameNodes[0].classList.contains('achievements-catalog__label')).toBe(true);
-    expect(nameNodes[0].textContent).toBe('Achievements, 1 of 3');
+    expect(nameNodes[0].classList.contains('achievements-catalog__title')).toBe(true);
+    expect(nameNodes[0].textContent?.trim()).toBe('Achievements, 1 of 3');
     expect(nameNodes[0].textContent).not.toMatch(/expanded|collapsed/i);
     // No aria-controls: it made Narrator repeat the toggle's name on the first Down Arrow into the list.
     expect(btn.hasAttribute('aria-controls')).toBe(false);
     expect(btn.getAttribute('aria-expanded')).toBe('false');
     Array.from(btn.children)
-      .filter((c) => !c.classList.contains('achievements-catalog__label'))
+      .filter((c) => !c.classList.contains('achievements-catalog__title'))
       .forEach((c) => expect(c.getAttribute('aria-hidden')).toBe('true'));
-    expect(btn.textContent).toContain('1 / 3');
+    expect(btn.textContent).toContain('Achievements, 1 of 3');
     btn.click();
     fixture.detectChanges();
     expect(btn.getAttribute('aria-expanded')).toBe('true');
-    expect(btn.querySelector('.achievements-catalog__label')?.textContent).toBe('Achievements, 1 of 3');
+    expect(btn.querySelector('.achievements-catalog__title')?.textContent?.trim()).toBe('Achievements, 1 of 3');
     expect(chevron.classList.contains('is-open')).toBe(true);
     expect(chevron.textContent?.trim()).toBe(glyph);
     btn.click();

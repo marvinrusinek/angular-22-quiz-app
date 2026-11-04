@@ -32,6 +32,9 @@ import { AchievementDefinition } from '@shared/models';
           </span>
           <ng-container i18n>Achievement Unlocked</ng-container>
         </h3>
+        <!-- The names + descriptions stay exposed: before the Achievements catalog is opened this card is the only place
+             that says WHICH achievement was unlocked (the catalog rows do not exist while it is collapsed). Once the catalog
+             is opened, the same achievement is read again in its row. -->
         <ul class="achievement-unlocked__list">
           @for (achievement of achievements(); track achievement.id) {
             <li class="achievement-unlocked__item">

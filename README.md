@@ -116,15 +116,17 @@
   <li><strong>Reactive State:</strong> Angular Signals, RxJS</li>
   <li><strong>UI:</strong> Angular Material, SCSS</li>
   <li><strong>Forms:</strong> Reactive Forms, Signal Forms</li>
-  <li><strong>Topic Quiz API:</strong> Node.js 22, Express, TypeScript</li>
-  <li><strong>Interview API:</strong> Java 21, Spring Boot, Spring JDBC, Spring Data JPA</li>
+  <li><strong>HTTP Integration:</strong> Angular HttpClient, Fetch API, HTTP Interceptors</li>
+  <li><strong>Topic Quiz REST API:</strong> Node.js 22, Express, TypeScript</li>
+  <li><strong>Interview REST API:</strong> Java 21, Spring Boot, Spring JDBC, Spring Data JPA</li>
   <li><strong>Database:</strong> PostgreSQL — Neon-hosted in production</li>
   <li><strong>Security:</strong> Backend-authoritative correctness, strict CSP, CORS allow-list, rate limiting, HMAC-signed attempt receipts</li>
   <li><strong>Testing:</strong> Jest, Playwright, JUnit 5, MockMvc, Testcontainers, API contract-parity testing</li>
   <li><strong>Platform:</strong> Progressive Web App (PWA)</li>
   <li><strong>Hosting:</strong> GitHub Pages, Render, Oracle Cloud Infrastructure, Neon</li>
   <li><strong>Transactional Email:</strong> Postmark HTTPS API for certificate verification, recovery, and owner notifications; optional SMTP support.</li>
-</ul>  
+</ul>
+```
 
 <hr>
 

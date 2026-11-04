@@ -233,10 +233,14 @@ npm install</code></pre>
 <h2>🗺️ Roadmap</h2>
 
 <ul>
-  <li>Expand the quiz bank with additional scenario-based and code-focused Angular questions</li>
-  <li>Continue improving accessibility, keyboard navigation, and mobile responsiveness</li>
-  <li>Expand automated security, performance, and cross-platform regression coverage</li>
-  <li>Adopt new Angular APIs and reactive patterns where they provide measurable architectural or user-experience improvements</li>
+  <li>Expand the quiz bank with additional scenario-based, code-focused, and advanced Angular questions</li>
+  <li>Continue improving accessibility, screen reader compatibility, keyboard navigation, and mobile responsiveness</li>
+  <li>Enhance Interview Mode with deeper performance analytics, topic trends, and personalized practice recommendations</li>
+  <li>Evaluate Angular Resource API (resource(), rxResource(), httpResource()) for appropriate REST API integrations</li>
+  <li>Explore Angular @defer for lazy loading non-critical components and improving rendering performance</li>
+  <li>Review API Model-Adapter patterns to strengthen frontend/backend separation and maintainability</li>
+  <li>Expand automated security, performance, accessibility, and cross-platform regression coverage</li>
+  <li>Adopt new Angular APIs, Signals, and reactive patterns where they provide measurable architectural or user-experience improvements</li>
 </ul>
 
 <hr>

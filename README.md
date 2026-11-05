@@ -147,7 +147,7 @@ angular-22-quiz-app/
 │       ├── routes/
 │       ├── quiz/
 │       ├── interview/
-        ├── certificate/
+|       ├── certificate/
 │       └── db/
 │
 ├── backend-spring/                  # Spring Boot API
@@ -188,18 +188,21 @@ npm install</code></pre>
 
 <h3>Database Configuration</h3>
 
-<p>PostgreSQL is the authoritative server-side data store for quiz content, Interview sessions, submitted answers, and results. Production uses PostgreSQL hosted by Neon.</p>
-
-<p>Configure the required database connection and application environment variables before starting the backend services. Keep credentials and secrets in local environment configuration and never commit them to source control.</p>
+<p>PostgreSQL serves as the authoritative data store for quiz content, interview sessions, submitted answers, and assessment results. Production uses Neon-hosted PostgreSQL.</p>
+<p>Before starting the backend services, configure the required database connections and environment variables. Refer to the Node/Express environment configuration for available settings.</p>
+<p>Both backend services require access to PostgreSQL. Keep database credentials, API keys, and application secrets in local environment configuration and never commit sensitive information to source control.</p>
 
 <h3>Run the Topic Quiz API and Angular Frontend</h3>
 
-<p>The Node/Express backend serves Topic Quizzes, quiz metadata, and certificate claims.</p>
+<p>The Node/Express backend serves Topic Quizzes, quiz metadata, and certificate claim endpoints.</p>
 
+<p>Start the Node/Express API and Angular development server together:</p>
 
 <pre><code>npm run dev</code></pre>
 
-<p>The development command starts the Node/Express API together with the Angular development server.</p>
+<p>This command starts both development services. The Angular application is available at http://localhost:4200, while the Node/Express API runs on port 3000 by default.</p>
+
+<p>Certificate claim functionality requires additional configuration and is disabled by default.</p>
 
 <h3>Run the Interview API</h3>
 
@@ -225,7 +228,8 @@ npm install</code></pre>
 
 <pre><code>http://localhost:4200</code></pre>
 
-<p>For the complete local application, ensure the Angular frontend, Node/Express Topic Quiz API, Spring Boot Interview API, and PostgreSQL database are all available.</p>
+<p>For full local functionality, ensure the Angular frontend, Node/Express Topic Quiz API, Spring Boot Interview API, and PostgreSQL database are running and correctly configured.</p>
+<p>Topic Quizzes require the Node/Express API, while Interview Mode requires the Spring Boot API. Features that depend on unavailable backend services or missing configuration may not function as expected.</p>
 
 <hr>
 

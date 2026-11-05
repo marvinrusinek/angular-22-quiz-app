@@ -88,9 +88,6 @@
 
 <h3>High-Level Flow</h3>
 
-
-### High-Level Flow
-
 ```mermaid
 flowchart TD
     A["Angular 22 Frontend<br/>Signals · RxJS · Angular Material"]

@@ -72,11 +72,24 @@
   <li><strong>Performance Insights:</strong> Interview history, performance trends, topic-level analysis, progress tracking, and achievements that help users understand their results over time.</li>
   <li><strong>Weak Areas Practice:</strong> Uses previous performance data to identify weaker topics and generate targeted practice opportunities without affecting Interview Mode history.</li>
   <li><strong>Modern Angular Architecture:</strong> Standalone components, Signals, RxJS, Signal Forms, zoneless change detection, modular application domains, and focused service layers.</li>
-  <li><strong>Secure Full-Stack Design:</strong> Node/Express powers Topic Quizzes, Spring Boot powers Interview Mode, and PostgreSQL serves as the authoritative data store. Correctness-sensitive data and scoring remain on the backend.</li>
-  <li><strong>Testing and Reliability:</strong> Automated coverage across Angular, Node/Express, Spring Boot, database integration, API contract parity, and end-to-end workflows using Jest, Playwright, JUnit 5, MockMvc, and Testcontainers. A GitHub Actions workflow (<a href="./.github/workflows/frontend-ci.yml">frontend-ci.yml</a>) runs on every pull request and push to <code>main</code> that touches frontend code: TypeScript checks, the full Jest suite, a production build, and the quiz-bank artifact scanner. It verifies only — it never deploys.</li>
+  <li><strong>Secure Full-Stack Design:</strong> Node/Express handles Topic Quiz answer validation, while Spring Boot manages Interview Mode sessions and server-side scoring. Both backends use PostgreSQL as the authoritative data store, keeping correctness-sensitive operations off the frontend.</li>
+  <li><strong>Testing and Reliability:</strong> Automated coverage across Angular, Node/Express, Spring Boot, database integration, API contract parity, and end-to-end workflows using Jest, Playwright, JUnit 5, MockMvc, and Testcontainers.</li>
   <li><strong>Accessible, Responsive Experience:</strong> Angular Material, keyboard navigation, screen reader support tested with Windows Narrator in Chrome, mobile-responsive layouts, dark and light themes, and Progressive Web App support.</li>
   <li><strong>Interview Certificate Claims (Production Rollout Pending):</strong> Implemented email-verified certificate claiming, recovery, and owner notifications using the Node/Express backend and PostgreSQL. Validated through automated browser tests and controlled email-delivery testing. Production enablement remains pending. See the certificate claims runbook for implementation details.</li>
 </ul>
+
+<hr>
+
+
+<hr>
+
+<h2>🔄 Continuous Integration</h2>
+
+<p>GitHub Actions provides automated verification of frontend changes through the <a href="./.github/workflows/frontend-ci.yml">Frontend CI workflow</a>.</p>
+
+<p>The workflow runs on pull requests and pushes to <code>main</code> when relevant frontend files change. It performs TypeScript checks, executes the Jest test suites, builds the Angular application for production, and verifies that the generated artifacts do not expose the private quiz bank.</p>
+
+<p>This workflow performs verification only; production deployment is handled separately.</p>
 
 <hr>
 
@@ -122,7 +135,7 @@ flowchart TD
   <li><strong>Reactive State:</strong> Angular Signals, RxJS</li>
   <li><strong>UI:</strong> Angular Material, SCSS</li>
   <li><strong>Forms:</strong> Reactive Forms, Signal Forms</li>
-  <li><strong>HTTP Integration:</strong> Angular HttpClient, Fetch API, HTTP Interceptors</li>
+  <li><strong>HTTP Integration:</strong> Angular HttpClient with Fetch backend (<code>withFetch()</code>) and functional HTTP interceptors (<code>withInterceptors()</code>)</li>
   <li><strong>Topic Quiz REST API:</strong> Node.js 22, Express, TypeScript</li>
   <li><strong>Interview REST API:</strong> Java 21, Spring Boot, Spring JDBC, Spring Data JPA</li>
   <li><strong>Database:</strong> PostgreSQL — Neon-hosted in production</li>

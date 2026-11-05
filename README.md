@@ -245,11 +245,11 @@ npm install</code></pre>
   <li>Expand the quiz bank with additional scenario-based, code-focused, and advanced Angular questions</li>
   <li>Continue improving accessibility, screen reader compatibility, keyboard navigation, and mobile responsiveness</li>
   <li>Enhance Interview Mode with deeper performance analytics, topic trends, and personalized practice recommendations</li>
-  <li>Evaluate Angular Resource API (resource(), rxResource(), httpResource()) for appropriate REST API integrations</li>
-  <li>Explore Angular @defer for lazy loading non-critical components and improving rendering performance</li>
+  <li>Evaluate Angular Resource APIs (<code>resource()</code>, <code>rxResource()</code>, <code>httpResource()</code>) for appropriate REST API integrations</li>
+  <li>Explore Angular <code>@defer</code> for lazy loading non-critical components and improving rendering performance</li>
   <li>Review API Model-Adapter patterns to strengthen frontend/backend separation and maintainability</li>
   <li>Expand automated security, performance, accessibility, and cross-platform regression coverage</li>
-  <li>Adopt new Angular APIs, Signals, and reactive patterns where they provide measurable architectural or user-experience improvements</li>
+  <li>Continue evaluating new Angular APIs, Signals, and reactive patterns, adopting them only where they provide measurable benefits</li>
 </ul>
 
 <hr>

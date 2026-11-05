@@ -254,5 +254,6 @@ npm install</code></pre>
 <hr>
 
 <h2>📄 License</h2>
-
-<p>Distributed under the <strong>MIT License</strong>. See the <a href="./LICENSE">LICENSE</a> file for more information. </p>
+<p>Copyright © 2026. All rights reserved.</p>
+<p>This project is publicly available for educational viewing and portfolio demonstration purposes.</p>
+<p>No permission is granted to copy, modify, redistribute, or commercially use the source code without prior written authorization from the copyright holder</p>

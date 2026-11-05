@@ -126,7 +126,6 @@
   <li><strong>Hosting:</strong> GitHub Pages, Render, Oracle Cloud Infrastructure, Neon</li>
   <li><strong>Transactional Email:</strong> Postmark HTTPS API for certificate verification, recovery, and owner notifications; optional SMTP support.</li>
 </ul>
-```
 
 <hr>
 
@@ -256,4 +255,4 @@ npm install</code></pre>
 <h2>📄 License</h2>
 <p>Copyright © 2026. All rights reserved.</p>
 <p>This project is publicly available for educational viewing and portfolio demonstration purposes.</p>
-<p>No permission is granted to copy, modify, redistribute, or commercially use the source code without prior written authorization from the copyright holder</p>
+<p>No permission is granted to copy, modify, redistribute, or commercially use the source code without prior written authorization from the copyright holder.</p>

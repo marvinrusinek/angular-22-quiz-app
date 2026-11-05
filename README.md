@@ -263,6 +263,7 @@ npm install</code></pre>
 <hr>
 
 <h2>📄 License</h2>
-<p>Copyright © 2026. All rights reserved.</p>
+<p>Copyright © 2026 Marvin Rusinek. All rights reserved.</p>
 <p>This project is publicly available for educational viewing and portfolio demonstration purposes.</p>
-<p>No permission is granted to copy, modify, redistribute, or commercially use the source code without prior written authorization from the copyright holder.</p>
+<p>Except as permitted by applicable law or GitHub's Terms of Service, no permission is granted to copy, modify, redistribute, or commercially use the original source code without prior written authorization from the copyright holder.</p>
+<p>Third-party dependencies and assets remain subject to their respective licenses.</p>

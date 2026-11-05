@@ -75,11 +75,8 @@
   <li><strong>Secure Full-Stack Design:</strong> Node/Express handles Topic Quiz answer validation, while Spring Boot manages Interview Mode sessions and server-side scoring. Both backends use PostgreSQL as the authoritative data store, keeping correctness-sensitive operations off the frontend.</li>
   <li><strong>Testing and Reliability:</strong> Automated coverage across Angular, Node/Express, Spring Boot, database integration, API contract parity, and end-to-end workflows using Jest, Playwright, JUnit 5, MockMvc, and Testcontainers.</li>
   <li><strong>Accessible, Responsive Experience:</strong> Angular Material, keyboard navigation, screen reader support tested with Windows Narrator in Chrome, mobile-responsive layouts, dark and light themes, and Progressive Web App support.</li>
-  <li><strong>Interview Certificate Claims (Production Rollout Pending):</strong> Implemented email-verified certificate claiming, recovery, and owner notifications using the Node/Express backend and PostgreSQL. Validated through automated browser tests and controlled email-delivery testing. Production enablement remains pending. See the certificate claims runbook for implementation details.</li>
+  <li><strong>Interview Certificate Claims (Production Rollout Pending):</strong> Implemented email-verified certificate claiming, recovery, and owner notifications using the Node/Express backend and PostgreSQL. Validated through automated browser tests and controlled email-delivery testing. Production enablement remains pending. See the <a href="./docs/certificate-claims-runbook.md">certificate claims runbook</a> for implementation details.</li>
 </ul>
-
-<hr>
-
 
 <hr>
 
@@ -208,7 +205,7 @@ npm install</code></pre>
 <h3>Database Configuration</h3>
 
 <p>PostgreSQL serves as the authoritative data store for quiz content, interview sessions, submitted answers, and assessment results. Production uses Neon-hosted PostgreSQL.</p>
-<p>Before starting the backend services, configure the required database connections and environment variables. Refer to the Node/Express environment configuration for available settings.</p>
+<p>Before starting the backend services, configure the required database connections and environment variables. Refer to the <a href="./backend/.env.example">Node/Express environment configuration</a> for available settings.</p>
 <p>Both backend services require access to PostgreSQL. Keep database credentials, API keys, and application secrets in local environment configuration and never commit sensitive information to source control.</p>
 
 <h3>Run the Topic Quiz API and Angular Frontend</h3>

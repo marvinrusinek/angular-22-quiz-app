@@ -163,7 +163,7 @@ angular-22-quiz-app/
 │       ├── routes/
 │       ├── quiz/
 │       ├── interview/
-|       ├── certificate/
+│       ├── certificate/
 │       └── db/
 │
 ├── backend-spring/                  # Spring Boot API

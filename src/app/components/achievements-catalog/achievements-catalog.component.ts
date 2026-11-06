@@ -66,35 +66,20 @@ export function catalogRevealDelta(
           [attr.aria-expanded]="expanded()"
           (click)="toggle()"
         >
-          <!-- The button's ONE accessible name comes from this single text node (toggleLabel(): "Achievements, N of M"),
-               contributed by the native button's own name-from-contents. It is invisible (opacity 0) but NOT aria-hidden, and it
-               is sized to fill the whole button: Chrome's UIA text range takes its rectangle from the text's own box, so a 1px
-               clipped label gave Narrator a small partial rectangle (measured: 328x40 inside a 1592x113 button).
-               Why not aria-label: a button whose name comes only from aria-label has no text of its own, and Chrome's
-               UIA text range for it collapses to its first character ("A") as soon as a client clones it, asks for its
-               bounds or expands it to a line (measured with UIA; Narrator spoke "button collapsed A"). -->
-          <span class="achievements-catalog__label">{{ toggleLabel() }}</span>
           <span
             class="achievements-catalog__icon"
             aria-hidden="true"
           >
             🏆
           </span>
-          <!-- The visible title and count stay on screen but are hidden from assistive technology so the name above is not
-               repeated. Expanded/collapsed comes from aria-expanded. Nothing INSIDE the focused button changes text on
-               toggle: the chevron is one fixed glyph rotated by CSS. -->
-          <span
-            class="achievements-catalog__title"
-            aria-hidden="true"
-            i18n
-          >
-            Achievements
-          </span>
-          <span
-            class="achievements-catalog__count"
-            aria-hidden="true"
-            >{{ earnedCount() }} / {{ total() }}</span
-          >
+          <!-- The button's ONE accessible name comes from this single visible text span (toggleLabel(): "Achievements, N of M"),
+               contributed by the native button's own name-from-contents: ordinary in-flow text, not hidden, no aria-label.
+               Why not aria-label: a button whose name comes only from aria-label has no text of its own, and Chrome's
+               UIA text range for it collapses to its first character ("A") as soon as a client clones it. The earlier invisible,
+               button-sized (justified) label spread the words across the whole button, and Narrator read it in pieces on arrival
+               ("button collapsed Achievements 6 of button collapsed 6"). Expanded/collapsed comes from aria-expanded. Nothing
+               INSIDE the focused button changes text on toggle: the chevron is one fixed glyph rotated by CSS. -->
+          <span class="achievements-catalog__title">{{ toggleLabel() }}</span>
           <span
             class="achievements-catalog__chevron"
             [class.is-open]="expanded()"
@@ -201,23 +186,6 @@ export function catalogRevealDelta(
         outline-offset: -2px;
       }
 
-      /* The accessible-name text. Invisible, but laid out across the WHOLE button (justified, button-sized glyphs) so the
-         text range Narrator highlights has the button's full rectangle. opacity (not color) so forced-colors cannot show it. */
-      .achievements-catalog__label {
-        position: absolute;
-        inset: 0;
-        display: block;
-        overflow: hidden;
-        font-size: 40px;
-        line-height: 44px;
-        white-space: nowrap;
-        text-align: justify;
-        text-align-last: justify;
-        opacity: 0;
-        pointer-events: none;
-        user-select: none;
-      }
-
       .achievements-catalog__icon {
         font-size: 17px;
         line-height: 1;
@@ -226,12 +194,6 @@ export function catalogRevealDelta(
       .achievements-catalog__title {
         font-size: 15px;
         font-weight: 700;
-      }
-
-      .achievements-catalog__count {
-        font-size: 14px;
-        font-variant-numeric: tabular-nums;
-        color: var(--text-secondary, #555555);
       }
 
       .achievements-catalog__chevron {

@@ -63,4 +63,18 @@ describe('AchievementUnlockedComponent', () => {
     // Meaning is carried by text, readable without the icon.
     expect(section.querySelector('h3')?.textContent).toContain('Achievement Unlocked');
   });
+
+  it('exposes the name/description list to assistive tech (the card is the only place they are read before the catalog is opened)', () => {
+    setAchievements([PERFECT, EXPLORER]);
+    const section = root() as HTMLElement;
+    // Still visible and present as text...
+    expect(items().length).toBe(2);
+    expect(section.textContent).toContain('Perfect Score');
+    // ...and exposed (no aria-hidden), together with the heading and live region.
+    expect(section.querySelector('.achievement-unlocked__list')?.hasAttribute('aria-hidden')).toBe(
+      false
+    );
+    expect(section.querySelector('h3')?.getAttribute('aria-hidden')).toBeNull();
+    expect(section.getAttribute('aria-live')).toBe('polite');
+  });
 });

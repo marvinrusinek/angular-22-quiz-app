@@ -20,6 +20,7 @@ import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metada
 import { QuizService } from '@shared/services/data/quiz.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
 
+import { SummaryIconsComponent } from './summary-icons/summary-icons.component';
 import { SummaryStatsComponent } from './summary-stats/summary-stats.component';
 
 @Component({
@@ -28,6 +29,7 @@ import { SummaryStatsComponent } from './summary-stats/summary-stats.component';
   imports: [
     DatePipe,
     NgTemplateOutlet,
+    SummaryIconsComponent,
     SummaryStatsComponent,
     MatTooltipModule
   ],

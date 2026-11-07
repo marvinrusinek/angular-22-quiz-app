@@ -10,7 +10,12 @@
         <h2 i18n>Summary Stats</h2>
       }
 
-      <!-- The Print / E-mail / Share links are rendered by ResultsComponent, right after the achievements catalog. -->
+      <codelab-summary-icons
+        [quizPercentage]="quizPercentage()"
+        [quizMetadata]="quizMetadata()"
+        [codelabUrl]="codelabUrl"
+      >
+      </codelab-summary-icons>
 
       <codelab-summary-stats
         [quizMetadata]="quizMetadata()"

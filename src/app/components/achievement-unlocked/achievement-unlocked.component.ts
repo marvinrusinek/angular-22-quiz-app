@@ -32,6 +32,8 @@ import { AchievementDefinition } from '@shared/models';
           </span>
           <ng-container i18n>Achievement Unlocked</ng-container>
         </h3>
+        <!-- The names and descriptions stay exposed to assistive technology (no aria-hidden): this card announces WHICH
+             achievement was just unlocked, alongside the always-visible Achievements catalog below. -->
         <ul class="achievement-unlocked__list">
           @for (achievement of achievements(); track achievement.id) {
             <li class="achievement-unlocked__item">

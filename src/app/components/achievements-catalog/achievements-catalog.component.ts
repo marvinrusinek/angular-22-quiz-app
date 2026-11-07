@@ -1,58 +1,18 @@
 import {
-  AfterRenderRef,
-  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
-  DestroyRef,
-  ElementRef,
-  inject,
-  Injector,
-  input,
-  signal
+  input
 } from '@angular/core';
 
 import { AchievementView } from '@shared/models';
 
 /**
- * Expandable "Achievements X / N" catalog for the Results screen.
+ * The "Achievements N of M" catalog for the Results screen, an ALWAYS-VISIBLE section. A heading carries the earned count and every
+ * achievement is shown as a named, non-interactive row with its earned/locked state distinguished by icon + text (not color alone). There is no disclosure button, no aria-expanded and no chevron.
  *
- * Collapsed it shows just the earned count. Clicking the header (a real button —
- * no hover-only behavior) reveals ALL achievements with each one's earned/locked
- * state clearly distinguished by icon + text label (not color alone).
- *
- * Pure presentation: it takes an already-resolved list of {definition, earned}
- * — no storage or rule logic. Renders nothing when the list is empty.
- *
- * Accessibility: a native disclosure button carrying `aria-expanded`, a labelled region,
- * and per-item "Earned"/"Locked" text so the state is conveyed without relying on color.
- * The button deliberately has NO `aria-controls`: with it, Narrator spoke the button's name again when
- * the first Down Arrow after expanding entered the list (the highlight was already on the first row).
+ * Pure presentation: it takes an already-resolved list of {definition, earned}; renders nothing when the list is empty.
  */
-/** Breathing room kept above/below the revealed catalog, in px. */
-const REVEAL_MARGIN = 12;
-
-/**
- * How far to scroll (px, positive = down) so a just-opened catalog is usable.
- * All inputs are viewport-relative (getBoundingClientRect). `listBottom` is the bottom of the LAST row that
- * must be visible (the component passes the first row).
- *  - Toggle + that row fit: show them (minimal movement, 0 if already visible).
- *  - They do not fit: put the toggle at the top so it and the first row (and as many
- *    following rows as fit) are visible. Never aims at the last row.
- */
-export function catalogRevealDelta(
-  toggleTop: number,
-  listBottom: number,
-  viewportHeight: number,
-  margin: number = REVEAL_MARGIN
-): number {
-  const fitsAll = listBottom - toggleTop <= viewportHeight - 2 * margin;
-  if (!fitsAll) return toggleTop - margin;
-  if (toggleTop < margin) return toggleTop - margin;
-  if (listBottom > viewportHeight - margin) return listBottom - (viewportHeight - margin);
-  return 0;
-}
-
 @Component({
   selector: 'codelab-achievements-catalog',
   standalone: true,
@@ -60,51 +20,18 @@ export function catalogRevealDelta(
   template: `
     @if (total() > 0) {
       <section class="achievements-catalog">
-        <button
-          type="button"
-          class="achievements-catalog__toggle"
-          [attr.aria-expanded]="expanded()"
-          (click)="toggle()"
-        >
-          <!-- The button's ONE accessible name comes from this single text node (toggleLabel(): "Achievements, N of M"),
-               contributed by the native button's own name-from-contents. It is invisible (opacity 0) but NOT aria-hidden, and it
-               is sized to fill the whole button: Chrome's UIA text range takes its rectangle from the text's own box, so a 1px
-               clipped label gave Narrator a small partial rectangle (measured: 328x40 inside a 1592x113 button).
-               Why not aria-label: a button whose name comes only from aria-label has no text of its own, and Chrome's
-               UIA text range for it collapses to its first character ("A") as soon as a client clones it, asks for its
-               bounds or expands it to a line (measured with UIA; Narrator spoke "button collapsed A"). -->
-          <span class="achievements-catalog__label">{{ toggleLabel() }}</span>
+        <!-- Always-visible section. The heading's text is the earned count ("Achievements, N of M"); there is no disclosure
+             button, no aria-expanded and no chevron, so nothing here is interactive. -->
+        <h3 class="achievements-catalog__heading">
           <span
             class="achievements-catalog__icon"
             aria-hidden="true"
           >
             🏆
           </span>
-          <!-- The visible title and count stay on screen but are hidden from assistive technology so the name above is not
-               repeated. Expanded/collapsed comes from aria-expanded. Nothing INSIDE the focused button changes text on
-               toggle: the chevron is one fixed glyph rotated by CSS. -->
-          <span
-            class="achievements-catalog__title"
-            aria-hidden="true"
-            i18n
-          >
-            Achievements
-          </span>
-          <span
-            class="achievements-catalog__count"
-            aria-hidden="true"
-            >{{ earnedCount() }} / {{ total() }}</span
-          >
-          <span
-            class="achievements-catalog__chevron"
-            [class.is-open]="expanded()"
-            aria-hidden="true"
-          >
-            ▼
-          </span>
-        </button>
+          <span class="achievements-catalog__title">{{ toggleLabel() }}</span>
+        </h3>
 
-        @if (expanded()) {
           <!-- role="none" on the <ul>: no list semantics, so no item positions ("2 of 6") are announced. Each row is
                ONE named graphic (role="img") whose name is "<name>. <description>. <Earned|Locked>."; its visible
                icon, name, description and status are hidden from assistive technology so nothing is read twice.
@@ -161,7 +88,6 @@ export function catalogRevealDelta(
               </li>
             }
           </ul>
-        }
       </section>
     }
   `,
@@ -177,45 +103,14 @@ export function catalogRevealDelta(
         overflow: hidden;
       }
 
-      .achievements-catalog__toggle {
-        position: relative;
+      .achievements-catalog__heading {
         display: flex;
         align-items: center;
         gap: 8px;
-        width: 100%;
+        margin: 0;
         padding: 12px 16px;
-        border: none;
-        background: transparent;
-        cursor: pointer;
         font: inherit;
         color: var(--text-primary, #212121);
-        text-align: left;
-      }
-
-      .achievements-catalog__toggle:hover {
-        background: var(--bg-hover, rgba(0, 0, 0, 0.04));
-      }
-
-      .achievements-catalog__toggle:focus-visible {
-        outline: 2px solid var(--text-link, #3b98fd);
-        outline-offset: -2px;
-      }
-
-      /* The accessible-name text. Invisible, but laid out across the WHOLE button (justified, button-sized glyphs) so the
-         text range Narrator highlights has the button's full rectangle. opacity (not color) so forced-colors cannot show it. */
-      .achievements-catalog__label {
-        position: absolute;
-        inset: 0;
-        display: block;
-        overflow: hidden;
-        font-size: 40px;
-        line-height: 44px;
-        white-space: nowrap;
-        text-align: justify;
-        text-align-last: justify;
-        opacity: 0;
-        pointer-events: none;
-        user-select: none;
       }
 
       .achievements-catalog__icon {
@@ -226,23 +121,6 @@ export function catalogRevealDelta(
       .achievements-catalog__title {
         font-size: 15px;
         font-weight: 700;
-      }
-
-      .achievements-catalog__count {
-        font-size: 14px;
-        font-variant-numeric: tabular-nums;
-        color: var(--text-secondary, #555555);
-      }
-
-      .achievements-catalog__chevron {
-        display: inline-block;
-        margin-left: auto;
-        font-size: 11px;
-        color: var(--text-secondary, #555555);
-      }
-
-      .achievements-catalog__chevron.is-open {
-        transform: rotate(180deg);
       }
 
       .achievements-catalog__list {
@@ -330,9 +208,6 @@ export class AchievementsCatalogComponent {
   /** Every achievement paired with its earned/locked state. Empty → renders nothing. */
   readonly achievements = input<readonly AchievementView[]>([]);
 
-  /** The single expansion state: renders the rows, and drives `aria-expanded` and the chevron's `is-open` class. */
-  readonly expanded = signal(false);
-
   readonly total = computed(() => this.achievements().length);
   readonly earnedCount = computed(() => this.achievements().filter((a) => a.earned).length);
 
@@ -351,54 +226,4 @@ export class AchievementsCatalogComponent {
     return $localize`${a.name}. ${description}. ${status}.`;
   }
 
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly injector = inject(Injector);
-
-  /** The queued post-render reveal for the latest open, if it has not run yet. */
-  private pendingReveal: AfterRenderRef | null = null;
-
-  constructor() {
-    inject(DestroyRef).onDestroy(() => this.cancelPendingReveal());
-  }
-
-  toggle(): void {
-    const opening = !this.expanded();
-    // A reveal queued by an earlier open must never run for a later state (close, reopen, destroy).
-    this.cancelPendingReveal();
-    this.expanded.set(opening);
-    // Only a user-initiated OPEN reveals the list. Closing, or the list simply staying open
-    // while Results sections change, never scrolls. Focus is not moved and keys are not intercepted.
-    if (opening) {
-      this.pendingReveal = afterNextRender(
-        () => {
-          this.pendingReveal = null;
-          this.revealCatalog();
-        },
-        { injector: this.injector }
-      );
-    }
-  }
-
-  private cancelPendingReveal(): void {
-    this.pendingReveal?.destroy();
-    this.pendingReveal = null;
-  }
-
-  /** Runs after the rows have rendered; immediate (non-animated) scroll. */
-  private revealCatalog(): void {
-    const el = this.host.nativeElement;
-    const toggle = el.querySelector<HTMLElement>('.achievements-catalog__toggle');
-    const list = el.querySelector<HTMLElement>('#achievements-catalog-list');
-    if (!toggle || !list) return;
-    // Keep only the toggle and the FIRST row in view. Scrolling further (to show the whole list) moved the toggle after
-    // Narrator had already drawn its outline for it, leaving the outline at the old position (measured: the outline was
-    // offset by exactly the reveal delta). The remaining rows are scrolled into view as the user moves down to them.
-    const firstRow = list.querySelector<HTMLElement>('.achievements-catalog__item') ?? list;
-    const delta = catalogRevealDelta(
-      toggle.getBoundingClientRect().top,
-      firstRow.getBoundingClientRect().bottom,
-      window.innerHeight
-    );
-    if (Math.abs(delta) >= 1) window.scrollBy({ top: delta, left: 0, behavior: 'instant' });
-  }
 }

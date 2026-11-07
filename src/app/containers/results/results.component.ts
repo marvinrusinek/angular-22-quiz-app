@@ -60,7 +60,6 @@ import { AchievementService } from '@shared/services/achievements/achievement.se
 import { AccordionComponent } from './accordion/accordion.component';
 import { AchievementUnlockedComponent } from '../../components/achievement-unlocked/achievement-unlocked.component';
 import { AchievementsCatalogComponent } from '../../components/achievements-catalog/achievements-catalog.component';
-import { SummaryIconsComponent } from './summary-report/summary-icons/summary-icons.component';
 import { ScrollDownIndicatorComponent } from '../../components/scroll-down-indicator/scroll-down-indicator.component';
 import { QuizFactComponent } from '../../components/quiz-fact/quiz-fact.component';
 import { ChallengeComponent } from './challenge/challenge.component';
@@ -84,7 +83,6 @@ import { swallow } from '@shared/utils/error-logging';
     NgTemplateOutlet,
     AchievementUnlockedComponent,
     AchievementsCatalogComponent,
-    SummaryIconsComponent,
     ScrollDownIndicatorComponent,
     QuizFactComponent,
     AccordionComponent,
@@ -120,7 +118,6 @@ export class ResultsComponent implements OnInit {
 
   // ── remaining variables ─────────────────────────────────────────
   readonly quizId = signal('');
-  readonly codelabUrl = 'https://www.codelab.fun';
   readonly detailedSummaryQuestions = signal<QuizQuestion[]>([]);
   readonly headerLabel = signal('');
 

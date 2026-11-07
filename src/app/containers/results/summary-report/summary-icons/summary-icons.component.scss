@@ -1,19 +1,47 @@
 @use '../../../../../variables' as vars;
 
-// Rendered by ResultsComponent right after the achievements catalog: one centered row.
-// (The unknown custom element would otherwise default to display:inline around this block.)
-:host {
-  display: block;
-}
-
 .summary-icons {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin: 0 0 12px 0;
+  float: right;
 
   a {
     color: vars.$gray;
     text-decoration: none;
+  }
+
+  .print {
+    float: right;
+    margin-top: -40px;
+    margin-right: 60px;
+  }
+
+  .email {
+    float: right;
+    margin-top: -40px;
+    margin-right: 35px;
+  }
+
+  .share {
+    float: right;
+    margin-top: -40px;
+    margin-right: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .summary-icons {
+    float: none !important;
+    display: flex !important;
+    justify-content: center !important;
+    gap: 20px !important;
+    margin: 0 0 12px 0 !important;
+
+    .print,
+    .email,
+    .share {
+      float: none !important;
+      margin: 0 !important;
+      margin-top: 0 !important;
+      margin-right: 0 !important;
+    }
   }
 }

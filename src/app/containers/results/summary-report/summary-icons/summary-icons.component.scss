@@ -8,6 +8,26 @@
     text-decoration: none;
   }
 
+  // Focus indicator for the three sharing links: a standard rectangular outline, shown only for KEYBOARD focus (Tab / Shift+Tab), using the
+  // CDK FocusMonitor origin class. Mouse and programmatic (assistive-technology) focus get no app outline. Backgrounds stay clear.
+  // Links remain in the Tab order.
+  a:focus {
+    outline: none;
+  }
+
+  a.cdk-keyboard-focused {
+    outline: 2px solid var(--text-link, #3b98fd);
+    outline-offset: 2px;
+    border-radius: 0;
+  }
+
+  // Forced colors: use the system highlight color.
+  @media (forced-colors: active) {
+    a.cdk-keyboard-focused {
+      outline-color: Highlight;
+    }
+  }
+
   .print {
     float: right;
     margin-top: -40px;

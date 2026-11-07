@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { FocusMonitor } from '@angular/cdk/a11y';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  input
+} from '@angular/core';
 
 import { Quiz, QuizMetadata } from '@shared/models';
 
@@ -11,6 +21,18 @@ import { Quiz, QuizMetadata } from '@shared/models';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SummaryIconsComponent {
+  private readonly focusMonitor = inject(FocusMonitor);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  constructor() {
+    // Focus ORIGIN: CDK FocusMonitor (already in the app via Angular Material) tags a link with cdk-keyboard-focused only when focus
+    // arrives from a keyboard event (Tab / Shift+Tab). Focus set programmatically (e.g. by assistive technology while it reads)
+    // is tagged cdk-program-focused and gets no extra app outline, so it does not compete with the screen reader's own highlight.
+    const links = (): HTMLAnchorElement[] => Array.from(this.host.nativeElement.querySelectorAll('a'));
+    afterNextRender(() => links().forEach((a) => this.focusMonitor.monitor(a, false)));
+    inject(DestroyRef).onDestroy(() => links().forEach((a) => this.focusMonitor.stopMonitoring(a)));
+  }
+
   // ── inputs ──────────────────────────────────────────────────────
   readonly quiz = input<Quiz | null>(null);
   readonly quizMetadata = input<Partial<QuizMetadata> | null>(null);

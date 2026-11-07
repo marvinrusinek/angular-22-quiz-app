@@ -21,4 +21,19 @@ describe('SummaryIconsComponent', () => {
     expect(glyphs.map((g) => g.textContent?.trim())).toEqual(['print', 'email', 'share']);
     glyphs.forEach((g) => expect(g.getAttribute('aria-hidden')).toBeNull());
   });
+
+  it('tags a link with the keyboard-focus class only when focus follows a keyboard event, not programmatic focus', async () => {
+    await fixture.whenStable();
+    const [print, email] = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+    document.body.appendChild(fixture.nativeElement);
+
+    print.focus();
+    expect(print.classList.contains('cdk-program-focused')).toBe(true);
+    expect(print.classList.contains('cdk-keyboard-focused')).toBe(false);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+    email.focus();
+    expect(email.classList.contains('cdk-keyboard-focused')).toBe(true);
+    fixture.nativeElement.remove();
+  });
 });

@@ -57,6 +57,8 @@ The heading element (both pages): ControlType Text, localized "heading", `UIA_He
 
 Exact speech (reporter): standalone `<h3>`: Down Arrow says "heading level 3" twice; Shift+H says "wrapping to bottom Achievements 6 of 6 heading level 3" (level once). Results page: Down Arrow "heading level 3 heading level 3 Achievements 6 of 6"; Shift+H "Achievements 6 of 6 heading level 3". Acceptance (not yet met): "heading level 3, Achievements, 6 of 6" once on Down Arrow.
 
+Also tried and discarded (2026-11-07): matching the Summary Stats heading's text layout and typography on the Achievements h3 (direct text node, centred flex, 22px / weight 900, the same blue, the trophy as a CSS ::before with empty alternative text so it stays out of the accessible name). The Scan Mode Down Arrow announcement still repeated the level, so presentation/typography does not resolve it. Not in this PR; the Results heading is unchanged and the issue stays open.
+
 Tried and discarded: putting "Achievements, N of M" directly in the `<h3>` as a text node (the title span removed, typography moved to the heading). The announcement was unchanged. No markup change is made for this issue.
 
 ## Open issue 2: the first sharing icon (Print) highlights differently from E-mail and Share

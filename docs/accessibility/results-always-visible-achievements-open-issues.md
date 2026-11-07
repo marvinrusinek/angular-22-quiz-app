@@ -44,6 +44,19 @@ Navigation-path and standalone results (2026-11-07, user-tested in Chrome with N
   Down Arrow onto the h3 says "heading level 3" TWICE. Shift+H says "wrapping to bottom Achievements 6 of 6 heading level 3" (the level once).
 - Conclusion: the repeated level reproduces on a standalone native heading. This test does not establish whether Narrator, Chrome, or their interaction causes it. Because it happens outside the app on a single native h3, the Results heading keeps its correct semantics (one native h3) and is not changed.
 
+Native UIA measurements (2026-11-07; read-only IUIAutomation client, Narrator off, active-tab title verified before recording; measured separately on the standalone page and on the Results page, identical results):
+
+| Range | StyleId (40034) | FontWeight |
+|---|---|---|
+| Heading range / line / first word / first character | 70003 (`StyleId_Heading3`) | 700 |
+| Control: ordinary line before the heading | 70012 (`StyleId_Normal`) | 400 (standalone) / 600 (Results stats line) |
+| Control: ordinary line after the heading | 70012 (`StyleId_Normal`) | 400 |
+| Range spanning control + heading + control | MIXED | MIXED |
+
+The heading element (both pages): ControlType Text, localized "heading", `UIA_HeadingLevelPropertyId` = 80053 (`HeadingLevel3`), Level 3, one raw-view Text child; the text ranges inside it have that child as their enclosing element. So Chrome exposes the heading level twice for the same heading: on the element (`HeadingLevel`) and on every text range inside it (`StyleId_Heading3`), and the exposure **matches on both pages**. This is evidence about Chrome's exposure only. **The cause of the repeated announcement remains unproven** (Narrator, Chrome, or their interaction), and no standards-compliant page-side workaround is supported: `StyleId` derives from any ancestor with a heading role, so removing it would mean removing the heading semantics. A sanitized upstream report draft exists locally and has not been filed.
+
+Exact speech (reporter): standalone `<h3>`: Down Arrow says "heading level 3" twice; Shift+H says "wrapping to bottom Achievements 6 of 6 heading level 3" (level once). Results page: Down Arrow "heading level 3 heading level 3 Achievements 6 of 6"; Shift+H "Achievements 6 of 6 heading level 3". Acceptance (not yet met): "heading level 3, Achievements, 6 of 6" once on Down Arrow.
+
 Tried and discarded: putting "Achievements, N of M" directly in the `<h3>` as a text node (the title span removed, typography moved to the heading). The announcement was unchanged. No markup change is made for this issue.
 
 ## Open issue 2: the first sharing icon (Print) highlights differently from E-mail and Share

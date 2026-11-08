@@ -112,12 +112,15 @@ async function readScore(page: Page): Promise<{ correct: number; total: number; 
   if (await scoreTab.count()) {
     await scoreTab.click().catch(() => {});
   }
-  await page.locator('.your-score').first().waitFor({ state: 'visible', timeout: 15_000 });
-  const results = page.locator('.your-score .result');
-  const correct = Number((await results.nth(0).textContent())?.trim());
-  const total = Number((await results.nth(1).textContent())?.trim());
-  const pctText = (await page.locator('.percentage').first().textContent()) ?? '';
-  const pct = Number(pctText.replace('%', '').trim());
+  // The Results summary exposes its numbers through accessible names: "You scored 8 out of 8 questions correctly." and "100% Score".
+  const scored = page.locator('[aria-label*="You scored"]').first();
+  await scored.waitFor({ state: 'attached', timeout: 15_000 });
+  const match = /You scored ([0-9]+) out of ([0-9]+)/.exec((await scored.getAttribute('aria-label')) ?? '');
+  if (!match) throw new Error('Results summary did not state the score');
+  const correct = Number(match[1]);
+  const total = Number(match[2]);
+  const pctLabel = (await page.locator('[aria-label$=" Score"]').first().getAttribute('aria-label')) ?? '';
+  const pct = Number(pctLabel.replace('% Score', '').trim());
   return { correct, total, pct };
 }
 

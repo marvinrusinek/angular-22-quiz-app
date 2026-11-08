@@ -116,7 +116,8 @@ test.describe('Interview Mode', () => {
     await expect(page.locator('.perf-chart__dot')).toHaveCount(2);
     await expect(page.locator('.perf-chart__dot--latest')).toHaveCount(1);
     await expect(page.locator('.perf-metrics dd')).toHaveCount(4);
-    await expect(page.locator('.perf-trends__sr li')).toHaveCount(2);
+    // Plain paragraphs, not list items (Narrator announced "bullet"): the lead sentence plus one per attempt.
+    await expect(page.locator('.perf-trends__sr p')).toHaveCount(3);
   });
 
   test('interview history: results → history list → read-only summary', async ({ page }) => {

@@ -20,7 +20,11 @@ import { SelectedOptionService } from '@shared/services/state/selectedoption.ser
 import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
-import { declaredIsMultiAnswer, resolveIsMultiAnswer } from '@shared/utils/question-type-authority';
+import {
+  declaredIsMultiAnswer,
+  resolveIsMultiAnswer,
+  selectionForSubmission
+} from '@shared/utils/question-type-authority';
 import { norm } from '@shared/utils/text-norm';
 
 export interface OptionInteractionState {
@@ -180,10 +184,12 @@ export class OptionInteractionService {
         if (typeof text === 'string' && text.length > 0) texts.push(text);
       }
 
+      // Same rule as the shared-option sync: a declared single-answer question submits only its newest pick (the revisit snapshot is
+      // NOT unioned in — that sent the old pick plus the new one and the server rejected it); multi-answer keeps the union.
       const revisit = this.selectedOptionService.getRevisitDisplayTexts(ctx.qIdx);
-      if (revisit) texts.push(...revisit);
+      const submission = selectionForSubmission(declaredIsMultiAnswer(ctx.question), texts, revisit);
 
-      this.selectedOptionService.setUiSelectedTextsForQuestion(ctx.qIdx, texts);
+      this.selectedOptionService.setUiSelectedTextsForQuestion(ctx.qIdx, submission);
     } catch {
       // Never let verdict submission break the click. A missing verdict leaves
       // the migrated readers on their documented fallback.

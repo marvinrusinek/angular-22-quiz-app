@@ -42,7 +42,7 @@ import { OptionUiSyncContext } from '@shared/services/options/engine/option-ui-s
 import { OptionUiSyncEffectsService } from '@shared/services/features/shared-option/option-ui-sync-effects.service';
 import { QuestionResolutionService } from '@shared/services/options/engine/question-resolution.service';
 import { pinAllOfTheAboveLast } from '@shared/utils/all-of-the-above';
-import { declaredIsMultiAnswer } from '@shared/utils/question-type-authority';
+import { declaredIsMultiAnswer, selectionForSubmission } from '@shared/utils/question-type-authority';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { SharedOptionBindingService } from '@shared/services/options/engine/shared-option-binding.service';
@@ -425,28 +425,22 @@ export class SharedOptionComponent implements OnInit, DoCheck, AfterViewInit {
       // claim" error this migration exists to remove.
       const declared = declaredIsMultiAnswer(this.getQuestionAtDisplayIndex?.(qIdx) ?? null);
 
-      let published: string[];
+      // Prefer an EXPLICIT selection over a highlight-only leftover on a single-answer question (after picking a second option the
+      // first still carries highlight, though only one is selected); the shared rule then keeps only the newest pick, and for
+      // multi-answer / undeclared types unions in the revisit snapshot.
+      const explicit: string[] = [];
       if (declared === false) {
-        // Prefer an EXPLICIT selection over a `highlight`-only leftover: after
-        // picking a second option the first still carries `highlight`, so both
-        // appear in `texts` though only one is selected. Last explicit wins,
-        // matching "the newest pick replaces the older one".
-        const explicit: string[] = [];
         for (const b of this.optionBindings() ?? []) {
           const opt = b?.option;
           if (!opt?.text) continue;
           if (b.isSelected === true || opt.selected === true) explicit.push(opt.text);
         }
-        published =
-          explicit.length > 0
-            ? [explicit[explicit.length - 1]!]
-            : texts.length > 0
-              ? [texts[texts.length - 1]!]
-              : [];
-      } else {
-        const snapshot = this.selectedOptionService.getRevisitDisplayTexts(qIdx);
-        published = snapshot ? [...texts, ...snapshot] : texts;
       }
+      const published = selectionForSubmission(
+        declared,
+        declared === false && explicit.length > 0 ? explicit : texts,
+        this.selectedOptionService.getRevisitDisplayTexts(qIdx)
+      );
 
       this.selectedOptionService.setUiSelectedTextsForQuestion(qIdx, published);
     } catch {

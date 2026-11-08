@@ -56,6 +56,8 @@ export interface QuestionResolutionResult {
    * An option absent from this map is not "wrong"; it is unjudged.
    */
   selectedVerdicts: ReadonlyMap<string, boolean>;
+  /** Display history only: earlier picks a later pick replaced (single-answer). See QuestionVerdictState. */
+  earlierPickVerdicts?: ReadonlyMap<string, boolean>;
   /**
    * The full correct-option identity — the authorized REVEAL.
    *
@@ -127,6 +129,8 @@ export class QuestionResolutionService {
     // #4 — the user's own picks. Available from `incomplete` onwards.
     const selectedVerdicts: ReadonlyMap<string, boolean> =
       verdictState?.selectedVerdicts ?? new Map<string, boolean>();
+    const earlierPickVerdicts: ReadonlyMap<string, boolean> =
+      verdictState?.earlierPickVerdicts ?? new Map<string, boolean>();
 
     // #3/#5/#6 — the reveal. `authorizedCorrectTexts` returns null until a
     // terminal phase; an empty set here means "not revealed", not "none correct".
@@ -149,6 +153,7 @@ export class QuestionResolutionService {
       computedPerfect,
       computedImperfect,
       selectedVerdicts,
+      earlierPickVerdicts,
       revealedCorrectOptionTexts,
       isMultiAnswer,
       liveSel
@@ -367,6 +372,20 @@ export class QuestionResolutionService {
   ): boolean {
     const text = norm(option?.text);
     return !!text && revealed.has(text);
+  }
+
+  /**
+   * Was this option an EARLIER pick that the server judged wrong and a later pick replaced? Only for a DECLARED single-answer question:
+   * choosing another option replaces the pick there, so the earlier wrong one keeps its red (as on first visit). A multi-answer
+   * question never paints from this history - deselecting an option there is a removal, not a replacement.
+   */
+  isEarlierWrongSinglePick(
+    option: { text?: string } | null | undefined,
+    isMultiAnswer: boolean,
+    earlierPickVerdicts: ReadonlyMap<string, boolean> | undefined
+  ): boolean {
+    if (isMultiAnswer !== false || !earlierPickVerdicts || earlierPickVerdicts.size === 0) return false;
+    return this.selectedVerdictForOption(option, earlierPickVerdicts) === false;
   }
 
   /**

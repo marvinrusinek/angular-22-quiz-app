@@ -938,22 +938,19 @@ export class QuizComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Record that the CURRENT question has been legitimately passed, unlocking
-   * the route for the one immediately after it. The single call site shared
-   * by Next, keyboard advancement (both call this method) and a forward
-   * dot-jump (see `navigateToDot`) — never mutated independently, so the
-   * marker can only ever grow by one at a time, regardless of how far a click
-   * superficially targets. Guarded by the SAME `currentVerdictBlocksProgression`
+   * Record that the attempt has reached a question, so QuizGuard accepts its route. Next and keyboard advancement record the one
+   * immediately after the current question (the default); a forward dot-jump records exactly the question it names. The single
+   * writer of the marker for the component. Guarded by the SAME `currentVerdictBlocksProgression`
    * this method already checked, so a call here always means the shared
    * progression gate just agreed to let the user leave.
    */
-  private unlockNextQuestion(): void {
+  private unlockNextQuestion(throughOneBased = this.currentQuestionIndex() + 2): void {
     const quizId = this.quizId() || this.quizService.quizId || undefined;
     if (!quizId) return;
     const total = Math.max(this.totalQuestions(), this.quizService.questions?.length ?? 0, 1);
-    // currentQuestionIndex() is 0-based; the route is 1-based, and the index
-    // being UNLOCKED is the one right after the current route position.
-    this.progressionService.unlockThrough(quizId, this.currentQuestionIndex() + 2, total);
+    // The route is 1-based and currentQuestionIndex() is 0-based: by default the question UNLOCKED is the one right after the
+    // current route position (Next); a dot click passes the exact question it names.
+    this.progressionService.unlockThrough(quizId, throughOneBased, total);
   }
   public async advanceToPreviousQuestion(): Promise<void> {
     await this.quizSetupService.advanceQuestion(this, 'previous');
@@ -1125,12 +1122,10 @@ export class QuizComponent implements OnInit, AfterViewInit {
 
   navigateToDot(index: number): void {
     if (!this.isDotClickable(index)) return;
-    // A FORWARD jump is exactly the same act as clicking Next, so it shares
-    // the same one-at-a-time unlock — never the target dot's own index, no
-    // matter how far ahead it is. `QuizGuard` is the actual backstop if the
-    // route this produces still turns out to be locked (e.g. a multi-step
-    // forward dot click past a question that was never truly finished).
-    if (index > this.currentQuestionIndex()) this.unlockNextQuestion();
+    // A dot opens EXACTLY the question it names, including unanswered questions ahead. The click already passed `isDotClickable`
+    // (the same gate as Next), so the target is recorded as reached for this attempt; QuizGuard then accepts the route instead of
+    // redirecting it to the next unlocked question. Skipped questions in between stay untouched: no answer, verdict or score.
+    if (index > this.currentQuestionIndex()) this.unlockNextQuestion(index + 1);
     this.dotStatusService.clearForIndex(index);
     this.selectedOptionService.lastClickedCorrectByQuestion.clear();
     this.quizPersistence.clearPersistedDotStatus(this.quizId(), index);
@@ -1142,15 +1137,14 @@ export class QuizComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Backward and same-index dot navigation is always allowed — revisiting an
-   * earlier question never bypasses anything, and a question left `error` or
-   * unresolved stays visibly recoverable there (`verdictNotice` recomputes for
-   * whichever question is current). A FORWARD jump is exactly the same act as
-   * clicking Next, so it shares the identical gate.
+   * A pagination dot opens exactly the question it names, forward or backward, whether or not the current question is answered.
+   * The answer/timer restriction belongs to Next (`currentVerdictBlocksProgression`), not to skipping with the dots. Only question
+   * bounds apply. Leaving a question mid-check or after a failed check is safe: the verification stays attached to its own question,
+   * the failure stays recoverable there, and Results stays unavailable until it is retried.
    */
   isDotClickable(index: number): boolean {
-    if (index <= this.currentQuestionIndex()) return true;
-    return !this.currentVerdictBlocksProgression();
+    const total = Math.max(this.totalQuestions(), this.quizService.questions?.length ?? 0);
+    return Number.isInteger(index) && index >= 0 && (total <= 0 || index < total);
   }
 
   // Read the URL question index — used as a fallback when

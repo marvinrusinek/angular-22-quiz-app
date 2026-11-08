@@ -186,7 +186,8 @@ export class QuizNavigationService {
   // The navigation body: route, reset timer/state, fetch+emit, finalize.
   // Returns false on a failed router nav or fetch. Throws propagate to
   // navigateToQuestion's catch; its finally always clears the navigating flags.
-  private async performNavigation(index: number): Promise<boolean> {
+  private async performNavigation(requestedIndex: number): Promise<boolean> {
+    let index = requestedIndex;
     // Snapshot the CURRENT (source) question's selections for revisit repaint,
     // BEFORE router nav updates the index and the selection stores are cleared.
     // Display-only — does NOT feed the selection stores the auto-reveal reads.
@@ -200,6 +201,14 @@ export class QuizNavigationService {
     // Perform Router Navigation
     const navSuccess = await this.performRouterNavigation(index);
     if (!navSuccess) return false;
+
+    // The router may have LANDED somewhere other than where we asked: QuizGuard redirects a locked forward target (a dot beyond the
+    // next unlocked question) to the furthest question the attempt has earned, and that redirect still resolves as a successful
+    // navigation. Everything below (current-question index, timer, fetch+emit) must follow the question actually on screen; using
+    // the requested index made the service hold the locked target's question while the URL and view showed another one, so the
+    // next answer was submitted with the wrong question text and the backend rejected it ('Invalid submission'), which then
+    // blocked Results as an unverifiable answer.
+    index = this.resolveLandedQuestionIndex(requestedIndex);
 
     // Reset timer state before emitting the new index to avoid immediate expiry
     this.timerService.stopTimer(undefined, { force: true });
@@ -392,6 +401,13 @@ export class QuizNavigationService {
       this.quizStateService.setAnswered(true);
       this.selectedOptionService.setAnswered(true, true);
     }
+  }
+
+  /** 0-based index of the question the router actually settled on (the requested one unless a guard redirected). */
+  private resolveLandedQuestionIndex(requestedIndex: number): number {
+    const match = /\/quiz\/question\/[^/?#]+\/(\d+)/.exec(this.router.url ?? '');
+    const landedRoute = match ? Number.parseInt(match[1], 10) : NaN;
+    return Number.isFinite(landedRoute) && landedRoute >= 1 ? landedRoute - 1 : requestedIndex;
   }
 
   private async performRouterNavigation(index: number): Promise<boolean> {

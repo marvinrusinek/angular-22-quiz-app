@@ -275,6 +275,34 @@ describe('QuizGuard', () => {
       });
     });
 
+    it.each(['4', '5'])('a dot jump to question %s (recorded as reached, furthest=5) is accepted - never clamped to the next unlocked question', (q, done?: any) => {
+      setCounts({ angular: 6 });
+      progressionService.getFurthestUnlocked.mockReturnValue(5);
+      (
+        guard.canActivate(makeRoute({ quizId: 'angular', questionIndex: q }), mockRouterState) as any
+      ).subscribe((result: unknown) => {
+        expect(result).toBe(true);
+        expect(router.createUrlTree).not.toHaveBeenCalled();
+        done();
+      });
+    });
+
+    it('a question beyond the jump target (furthest=5, requesting 6) is still redirected, and out-of-bounds still redirects to the last question', (done) => {
+      setCounts({ angular: 6 });
+      progressionService.getFurthestUnlocked.mockReturnValue(5);
+      (
+        guard.canActivate(makeRoute({ quizId: 'angular', questionIndex: '6' }), mockRouterState) as any
+      ).subscribe(() => {
+        expect(router.createUrlTree).toHaveBeenCalledWith(['/quiz/question', 'angular', 5]);
+        (
+          guard.canActivate(makeRoute({ quizId: 'angular', questionIndex: '9' }), mockRouterState) as any
+        ).subscribe(() => {
+          expect(router.createUrlTree).toHaveBeenCalledWith(['/quiz/question', 'angular', 6]);
+          done();
+        });
+      });
+    });
+
     it('requesting exactly the furthest-unlocked index is allowed (the boundary is inclusive)', (done) => {
       setCounts({ angular: 6 });
       progressionService.getFurthestUnlocked.mockReturnValue(3);

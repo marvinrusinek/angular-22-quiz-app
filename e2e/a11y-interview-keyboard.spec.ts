@@ -149,7 +149,8 @@ test.describe('Full keyboard-only Interview flow', () => {
     for (let i = 1; i <= 10; i++) {
       await dismissIntegrityDialogIfPresent(page);
       await tabUntil(page, async () => page.evaluate(() => (document.activeElement as HTMLElement)?.closest('.io-option') !== null));
-      const optionOutline = await page.evaluate(() => getComputedStyle(document.activeElement as Element).outlineStyle);
+      // The ring is drawn on the option row that contains the focused input (.io-option:has(input:focus-visible)).
+      const optionOutline = await page.evaluate(() => getComputedStyle((document.activeElement as Element).closest('.io-option') as Element).outlineStyle);
       expect(optionOutline).not.toBe('none'); // visible focus on the option itself
       await pressKey(page, 'Space');
       await expect(page.locator('.io-option').first()).toHaveClass(/io-selected/);

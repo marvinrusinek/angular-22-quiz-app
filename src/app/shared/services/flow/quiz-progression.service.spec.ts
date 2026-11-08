@@ -8,7 +8,7 @@ import { SK_FURTHEST_UNLOCKED } from '@shared/constants/session-keys';
  * Direct-route progression bypass fix — the single source of truth for how
  * far the current attempt has legitimately reached. See the service's own
  * doc comment for the full design rationale (attempt scoping, LAZY ATTEMPT
- * CREATION, and the one-step cap); this spec exercises every fail-closed
+ * CREATION, and the question-count bounds); this spec exercises every fail-closed
  * path plus the ordinary unlock/read/clear lifecycle.
  *
  * The mock below is STATEFUL — `startNewAttempt()` actually changes what
@@ -148,9 +148,11 @@ describe('QuizProgressionService', () => {
       expect(service.getFurthestUnlocked('angular', 6)).not.toBe(3);
     });
 
-    it('5. a direct call attempting to unlock question 3 straight from question 1 fails closed to 2 — the one-step cap applies even to a lazily-minted attempt', () => {
-      service.unlockThrough('angular', 3, 6);
-      expect(service.getFurthestUnlocked('angular', 6)).toBe(2);
+    it('5. a dot jump straight from question 1 to question 4 or 5 is recorded exactly (no one-step clamp), with one lazy mint', () => {
+      service.unlockThrough('angular', 4, 6);
+      expect(service.getFurthestUnlocked('angular', 6)).toBe(4);
+      service.unlockThrough('angular', 5, 6);
+      expect(service.getFurthestUnlocked('angular', 6)).toBe(5);
       expect(quizService.startNewAttempt).toHaveBeenCalledTimes(1); // still exactly one mint
     });
 
@@ -199,14 +201,13 @@ describe('QuizProgressionService', () => {
     });
   });
 
-  describe('17-18. bounds — requested indexes cannot skip beyond furthest+1, and always respect the real question count', () => {
-    it('17. an existing attempt already at question 3 cannot be asked to skip to question 10 in one call', () => {
-      service.unlockThrough('angular', 2, 10);
+  describe('17-18. bounds — a request always respects the real question count and never lowers the marker', () => {
+    it('17. a request past the last question clamps to the last question; a later lower request never lowers it; reading alone never unlocks', () => {
       service.unlockThrough('angular', 3, 10);
-      expect(service.getFurthestUnlocked('angular', 10)).toBe(3);
-
-      service.unlockThrough('angular', 10, 10);
-      expect(service.getFurthestUnlocked('angular', 10)).toBe(4); // capped to 3+1, not 10
+      service.unlockThrough('angular', 99, 10);
+      expect(service.getFurthestUnlocked('angular', 10)).toBe(10);
+      service.unlockThrough('angular', 2, 10);
+      expect(service.getFurthestUnlocked('angular', 10)).toBe(10);
     });
 
     it('18. bounds respect the real question count even at the very last step', () => {
@@ -253,9 +254,9 @@ describe('QuizProgressionService', () => {
 
       expect(service.getFurthestUnlocked('angular', 6)).toBe(1);
 
-      // The old furthest (3) does not carry over — only one legitimate
-      // one-step unlock is available again.
-      service.unlockThrough('angular', 3, 6);
+      // The old furthest (3) does not carry over: the new attempt starts again from 1 and
+      // only reaches what it asks for.
+      service.unlockThrough('angular', 2, 6);
       expect(service.getFurthestUnlocked('angular', 6)).toBe(2);
     });
   });

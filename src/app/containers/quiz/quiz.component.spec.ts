@@ -9,6 +9,8 @@ import { NEVER, Observable, of, Subject } from 'rxjs';
 
 import { QuizService } from '@shared/services/data/quiz.service';
 import { QuizProgressionService } from '@shared/services/flow/quiz-progression.service';
+import { QuizDotStatusService } from '@shared/services/flow/quiz-dot-status.service';
+import { QuizPersistenceService } from '@shared/services/state/quiz-persistence.service';
 import { QuizSetupService } from '@shared/services/flow/quiz-setup.service';
 import { SelectionMessageService } from '@shared/services/features/selection-message/selection-message.service';
 import { QuestionVerdictService } from '@shared/services/features/verdict/question-verdict.service';
@@ -423,10 +425,11 @@ describe('QuizComponent — progression gate (single-answer)', () => {
     expect(component.nextButtonEnabled()).toBe(false);
   });
 
-  it('5. a forward paginator dot cannot bypass `checking`', () => {
+  it('5. `checking` blocks Next but not a forward paginator dot (skipping is not progression)', () => {
     pick();
     fixture.detectChanges();
-    expect(laterDotClickable()).toBe(false);
+    expect(nextButton()!.disabled).toBe(true);
+    expect(laterDotClickable()).toBe(true);
   });
 
   it('6. resolved INCORRECT remains blocked — the user must try again', () => {
@@ -434,10 +437,10 @@ describe('QuizComponent — progression gate (single-answer)', () => {
     resolve(0, RESOLVED_INCORRECT);
     expect(phase()).toBe('resolved');
     expect(nextButton()!.disabled).toBe(true);
-    expect(laterDotClickable()).toBe(false);
+    expect(laterDotClickable()).toBe(true); // dots are not gated
   });
 
-  it('7. resolved CORRECT enables Next (and the forward dot, and the keyboard path)', () => {
+  it('7. resolved CORRECT enables Next (and the keyboard path)', () => {
     pick();
     resolve(0, RESOLVED_CORRECT);
     expect(nextButton()!.disabled).toBe(false);
@@ -488,12 +491,12 @@ describe('QuizComponent — progression gate (single-answer)', () => {
     expect(laterDotClickable()).toBe(true);
   });
 
-  it('22. button, direct method, keyboard signal, and forward-dot all agree, in both directions', async () => {
+  it('22. button, direct method and keyboard signal agree, in both directions (the forward dot is never gated)', async () => {
     pick();
     fixture.detectChanges();
     expect(nextButton()!.disabled).toBe(true);
     expect(component.nextButtonEnabled()).toBe(false);
-    expect(laterDotClickable()).toBe(false);
+    expect(laterDotClickable()).toBe(true); // only Next/keyboard are gated
     await component.advanceToNextQuestion();
     expect(advance()).not.toHaveBeenCalled();
 
@@ -672,7 +675,7 @@ describe('QuizComponent — final question submission policy (Results)', () => {
  * DIRECT-ROUTE PROGRESSION BYPASS FIX — the component-side half of
  * QuizProgressionService's contract: it must call `unlockThrough` at every
  * legitimate forward-progress call site (Next/keyboard via
- * `advanceToNextQuestion`, and a forward dot-jump via `navigateToDot`), with
+ * `advanceToNextQuestion`); a forward dot-jump asks for its exact target through the same call, with
  * the correct 1-based target index, and must call `clear()` on Restart. The
  * guard-side half (redirecting a locked direct request) is covered in
  * `quiz-guard.spec.ts`; the service's own persistence/fail-closed behavior is
@@ -762,15 +765,25 @@ describe('QuizComponent — progression unlock call sites', () => {
     expect(progression.unlockThrough).toHaveBeenCalledWith(QUIZ, 2, 3);
   });
 
-  it('27a. a forward dot-jump unlocks through the target the same way Next does', () => {
+  it('27a. a forward dot-jump records EXACTLY the clicked question as reached (not one step), and never goes through the Next unlock', () => {
+    component.totalQuestions.set(5);
     pick();
     resolve(0, RESOLVED_CORRECT); // unblocks isDotClickable for a forward index
 
-    component.navigateToDot(2);
+    component.navigateToDot(3); // dot 4
 
-    expect(progression.unlockThrough).toHaveBeenCalledWith(QUIZ, 2, 3);
+    expect(progression.unlockThrough).toHaveBeenCalledWith(QUIZ, 4, 5);
   });
 
+  it('27a2. dot 5 records Q5 the same way', () => {
+    component.totalQuestions.set(5);
+    pick();
+    resolve(0, RESOLVED_CORRECT);
+
+    component.navigateToDot(4);
+
+    expect(progression.unlockThrough).toHaveBeenCalledWith(QUIZ, 5, 5);
+  });
   it('27b. a backward dot-jump never calls unlockThrough — only forward jumps are progression-relevant', () => {
     component.currentQuestionIndex.set(2);
     fixture.detectChanges();
@@ -780,15 +793,68 @@ describe('QuizComponent — progression unlock call sites', () => {
     expect(progression.unlockThrough).not.toHaveBeenCalled();
   });
 
-  it('a blocked forward dot-jump neither unlocks nor navigates', () => {
+  describe('fresh-visit resets apply to the exact question the dot names', () => {
+    let clearForIndex: jest.SpyInstance;
+    let clearPersisted: jest.SpyInstance;
+    let resetLocks: jest.SpyInstance;
+
+    beforeEach(() => {
+      component.totalQuestions.set(5);
+      clearForIndex = jest.spyOn(TestBed.inject(QuizDotStatusService), 'clearForIndex');
+      clearPersisted = jest.spyOn(TestBed.inject(QuizPersistenceService), 'clearPersistedDotStatus');
+      resetLocks = jest.spyOn(selected, 'resetLocksForQuestion');
+      pick();
+      resolve(0, RESOLVED_CORRECT); // Q1 passed, so a forward dot is clickable
+    });
+
+    it.each([3, 4])('a forward dot to index %i resets exactly that question and no skipped one in between', (target) => {
+      component.navigateToDot(target);
+
+      expect(clearForIndex).toHaveBeenCalledWith(target);
+      expect(resetLocks).toHaveBeenCalledWith(target);
+      expect(clearPersisted).toHaveBeenCalledWith(expect.anything(), target);
+      for (const skipped of [1, 2, 3].filter((i) => i < target)) {
+        expect(clearForIndex).not.toHaveBeenCalledWith(skipped);
+        expect(resetLocks).not.toHaveBeenCalledWith(skipped);
+      }
+    });
+
+    it('a backward dot resets the earlier question that was clicked (established revisit policy)', () => {
+      component.currentQuestionIndex.set(2);
+      fixture.detectChanges();
+
+      component.navigateToDot(0);
+
+      expect(clearForIndex).toHaveBeenCalledWith(0);
+      expect(resetLocks).toHaveBeenCalledWith(0);
+    });
+  });
+  it('a forward dot opens the exact question while the current one is still PENDING (checking), unanswered, or failed', () => {
+    component.totalQuestions.set(5);
+    expect(component.isDotClickable(4)).toBe(true); // Q1 unanswered (idle): dot 5
+    component.navigateToDot(4);
+    expect(progression.unlockThrough).toHaveBeenLastCalledWith(QUIZ, 5, 5);
+
+    component.currentQuestionIndex.set(4);
+    fixture.detectChanges(); // now on Q5, unanswered: dot 4 is a backward jump
+    expect(component.isDotClickable(3)).toBe(true);
+
+    component.currentQuestionIndex.set(0);
     pick();
-    fixture.detectChanges(); // still `checking` — isDotClickable(forward) is false
-
-    component.navigateToDot(2);
-
-    expect(progression.unlockThrough).not.toHaveBeenCalled();
+    fixture.detectChanges(); // checking
+    expect(component.isDotClickable(3)).toBe(true);
+    failCheck(0);
+    expect(component.isDotClickable(3)).toBe(true); // failed: still skippable, recoverable on return
   });
 
+  it('dots outside the question range are not clickable (bounds preserved)', () => {
+    component.totalQuestions.set(5);
+    expect(component.isDotClickable(-1)).toBe(false);
+    expect(component.isDotClickable(5)).toBe(false);
+    expect(component.isDotClickable(1.5)).toBe(false);
+    component.navigateToDot(9);
+    expect(progression.unlockThrough).not.toHaveBeenCalled();
+  });
   it('confirming Restart clears the progression marker (a new attempt inherits nothing)', () => {
     component.restartQuiz();
     fixture.detectChanges();

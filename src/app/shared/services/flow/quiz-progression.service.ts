@@ -50,22 +50,21 @@ import { swallow } from '@shared/utils/error-logging';
  * because a future URL was requested. A lazy mint only ever happens when the
  * CURRENT furthest-unlocked (under no attempt) is 1 — the one state a
  * missing attempt can honestly represent — and, like every other call, the
- * newly-minted attempt is immediately subject to the same one-step cap below.
+ * newly-minted attempt is immediately subject to the same bounds below.
  * If a valid attempt already exists, it is always reused, never replaced.
  *
- * ── The one-step cap ──────────────────────────────────────────────────
+ * ── What a request may unlock ─────────────────────────────────────────
  *
- * `unlockThrough` never advances the marker by more than one question per
- * call, regardless of what `throughIndex` asks for:
+ * `unlockThrough` records that the attempt has REACHED question `throughIndex` (clamped to the quiz's own question count, monotonic,
+ * attempt-scoped):
  *
- *     next = min(throughIndex, currentFurthestUnlocked + 1, totalQuestions)
+ *     next = min(throughIndex, totalQuestions)
  *
- * This is enforced unconditionally — for an existing attempt and a freshly
- * lazy-created one alike — so neither a caller bug nor a lazily-minted
- * attempt can ever unlock question 3 from question 1 in one call. The single
- * production caller (`QuizComponent#unlockNextQuestion`) only ever asks for
- * "the next one" anyway; this is defense at the service boundary, not a
- * behavior change for that caller.
+ * The two legitimate callers go through `QuizComponent#unlockNextQuestion`: Next/keyboard advancement asks for the question after
+ * the current one, and a pagination-dot click asks for exactly the question it names, so a dot opens that question rather than
+ * being clamped to the next one. A one-step cap used to sit here; a dot jump made it wrong, and Next never asked for more than one
+ * step anyway. A typed or pasted URL still cannot reach an unvisited question: reading never writes the marker, so `QuizGuard`
+ * redirects any request beyond what a Next or dot click has recorded.
  *
  * ── Persistence ─────────────────────────────────────────────────────
  *
@@ -111,9 +110,8 @@ export class QuizProgressionService {
   }
 
   /**
-   * Unlock AT MOST one question past `quizId`'s current furthest-unlocked
-   * index for the current attempt — never further, regardless of what
-   * `throughIndex` requests (see the one-step-cap doc above). Monotonic:
+   * Record that the current attempt has reached question `throughIndex`
+   * (1-based), clamped to the quiz's question count (see the doc above). Monotonic:
    * never lowers the marker. A no-op if `quizId` is empty, `throughIndex` is
    * not a positive integer, the target is already reached, or no attempt
    * could be established (fails closed rather than persisting an
@@ -128,9 +126,7 @@ export class QuizProgressionService {
     const max = Math.max(1, Math.trunc(totalQuestions) || 1);
     const current = this.getFurthestUnlocked(quizId, max);
 
-    // The hard, unconditional cap: this call may move the marker forward by
-    // at most one question, no matter how far `throughIndex` reaches.
-    const next = Math.min(throughIndex, current + 1, max);
+    const next = Math.min(throughIndex, max);
     if (next <= current) return; // nothing to unlock — already there or behind
 
     const attemptId = this.resolveAttemptIdForUnlock(quizId, current);

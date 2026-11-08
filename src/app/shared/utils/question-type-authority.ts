@@ -61,6 +61,26 @@ export function resolveIsMultiAnswer(
   return declared === null ? countedIsMulti : declared;
 }
 
+/**
+ * The selection to submit to POST /check for one question.
+ *
+ * A DECLARED single-answer (or true/false) question has exactly one selection: picking another option REPLACES the earlier pick, so
+ * only the newest is submitted (the last of `picked`). Everything else — multi-answer, or a type nobody has declared — keeps the union
+ * of the live picks and the first-visit revisit snapshot, because a partial multi-answer selection is completed across visits and
+ * `null` must never be treated as single ('absence is not a claim').
+ *
+ * Both submission paths (the click handler and the shared-option change-detection sync) use this one rule so they cannot publish
+ * different sets for the same question and so a single-answer revisit can never send two selections, which the server rejects.
+ */
+export function selectionForSubmission(
+  declaredMulti: boolean | null,
+  picked: readonly string[],
+  revisitSnapshot: Iterable<string> | null | undefined
+): string[] {
+  if (declaredMulti === false) return picked.length > 0 ? [picked[picked.length - 1]!] : [];
+  return revisitSnapshot ? [...picked, ...revisitSnapshot] : [...picked];
+}
+
 /** True only for an explicitly declared true/false question. */
 export function isDeclaredTrueFalse(question: QuizQuestion | null | undefined): boolean {
   return question?.type === QuestionType.TrueFalse;

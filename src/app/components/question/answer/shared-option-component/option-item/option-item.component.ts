@@ -305,6 +305,9 @@ export class OptionItemComponent implements OnInit {
       return { ...classes, 'correct-option': true, 'incorrect-option': false };
     }
 
+    const earlierWrongClasses = this.getEarlierWrongPickClasses(classes);
+    if (earlierWrongClasses) return earlierWrongClasses;
+
     const revisitClasses = this.getRevisitOptionClasses(classes);
     if (revisitClasses) return revisitClasses;
 
@@ -472,6 +475,33 @@ export class OptionItemComponent implements OnInit {
       selected: false,
       'selected-option': false
     };
+  }
+
+  // A single-answer pick that was judged wrong and later REPLACED by another pick stays red, as it does on first visit. Driven by the
+  // verdict service's display history (not by the current selection), so it also holds after a revisit and after a later correct
+  // answer. Never for multi-answer questions.
+  private getEarlierWrongPickClasses(classes: {
+    [key: string]: boolean;
+  }): { [key: string]: boolean } | null {
+    try {
+      const option = this.binding()?.option;
+      if (!option?.text) return null;
+      const { earlierPickVerdicts, isMultiAnswer } = this.questionResolution.resolveQuestionState(
+        this.resolveQuestionIndex(),
+        { includeWrongDetection: true }
+      );
+      if (!this.questionResolution.isEarlierWrongSinglePick(option, isMultiAnswer, earlierPickVerdicts)) return null;
+      return {
+        ...classes,
+        selected: true,
+        'selected-option': true,
+        'correct-option': false,
+        'incorrect-option': true,
+        highlighted: true
+      };
+    } catch {
+      return null;
+    }
   }
 
   private getRevisitOptionClasses(classes: {

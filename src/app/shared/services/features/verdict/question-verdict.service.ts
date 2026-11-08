@@ -534,6 +534,8 @@ export class QuestionVerdictService {
 
       this.write(quizId, questionText, {
         phase: 'incomplete',
+        // Display history of earlier single-answer picks is never dropped by an incomplete response.
+        earlierPickVerdicts: previous.earlierPickVerdicts,
         selectedOptionTexts: selected,
         selectedVerdicts: mergedVerdicts,
         remainingCorrectCount: result.remainingCorrectCount,
@@ -545,8 +547,19 @@ export class QuestionVerdictService {
     }
 
     if (result.status === 'resolved') {
+      // KEEP HOW EARLIER PICKS WERE JUDGED, AS DISPLAY HISTORY ONLY (see QuestionVerdictState.earlierPickVerdicts). A pick that this
+      // resolution replaced stays in the history; a pick that is selected again is current, so it leaves the history.
+      const previousState = this.verdictFor(quizId, questionText);
+      const nowSelected = new Set(selected.map((text) => canonicalize(text)));
+      const earlierPickVerdicts = new Map<string, boolean>();
+      for (const source of [previousState.earlierPickVerdicts, previousState.selectedVerdicts]) {
+        for (const [text, correct] of source ?? []) {
+          if (!nowSelected.has(canonicalize(text))) earlierPickVerdicts.set(canonicalize(text), correct);
+        }
+      }
       this.write(quizId, questionText, {
         phase: 'resolved',
+        earlierPickVerdicts,
         selectedOptionTexts: selected,
         selectedVerdicts: new Map(
           selected.map((text) => [

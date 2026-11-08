@@ -83,6 +83,15 @@ export interface QuestionVerdictState {
   readonly explanation: string | null;
   /** Null until the question reaches a terminal phase. */
   readonly isResolvedCorrect: boolean | null;
+  /**
+   * DISPLAY HISTORY, never a submission and never a count: how the server judged picks this player made EARLIER in the same attempt
+   * that a later pick has since REPLACED (single-answer: choosing another option replaces the pick). It exists so a replaced wrong
+   * pick keeps its red after a revisit, matching first-visit colours. `selectedVerdicts` keeps its own meaning (the CURRENT
+   * selection, plus the accumulating map for an incomplete multi-answer question) so every counter, the perfect/strict checks and
+   * the sounds that read that whole map are unaffected. Only the option painter reads this, and only for a declared single-answer
+   * question, so a multi-answer deselection can never paint a stale verdict. Cleared with the question state (restart, new attempt).
+   */
+  readonly earlierPickVerdicts?: ReadonlyMap<string, boolean>;
 }
 
 /**

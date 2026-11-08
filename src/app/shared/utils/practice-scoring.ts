@@ -5,6 +5,7 @@ import {
   PracticeTopicScore,
   QuizQuestion
 } from '@shared/models';
+import { capitalizeLead } from './capitalize-lead';
 import { declaredIsMultiAnswer } from './question-type-authority';
 
 /**
@@ -202,7 +203,7 @@ export function computePracticeResult(params: {
       correctTexts: [...authorizedCorrectTexts(question)],
       answered: isAnswered,
       isCorrect,
-      explanation: question.explanation ?? ''
+      explanation: capitalizeLead(question.explanation ?? '')
     });
   }
 

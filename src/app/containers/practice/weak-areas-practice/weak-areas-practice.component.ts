@@ -14,6 +14,7 @@ import { PracticeSessionService } from '@shared/services/features/practice/pract
 import { PracticeOptionsComponent } from '../../../components/practice/practice-options/practice-options.component';
 import { PracticeVerdictService } from '@shared/services/features/practice/practice-verdict.service';
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
+import { capitalizeLead } from '@shared/utils/capitalize-lead';
 import { ThemeToggleComponent } from '../../../components/theme-toggle/theme-toggle.component';
 import { ScrollDownIndicatorComponent } from '../../../components/scroll-down-indicator/scroll-down-indicator.component';
 
@@ -96,8 +97,11 @@ export class WeakAreasPracticeComponent {
     if (!question?.sourceQuizId) return '';
     // The explanation is released BY THE SERVER with the reveal. API-sourced
     // questions carry none of their own — it is answer-key material, and the
-    // /check response is the only thing entitled to hand it over.
-    return this.verdicts.verdictFor(question.sourceQuizId, question.questionText ?? '').explanation;
+    // /check response is the only thing entitled to hand it over. Stored explanations are written to follow
+    // "Option N is correct because ...", so many open in lowercase; shown on its own it starts with a capital.
+    return capitalizeLead(
+      this.verdicts.verdictFor(question.sourceQuizId, question.questionText ?? '').explanation
+    );
   });
 
   constructor() {

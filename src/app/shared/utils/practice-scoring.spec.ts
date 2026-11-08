@@ -296,6 +296,28 @@ describe('practice-scoring — results (final-state scoring)', () => {
     expect(r.answered).toBe(3);
   });
 
+  it('Review explanations start with a capital letter; names, code and already-capitalized text are left as stored', () => {
+    const explained = [
+      { ...single, explanation: 'the async pipe subscribes for you.' },
+      { ...trueFalse, explanation: 'computed() creates a read-only signal.' },
+      { ...multi, explanation: 'Already capitalized text.' }
+    ];
+    const r = computePracticeResult({
+      sessionId: 's-expl',
+      questions: explained,
+      answersByIndex: {},
+      completedAt: 'now',
+      topicNameFor,
+      authorizedResolved: NOTHING_AUTHORIZED,
+      authorizedCorrectTexts: () => []
+    });
+    expect(r.review.map((e) => e.explanation)).toEqual([
+      'The async pipe subscribes for you.',
+      'computed() creates a read-only signal.',
+      'Already capitalized text.'
+    ]);
+  });
+
   it('handles an empty question set without dividing by zero', () => {
     const r = computePracticeResult({
       sessionId: 's0',

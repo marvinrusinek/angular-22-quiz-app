@@ -305,6 +305,30 @@ describe('WeakAreasPracticeComponent — FET reveal', () => {
     expect(explanationText(fixture)).toBe('SINGLE-FET');
   });
 
+  it('a lowercase-opening explanation is shown with a capital first letter and the rest unchanged', async () => {
+    const lower = { ...SINGLE, explanation: 'the async pipe subscribes for you; RxJS and `code` stay as written.' };
+    const { fixture, session } = await mount([lower]);
+    session.select(0, [2]);
+    fixture.detectChanges();
+    expect(explanationText(fixture)).toBe('The async pipe subscribes for you; RxJS and `code` stay as written.');
+  });
+
+  it('an already-capitalized explanation is shown unchanged', async () => {
+    const upper = { ...SINGLE, explanation: 'Dependency injection supplies the instance.' };
+    const { fixture, session } = await mount([upper]);
+    session.select(0, [2]);
+    fixture.detectChanges();
+    expect(explanationText(fixture)).toBe('Dependency injection supplies the instance.');
+  });
+
+  it('an explanation that opens with a code identifier is not capitalized', async () => {
+    const code = { ...SINGLE, explanation: 'computed() creates a read-only signal.' };
+    const { fixture, session } = await mount([code]);
+    session.select(0, [2]);
+    fixture.detectChanges();
+    expect(explanationText(fixture)).toBe('computed() creates a read-only signal.');
+  });
+
   it('MULTI: a PARTIAL selection does NOT reveal the FET', async () => {
     const { fixture, session } = await mount([MULTI]);
     session.select(0, [1]);

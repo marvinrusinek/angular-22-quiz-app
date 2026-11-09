@@ -43,8 +43,10 @@
   </li>
 
   <li role="none">
+    <!-- Units are pluralized in elapsedText() (singular only for exactly 1), not with an ICU plural expression: ICU renders as several
+         text nodes ("Time Elapsed: ", "0 minutes", " and ", "17 seconds"), which breaks the one-text-node-per-row requirement above. -->
     <!-- prettier-ignore -->
-    <span class="summary-stats-leader" i18n>Time Elapsed: {{ elapsedMinutes() }} {{ elapsedMinutes() === 1 ? 'minute' : 'minutes' }} and {{ elapsedSeconds() }} seconds</span>
+    <span class="summary-stats-leader" i18n>Time Elapsed: {{ elapsedText() }}</span>
   </li>
 
   <li role="none">

@@ -102,6 +102,55 @@ describe('SummaryStatsComponent', () => {
     expect(r[8]).toBe('Date/Time Completed: N/A');
   });
 
+  describe('Time Elapsed pluralization (singular only for exactly 1)', () => {
+    const timeRow = (): HTMLElement => items()[7];
+
+    it.each([
+      [0, 0, 'Time Elapsed: 0 minutes and 0 seconds'],
+      [0, 1, 'Time Elapsed: 0 minutes and 1 second'],
+      [1, 0, 'Time Elapsed: 1 minute and 0 seconds'],
+      [1, 1, 'Time Elapsed: 1 minute and 1 second'],
+      [2, 30, 'Time Elapsed: 2 minutes and 30 seconds'],
+      [0, 17, 'Time Elapsed: 0 minutes and 17 seconds'],
+      [1, 5, 'Time Elapsed: 1 minute and 5 seconds'],
+      [10, 21, 'Time Elapsed: 10 minutes and 21 seconds']
+    ])('%i min %i sec renders "%s"', (minutes, seconds, expected) => {
+      setUp({ minutes, seconds });
+      // Exposed text: exactly the sentence, with single spaces and nothing leading or trailing (so appearance matches the old line).
+      expect(timeRow().textContent).toBe(expected);
+      expect(text(timeRow())).toBe(expected);
+    });
+
+    it('stays ONE text node, so the label and value are read together', () => {
+      for (const [minutes, seconds] of [[0, 0], [0, 1], [1, 0], [1, 1], [2, 30]]) {
+        setUp({ minutes, seconds });
+        const textNodes: Node[] = [];
+        const walker = document.createTreeWalker(timeRow(), NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          if ((n.textContent ?? '').trim()) textNodes.push(n);
+        }
+        expect(textNodes).toHaveLength(1);
+      }
+    });
+
+    it('keeps the wrapper, class and role unchanged', () => {
+      setUp({ minutes: 1, seconds: 1 });
+      expect(timeRow().getAttribute('role')).toBe('none');
+      const leader = timeRow().querySelector('span.summary-stats-leader');
+      expect(leader).not.toBeNull();
+      expect(timeRow().querySelectorAll('span, [aria-label], [aria-live]')).toHaveLength(1);
+    });
+
+    it('updates when the inputs change', () => {
+      setUp({ minutes: 1, seconds: 1 });
+      expect(text(timeRow())).toBe('Time Elapsed: 1 minute and 1 second');
+      fixture.componentRef.setInput('elapsedMinutes', 2);
+      fixture.componentRef.setInput('elapsedSeconds', 0);
+      fixture.detectChanges();
+      expect(text(timeRow())).toBe('Time Elapsed: 2 minutes and 0 seconds');
+    });
+  });
+
   it('keeps the existing pass threshold (strictly above 60%)', () => {
     setUp({ percentage: 60 });
     expect(rows()[5]).toBe('Test Status: Failed');

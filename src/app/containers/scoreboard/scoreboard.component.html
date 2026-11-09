@@ -3,12 +3,12 @@
     <main class="scoreboard">
       <codelab-scoreboard-score class="scoreboard__score" />
 
-      @if (badgeText(); as text) {
+      @if (badgeParts(); as badge) {
         <span class="scoreboard__badge" i18n role="status">
           <span class="badge-q">Q</span>
-          <span class="badge-current">{{ badgeparts()[0] }}</span>
+          <span class="badge-current">{{ badge.current }}</span>
           <span class="badge-of">of</span>
-          <span class="badge-total">{{ badgeparts()[1] }}</span>
+          <span class="badge-total">{{ badge.total }}</span>
         </span>
       }
 

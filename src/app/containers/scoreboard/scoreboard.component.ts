@@ -129,10 +129,16 @@ export class ScoreboardComponent implements OnInit {
 
   readonly badgeText = toSignal(this.badgeText$, { initialValue: '' });
 
-  readonly badgeparts = computed(() => {
-    const text = this.badgeText().replace('Question ', '');
-    const parts = text.split(' of ');
-    return [parts[0] || '', parts[1] || ''];
+  readonly badgeParts = computed(() => {
+    const text = this.badgeText();
+
+    if (!text) return null;
+
+    const [current = '', total = ''] = text
+      .replace('Question ', '')
+      .split(' of ');
+
+    return { current, total };
   });
 
   ngOnInit(): void {

@@ -789,14 +789,22 @@ export class QuizSelectionComponent implements OnInit {
   }
 
   // Case-insensitive match against the quiz's milestone/title ONLY (not the
-  // summary or difficulty). An empty term matches everything.
+  // summary or difficulty). An empty term matches everything. Each search word
+  // must be the START of a title word, and the search words must hit CONSECUTIVE
+  // title words in order: "ang" finds "Angular" but NOT "chANGe detection", and
+  // "angular f" finds "Angular Forms" but "forms angular" does not.
   private matchesSearch(quiz: Quiz, term: string): boolean {
-    const needle = term.trim().toLowerCase();
-    if (!needle) return true;
-    // Match at the START of any word in the title, so "ang" finds "Angular" but
-    // NOT "chANGe detection". A plain substring includes() matched mid-word noise.
-    const title = (quiz?.milestone ?? '').toString().toLowerCase();
-    return title.split(/[^a-z0-9]+/).some((word) => word.startsWith(needle));
+    const searchWords = term.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+    if (!searchWords.length) return true;
+
+    const titleWords =
+      (quiz?.milestone ?? '').toLowerCase().match(/[a-z0-9]+/g) ?? [];
+
+    return titleWords.some((_, startIndex) =>
+      searchWords.every((searchWord, offset) =>
+        titleWords[startIndex + offset]?.startsWith(searchWord)
+      )
+    );
   }
 
   // 'all' keeps every quiz (including any with a missing/unknown difficulty);

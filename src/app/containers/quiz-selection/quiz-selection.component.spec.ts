@@ -2733,3 +2733,186 @@ describe('QuizSelectionComponent — catalog stats accessible phrase (2026-10-16
     expect(childFirstClass).toEqual(['visually-hidden', 'stat-num', 'stat-label']);
   });
 });
+
+/**
+ * Search: single-word prefixes AND consecutive multi-word prefixes.
+ *
+ * Every search word must be the START of a title word, and the search words must hit CONSECUTIVE title words in order
+ * ("angular f" finds "Angular Forms"; "forms angular" does not; "forms" does not match inside "Platforms"). Driven through the
+ * component's own `searchTerm` / `difficultyFilter` signals and read back from `displayedQuizzes()`.
+ */
+describe('QuizSelectionComponent — search (single-word and consecutive multi-word prefixes)', () => {
+  const catalog: Array<[id: string, title: string, difficulty: string]> = [
+    ['forms', 'Angular Forms', 'intermediate'],
+    ['change-detection', 'Change Detection', 'advanced'],
+    ['create-first-app', 'Create Your First App', 'beginner'],
+    ['dependency-injection-advanced', 'Dependency Injection Advanced', 'advanced'],
+    ['getting-started', 'Getting Started with Angular Forms', 'beginner'],
+    ['platforms', 'Cross Platforms Guide', 'beginner']
+  ];
+  const ALL = catalog.map(([id]) => id).sort();
+
+  function setup(): QuizSelectionComponent {
+    sessionStorage.clear();
+    localStorage.clear();
+    const metadata: any = {
+      load: jest.fn(() => of(catalog.map(([quizId]) => ({ quizId })))),
+      difficultyByQuiz: signal(new Map(catalog.map(([id, , d]) => [id, d]))),
+      milestoneByQuiz: signal(new Map(catalog.map(([id, t]) => [id, t]))),
+      summaryByQuiz: signal(new Map(catalog.map(([id]) => [id, `About ${id}.`]))),
+      imageByQuiz: signal(new Map<string, string>()),
+      factsByQuiz: signal(new Map<string, readonly string[]>()),
+      questionCountByQuiz: signal(new Map(catalog.map(([id]) => [id, 5]))),
+      imageFor: () => '',
+      factsFor: () => []
+    };
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        QuizSelectionComponent,
+        {
+          provide: QuizService,
+          useValue: {
+            setQuizId: jest.fn(),
+            setQuizStatus: jest.fn(),
+            setCompletedQuizId: jest.fn(),
+            setCheckedShuffle: jest.fn(),
+            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            quizCompleted: false
+          }
+        },
+        {
+          provide: AchievementService,
+          useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() }
+        },
+        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+        {
+          provide: LearningPathService,
+          useValue: { recommend: jest.fn(() => ({ recommendation: null, allComplete: false, totalCount: 0 })) }
+        },
+        { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+        { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
+        { provide: TopicQuizMetadataService, useValue: metadata },
+        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+      ]
+    });
+    const comp = TestBed.inject(QuizSelectionComponent);
+    comp.ngOnInit();
+    return comp;
+  }
+
+  const found = (comp: QuizSelectionComponent, term: string): string[] => {
+    comp.searchTerm.set(term);
+    return comp.displayedQuizzes().map((q) => q.quizId).sort();
+  };
+  const ANGULAR_FORMS = ['forms', 'getting-started'];
+
+  it('an empty search shows every quiz', () => {
+    const comp = setup();
+    expect(found(comp, '')).toEqual(ALL);
+  });
+
+  it.each([
+    ['ang', ANGULAR_FORMS],
+    ['angular', ANGULAR_FORMS],
+    ['forms', ANGULAR_FORMS],
+    ['dep', ['dependency-injection-advanced']],
+    ['inj', ['dependency-injection-advanced']],
+    ['adv', ['dependency-injection-advanced']],
+    ['change', ['change-detection']]
+  ])('single-word prefix "%s" still matches the start of ANY title word', (term, expected) => {
+    expect(found(setup(), term)).toEqual(expected);
+  });
+
+  it.each([
+    ['angular f', ANGULAR_FORMS],
+    ['angular for', ANGULAR_FORMS],
+    ['angular forms', ANGULAR_FORMS],
+    ['ang for', ANGULAR_FORMS],
+    ['dependency inj', ['dependency-injection-advanced']],
+    ['injection adv', ['dependency-injection-advanced']],
+    ['change det', ['change-detection']]
+  ])('multi-word "%s" matches consecutive word prefixes', (term, expected) => {
+    expect(found(setup(), term)).toEqual(expected);
+  });
+
+  it('a multi-word search can match consecutive words that start LATER in a longer title', () => {
+    const comp = setup();
+    expect(found(comp, 'with angular f')).toEqual(['getting-started']);
+    expect(found(comp, 'started with angular')).toEqual(['getting-started']);
+    expect(found(comp, 'with ang')).toEqual(['getting-started']);
+  });
+
+  it('is case-insensitive', () => {
+    const comp = setup();
+    expect(found(comp, 'ANGULAR F')).toEqual(ANGULAR_FORMS);
+    expect(found(comp, 'Angular Forms')).toEqual(ANGULAR_FORMS);
+    expect(found(comp, 'DEPENDENCY inj')).toEqual(['dependency-injection-advanced']);
+  });
+
+  it('ignores leading, trailing and repeated whitespace', () => {
+    const comp = setup();
+    expect(found(comp, ' angular f ')).toEqual(ANGULAR_FORMS);
+    expect(found(comp, '   angular    f   ')).toEqual(ANGULAR_FORMS);
+    expect(found(comp, '\tangular\tf\n')).toEqual(ANGULAR_FORMS);
+  });
+
+  it('keeps word boundaries: a search word must START a title word', () => {
+    const comp = setup();
+    expect(found(comp, 'ange')).toEqual([]); // inside "cHANGE Detection"
+    expect(found(comp, 'orms')).toEqual([]); // inside "Angular fORMS"
+    expect(found(comp, 'forms')).not.toContain('platforms'); // "Platforms" contains "forms" but does not start with it
+    expect(found(comp, 'angularf')).toEqual([]); // words are not run together
+  });
+
+  it('keeps word ORDER and ADJACENCY', () => {
+    const comp = setup();
+    expect(found(comp, 'forms angular')).toEqual([]);
+    expect(found(comp, 'started angular')).toEqual([]); // "with" sits between them
+    expect(found(comp, 'detection change')).toEqual([]);
+  });
+
+  it('a non-matching term shows nothing', () => {
+    const comp = setup();
+    expect(found(comp, 'nonexistent-topic')).toEqual([]);
+    expect(found(comp, 'zzz')).toEqual([]);
+    expect(found(comp, 'angular zzz')).toEqual([]);
+  });
+
+  it('only the title (milestone) is searched, not the summary or difficulty', () => {
+    const comp = setup();
+    expect(found(comp, 'about')).toEqual([]); // every summary starts "About ..."
+    expect(found(comp, 'intermediate')).toEqual([]);
+    expect(found(comp, 'beginner')).toEqual([]);
+  });
+
+  it('combines with the difficulty filter (a quiz must satisfy both)', () => {
+    const comp = setup();
+    comp.searchTerm.set('angular');
+    comp.difficultyFilter.set('intermediate');
+    expect(comp.displayedQuizzes().map((q) => q.quizId)).toEqual(['forms']);
+    comp.difficultyFilter.set('beginner');
+    expect(comp.displayedQuizzes().map((q) => q.quizId)).toEqual(['getting-started']);
+    comp.difficultyFilter.set('advanced');
+    expect(comp.displayedQuizzes()).toEqual([]);
+
+    comp.searchTerm.set('angular f');
+    comp.difficultyFilter.set('all');
+    expect(comp.displayedQuizzes().map((q) => q.quizId).sort()).toEqual(ANGULAR_FORMS);
+
+    comp.searchTerm.set('');
+    comp.difficultyFilter.set('advanced');
+    expect(comp.displayedQuizzes().map((q) => q.quizId).sort()).toEqual(['change-detection', 'dependency-injection-advanced']);
+  });
+
+  it('the no-results message still names the search when nothing matches', () => {
+    const comp = setup();
+    comp.searchTerm.set('forms angular');
+    expect(comp.displayedQuizzes()).toEqual([]);
+    expect(comp.noResultsMessage()).toBe('No quizzes match your search.');
+    comp.difficultyFilter.set('advanced');
+    expect(comp.noResultsMessage()).toBe('No quizzes match your search and difficulty filter.');
+  });
+});

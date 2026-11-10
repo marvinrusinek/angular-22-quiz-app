@@ -176,15 +176,29 @@
           <li>
             <span class="leader" i18n>Explanation:</span>
             @let correctIndicesExp = getCorrectOptionIndices(question, i);
-            {{ formatOptionList(correctIndicesExp) }}
-            {{ correctIndicesExp.length === 1 ? 'was' : 'were' }} correct because {{ question.explanation }}.
+
+            <ng-container i18n>
+              {{ formatOptionList(correctIndicesExp) }}
+              {correctIndicesExp.length, plural,
+                =1 {was}
+                other {were}
+              }
+              correct because {{ question.explanation }}.
+            </ng-container>
           </li>
 
           <!-- ELAPSED TIME -->
           <li>
             <span class="leader" i18n>Elapsed Time:</span>
-            <span>{{ results.elapsedTimes[i] || 0 }} {{ (results.elapsedTimes[i] || 0) === 1 ? 'second' : 'seconds'
-              }}</span>
+
+            @let elapsedSeconds = results.elapsedTimes[i] || 0;
+
+            <span i18n>
+              {elapsedSeconds, plural,
+                =1 {{{ elapsedSeconds }} second}
+                other {{{ elapsedSeconds }} seconds}
+              }
+            </span>
           </li>
         </ul>
       </ng-template>

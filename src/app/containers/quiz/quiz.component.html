@@ -20,37 +20,11 @@
                 [questionIndex]="questionIndex"
                 [questionToDisplay$]="questionToDisplay$"
               >
-                <!-- Projected question box: lands in codelab-quiz-content's
-                     <ng-content select="[quiz-projected-content]"> slot as ONE
-                     unit, so the heading and its optional code snippet are
-                     literal DOM children of the same box element, not merely
-                     adjacent siblings. contentChild('qText') still finds the
-                     <h3> anywhere within this projected subtree, AND this
-                     component's own viewChild('qText') resolves it too (it was
-                     declared in THIS template) — the route-focus effect in
-                     quiz.component.ts uses that to focus it on every actual
-                     question-index change (initial arrival AND every
-                     Next/Previous). tabindex="-1" makes it focusable without
-                     adding it to the normal Tab order.
-
-                     aria-live is CONDITIONAL, on only for a genuine live timer
-                     expiry (isLiveTimerExpiryForCurrentQuestion) — that is the
-                     one reveal with no option click to compose an
-                     announcement from, so this is still its sole automatic
-                     announcement channel (preserves existing timer-expiry
-                     behavior unchanged). Every click-driven reveal (a real
-                     correct pick) is composed and announced through the
-                     persistent answer-outcome announcer in
-                     shared-option.component.html instead, so aria-live stays
-                     OFF here for that case: a live diagnostic had previously
-                     confirmed this heading and that announcer mutate within
-                     the SAME synchronous tick on a correctness reveal, which
-                     is not reliably queued by every assistive technology —
-                     turning this OFF for the click-driven case removes that
-                     competition at its source rather than staggering around
-                     it. The heading's VISIBLE content and its reachability
-                     via normal reading (Tab to it, or a screen reader's own
-                     navigation) are unaffected either way. -->
+                <!-- Projected question content keeps the heading and optional code snippet
+                     together. #qText is programmatically focused on question changes;
+                     tabindex="-1" keeps it outside normal Tab navigation.
+                     Only live timer expiry enables aria-live; click-driven answer
+                     feedback is announced separately to avoid duplicate speech. -->
                 <div
                   quiz-projected-content
                   class="question-box"
@@ -88,21 +62,10 @@
             </mat-card-content>
 
             <mat-card-footer>
-              <!-- Row 1: Selection Message (left) + Navigation (right) -->
+              <!-- Selection guidance and navigation -->
               <section class="footer-row-1">
-                <!-- NOT a live region: this guidance ("Select N more...",
-                     "Please select the correct answer...", "Answered ✓
-                     Click Next...") is now folded into the SAME composed
-                     answer-outcome announcement as the feedback verdict
-                     (AnswerAnnouncementCoordinatorService), when it is
-                     genuinely useful new information (partial multi-answer
-                     progress) — and deliberately OMITTED when it is not
-                     (unchanged guidance after an incorrect pick, or
-                     completion/navigation guidance that would be redundant
-                     with "correct! <explanation>"). Self-announcing here
-                     too would speak the same information twice. The VISIBLE
-                     text is completely unchanged and still reachable by
-                     normal reading. -->
+                <!-- Not a live region: the answer-outcome announcer includes relevant
+                     selection guidance, preventing duplicate announcements. -->
                 <div class="message-area">
                   @if (selectionMessage(); as message) {
                     <span class="instructions-message">{{ message }}</span>
@@ -161,7 +124,6 @@
                 }
               </section>
 
-              <!-- A failed or timed-out answer check: say so, and offer a retry. -->
               @if (verdictNotice(); as notice) {
                 <codelab-verdict-notice
                   [message]="notice.message"
@@ -170,7 +132,6 @@
                 />
               }
 
-              <!-- Show Results Button (when applicable) -->
               @if (shouldShowResultsButton) {
                 <section class="show-results-section">
                   <button
@@ -187,7 +148,7 @@
               }
 
               @if (showPaging()) {
-                <!-- Row 2: Pagination Dots (center) + Progress (right) -->
+                <!-- Pagination dots and progress -->
                 <section class="footer-row-2">
                   <div class="paging-dots">
                     @for (q of questionsList(); track q.questionText) {
@@ -215,7 +176,6 @@
                   </span>
                 </section>
 
-                <!-- Row 3: Animated striped progress bar -->
                 <div
                   class="quiz-progress"
                   [class.is-complete]="progress >= 100"

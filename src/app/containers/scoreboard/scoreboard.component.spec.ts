@@ -82,7 +82,7 @@ describe('ScoreboardComponent — question badge', () => {
     expect(badge(fixture)).toBeNull();
   });
 
-  it('"Question 1 of 6" renders as Q / 1 / of / 6 with the status role', () => {
+  it('"Question 1 of 6" renders as two single-text-node versions (desktop / mobile) with the status role', () => {
     const { fixture, component } = mount({ questionIndex: '1', total: 6 });
     expect(component.badgeText()).toBe('Question 1 of 6');
     expect(component.badgeParts()).toEqual({ current: '1', total: '6' });
@@ -90,10 +90,35 @@ describe('ScoreboardComponent — question badge', () => {
     const el = badge(fixture)!;
     expect(el).not.toBeNull();
     expect(el.getAttribute('role')).toBe('status');
-    expect(text(fixture, 'badge-q')).toBe('Q');
-    expect(text(fixture, 'badge-current')).toBe('1');
-    expect(text(fixture, 'badge-of')).toBe('of');
-    expect(text(fixture, 'badge-total')).toBe('6');
+    expect(text(fixture, 'badge-full')).toBe('Question 1 of 6');
+    expect(text(fixture, 'badge-short')).toBe('Q 1 of 6');
+  });
+
+  it('each badge version is ONE real text node: no per-word spans, no ARIA overrides, no focusables', () => {
+    const { fixture } = mount({ questionIndex: '3', total: 10 });
+    const el = badge(fixture)!;
+    expect(el.querySelectorAll('span span *')).toHaveLength(0);
+    for (const cls of ['badge-full', 'badge-short']) {
+      const v = el.querySelector(`.${cls}`)!;
+      expect(v.childNodes).toHaveLength(1);
+      expect(v.childNodes[0].nodeType).toBe(Node.TEXT_NODE);
+    }
+    expect(el.children).toHaveLength(2);
+    expect(el.querySelector('[aria-label],[aria-labelledby],[aria-hidden],[tabindex],[role]')).toBeNull();
+    expect(el.getAttribute('aria-label')).toBeNull();
+    expect(el.getAttribute('tabindex')).toBeNull();
+    expect(text(fixture, 'badge-full')).toBe('Question 3 of 10');
+    expect(text(fixture, 'badge-short')).toBe('Q 3 of 10');
+  });
+
+  it('badgeFullText / badgeShortText are the complete sentences, and empty when there is no badge', () => {
+    const shown = mount({ questionIndex: '3', total: 10 });
+    expect(shown.component.badgeFullText()).toBe('Question 3 of 10');
+    expect(shown.component.badgeShortText()).toBe('Q 3 of 10');
+
+    const hidden = mount({ questionIndex: '1', total: 0 });
+    expect(hidden.component.badgeFullText()).toBe('');
+    expect(hidden.component.badgeShortText()).toBe('');
   });
 
   it('follows navigation: the badge updates when the route moves to question 4', () => {
@@ -101,14 +126,15 @@ describe('ScoreboardComponent — question badge', () => {
     params$.next({ questionIndex: '4' });
     fixture.detectChanges();
     expect(component.badgeParts()).toEqual({ current: '4', total: '6' });
-    expect(text(fixture, 'badge-current')).toBe('4');
+    expect(text(fixture, 'badge-full')).toBe('Question 4 of 6');
+    expect(text(fixture, 'badge-short')).toBe('Q 4 of 6');
   });
 
   it('a STALE service value never wins over the route (resume / tab-visibility fallback)', () => {
     const { fixture, component } = mount({ questionIndex: '3', total: 6, serviceBadge: 'Question 1 of 6' });
     expect(component.badgeText()).toBe('Question 3 of 6');
     expect(component.badgeParts()).toEqual({ current: '3', total: '6' });
-    expect(text(fixture, 'badge-current')).toBe('3');
+    expect(text(fixture, 'badge-full')).toBe('Question 3 of 6');
   });
 
   it('an agreeing service value is used as is', () => {

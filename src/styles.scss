@@ -771,37 +771,15 @@ button.mat-mdc-menu-trigger {
     align-items: baseline !important;
     gap: 3px !important;
 
-    .badge-q,
-    .badge-current,
-    .badge-of,
-    .badge-total {
+    // One text node per version ("Q 3 of 10"), so one font size/weight for the phrase.
+    .badge-full {
+      display: none !important;
+    }
+
+    .badge-short {
       display: inline !important;
-    }
-
-    .badge-q {
-      font-size: 14px !important;
+      font-size: 16px !important;
       font-weight: 700;
-      text-transform: uppercase;
-      &::before {
-        content: none !important;
-      }
-    }
-
-    .badge-current,
-    .badge-total {
-      font-size: 20px !important;
-      font-weight: 700;
-    }
-
-    .badge-q::after,
-    .badge-current::after,
-    .badge-of::after {
-      content: none !important;
-    }
-
-    .badge-of {
-      font-size: 12px !important;
-      font-weight: 400;
     }
   }
 }

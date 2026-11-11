@@ -141,6 +141,18 @@ export class ScoreboardComponent implements OnInit {
     return { current, total };
   });
 
+  // Complete badge sentences, built once so the template interpolates exactly ONE value per version
+  // (one text node for assistive tech). `$localize` keeps the sentences translatable.
+  readonly badgeFullText = computed(() => {
+    const badge = this.badgeParts();
+    return badge ? $localize`Question ${badge.current}:current: of ${badge.total}:total:` : '';
+  });
+
+  readonly badgeShortText = computed(() => {
+    const badge = this.badgeParts();
+    return badge ? $localize`Q ${badge.current}:current: of ${badge.total}:total:` : '';
+  });
+
   ngOnInit(): void {
     this.handleRouteParameters();
     this.syncBadgeWithRouteSlug();

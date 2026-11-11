@@ -3,12 +3,13 @@
     <main class="scoreboard">
       <codelab-scoreboard-score class="scoreboard__score" />
 
-      @if (badgeParts(); as badge) {
-        <span class="scoreboard__badge" i18n role="status">
-          <span class="badge-q">Q</span>
-          <span class="badge-current">{{ badge.current }}</span>
-          <span class="badge-of">of</span>
-          <span class="badge-total">{{ badge.total }}</span>
+      @if (badgeParts()) {
+        <!-- Each badge version is ONE real text node so Narrator reads (and highlights) it as one phrase.
+             Exactly one version is rendered at a time: the other is display:none (removed from the accessibility
+             tree), switched at the 600px breakpoint, so it is never announced twice. -->
+        <span class="scoreboard__badge" role="status">
+          <span class="badge-full">{{ badgeFullText() }}</span>
+          <span class="badge-short">{{ badgeShortText() }}</span>
         </span>
       }
 

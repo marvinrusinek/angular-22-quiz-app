@@ -54,25 +54,10 @@ mat-card-content {
     margin: 0 10px;
     line-height: 1.2;
 
-    .badge-q,
-    .badge-current,
-    .badge-of,
-    .badge-total {
-      display: inline;
-    }
-
-    // Desktop: show "Question" instead of "Q"
-    .badge-q {
-      font-size: 0;
-      &::before {
-        content: 'Question\00a0';
-        font-size: 26px;
-      }
-    }
-
-    .badge-current::after,
-    .badge-of::after {
-      content: '\00a0';
+    // Desktop shows "Question 3 of 10"; mobile (<=600px) shows "Q 3 of 10".
+    // Both are real text; the inactive one is display:none so only one is ever exposed.
+    .badge-short {
+      display: none;
     }
   }
 

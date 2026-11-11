@@ -21,6 +21,7 @@
       [style.background-color]="getOptionBackgroundColor()"
       [disabled]="isDisabled()"
       [disableRipple]="true"
+      [aria-label]="getOptionDisplayText()"
       (change)="onChanged($event)"
       [attr.data-option-id]="optionId"
     >
@@ -37,6 +38,7 @@
       [style.background-color]="getOptionBackgroundColor()"
       [disabled]="isDisabled()"
       [disableRipple]="true"
+      [aria-label]="getOptionDisplayText()"
       (change)="onChanged($event)"
       [attr.data-option-id]="optionId"
     >
@@ -46,8 +48,13 @@
 </div>
 
 <ng-template #optionContent>
+  <!-- aria-hidden: the control's accessible name is bound explicitly via [aria-label]
+       on the mat-radio-button / mat-checkbox (forwarded to the native input), so the
+       visible label text must not ALSO be exposed as separate content (Narrator scan
+       mode otherwise reads each option twice). Visual text and click behavior unchanged. -->
   <div
     class="option-wrapper"
+    aria-hidden="true"
     (click)="onContentClick($event)"
   >
     <span class="option-text">{{ getOptionDisplayText() }}</span>

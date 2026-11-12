@@ -45,45 +45,13 @@
     </div>
   </header>
 
-  <!-- Catalog summary stats -->
   @if (quizzes().length > 0) {
     <div
       class="quiz-stats"
       role="status"
       aria-live="polite"
     >
-      <!-- CONFIRMED (real Narrator scan-mode retest, localhost:4200,
-           2026-10-16): supersedes TWO earlier candidates, both reverted.
-
-           Candidate 1 (reverted): `role="group"` + `aria-label` on the
-           `.stat` wrapper itself, with no visible-text equivalent. CDP
-           confirmed it WAS exposed (named, not ignored) — the open
-           question was whether Narrator's non-focusable scan-mode
-           reading cursor actually speaks an attribute-only name with no
-           underlying text, which several sources report as unreliable
-           for plain/non-interactive elements.
-
-           Candidate 2 (reverted): a BARE, roleless `.visually-hidden`
-           span holding the real phrase as text, with `.stat` itself
-           left alone. A direct, controlled comparison against this
-           exact file's own PRE-EXISTING `.visually-hidden[role="status"]`
-           span (the search-results announcement below) found the bare
-           version's real text gets pruned from the accessibility tree
-           entirely (`ignored: true`) — identical CSS, only the role
-           differed, and the one with no role was the one that vanished.
-
-           SHIPPED: the `.visually-hidden` span keeps the real phrase as
-           actual rendered text AND gets `role="group"` (confirmed via
-           CDP: a non-ignored `group` node with a `StaticText` child
-           reading the full phrase, e.g. "20 Quizzes") — real text, not
-           an attribute, inside a role that's confirmed not pruned.
-           `.stat-num`/`.stat-label` get `aria-hidden="true"` so the same
-           information isn't ALSO announced separately — not lost, just
-           carried by the new node instead; both stay fully VISIBLE
-           (aria-hidden only affects the accessibility tree), and
-           `appCountUp` keeps owning `.stat-num`'s visible text exactly
-           as before, untouched. `.stat` itself carries no role and no
-           tabindex — no new Tab stop anywhere in this row. -->
+      <!-- Stats use visually hidden grouped text for Narrator; visible animated counters are aria-hidden to avoid duplicate announcements. -->
       <span class="stat">
         <span class="visually-hidden" role="group">{{ quizCountAccessibleLabelSig() }}</span>
         <span class="stat-num" aria-hidden="true" [appCountUp]="quizStats().quizCount" [countUpDelay]="0"></span>
@@ -96,8 +64,7 @@
         <span class="stat-label" aria-hidden="true" i18n>Questions</span>
       </span>
       <span class="stat-divider stat-divider--before-levels" aria-hidden="true"></span>
-      <!-- Grouped so the three difficulty levels stay together on their own row
-           on mobile (display: contents keeps the desktop single row unchanged). -->
+      <!-- Keep difficulty levels together on mobile without changing desktop layout. -->
       <div class="difficulty-stats">
         @for (level of quizStats().levels; track level.key; let i = $index) {
           @if (i > 0) {
@@ -113,46 +80,33 @@
     </div>
   }
 
-  <!-- Your Progress is its own page (/progress), which has an empty state, so this
-       entry point is ALWAYS available — deliberately NOT behind showSelectionProgress.
-       A plain link: it writes nothing, marks no engagement, creates no session. -->
+  <!-- The Progress page is always available, even before quiz activity. -->
   <p class="progress-entry">
     <a class="progress-entry__link" routerLink="/progress" i18n>View Your Progress</a>
   </p>
 
-  <!-- Progress-driven pieces stay hidden on a fresh load; they appear once the
-       user starts using a quiz this session (showSelectionProgress). Their own
-       inner guards still apply (e.g. renders nothing until there's data). -->
+  <!-- Show progress-driven content only after quiz engagement. -->
   @if (showSelectionProgress()) {
-    <!-- Compact achievements progress (renders nothing until total > 0), with
-         the "You accessed…" note to its right. -->
     <div class="achievements-summary-row">
       <codelab-achievements-summary
         [earned]="achievementsEarned()"
         [total]="achievementsTotal()"
       />
 
-      <!-- 🎖 Certificate Earned — to the right of the count; only once unlocked. -->
       <app-certificate-earned-badge />
 
       @if (hasAccessedQuizzes()) {
-        <!-- Headline stays INLINE with the "Achievements X / N" badge (row 1). -->
         <span class="accessed-banner">{{
           allQuizzesAccessed() ? completionParts().headline : accessedBannerMessage()
         }}</span>
       }
     </div>
 
-    <!-- Completion subline — its OWN centered line below the badge row (a plain
-         block, so it never shares the badge's line regardless of flex behaviour). -->
     @if (hasAccessedQuizzes() && allQuizzesAccessed() && completionParts().subline) {
       <p class="accessed-subline">{{ completionParts().subline }}</p>
     }
 
-    <!-- Recommended Next Quiz — beneath the achievements row. Start/Continue
-         reuse the existing quiz-start navigation; completion goes to the builder.
-         Hidden once the Difficulty card owns the completion state, so the finished
-         path shows ONE "Excellent work! / Build an Interview" card, not two. -->
+    <!-- Hide the next-quiz recommendation once the completion state is handled by the difficulty card. -->
     @if (difficultyRecommendation()?.level !== 'complete') {
       <codelab-recommended-next-quiz
         [state]="learningPath()"
@@ -161,8 +115,7 @@
       />
     }
 
-    <!-- Difficulty Recommendation — advisory readiness message beneath the
-         Recommended Next Quiz card. Browse scrolls to the grid; complete → builder. -->
+    <!-- Difficulty recommendation offers quiz browsing or interview building. -->
     <codelab-difficulty-recommendation
       [recommendation]="difficultyRecommendation()"
       (browse)="browseQuizzes($event)"
@@ -170,9 +123,7 @@
     />
   }
 
-  <!-- Toolbar: search + difficulty filter + sort (right above the grid they act on).
-       The filter (WHICH quizzes) and the sort (their ORDER) are independent and
-       sit together in one group, so on a narrow screen they wrap as a unit. -->
+  <!-- Search, difficulty filtering, and sorting work independently. -->
   <div class="toolbar">
     <app-quiz-search
       [searchTerm]="searchTerm()"
@@ -194,27 +145,15 @@
     </div>
   </div>
 
-  <!-- Empty state: quizzes are loaded but none match the search and/or the
-       difficulty filter. ONE element; noResultsMessage() names what is narrowing
-       the list, so it reads correctly whichever of the two caused it.
-
-       NOT a live region of its own anymore (2026-10-17): this used to carry
-       its own `role="status" aria-live="polite"`, competing with the
-       search-results span below for the same information. Both are now
-       announced through Angular CDK's `LiveAnnouncer` (see
-       `announceSearchResultEffect` in the .ts file) — this span is purely
-       the VISIBLE text, unchanged. -->
+  <!-- LiveAnnouncer handles search results; avoid a second live region here. -->
   @if (quizzes().length > 0 && displayedQuizzes().length === 0) {
     <span class="no-results">
       {{ noResultsMessage() }}
     </span>
   }
 
-  <!-- Quiz Tiles Grid -->
   <div class="quiz-grid">
-    <!-- Featured Interview Mode card. Rendered OUTSIDE the @for so it is not a
-         topic quiz: excluded from quiz counts, difficulty counts, completion
-         totals, and progress/achievements. Always first. -->
+    <!-- Interview Mode is separate from topic quiz counts and achievements. -->
     <div
       class="quiz-tile interview-tile"
       role="group"
@@ -247,43 +186,7 @@
         (@slideLeftToRight.done)="animationDoneHandler()"
         routerLinkActive="active"
       >
-        <!-- Real, lazy-loadable tile artwork — replaces a CSS background-image,
-             which has no lazy-loading hook and fired all 20 requests at once
-             regardless of scroll position (measured on live production under
-             throttled mobile conditions). Purely decorative: the tile's own
-             title (quiz-title, below) already names the quiz, so this is
-             alt="" + aria-hidden rather than a repeated/redundant description.
-             HYBRID loading: all-lazy measured too conservative on a real
-             phone (images appeared one at a time while scrolling), so the
-             first `priorityTileCount` tiles of the CURRENTLY DISPLAYED list
-             — bound to the live `@for` index `i`, so search/sort correctly
-             re-targets whichever quizzes land in those positions — load
-             eagerly; the rest stay on NgOptimizedImage's default lazy
-             (IntersectionObserver-based) path.
-
-             loading="eager", DELIBERATELY NOT Angular `priority`: the header
-             logo above is the real LCP element and is the only image with
-             `priority` (-> fetchpriority="high"). Marking 6 tile images
-             `priority` too was measured to make them contend with the logo
-             for the browser's elevated-priority queue; plain
-             loading="eager" starts the same 6 requests immediately (still
-             all fire before any scroll) while leaving fetchpriority="auto",
-             so only the logo holds "high". Measured: first-six-decoded
-             dropped from ~9.7s to ~8.4s this way, with the header-logo LCP
-             not regressed (see the commit message for the full numbers).
-
-             TWO @if BRANCHES, not one <img> with a dynamic [loading]/
-             [priority] binding: NgOptimizedImage captures BOTH `loading`
-             and `priority` ONCE at initialization and explicitly does not
-             react to either changing later (NG02952 / NG02953) — and
-             `@for` here tracks by quiz?.quizId, so a sort/search that moves
-             a quiz across the eager/lazy boundary REUSES its existing <img>
-             element rather than recreating it, which would silently leave
-             it stuck on its original value. Splitting into two statically-
-             configured branches means Angular DESTROYS and RECREATES the
-             element when a quiz crosses the boundary, so the new instance
-             initializes correctly from scratch — the fix Angular's own
-             error message recommends. -->
+        <!-- Use separate eager/lazy image branches: NgOptimizedImage initializes loading only once. Eager tiles do not compete with the priority header logo. -->
         @if (i < priorityTileCount) {
           <img
             class="quiz-tile__image"
@@ -305,14 +208,7 @@
           />
         }
 
-        <!-- Native, full-tile activation control. An absolutely-positioned
-             overlay (not a wrapper) so it covers the SAME clickable area the
-             tile always has, without requiring the flex/layout of the visible
-             content below to change. Its accessible name is derived from the
-             visible title/summary via aria-labelledby (below), not a
-             duplicate aria-label. Kept as a SIBLING of .status-icon's <a>,
-             never an ancestor, because a <button> cannot legally contain
-             another interactive element (nested-interactive markup). -->
+        <!-- Full-tile button is named by visible content and stays separate from the status link. -->
         <button
           type="button"
           class="quiz-tile__activate"
@@ -354,8 +250,6 @@
           </mat-card-actions>
         </div>
 
-        <!-- Bottom row: progress (left) + difficulty (right) share one line so
-             the tile height stays fixed and content stays above the fold. -->
         <div class="quiz-card-footer">
           @if (showSelectionProgress()) {
             @let cardProgress = quizCardProgress().get(quiz.quizId);
@@ -379,7 +273,6 @@
     }
   </div>
 
-  <!-- Footer -->
   <footer>
     <h3 i18n>
       Copyright © 2026
@@ -395,8 +288,6 @@
 </div>
 
 @defer (on idle) {
-  <!-- The single scroll control. It pages down and flips to an up-chevron at
-       the bottom, so it already does what the separate back-to-top button did;
-       rendering both put two floating controls on the same page. -->
+  <!-- One scroll control handles both scrolling down and returning to the top. -->
   <app-scroll-down-indicator />
 }

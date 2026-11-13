@@ -79,9 +79,10 @@
   }
 }
 
-<!-- Variant D: CDK headless accordion. Each header is a native button (aria-expanded +
-     aria-controls). The expanded body is a plain, UNNAMED container: no role="region" and
-     no aria-labelledby, so Narrator does not re-announce the question when entering it. -->
+<!-- Variant D: CDK headless accordion. Each header is a native button
+     (aria-expanded + aria-controls). The expanded body is a plain, UNNAMED
+     container: no role="region" and no aria-labelledby, so Narrator does not
+     re-announce the question when entering it. -->
 <div cdkAccordion multi="true" class="qr-accordion">
   @for (item of filteredQuestions(); track item.question.questionText) {
     @let question = item.question;
@@ -136,11 +137,14 @@
               [filename]="snippet.filename"
             />
           }
-          <!-- Detail rows: each row is ONE named image (role="img" + aria-label = the row's sentence; the answer row
-               adds ", Correct" / ", Incorrect"). Its visible content (bold label, value, check/X icon) is presentational
-               to assistive tech, so Narrator reads the whole row as a single stop and highlights its whole box.
-               Known limitations (experimental): the row's text is not navigable word by word, the name repeats the
-               visible sentence, and Narrator announces "graphic" after the row. -->
+          <!-- Detail rows: each row is ONE named image (role="img" +
+               aria-label = the row's sentence; the answer row adds
+               ", Correct" / ", Incorrect"). Its visible content (bold label,
+               value, check/X icon) is presentational to assistive tech, so
+               Narrator reads the whole row as a single stop and highlights
+               its whole box. Known limitations (experimental): the row's text
+               is not navigable word by word, the name repeats the visible
+               sentence, and Narrator announces "graphic" after the row. -->
           <div class="quiz-summary-fields">
             <!-- USER ANSWERS -->
             <div class="quiz-summary-row">

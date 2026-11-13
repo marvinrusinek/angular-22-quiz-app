@@ -79,33 +79,56 @@
   }
 }
 
-<mat-accordion multi="true" #accordion="matAccordion">
+<!-- Variant D: CDK headless accordion. Each header is a native button (aria-expanded +
+     aria-controls). The expanded body is a plain, UNNAMED container: no role="region" and
+     no aria-labelledby, so Narrator does not re-announce the question when entering it. -->
+<div cdkAccordion multi="true" class="qr-accordion">
   @for (item of filteredQuestions(); track item.question.questionText) {
     @let question = item.question;
     @let i = item.index;
-    <mat-expansion-panel #panel class="quiz-summary-question" hideToggle="true">
-      <mat-expansion-panel-header>
-        <mat-panel-description>
-          <i class="material-icons accordion-icon">
-            {{ panel.expanded ? 'remove' : 'add' }}
-          </i>
-        </mat-panel-description>
-
-        <mat-panel-title class="accordion-title">
-          <span class="question-leader">Question #{{ i + 1 }}:</span>
-          <span class="question-text">
-            {{ question.questionText }}
-            @let correctCount = getCorrectOptionIndices(question, i).length;
-            @if (correctCount > 1) {
-              <span class="question-correct-count">({{ correctCount }} correct answers)</span>
-            }
-            @if (isQuestionTimedOut(i)) {
-              <span class="timed-out-badge"><i class="material-icons">timer_off</i><span i18n>Timed out</span></span>
-            }
+    <div
+      cdkAccordionItem
+      #panel="cdkAccordionItem"
+      class="quiz-summary-question qr-panel"
+      [class.qr-expanded]="panel.expanded"
+    >
+      <button
+        type="button"
+        class="qr-header"
+        codelabReviewHeader
+        #hdr="codelabReviewHeader"
+        [id]="'qr-header-' + i"
+        [attr.aria-expanded]="panel.expanded"
+        [attr.aria-controls]="'qr-body-' + i"
+        (click)="panel.toggle()"
+        (focus)="onHeaderFocus(hdr)"
+        (keydown)="onHeaderKeydown($event)"
+      >
+        <span class="qr-content">
+          <span class="qr-title accordion-title">
+            <span class="question-leader">Question #{{ i + 1 }}:</span>
+            <span class="question-text">
+              {{ question.questionText }}
+              @let correctCount = getCorrectOptionIndices(question, i).length;
+              @if (correctCount > 1) {
+                <span class="question-correct-count">({{ correctCount }} correct answers)</span>
+              }
+              @if (isQuestionTimedOut(i)) {
+                <span class="timed-out-badge"><i class="material-icons">timer_off</i><span i18n>Timed out</span></span>
+              }
+            </span>
           </span>
-        </mat-panel-title>
 
-        <ng-template matExpansionPanelContent>
+          <span class="qr-description">
+            <i class="material-icons accordion-icon" aria-hidden="true">
+              {{ panel.expanded ? 'remove' : 'add' }}
+            </i>
+          </span>
+        </span>
+      </button>
+
+      @if (panel.expanded) {
+        <div class="qr-body" [id]="'qr-body-' + i">
           @if (question.codeSnippet; as snippet) {
             <app-code-snippet
               [code]="snippet.code"
@@ -113,96 +136,77 @@
               [filename]="snippet.filename"
             />
           }
-          <ul class="quiz-summary-fields">
+          <!-- Detail rows: each row is ONE named image (role="img" + aria-label = the row's sentence; the answer row
+               adds ", Correct" / ", Incorrect"). Its visible content (bold label, value, check/X icon) is presentational
+               to assistive tech, so Narrator reads the whole row as a single stop and highlights its whole box.
+               Known limitations (experimental): the row's text is not navigable word by word, the name repeats the
+               visible sentence, and Narrator announces "graphic" after the row. -->
+          <div class="quiz-summary-fields">
             <!-- USER ANSWERS -->
-            <li>
-              <span class="leader" i18n>Your Answer(s):</span>
+            <div class="quiz-summary-row">
+              @let answer = yourAnswerRow(question, i);
+              @let answerRow = splitRow(answer.text);
+              <span
+                class="quiz-summary-text"
+                role="img"
+                [attr.aria-label]="answer.name"
+              >
+                <span class="quiz-summary-label">{{ answerRow.label }}</span>
+                {{ answerRow.value }}@switch (answer.state) {
+                  @case ('correct') {
+                    <i class="material-icons correct" aria-hidden="true">done</i>
+                  }
+                  @default {
+                    <i class="material-icons incorrect" aria-hidden="true">clear</i>
+                  }
+                }</span
+              >
+            </div>
 
-              <!-- Try to get selections from SelectedOptionService first -->
-            @if (hasSelectionsFromService(i)) {
-            @let selectedOpts = getSelectedOptionsForQuestion(i);
-            @for (opt of selectedOpts; track opt.visualIndex; let isLast = $last) {
-            Option {{ opt.visualIndex }}: {{ opt.text }}@if (!isLast) {, }
-            }
+            <!-- CORRECT ANSWERS -->
+            <div class="quiz-summary-row">
+              @let correctText = correctAnswerRowText(question, i);
+              @let correctRow = splitRow(correctText);
+              <span
+                class="quiz-summary-text"
+                role="img"
+                [attr.aria-label]="correctText"
+              >
+                <span class="quiz-summary-label">{{ correctRow.label }}</span>
+                {{ correctRow.value }}</span
+              >
+            </div>
 
-            <!-- Correct / Incorrect Icons -->
-            @if (!isQuestionCorrect(question, i)) {
-            <i class="material-icons incorrect">clear</i>
-            } @else {
-            <i class="material-icons correct">done</i>
-            }
-            } @else if (results.userAnswers[i] && results.userAnswers[i].length > 0) {
-            <!-- Fallback to localStorage data -->
-            @let userIndices = getUserAnswerIndices(question, results.userAnswers[i]);
+            <!-- EXPLANATION -->
+            <div class="quiz-summary-row">
+              @let explanationText = explanationRowText(question, i);
+              @let explanationRow = splitRow(explanationText);
+              <span
+                class="quiz-summary-text"
+                role="img"
+                [attr.aria-label]="explanationText"
+              >
+                <span class="quiz-summary-label">{{ explanationRow.label }}</span>
+                {{ explanationRow.value }}</span
+              >
+            </div>
 
-            {{ formatOptionList(userIndices) }} &mdash;
-
-            @for (item of userIndices; track item; let isLast = $last) {
-            @if (item > 0 && item <= question.options.length) { {{ question.options[item - 1].text }} } @else { (Invalid
-              Option) } @if (!isLast) { <span>, </span> }
-              }
-
-              <!-- Correct / Incorrect Icons -->
-              @if (
-              !checkIfAnswersAreCorrect(
-              question,
-              results.userAnswers,
-              i
-              )
-              ) {
-              <i class="material-icons incorrect">clear</i>
-              } @else {
-              <i class="material-icons correct">done</i>
-              }
-              } @else {
-              <span>(no answer provided)</span>
-              <i class="material-icons incorrect">clear</i>
-              }
-          </li>
-
-          <!-- CORRECT ANSWERS -->
-          <li>
-            <span class="leader" i18n>Correct Answer(s):</span>
-            @let correctIndices = getCorrectOptionIndices(question, i);
-            {{ formatOptionList(correctIndices) }}
-
-            <!-- Append text for clarity -->
-            &mdash;
-            @for (item of correctIndices; track item; let isLast = $last) {<span>{{ question.options[item - 1].text
-              }}</span>@if (!isLast) {, }}
-          </li>
-
-          <!-- EXPLANATION -->
-          <li>
-            <span class="leader" i18n>Explanation:</span>
-            @let correctIndicesExp = getCorrectOptionIndices(question, i);
-
-            <ng-container i18n>
-              {{ formatOptionList(correctIndicesExp) }}
-              {correctIndicesExp.length, plural,
-                =1 {was}
-                other {were}
-              }
-              correct because {{ question.explanation }}.
-            </ng-container>
-          </li>
-
-          <!-- ELAPSED TIME -->
-          <li>
-            <span class="leader" i18n>Elapsed Time:</span>
-
-            @let elapsedSeconds = results.elapsedTimes[i] || 0;
-
-            <span i18n>
-              {elapsedSeconds, plural,
-                =1 {{{ elapsedSeconds }} second}
-                other {{{ elapsedSeconds }} seconds}
-              }
-            </span>
-          </li>
-        </ul>
-      </ng-template>
-    </mat-expansion-panel-header>
-  </mat-expansion-panel>
+            <!-- ELAPSED TIME -->
+            <div class="quiz-summary-row">
+              @let elapsedText = elapsedTimeRowText(i);
+              @let elapsedRow = splitRow(elapsedText);
+              <span
+                class="quiz-summary-text"
+                role="img"
+                [attr.aria-label]="elapsedText"
+              >
+                <span class="quiz-summary-label">{{ elapsedRow.label }}</span>
+                {{ elapsedRow.value }}</span
+              >
+            </div>
+          </div>
+        </div>
+      }
+    </div>
   }
-</mat-accordion>
+</div>

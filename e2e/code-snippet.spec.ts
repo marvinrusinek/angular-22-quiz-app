@@ -240,11 +240,11 @@ test.describe('Code snippet — Topic Quiz', () => {
     await page.locator('.nav-item', { hasText: 'Quiz Review' }).click();
     await expect(page.locator('.summary-header')).toBeVisible({ timeout: 15_000 });
 
-    const firstHeader = page.locator('mat-expansion-panel-header').first();
+    const firstHeader = page.locator('.qr-header').first();
     await expect(firstHeader).toContainText('Which whatsit code unlocks feature 1');
     await firstHeader.click();
 
-    const firstPanel = page.locator('mat-expansion-panel').first();
+    const firstPanel = page.locator('.qr-panel').first();
     await expect(firstPanel.locator(SNIPPET)).toBeVisible();
     await expect(firstPanel.locator('.code-snippet__filename')).toHaveText('code.ts');
     await expect(firstPanel.locator('.code-snippet__code')).toContainText('codeSignal');

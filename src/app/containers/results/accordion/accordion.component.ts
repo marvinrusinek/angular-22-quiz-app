@@ -5,14 +5,17 @@ import {
   DestroyRef,
   effect,
   inject,
+  Injector,
   input,
   OnInit,
-  signal
+  signal,
+  viewChildren
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 
-import { MatExpansionModule } from '@angular/material/expansion';
+import { FocusKeyManager } from '@angular/cdk/a11y';
+import { CdkAccordion, CdkAccordionItem } from '@angular/cdk/accordion';
 import { MatIconModule } from '@angular/material/icon';
 import { Toolbar, ToolbarWidget, ToolbarWidgetGroup } from '@angular/aria/toolbar';
 
@@ -29,14 +32,20 @@ import { TimerService } from '@shared/services/features/timer/timer.service';
 import { norm } from '@shared/utils/text-norm';
 import { swallow } from '@shared/utils/error-logging';
 import { CodeSnippetComponent } from '../../../components/code-snippet/code-snippet.component';
+import { ReviewHeaderDirective } from './review-header.directive';
 
 export type ReviewFilter = 'all' | 'incorrect' | 'correct';
+
+// Collapses runs of whitespace like HTML rendering did, so the row text is identical to what the template showed.
+const oneLine = (text: string): string => text.replace(/\s+/g, ' ').trim();
 
 @Component({
   selector: 'codelab-results-accordion',
   standalone: true,
   imports: [
-    MatExpansionModule,
+    CdkAccordion,
+    CdkAccordionItem,
+    ReviewHeaderDirective,
     MatIconModule,
     Toolbar,
     ToolbarWidget,
@@ -56,6 +65,24 @@ export class AccordionComponent implements OnInit {
   private readonly timerService = inject(TimerService);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+
+  // ── header keyboard navigation (Arrow Up/Down, Home/End; wraps like Material's accordion) ──
+  private readonly headers = viewChildren(ReviewHeaderDirective);
+  private readonly headerKeyManager = new FocusKeyManager<ReviewHeaderDirective>(
+    this.headers,
+    this.injector
+  )
+    .withWrap()
+    .withHomeAndEnd();
+
+  onHeaderKeydown(event: KeyboardEvent): void {
+    this.headerKeyManager.onKeydown(event);
+  }
+
+  onHeaderFocus(header: ReviewHeaderDirective): void {
+    this.headerKeyManager.updateActiveItem(header);
+  }
 
   // ── inputs ──────────────────────────────────────────────────────
   readonly questionsInput = input<QuizQuestion[]>([], { alias: 'questions' });
@@ -214,6 +241,91 @@ export class AccordionComponent implements OnInit {
     const last = indices[indices.length - 1];
     const rest = indices.slice(0, -1).join(', ');
     return `Options ${rest}, and ${last}`;
+  }
+
+  // ── Consolidated detail-row text ────────────────────────────────
+  // Each Quiz Review detail row is rendered as ONE text node ("<label>: <value>", one interpolation) so Windows
+  // Narrator reads — and highlights — the whole field as a single phrase, like the Results Statistics / Summary
+  // Stats rows. An ICU plural or separate label/value spans would split the row into several text nodes, so the
+  // singular/plural wording is chosen here (still via $localize) instead of in the template.
+
+  /** The "Your Answer(s)" row text plus the correctness state that drives its (decorative) icon. */
+  private yourAnswerBase(
+    question: QuizQuestion,
+    index: number
+  ): { text: string; state: 'correct' | 'incorrect' | 'none' } {
+    if (this.hasSelectionsFromService(index)) {
+      const value = this.getSelectedOptionsForQuestion(index)
+        .map((opt) => `Option ${opt.visualIndex}: ${opt.text}`)
+        .join(', ');
+      return {
+        text: oneLine($localize`Your Answer(s): ${value}:value:`),
+        state: this.isQuestionCorrect(question, index) ? 'correct' : 'incorrect'
+      };
+    }
+
+    const stored = this.results.userAnswers[index];
+    if (stored && stored.length > 0) {
+      const userIndices = this.getUserAnswerIndices(question, stored);
+      const texts = userIndices
+        .map((item) =>
+          item > 0 && item <= question.options.length ? question.options[item - 1].text : '(Invalid Option)'
+        )
+        .join(', ');
+      const value = `${this.formatOptionList(userIndices)} — ${texts}`;
+      return {
+        text: oneLine($localize`Your Answer(s): ${value}:value:`),
+        state: this.checkIfAnswersAreCorrect(question, this.results.userAnswers, index)
+          ? 'correct'
+          : 'incorrect'
+      };
+    }
+
+    const none = '(no answer provided)';
+    return { text: oneLine($localize`Your Answer(s): ${none}:value:`), state: 'none' };
+  }
+
+  /**
+   * The answer row for the template: its visible sentence, the correctness state that drives the icon, and the row's
+   * accessible name, i.e. the sentence plus the verdict the check / X icon shows ("..., Correct" / "..., Incorrect").
+   * (Experiment: the whole visible row is one named image so Narrator reads label, value and verdict as one stop.)
+   */
+  yourAnswerRow(
+    question: QuizQuestion,
+    index: number
+  ): { text: string; state: 'correct' | 'incorrect' | 'none'; name: string } {
+    const base = this.yourAnswerBase(question, index);
+    const verdict = base.state === 'correct' ? $localize`Correct` : $localize`Incorrect`;
+    return { ...base, name: oneLine($localize`${base.text}:text:, ${verdict}:verdict:`) };
+  }
+
+  /** Splits "<label>: <value>" at the first ": " so the label can be styled separately (bold-label variant). */
+  splitRow(text: string): { label: string; value: string } {
+    const i = text.indexOf(': ');
+    return i < 0 ? { label: '', value: text } : { label: text.slice(0, i + 1), value: text.slice(i + 2) };
+  }
+
+  correctAnswerRowText(question: QuizQuestion, index: number): string {
+    const correctIndices = this.getCorrectOptionIndices(question, index);
+    const list = this.formatOptionList(correctIndices);
+    const texts = correctIndices.map((item) => question.options[item - 1]?.text ?? '').join(', ');
+    return oneLine($localize`Correct Answer(s): ${list}:list: — ${texts}:texts:`);
+  }
+
+  explanationRowText(question: QuizQuestion, index: number): string {
+    const correctIndices = this.getCorrectOptionIndices(question, index);
+    const list = this.formatOptionList(correctIndices);
+    const verb = correctIndices.length === 1 ? $localize`was` : $localize`were`;
+    const explanation = question.explanation ?? '';
+    return oneLine(
+      $localize`Explanation: ${list}:list: ${verb}:verb: correct because ${explanation}:explanation:.`
+    );
+  }
+
+  elapsedTimeRowText(index: number): string {
+    const seconds = this.results.elapsedTimes?.[index] || 0;
+    const unit = seconds === 1 ? $localize`second` : $localize`seconds`;
+    return oneLine($localize`Elapsed Time: ${seconds}:seconds: ${unit}:unit:`);
   }
 
   // ── Timer expiry (countdown only) ───────────────────────────────

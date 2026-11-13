@@ -337,7 +337,9 @@ mat-card {
     display: flex;
     flex-direction: column;
     margin-top: 24px;
-    animation: fadeInUp 0.5s ease-out 0.5s both;
+    // Opacity-only (no translateY): the heading inside must not move while
+    // it is announced.
+    animation: fadeIn 0.5s ease-out 0.5s both;
 
     details {
       background: rgba(255, 255, 255, 0.6);
@@ -409,17 +411,6 @@ mat-card {
       &[open] summary::after {
         transform: rotate(180deg);
       }
-    }
-  }
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
     }
   }
 

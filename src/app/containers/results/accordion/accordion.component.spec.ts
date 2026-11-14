@@ -408,7 +408,12 @@ describe('AccordionComponent — CDK accordion semantics (Variant D)', () => {
     fixture.detectChanges();
     const rows = [...fixture.nativeElement.querySelectorAll('#qr-body-0 .quiz-summary-row')] as HTMLElement[];
     const labels = rows.map((r) => (r.querySelector('.quiz-summary-text')!.textContent ?? '').split(':')[0]);
-    expect(labels).toEqual(['Your Answer(s)', 'Correct Answer(s)', 'Explanation', 'Elapsed Time']);
+    expect(labels).toEqual([
+      'Your Answers',
+      'Correct Answer',
+      'Explanation',
+      'Elapsed Time'
+    ]);
   });
 
   it('is multi-open: expanding a second panel leaves the first open, and a click collapses again', async () => {
@@ -539,8 +544,10 @@ describe('AccordionComponent — detail rows are not a list (Variant D)', () => 
         expect([...spans[0].childNodes].filter((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim())).toHaveLength(1);
         expect(r.querySelector('.leader')).toBeNull();
       }
+      // Q1 and Q2 have one selected answer; Q3 has none (plural form)
+      const yours = i === 2 ? 'Your Answers' : 'Your Answer';
       expect(rows.map((r) => (r.querySelector('.quiz-summary-text')!.textContent ?? '').split(':')[0])).toEqual([
-        'Your Answer(s)', 'Correct Answer(s)', 'Explanation', 'Elapsed Time'
+        yours, 'Correct Answer', 'Explanation', 'Elapsed Time'
       ]);
     }
     expect(norm2(rowsOf(f, 1)[1])).toContain('Option 1');
@@ -550,8 +557,8 @@ describe('AccordionComponent — detail rows are not a list (Variant D)', () => 
     const f = await mount(SELECTIONS);
     const row = answerRow(f, 0);
     const img = row.querySelector('.quiz-summary-text[role="img"]')!;
-    expect(plain(img)).toBe('Your Answer(s): Option 2: B');
-    expect(img.getAttribute('aria-label')).toBe('Your Answer(s): Option 2: B, Incorrect');
+    expect(plain(img)).toBe('Your Answer: Option 2: B');
+    expect(img.getAttribute('aria-label')).toBe('Your Answer: Option 2: B, Incorrect');
     expect(img.querySelector('i.incorrect')!.getAttribute('aria-hidden')).toBe('true');
     expect(row.querySelector('i.correct')).toBeNull();
   });
@@ -560,8 +567,8 @@ describe('AccordionComponent — detail rows are not a list (Variant D)', () => 
     const f = await mount(SELECTIONS);
     const row = answerRow(f, 1);
     const img = row.querySelector('.quiz-summary-text[role="img"]')!;
-    expect(plain(img)).toBe('Your Answer(s): Option 1: A');
-    expect(img.getAttribute('aria-label')).toBe('Your Answer(s): Option 1: A, Correct');
+    expect(plain(img)).toBe('Your Answer: Option 1: A');
+    expect(img.getAttribute('aria-label')).toBe('Your Answer: Option 1: A, Correct');
     expect(img.querySelector('i.correct')!.getAttribute('aria-hidden')).toBe('true');
     expect(row.querySelector('i.incorrect')).toBeNull();
   });
@@ -570,7 +577,7 @@ describe('AccordionComponent — detail rows are not a list (Variant D)', () => 
     const f = await mount(SELECTIONS);
     const row = answerRow(f, 2);
     expect(norm2(row)).toContain('(no answer provided)');
-    expect(row.querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answer(s): (no answer provided), Incorrect');
+    expect(row.querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answers: (no answer provided), Incorrect');
     expect(row.querySelector('[role="img"] i.incorrect')!.getAttribute('aria-hidden')).toBe('true');
   });
 
@@ -675,19 +682,19 @@ describe('AccordionComponent — consolidated detail row sentences (Variant D)',
   it('correct single selection: four exact sentences, "was", "1 second", icon image "Correct"', async () => {
     const f = await mount([single('Q1')], new Map([[0, [{ optionId: 1, text: 'A' }]]]), [], [1]);
     expect(rowTexts(f, 0)).toEqual([
-      'Your Answer(s): Option 1: A',
-      'Correct Answer(s): Option 1 — A',
+      'Your Answer: Option 1: A',
+      'Correct Answer: Option 1 — A',
       'Explanation: Option 1 was correct because because.',
       'Elapsed Time: 1 second'
     ]);
-    expect(answerRow(f, 0).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answer(s): Option 1: A, Correct');
+    expect(answerRow(f, 0).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answer: Option 1: A, Correct');
   });
 
   it('incorrect selection: shows the picked option and an incorrect icon image named "Incorrect"', async () => {
     const f = await mount([single('Q1')], new Map([[0, [{ optionId: 2, text: 'B' }]]]), [], [30]);
-    expect(rowTexts(f, 0)[0]).toBe('Your Answer(s): Option 2: B');
+    expect(rowTexts(f, 0)[0]).toBe('Your Answer: Option 2: B');
     expect(rowTexts(f, 0)[3]).toBe('Elapsed Time: 30 seconds');
-    expect(answerRow(f, 0).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answer(s): Option 2: B, Incorrect');
+    expect(answerRow(f, 0).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answer: Option 2: B, Incorrect');
   });
 
   it('multi-answer: lists both options, "Options 1 and 3", and "were"', async () => {
@@ -698,34 +705,34 @@ describe('AccordionComponent — consolidated detail row sentences (Variant D)',
       [2]
     );
     expect(rowTexts(f, 0)).toEqual([
-      'Your Answer(s): Option 1: A, Option 3: C',
-      'Correct Answer(s): Options 1 and 3 — A, C',
+      'Your Answers: Option 1: A, Option 3: C',
+      'Correct Answers: Options 1 and 3 — A, C',
       'Explanation: Options 1 and 3 were correct because both are needed.',
       'Elapsed Time: 2 seconds'
     ]);
     expect(answerRow(f, 0).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe(
-      'Your Answer(s): Option 1: A, Option 3: C, Correct'
+      'Your Answers: Option 1: A, Option 3: C, Correct'
     );
   });
 
   it('stored-answers fallback (no live selection): "Option 1 — A", marked correct', async () => {
     const f = await mount([single('Q1')], new Map(), [[1]], [0]);
-    expect(rowTexts(f, 0)[0]).toBe('Your Answer(s): Option 1 — A');
-    expect(answerRow(f, 0).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answer(s): Option 1 — A, Correct');
+    expect(rowTexts(f, 0)[0]).toBe('Your Answer: Option 1 — A');
+    expect(answerRow(f, 0).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answer: Option 1 — A, Correct');
     expect(rowTexts(f, 0)[3]).toBe('Elapsed Time: 0 seconds');
   });
 
   it('stored-answers fallback with a wrong answer is marked Incorrect', async () => {
     const f = await mount([single('Q1')], new Map(), [[2]], [0]);
-    expect(rowTexts(f, 0)[0]).toBe('Your Answer(s): Option 2 — B');
-    expect(answerRow(f, 0).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answer(s): Option 2 — B, Incorrect');
+    expect(rowTexts(f, 0)[0]).toBe('Your Answer: Option 2 — B');
+    expect(answerRow(f, 0).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answer: Option 2 — B, Incorrect');
   });
 
   it('unanswered: "(no answer provided)" and an X icon image named "Incorrect"', async () => {
     const f = await mount([single('Q1')], new Map(), [], []);
-    expect(rowTexts(f, 0)[0]).toBe('Your Answer(s): (no answer provided)');
+    expect(rowTexts(f, 0)[0]).toBe('Your Answers: (no answer provided)');
     expect(rowTexts(f, 0)[3]).toBe('Elapsed Time: 0 seconds');
-    expect(answerRow(f, 0).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answer(s): (no answer provided), Incorrect');
+    expect(answerRow(f, 0).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answers: (no answer provided), Incorrect');
   });
 
   it('empty explanation keeps the same sentence shape (full stop directly after the blank)', async () => {
@@ -819,10 +826,195 @@ describe('AccordionComponent — timed-out questions (Variant D)', () => {
     f.detectChanges();
     const rows = [...f.nativeElement.querySelectorAll('#qr-body-0 .quiz-summary-text')].map((e) => plain(e));
     expect(rows).toEqual([
-      'Your Answer(s): (no answer provided)',
-      'Correct Answer(s): Option 1 — A',
+      'Your Answers: (no answer provided)',
+      'Correct Answer: Option 1 — A',
       'Explanation: Option 1 was correct because because.',
       'Elapsed Time: 30 seconds'
     ]);
+  });
+});
+
+/**
+ * Singular / plural answer labels.
+ *
+ * "Your Answer" for exactly one selected answer, otherwise "Your Answers";
+ * "Correct Answer" for exactly one correct option, otherwise "Correct Answers".
+ * The two counts are independent, and the visible text, the label span and the
+ * row's aria-label all use the same form.
+ */
+describe('AccordionComponent — singular/plural answer labels', () => {
+  const opt = (id: number, text: string, correct = false) => ({
+    optionId: id,
+    text,
+    ...(correct ? { correct: true } : {})
+  });
+  const oneCorrect = (t: string): QuizQuestion =>
+    ({
+      questionText: t,
+      explanation: 'because',
+      options: [opt(1, 'A', true), opt(2, 'B'), opt(3, 'C')]
+    }) as unknown as QuizQuestion;
+  const twoCorrect = (t: string): QuizQuestion =>
+    ({
+      questionText: t,
+      explanation: 'because',
+      options: [opt(1, 'A', true), opt(2, 'B'), opt(3, 'C', true)]
+    }) as unknown as QuizQuestion;
+  const pick = (...ids: number[]) =>
+    ids.map((id) => ({ optionId: id, text: 'ABC'[id - 1] }));
+
+  async function mount(
+    questions: QuizQuestion[],
+    selections: Map<number, { optionId: number; text: string }[]>,
+    userAnswers: number[][] = []
+  ): Promise<ComponentFixture<AccordionComponent>> {
+    localStorage.removeItem('quizAnswersForResults');
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [AccordionComponent],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, parent: null }
+        },
+        {
+          provide: QuizService,
+          useValue: {
+            questionsSig: () => questions,
+            userAnswers,
+            questions: [],
+            quizId: 'fixture-quiz',
+            setQuizId: jest.fn(),
+            getFinalResultSnapshot: () => null
+          }
+        },
+        {
+          provide: QuizDataService,
+          useValue: {
+            getQuestionsForQuiz: () => ({ pipe: () => ({ subscribe: () => undefined }) })
+          }
+        },
+        {
+          provide: SelectedOptionService,
+          useValue: {
+            recoverAnswersForResults: jest.fn(),
+            rawSelectionsMap: selections,
+            selectedOptionsMap: new Map()
+          }
+        },
+        { provide: TimerService, useValue: { elapsedTimes: [], isCountdown: () => false } }
+      ]
+    });
+    const fixture = TestBed.createComponent(AccordionComponent);
+    fixture.componentRef.setInput('questions', questions);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    for (const h of [...fixture.nativeElement.querySelectorAll('.qr-header')] as HTMLElement[]) {
+      h.click();
+      fixture.detectChanges();
+    }
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  // The visible label (bold span), the whole visible sentence, and the aria-label.
+  const rowOf = (f: ComponentFixture<AccordionComponent>, q: number, n: number) => {
+    const row = f.nativeElement.querySelectorAll(
+      `#qr-body-${q} .quiz-summary-row`
+    )[n] as HTMLElement;
+    const img = row.querySelector('.quiz-summary-text') as HTMLElement;
+    return {
+      label: row.querySelector('.quiz-summary-label')!.textContent!.trim(),
+      aria: img.getAttribute('aria-label')!
+    };
+  };
+
+  // Q0: 1 selected / 1 correct   Q1: 2 selected / 1 correct
+  // Q2: 1 selected / 2 correct   Q3: 2 selected / 2 correct
+  // Q4: 3 selected / 2 correct   Q5: none selected / 1 correct
+  const QUESTIONS = [
+    oneCorrect('Q0'), oneCorrect('Q1'), twoCorrect('Q2'),
+    twoCorrect('Q3'), twoCorrect('Q4'), oneCorrect('Q5')
+  ];
+  const SELECTIONS = new Map([
+    [0, pick(1)], [1, pick(1, 2)], [2, pick(1)],
+    [3, pick(1, 3)], [4, pick(1, 2, 3)]
+  ]);
+
+  it('one selected answer, one correct answer: both singular', async () => {
+    const f = await mount(QUESTIONS, SELECTIONS);
+    expect(rowOf(f, 0, 0).label).toBe('Your Answer:');
+    expect(rowOf(f, 0, 1).label).toBe('Correct Answer:');
+  });
+
+  it('several selected answers, one correct answer: Answers / Answer', async () => {
+    const f = await mount(QUESTIONS, SELECTIONS);
+    expect(rowOf(f, 1, 0).label).toBe('Your Answers:');
+    expect(rowOf(f, 1, 1).label).toBe('Correct Answer:');
+  });
+
+  it('one selected answer, several correct answers: Answer / Answers', async () => {
+    const f = await mount(QUESTIONS, SELECTIONS);
+    expect(rowOf(f, 2, 0).label).toBe('Your Answer:');
+    expect(rowOf(f, 2, 1).label).toBe('Correct Answers:');
+  });
+
+  it('several selected, several correct: both plural', async () => {
+    const f = await mount(QUESTIONS, SELECTIONS);
+    expect(rowOf(f, 3, 0).label).toBe('Your Answers:');
+    expect(rowOf(f, 3, 1).label).toBe('Correct Answers:');
+  });
+
+  it('the two counts are independent (3 selected vs 2 correct)', async () => {
+    const f = await mount(QUESTIONS, SELECTIONS);
+    expect(rowOf(f, 4, 0).label).toBe('Your Answers:');
+    expect(rowOf(f, 4, 1).label).toBe('Correct Answers:');
+  });
+
+  it('zero selected answers use "Your Answers" (nothing is invented)', async () => {
+    const f = await mount(QUESTIONS, SELECTIONS);
+    expect(rowOf(f, 5, 0).label).toBe('Your Answers:');
+    expect(rowOf(f, 5, 0).aria).toBe(
+      'Your Answers: (no answer provided), Incorrect'
+    );
+    expect(rowOf(f, 5, 1).label).toBe('Correct Answer:');
+  });
+
+  it('the aria-label starts with the same label as the visible text', async () => {
+    const f = await mount(QUESTIONS, SELECTIONS);
+    for (let q = 0; q < QUESTIONS.length; q++) {
+      for (const n of [0, 1]) {
+        const r = rowOf(f, q, n);
+        expect(r.aria.startsWith(r.label)).toBe(true);
+      }
+    }
+    expect(rowOf(f, 1, 0).aria.startsWith('Your Answers: Option 1: A, ')).toBe(true);
+  });
+
+  it('the stored-answers fallback uses the same counts', async () => {
+    const f = await mount(
+      [oneCorrect('Q0'), twoCorrect('Q1')],
+      new Map(),
+      [[1], [1, 3]]
+    );
+    expect(rowOf(f, 0, 0).label).toBe('Your Answer:');
+    expect(rowOf(f, 0, 1).label).toBe('Correct Answer:');
+    expect(rowOf(f, 1, 0).label).toBe('Your Answers:');
+    expect(rowOf(f, 1, 1).label).toBe('Correct Answers:');
+  });
+
+  it('keeps role="img" on all four rows, with no roledescription', async () => {
+    const f = await mount(QUESTIONS, SELECTIONS);
+    const imgs = f.nativeElement.querySelectorAll(
+      '#qr-body-0 .quiz-summary-text[role="img"]'
+    );
+    expect(imgs).toHaveLength(4);
+    for (const img of imgs) {
+      expect(img.hasAttribute('aria-roledescription')).toBe(false);
+      expect(img.getAttribute('aria-label')!.length).toBeGreaterThan(0);
+    }
   });
 });

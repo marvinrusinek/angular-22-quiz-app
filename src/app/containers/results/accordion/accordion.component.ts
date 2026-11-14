@@ -249,17 +249,21 @@ export class AccordionComponent implements OnInit {
   // Stats rows. An ICU plural or separate label/value spans would split the row into several text nodes, so the
   // singular/plural wording is chosen here (still via $localize) instead of in the template.
 
-  /** The "Your Answer(s)" row text plus the correctness state that drives its (decorative) icon. */
+  /**
+   * The "Your Answer" / "Your Answers" row text plus the correctness state
+   * that drives its (decorative) icon.
+   */
   private yourAnswerBase(
     question: QuizQuestion,
     index: number
   ): { text: string; state: 'correct' | 'incorrect' | 'none' } {
     if (this.hasSelectionsFromService(index)) {
-      const value = this.getSelectedOptionsForQuestion(index)
+      const selected = this.getSelectedOptionsForQuestion(index);
+      const value = selected
         .map((opt) => `Option ${opt.visualIndex}: ${opt.text}`)
         .join(', ');
       return {
-        text: oneLine($localize`Your Answer(s): ${value}:value:`),
+        text: this.yourAnswerSentence(value, selected.length),
         state: this.isQuestionCorrect(question, index) ? 'correct' : 'incorrect'
       };
     }
@@ -274,7 +278,7 @@ export class AccordionComponent implements OnInit {
         .join(', ');
       const value = `${this.formatOptionList(userIndices)} — ${texts}`;
       return {
-        text: oneLine($localize`Your Answer(s): ${value}:value:`),
+        text: this.yourAnswerSentence(value, userIndices.length),
         state: this.checkIfAnswersAreCorrect(question, this.results.userAnswers, index)
           ? 'correct'
           : 'incorrect'
@@ -282,7 +286,19 @@ export class AccordionComponent implements OnInit {
     }
 
     const none = '(no answer provided)';
-    return { text: oneLine($localize`Your Answer(s): ${none}:value:`), state: 'none' };
+    return { text: this.yourAnswerSentence(none, 0), state: 'none' };
+  }
+
+  /**
+   * "Your Answer: ..." for exactly one selected answer, otherwise (several,
+   * or none) "Your Answers: ...". Each form is one whole localized sentence.
+   */
+  private yourAnswerSentence(value: string, count: number): string {
+    return oneLine(
+      count === 1
+        ? $localize`Your Answer: ${value}:value:`
+        : $localize`Your Answers: ${value}:value:`
+    );
   }
 
   /**
@@ -309,7 +325,11 @@ export class AccordionComponent implements OnInit {
     const correctIndices = this.getCorrectOptionIndices(question, index);
     const list = this.formatOptionList(correctIndices);
     const texts = correctIndices.map((item) => question.options[item - 1]?.text ?? '').join(', ');
-    return oneLine($localize`Correct Answer(s): ${list}:list: — ${texts}:texts:`);
+    return oneLine(
+      correctIndices.length === 1
+        ? $localize`Correct Answer: ${list}:list: — ${texts}:texts:`
+        : $localize`Correct Answers: ${list}:list: — ${texts}:texts:`
+    );
   }
 
   explanationRowText(question: QuizQuestion, index: number): string {

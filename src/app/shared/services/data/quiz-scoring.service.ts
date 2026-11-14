@@ -358,7 +358,16 @@ export class QuizScoringService {
     return typeof inDisplayOrder === 'string' && inDisplayOrder.length > 0 ? inDisplayOrder : null;
   }
 
-  // Update the correctness map + running count based on now-vs-was correctness.
+  /**
+   * Update the correctness ledger, then re-derive the live count FROM it.
+   *
+   * The ledger (`questionCorrectness`) is the single source of truth. The
+   * count used to be a free-running `correctCountSig() ± 1`, so any value it
+   * started with — a stale stored counter, another tab's write — was carried
+   * forward and added to: a stored 7 plus seven real credits ended at 14/7. A
+   * count derived from the ledger cannot exceed the number of questions
+   * credited, however it started.
+   */
   private applyCorrectnessUpdate(
     scoringKey: number,
     isNowCorrect: boolean,
@@ -366,15 +375,23 @@ export class QuizScoringService {
   ): void {
     if (isNowCorrect && !wasCorrect) {
       this.questionCorrectness.set(scoringKey, true);
-      this.updateCorrectCountForResults(this.correctCountSig() + 1);
     } else if (!isNowCorrect && wasCorrect) {
-      this.updateCorrectCountForResults(Math.max(this.correctCountSig() - 1, 0));
       this.questionCorrectness.set(scoringKey, false);
     } else if (!isNowCorrect && !this.questionCorrectness.has(scoringKey)) {
       // Only set to false if not already set — don't overwrite a true
       // value that was set directly by the SOC's display-index path.
       this.questionCorrectness.set(scoringKey, false);
     }
+    this.updateCorrectCountForResults(this.ledgerTrueCount());
+  }
+
+  /** How many questions the ledger records as credited correct. */
+  private ledgerTrueCount(): number {
+    let count = 0;
+    for (const credited of this.questionCorrectness.values()) {
+      if (credited === true) count++;
+    }
+    return count;
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -471,16 +488,14 @@ export class QuizScoringService {
       const scoreQuizId = localStorage.getItem(this.scoreQuizIdStorageKey) ?? '';
       const quizMatches = scoreQuizId.length > 0 && scoreQuizId === quizId;
 
-      // Compute what we HAVE stored for this quiz. If there's real data,
-      // this is an in-progress session and we must restore it on refresh,
-      // even if the user was on Q1 (savedIndex === 0).
-      const storedRaw = localStorage.getItem(SK_CORRECT_ANSWERS_COUNT);
-      const storedCount = Number(storedRaw);
-      const safeStored = Number.isFinite(storedCount) ? Math.max(0, Math.trunc(storedCount)) : 0;
-      const mapTrueCount = Array.from(this.questionCorrectness.values()).filter(
-        (v) => v === true
-      ).length;
-      const hasStoredScore = safeStored > 0 || mapTrueCount > 0;
+      // The LEDGER is what we trust. The stored counter is only a derived
+      // copy: restoring `max(storedCount, ledger)` adopted a stale or foreign
+      // counter (a previous run's value, another tab's write) with no credits
+      // behind it, and every later credit then stacked on top — 14/7.
+      // The ledger is persisted after every credit, so a mid-quiz refresh
+      // loses nothing by ignoring the counter.
+      const mapTrueCount = this.ledgerTrueCount();
+      const hasStoredScore = mapTrueCount > 0;
 
       // Wipe ONLY when: (a) quiz doesn't match (switching quizzes), OR
       // (b) there is genuinely no progress (no stored score AND no
@@ -496,7 +511,7 @@ export class QuizScoringService {
         return;
       }
 
-      const restored = Math.max(safeStored, mapTrueCount);
+      const restored = mapTrueCount;
       this.correctCountSig.set(restored);
       this.correctAnswersCountSig.set(restored);
       localStorage.setItem(SK_CORRECT_ANSWERS_COUNT, String(restored));

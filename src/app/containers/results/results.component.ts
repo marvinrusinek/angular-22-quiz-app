@@ -53,6 +53,12 @@ import { QuizStateService } from '@shared/services/state/quizstate.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
 import { ScoreAnalysisService } from '@shared/services/features/results/score-analysis.service';
+import {
+  ReviewReveal,
+  ReviewRevealService,
+  mergeReviewReveals
+} from '@shared/services/features/results/review-reveal.service';
+import { norm } from '@shared/utils/text-norm';
 import { ThemeService } from '@shared/services/ui/theme.service';
 
 import { AchievementService } from '@shared/services/achievements/achievement.service';
@@ -107,6 +113,7 @@ export class ResultsComponent implements OnInit {
   private readonly selectedOptionService = inject(SelectedOptionService);
   private readonly timerService = inject(TimerService);
   private readonly scoreAnalysisService = inject(ScoreAnalysisService);
+  private readonly reviewRevealService = inject(ReviewRevealService);
   private readonly achievementService = inject(AchievementService);
   private readonly topicPerformanceHistory = inject(TopicPerformanceHistoryService);
   private readonly themeService = inject(ThemeService);
@@ -127,7 +134,16 @@ export class ResultsComponent implements OnInit {
   );
 
   readonly finalResult = signal<FinalResult | null>(null);
-  readonly scoreAnalysis = computed<ScoreAnalysisItem[]>(() => this.finalResult()?.analysis ?? []);
+  // Answers fetched AFTER completion for questions that already had a receipt.
+  // In memory only, and never merged into the persisted result.
+  private readonly reviewReveals = signal<ReadonlyMap<string, ReviewReveal>>(new Map());
+  readonly scoreAnalysis = computed<ScoreAnalysisItem[]>(() =>
+    mergeReviewReveals(
+      this.finalResult()?.analysis ?? [],
+      this.reviewReveals(),
+      this.detailedSummaryQuestions()
+    )
+  );
 
   // This page's own heading — the entry-focus target (see
   // focusResultsHeadingOnce()'s own comment in the constructor).
@@ -210,6 +226,7 @@ export class ResultsComponent implements OnInit {
       this.updateHeaderLabel(r.total);
       this.persistResultsToSession(r);
       this.finalizeCompletion(r);
+      this.startReviewReveals(r);
     });
 
     // S6d: re-run achievement evaluation whenever the metadata-backed catalog
@@ -401,6 +418,7 @@ export class ResultsComponent implements OnInit {
       this.updateHeaderLabel(snapshot.total);
       this.persistResultsToSession(snapshot);
       this.finalizeCompletion(snapshot);
+      this.startReviewReveals(snapshot);
 
       // Record this completed attempt in the High Scores list ONCE, here at the
       // single results-load convergence point (alongside achievements). The
@@ -716,6 +734,29 @@ export class ResultsComponent implements OnInit {
     // reactively, because metadataApi's catalog can still be empty here (HTTP
     // in flight) — see that effect for why.
     this.pendingAchievementResult.set(result);
+  }
+
+  private reviewRevealQuizId: string | null = null;
+
+  /**
+   * Fetch the answers and explanations still missing from the review, for
+   * questions that already hold a signed receipt, once each one's own deadline
+   * has passed. Review-only: it never touches a verdict, the score, a timer or
+   * navigation, and what arrives is not persisted. Started once per quiz.
+   */
+  private startReviewReveals(result: FinalResult): void {
+    if (!result.quizId || this.reviewRevealQuizId === result.quizId) return;
+    this.reviewRevealQuizId = result.quizId;
+
+    this.reviewRevealService
+      .reveals(result.quizId, result.analysis ?? [])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((reveal) => {
+        const next = new Map(this.reviewReveals());
+        next.set(norm(reveal.questionText), reveal);
+        this.reviewReveals.set(next);
+        this.cdRef.markForCheck();
+      });
   }
 
   private persistResultsToSession(result: FinalResult): void {

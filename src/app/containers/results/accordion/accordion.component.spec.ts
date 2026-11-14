@@ -6,7 +6,7 @@ import { QuizDataService } from '@shared/services/data/quizdata.service';
 import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
-import { QuizQuestion } from '@shared/models';
+import { QuizQuestion, ScoreAnalysisItem } from '@shared/models';
 
 /**
  * Angular Aria Toolbar prototype coverage for the Quiz Review filter
@@ -735,9 +735,9 @@ describe('AccordionComponent — consolidated detail row sentences (Variant D)',
     expect(answerRow(f, 0).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('Your Answers: (no answer provided), Incorrect');
   });
 
-  it('empty explanation keeps the same sentence shape (full stop directly after the blank)', async () => {
+  it('empty explanation omits the "because" clause (no dangling full stop)', async () => {
     const f = await mount([single('Q1', '')], new Map(), [], [1]);
-    expect(rowTexts(f, 0)[2]).toBe('Explanation: Option 1 was correct because .');
+    expect(rowTexts(f, 0)[2]).toBe('Explanation: Option 1 was correct.');
   });
 
   it('every row is one span: a bold label span + ONE value text node, no leader span, for all branches', async () => {
@@ -1016,5 +1016,466 @@ describe('AccordionComponent — singular/plural answer labels', () => {
       expect(img.hasAttribute('aria-roledescription')).toBe(false);
       expect(img.getAttribute('aria-label')!.length).toBeGreaterThan(0);
     }
+  });
+});
+
+/**
+ * Explanation row: the text comes from the Results analysis.
+ *
+ * The Topic Quiz API deliberately sends no explanation with a question; the
+ * one the player earned arrives with the answer check and lives in the Results
+ * analysis (`ScoreAnalysisItem.explanation`). These tests use questions WITHOUT
+ * an explanation, the real shape, and feed the analysis in through the new
+ * `analysis` input.
+ */
+describe('AccordionComponent — explanation from the Results analysis', () => {
+  const q = (text: string, correct = true, explanation?: string): QuizQuestion =>
+    ({
+      questionText: text,
+      ...(explanation === undefined ? {} : { explanation }),
+      options: [
+        { optionId: 1, text: 'A', ...(correct ? { correct: true } : {}) },
+        { optionId: 2, text: 'B' }
+      ]
+    }) as unknown as QuizQuestion;
+  const item = (
+    questionIndex: number,
+    questionText: string,
+    explanation: string | null | undefined
+  ): ScoreAnalysisItem =>
+    ({
+      questionIndex,
+      questionText,
+      wasCorrect: true,
+      selectedOptionIds: [],
+      correctOptionIds: [],
+      explanation
+    }) as ScoreAnalysisItem;
+
+  async function mount(
+    questions: QuizQuestion[],
+    analysis: ScoreAnalysisItem[] | undefined
+  ): Promise<ComponentFixture<AccordionComponent>> {
+    localStorage.removeItem('quizAnswersForResults');
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [AccordionComponent],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, parent: null }
+        },
+        {
+          provide: QuizService,
+          useValue: {
+            questionsSig: () => questions,
+            userAnswers: [],
+            questions: [],
+            quizId: 'fixture-quiz',
+            setQuizId: jest.fn(),
+            getFinalResultSnapshot: () => null
+          }
+        },
+        {
+          provide: QuizDataService,
+          useValue: {
+            getQuestionsForQuiz: () => ({ pipe: () => ({ subscribe: () => undefined }) })
+          }
+        },
+        {
+          provide: SelectedOptionService,
+          useValue: {
+            recoverAnswersForResults: jest.fn(),
+            rawSelectionsMap: new Map(),
+            selectedOptionsMap: new Map()
+          }
+        },
+        { provide: TimerService, useValue: { elapsedTimes: [], isCountdown: () => false } }
+      ]
+    });
+    const fixture = TestBed.createComponent(AccordionComponent);
+    fixture.componentRef.setInput('questions', questions);
+    if (analysis !== undefined) fixture.componentRef.setInput('analysis', analysis);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    for (const h of [...fixture.nativeElement.querySelectorAll('.qr-header')] as HTMLElement[]) {
+      h.click();
+      fixture.detectChanges();
+    }
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  // The Explanation row of question `i`: its visible text and aria-label.
+  const explRow = (f: ComponentFixture<AccordionComponent>, i: number) => {
+    const span = f.nativeElement.querySelectorAll(
+      `#qr-body-${i} .quiz-summary-row .quiz-summary-text`
+    )[2] as HTMLElement;
+    return {
+      text: (span.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      aria: span.getAttribute('aria-label')!
+    };
+  };
+
+  it('shows the analysis explanation for an API question that has none', async () => {
+    const f = await mount([q('Q0')], [item(0, 'Q0', 'DI injects dependencies')]);
+    expect(explRow(f, 0).text).toBe(
+      'Explanation: Option 1 was correct because DI injects dependencies.'
+    );
+  });
+
+  it('maps distinct explanations to the right questions', async () => {
+    const f = await mount(
+      [q('Q0'), q('Q1'), q('Q2')],
+      [item(0, 'Q0', 'first'), item(1, 'Q1', 'second'), item(2, 'Q2', 'third')]
+    );
+    expect(explRow(f, 0).text).toContain('because first.');
+    expect(explRow(f, 1).text).toContain('because second.');
+    expect(explRow(f, 2).text).toContain('because third.');
+  });
+
+  it('uses the display index, verified by question text', async () => {
+    const f = await mount(
+      [q('Q0'), q('Q1')],
+      [item(1, 'Q1', 'for-q1'), item(0, 'Q0', 'for-q0')] // array order differs
+    );
+    expect(explRow(f, 0).text).toContain('because for-q0.');
+    expect(explRow(f, 1).text).toContain('because for-q1.');
+  });
+
+  it('falls back to the question text when the index does not line up', async () => {
+    const f = await mount(
+      [q('Q0'), q('Q1')],
+      [item(0, 'Q1', 'for-q1'), item(1, 'Q0', 'for-q0')] // indexes swapped
+    );
+    expect(explRow(f, 0).text).toContain('because for-q0.');
+    expect(explRow(f, 1).text).toContain('because for-q1.');
+  });
+
+  it('prefers the analysis explanation over question.explanation', async () => {
+    const f = await mount([q('Q0', true, 'old')], [item(0, 'Q0', 'new')]);
+    expect(explRow(f, 0).text).toContain('because new.');
+    expect(explRow(f, 0).text).not.toContain('old');
+  });
+
+  it('falls back to question.explanation when there is no analysis', async () => {
+    const f = await mount([q('Q0', true, 'from-question')], undefined);
+    expect(explRow(f, 0).text).toBe(
+      'Explanation: Option 1 was correct because from-question.'
+    );
+  });
+
+  it('missing explanation: no dangling "because ." clause', async () => {
+    for (const analysis of [[item(0, 'Q0', null)], [item(0, 'Q0', '  ')], []]) {
+      const f = await mount([q('Q0')], analysis);
+      expect(explRow(f, 0).text).toBe('Explanation: Option 1 was correct.');
+      expect(explRow(f, 0).text).not.toContain('because');
+    }
+  });
+
+  it('no correct options and no explanation: a plain "not available" note', async () => {
+    const f = await mount([q('Q0', false)], [item(0, 'Q0', null)]);
+    expect(explRow(f, 0).text).toBe('Explanation: (no explanation available)');
+  });
+
+  it('visible text and aria-label agree for every row', async () => {
+    const f = await mount([q('Q0')], [item(0, 'Q0', 'because reasons')]);
+    const spans = [
+      ...f.nativeElement.querySelectorAll('#qr-body-0 .quiz-summary-text')
+    ] as HTMLElement[];
+    expect(spans).toHaveLength(4);
+    for (const s of spans) {
+      const clone = s.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll('i').forEach((i) => i.remove());
+      const visible = (clone.textContent ?? '').replace(/\s+/g, ' ').trim();
+      // the answer row's name adds the verdict after the visible sentence
+      expect(s.getAttribute('aria-label')!.startsWith(visible)).toBe(true);
+    }
+    expect(explRow(f, 0).aria).toBe(explRow(f, 0).text);
+  });
+
+  it('keeps the singular/plural labels and role="img" rows', async () => {
+    const f = await mount([q('Q0')], [item(0, 'Q0', 'x')]);
+    const labels = [
+      ...f.nativeElement.querySelectorAll('#qr-body-0 .quiz-summary-label')
+    ].map((e) => (e as HTMLElement).textContent!.trim());
+    expect(labels).toEqual([
+      'Your Answers:', 'Correct Answer:', 'Explanation:', 'Elapsed Time:'
+    ]);
+    expect(
+      f.nativeElement.querySelectorAll('#qr-body-0 .quiz-summary-text[role="img"]')
+    ).toHaveLength(4);
+  });
+});
+
+/**
+ * Quiz Review rows for EVERY question state.
+ *
+ * What the backend authorizes decides what a row can show:
+ *   resolved (answered) and expired (timed out) -> the correct option(s) and
+ *     the explanation are revealed;
+ *   incomplete (a multiple-answer question never finished) and idle (never
+ *     answered) -> nothing is authorized, by design, so the row says so.
+ * Revealed questions are modelled with `correct` flags on the options (that is
+ * how the reveal reaches the row's correct-option list) plus the analysis
+ * explanation; unrevealed ones have neither. Every option text and explanation
+ * is unique per question, so a row showing another question's data fails.
+ */
+describe('AccordionComponent — reveal by question state', () => {
+  const opts = (k: number, correct: number[] | null) =>
+    [1, 2, 3].map((n) => ({
+      optionId: n,
+      text: `${'ABC'[n - 1]}${k}`,
+      ...(correct?.includes(n) ? { correct: true } : {})
+    }));
+  const question = (k: number, correct: number[] | null): QuizQuestion =>
+    ({ questionText: `Q${k}`, options: opts(k, correct) }) as unknown as QuizQuestion;
+  const analysisItem = (k: number, explanation: string | null) =>
+    ({
+      questionIndex: k,
+      questionText: `Q${k}`,
+      wasCorrect: false,
+      selectedOptionIds: [],
+      correctOptionIds: [],
+      explanation
+    }) as ScoreAnalysisItem;
+  const pick = (k: number, ...ids: number[]) =>
+    ids.map((n) => ({ optionId: n, text: `${'ABC'[n - 1]}${k}` }));
+
+  async function mount(
+    questions: QuizQuestion[],
+    analysis: ScoreAnalysisItem[],
+    selections: Map<number, { optionId: number; text: string }[]>,
+    elapsed: number[] = [],
+    countdown = false
+  ): Promise<ComponentFixture<AccordionComponent>> {
+    localStorage.removeItem('quizAnswersForResults');
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [AccordionComponent],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } }, parent: null }
+        },
+        {
+          provide: QuizService,
+          useValue: {
+            questionsSig: () => questions,
+            userAnswers: [],
+            questions: [],
+            quizId: 'fixture-quiz',
+            setQuizId: jest.fn(),
+            getFinalResultSnapshot: () => null
+          }
+        },
+        {
+          provide: QuizDataService,
+          useValue: {
+            getQuestionsForQuiz: () => ({ pipe: () => ({ subscribe: () => undefined }) })
+          }
+        },
+        {
+          provide: SelectedOptionService,
+          useValue: {
+            recoverAnswersForResults: jest.fn(),
+            rawSelectionsMap: selections,
+            selectedOptionsMap: new Map()
+          }
+        },
+        {
+          provide: TimerService,
+          useValue: {
+            elapsedTimes: elapsed,
+            isCountdown: () => countdown,
+            timePerQuestion: 30
+          }
+        }
+      ]
+    });
+    const fixture = TestBed.createComponent(AccordionComponent);
+    fixture.componentRef.setInput('questions', questions);
+    fixture.componentRef.setInput('analysis', analysis);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    for (const h of [...fixture.nativeElement.querySelectorAll('.qr-header')] as HTMLElement[]) {
+      h.click();
+      fixture.detectChanges();
+    }
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  // The four row sentences of question `k` (icon glyph text removed).
+  const rows = (f: ComponentFixture<AccordionComponent>, k: number): string[] =>
+    [...f.nativeElement.querySelectorAll(`#qr-body-${k} .quiz-summary-text`)].map(
+      (e) => {
+        const c = (e as HTMLElement).cloneNode(true) as HTMLElement;
+        c.querySelectorAll('i').forEach((i) => i.remove());
+        return (c.textContent ?? '').replace(/\s+/g, ' ').trim();
+      }
+    );
+  const aria = (f: ComponentFixture<AccordionComponent>, k: number): string[] =>
+    [...f.nativeElement.querySelectorAll(`#qr-body-${k} .quiz-summary-text`)].map(
+      (e) => (e as HTMLElement).getAttribute('aria-label')!
+    );
+
+  it('answered correctly: answer, correct option and explanation', async () => {
+    const f = await mount(
+      [question(0, [1])], [analysisItem(0, 'why-0')], new Map([[0, pick(0, 1)]])
+    );
+    expect(rows(f, 0).slice(0, 3)).toEqual([
+      'Your Answer: Option 1: A0',
+      'Correct Answer: Option 1 — A0',
+      'Explanation: Option 1 was correct because why-0.'
+    ]);
+    expect(aria(f, 0)[0]).toBe('Your Answer: Option 1: A0, Correct');
+  });
+
+  it('answered incorrectly: the revealed correct option, not the pick', async () => {
+    const f = await mount(
+      [question(0, [2])], [analysisItem(0, 'why-0')], new Map([[0, pick(0, 1)]])
+    );
+    expect(rows(f, 0).slice(0, 3)).toEqual([
+      'Your Answer: Option 1: A0',
+      'Correct Answer: Option 2 — B0',
+      'Explanation: Option 2 was correct because why-0.'
+    ]);
+    expect(aria(f, 0)[0]).toBe('Your Answer: Option 1: A0, Incorrect');
+  });
+
+  it('multiple-answer, completed: plural labels, both correct options', async () => {
+    const f = await mount(
+      [question(0, [1, 3])], [analysisItem(0, 'why-0')],
+      new Map([[0, pick(0, 1, 3)]])
+    );
+    expect(rows(f, 0).slice(0, 3)).toEqual([
+      'Your Answers: Option 1: A0, Option 3: C0',
+      'Correct Answers: Options 1 and 3 — A0, C0',
+      'Explanation: Options 1 and 3 were correct because why-0.'
+    ]);
+  });
+
+  it('partially answered multiple-answer (never completed): nothing revealed', async () => {
+    const f = await mount(
+      [question(0, null)], [analysisItem(0, null)], new Map([[0, pick(0, 1)]])
+    );
+    expect(rows(f, 0).slice(0, 3)).toEqual([
+      'Your Answer: Option 1: A0',
+      'Correct Answers: (not available)',
+      'Explanation: (no explanation available)'
+    ]);
+    expect(aria(f, 0)[1]).toBe('Correct Answers: (not available)');
+  });
+
+  it('timed out with no answer: revealed correct option and explanation', async () => {
+    const f = await mount(
+      [question(0, [2])], [analysisItem(0, 'why-0')], new Map(), [30], true
+    );
+    expect(f.nativeElement.querySelector('#qr-header-0 .timed-out-badge')).not.toBeNull();
+    expect(rows(f, 0)).toEqual([
+      'Your Answers: (no answer provided)',
+      'Correct Answer: Option 2 — B0',
+      'Explanation: Option 2 was correct because why-0.',
+      'Elapsed Time: 30 seconds'
+    ]);
+  });
+
+  it('left unanswered: no answer, and no reveal (nothing is made up)', async () => {
+    const f = await mount([question(0, null)], [analysisItem(0, null)], new Map(), [0]);
+    expect(rows(f, 0)).toEqual([
+      'Your Answers: (no answer provided)',
+      'Correct Answers: (not available)',
+      'Explanation: (no explanation available)',
+      'Elapsed Time: 0 seconds'
+    ]);
+  });
+
+  it('an unanswered question never shows another question\'s answer or text', async () => {
+    const f = await mount(
+      [question(0, null), question(1, [2]), question(2, [3])],
+      [analysisItem(0, null), analysisItem(1, 'SECRET-1'), analysisItem(2, 'SECRET-2')],
+      new Map([[1, pick(1, 2)], [2, pick(2, 3)]])
+    );
+    const q0 = rows(f, 0).join(' | ') + aria(f, 0).join(' | ');
+    for (const other of ['SECRET-1', 'SECRET-2', 'B1', 'C2']) {
+      expect(q0).not.toContain(other);
+    }
+    expect(rows(f, 1)[2]).toContain('SECRET-1');
+    expect(rows(f, 2)[2]).toContain('SECRET-2');
+  });
+
+  it('shuffled order: each explanation stays with its own question', async () => {
+    // Questions are displayed 2, 0, 1; the analysis array order and indexes
+    // differ, so only the question text can tie them together.
+    const f = await mount(
+      [question(2, [3]), question(0, [1]), question(1, [2])],
+      [analysisItem(0, 'why-0'), analysisItem(1, 'why-1'), analysisItem(2, 'why-2')],
+      new Map()
+    );
+    expect(rows(f, 0).slice(1, 3)).toEqual([
+      'Correct Answer: Option 3 — C2', 'Explanation: Option 3 was correct because why-2.'
+    ]);
+    expect(rows(f, 1).slice(1, 3)).toEqual([
+      'Correct Answer: Option 1 — A0', 'Explanation: Option 1 was correct because why-0.'
+    ]);
+    expect(rows(f, 2).slice(1, 3)).toEqual([
+      'Correct Answer: Option 2 — B1', 'Explanation: Option 2 was correct because why-1.'
+    ]);
+  });
+
+  it('revealed correct option but no explanation data: a clean sentence', async () => {
+    const f = await mount([question(0, [1])], [analysisItem(0, null)], new Map());
+    expect(rows(f, 0)[2]).toBe('Explanation: Option 1 was correct.');
+  });
+
+  it('visible text and aria-label agree in every state', async () => {
+    const f = await mount(
+      [question(0, [1]), question(1, null), question(2, [2])],
+      [analysisItem(0, 'a'), analysisItem(1, null), analysisItem(2, 'c')],
+      new Map([[0, pick(0, 1)], [2, pick(2, 1)]])
+    );
+    for (const k of [0, 1, 2]) {
+      const visible = rows(f, k);
+      const names = aria(f, k);
+      expect(names[0].startsWith(visible[0])).toBe(true);
+      for (const n of [1, 2, 3]) expect(names[n]).toBe(visible[n]);
+      expect(
+        f.nativeElement.querySelectorAll(`#qr-body-${k} .quiz-summary-text[role="img"]`)
+      ).toHaveLength(4);
+    }
+  });
+
+  it('updates reactively when a reveal arrives after the quiz ended', async () => {
+    const qs = [question(0, null)]; // API question: no correctness flags
+    const f = await mount(qs, [analysisItem(0, null)], new Map([[0, pick(0, 1)]]));
+    expect(rows(f, 0).slice(1, 3)).toEqual([
+      'Correct Answers: (not available)',
+      'Explanation: (no explanation available)'
+    ]);
+    const answerBefore = aria(f, 0)[0];
+
+    f.componentRef.setInput('analysis', [
+      { ...analysisItem(0, 'why-0'), correctOptionTexts: ['A0', 'C0'] }
+    ]);
+    f.detectChanges();
+    await f.whenStable();
+    f.detectChanges();
+
+    expect(rows(f, 0).slice(1, 3)).toEqual([
+      'Correct Answers: Options 1 and 3 — A0, C0',
+      'Explanation: Options 1 and 3 were correct because why-0.'
+    ]);
+    expect(aria(f, 0)[0]).toBe(answerBefore); // the verdict wording is unchanged
+    expect(aria(f, 0)[1]).toBe(rows(f, 0)[1]);
+    expect(
+      f.nativeElement.querySelectorAll('#qr-body-0 .quiz-summary-text[role="img"]')
+    ).toHaveLength(4);
   });
 });

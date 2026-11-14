@@ -1,9 +1,13 @@
 import { Service, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, shareReplay, switchMap } from 'rxjs/operators';
 
-import { QuestionVerdictError } from './question-verdict.types';
+import {
+  QuestionVerdictError,
+  type QuestionCheckResult,
+  type QuestionExpiredResult
+} from './question-verdict.types';
 import { API_BASE_URL } from '@shared/tokens/api-base-url.token';
 
 /**
@@ -59,6 +63,14 @@ export class TopicQuizAttemptService {
   private readonly questionReceipts = new Map<string, Observable<QuestionActivation>>();
 
   /**
+   * Receipts that have actually SETTLED, by the same key. A plain read-only
+   * mirror of `questionReceipts`: it lets a caller ask "was one already issued,
+   * and when does it expire?" without subscribing to anything that could issue
+   * one.
+   */
+  private readonly settledReceipts = new Map<string, QuestionActivation>();
+
+  /**
    * Source quiz id → practice attempt receipt, for UNTIMED Weak Areas Practice.
    *
    * Separate from `attempt$` on purpose: practice draws questions from several
@@ -94,6 +106,7 @@ export class TopicQuizAttemptService {
     this.quizId = quizId;
     this.attempt$ = null;
     this.questionReceipts.clear();
+    this.settledReceipts.clear();
   }
 
   /**
@@ -140,17 +153,22 @@ export class TopicQuizAttemptService {
           { headers: { 'X-Attempt-Receipt': attemptReceipt } }
         )
       ),
-      map((body) => ({
-        receipt: body.questionReceipt,
-        // Anchor the server's duration to the local clock at arrival. See the
-        // class docblock: this is what keeps the countdown from ending early
-        // when the two clocks disagree.
-        deadlineMs: Date.now() + Math.max(0, body.expiresAt - body.startedAt)
-      })),
+      map((body) => {
+        const activation: QuestionActivation = {
+          receipt: body.questionReceipt,
+          // Anchor the server's duration to the local clock at arrival. See the
+          // class docblock: this is what keeps the countdown from ending early
+          // when the two clocks disagree.
+          deadlineMs: Date.now() + Math.max(0, body.expiresAt - body.startedAt)
+        };
+        if (this.quizId === quizId) this.settledReceipts.set(key, activation);
+        return activation;
+      }),
       catchError((err: unknown) => {
         // A failed start must not poison the cache — the next attempt to
         // activate this question should be able to try again.
         this.questionReceipts.delete(key);
+        this.settledReceipts.delete(key);
         return throwError(() =>
           err instanceof QuestionVerdictError ? err : new QuestionVerdictError('Invalid submission')
         );
@@ -180,11 +198,76 @@ export class TopicQuizAttemptService {
     return this.quizId === quizId && this.questionReceipts.has(this.cacheKey(questionText));
   }
 
+  /**
+   * READ-ONLY. The local-clock deadline of a receipt that was ALREADY issued
+   * for this question, or null. Never issues, starts or refreshes anything — a
+   * question with no receipt simply answers null.
+   */
+  issuedDeadline(quizId: string, questionText: string): number | null {
+    if (this.quizId !== quizId) return null;
+    return this.settledReceipts.get(this.cacheKey(questionText))?.deadlineMs ?? null;
+  }
+
+  /**
+   * REVIEW-ONLY reveal: ask `/check` (empty selection) using the receipt that
+   * was already issued, once its deadline has passed.
+   *
+   * Deliberately NOT built on `withQuestionReceipt`/`activation`: those issue a
+   * receipt when none exists, and a receipt minted at review time would start a
+   * brand-new 30 seconds. Here no receipt means no request. Two independent
+   * guards keep it from asking early — the deadline check below, and the
+   * server, which answers `incomplete` (revealing nothing) before the deadline.
+   * Only an `expired` answer is accepted.
+   *
+   * Touches no verdict state: the caller gets the reveal as a value.
+   */
+  revealIssued(quizId: string, questionText: string): Observable<QuestionExpiredResult> {
+    const issued =
+      this.quizId === quizId ? this.settledReceipts.get(this.cacheKey(questionText)) : undefined;
+    if (!issued || Date.now() < issued.deadlineMs) {
+      return throwError(() => new QuestionVerdictError('Invalid submission'));
+    }
+
+    return this.http
+      .post<QuestionCheckResult>(
+        `${this.baseUrl(quizId)}/check`,
+        { questionText, selectedOptionTexts: [] },
+        { headers: { 'X-Question-Receipt': issued.receipt } }
+      )
+      .pipe(
+        map((result) => {
+          if (
+            result?.status !== 'expired' ||
+            !Array.isArray(result.correctOptionTexts) ||
+            typeof result.explanation !== 'string'
+          ) {
+            throw new QuestionVerdictError('Invalid submission');
+          }
+          return result;
+        }),
+        catchError((err: unknown) => {
+          if (err instanceof HttpErrorResponse && err.status === 429) {
+            const seconds = Number(err.headers?.get('Retry-After'));
+            return throwError(
+              () =>
+                new ReviewRevealRateLimitedError(
+                  Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 2000
+                )
+            );
+          }
+          return throwError(() =>
+            err instanceof QuestionVerdictError ? err : new QuestionVerdictError('Invalid submission')
+          );
+        })
+      );
+  }
+
   /** Leaving the quiz. Everything is in memory, so dropping it is the cleanup. */
   clear(): void {
     this.quizId = null;
     this.attempt$ = null;
     this.questionReceipts.clear();
+    this.settledReceipts.clear();
   }
 
   /**
@@ -290,6 +373,13 @@ export class TopicQuizAttemptService {
   /** Discard practice credentials when a session ends. Topic Quiz untouched. */
   clearUntimedPracticeReceipts(): void {
     this.untimedPracticeAttempts.clear();
+  }
+}
+
+/** The server throttled a review reveal; try again after `retryAfterMs`. */
+export class ReviewRevealRateLimitedError extends QuestionVerdictError {
+  constructor(readonly retryAfterMs: number) {
+    super('Rate limited');
   }
 }
 

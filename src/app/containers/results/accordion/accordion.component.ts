@@ -21,7 +21,7 @@ import { Toolbar, ToolbarWidget, ToolbarWidgetGroup } from '@angular/aria/toolba
 
 import { SK_USER_ANSWERS } from '@shared/constants/session-keys';
 
-import { Option, QuizQuestion, Result } from '@shared/models';
+import { Option, QuizQuestion, Result, ScoreAnalysisItem } from '@shared/models';
 
 import { ExplanationTextService } from '@shared/services/features/explanation/explanation-text.service';
 import { QuizDataService } from '@shared/services/data/quizdata.service';
@@ -88,6 +88,11 @@ export class AccordionComponent implements OnInit {
   readonly questionsInput = input<QuizQuestion[]>([], { alias: 'questions' });
   readonly isShuffled = input(false);
   readonly accordionHeaderLabel = input('', { alias: 'headerLabel' });
+  // The Results analysis: its items carry the explanation the player earned
+  // (the API question payload has none, by design).
+  readonly analysisInput = input<ScoreAnalysisItem[]>([], {
+    alias: 'analysis'
+  });
 
   // ── remaining variables ─────────────────────────────────────────
   readonly questions = signal<QuizQuestion[]>([]);
@@ -231,7 +236,24 @@ export class AccordionComponent implements OnInit {
   }
 
   getCorrectOptionIndices(question: QuizQuestion, index?: number): number[] {
+    const revealed = this.revealedCorrectIndices(question, index);
+    if (revealed.length > 0) return revealed;
     return this.explanationTextService.getCorrectOptionIndices(question, undefined, index);
+  }
+
+  /**
+   * 1-based indices of the correct options the Results analysis carries (the
+   * authorized reveal, including one fetched after the quiz ended), matched by
+   * option TEXT against the options as displayed.
+   */
+  private revealedCorrectIndices(question: QuizQuestion, index?: number): number[] {
+    if (index === undefined) return [];
+    const texts = this.analysisItemFor(question, index)?.correctOptionTexts ?? [];
+    if (texts.length === 0) return [];
+    const wanted = new Set(texts.map((t) => norm(t)));
+    return (question.options ?? [])
+      .map((o, i) => (wanted.has(norm(o.text ?? '')) ? i + 1 : -1))
+      .filter((i) => i > 0);
   }
 
   formatOptionList(indices: number[]): string {
@@ -325,6 +347,11 @@ export class AccordionComponent implements OnInit {
     const correctIndices = this.getCorrectOptionIndices(question, index);
     const list = this.formatOptionList(correctIndices);
     const texts = correctIndices.map((item) => question.options[item - 1]?.text ?? '').join(', ');
+    if (correctIndices.length === 0) {
+      // Nothing was authorized for this question (left unanswered, or a
+      // multiple-answer question never completed): say so, not a bare dash.
+      return oneLine($localize`Correct Answers: (not available)`);
+    }
     return oneLine(
       correctIndices.length === 1
         ? $localize`Correct Answer: ${list}:list: — ${texts}:texts:`
@@ -332,11 +359,40 @@ export class AccordionComponent implements OnInit {
     );
   }
 
+  /**
+   * The explanation the player earned for this question. It comes from the
+   * Results analysis, because the API question carries none. Matched by the
+   * display index and verified against the question text; if the order
+   * differs, the question text is the fallback. Never persisted here:
+   * durable results strip it, so it is simply absent after a reload.
+   */
+  private analysisItemFor(question: QuizQuestion, index: number): ScoreAnalysisItem | undefined {
+    const items = this.analysisInput();
+    const text = norm(question.questionText ?? '');
+    const byIndex = items.find((a) => a.questionIndex === index);
+    return byIndex && norm(byIndex.questionText ?? '') === text
+      ? byIndex
+      : items.find((a) => norm(a.questionText ?? '') === text);
+  }
+
+  private explanationFor(question: QuizQuestion, index: number): string {
+    const item = this.analysisItemFor(question, index);
+    return (item?.explanation ?? question.explanation ?? '').trim();
+  }
+
   explanationRowText(question: QuizQuestion, index: number): string {
     const correctIndices = this.getCorrectOptionIndices(question, index);
     const list = this.formatOptionList(correctIndices);
     const verb = correctIndices.length === 1 ? $localize`was` : $localize`were`;
-    const explanation = question.explanation ?? '';
+    const explanation = this.explanationFor(question, index);
+    if (!explanation) {
+      // No explanation to give: no dangling "because ." clause.
+      return oneLine(
+        list
+          ? $localize`Explanation: ${list}:list: ${verb}:verb: correct.`
+          : $localize`Explanation: (no explanation available)`
+      );
+    }
     return oneLine(
       $localize`Explanation: ${list}:list: ${verb}:verb: correct because ${explanation}:explanation:.`
     );

@@ -303,7 +303,7 @@
 // (same as the History list / detail pages), which carries its own styles.
 
 @media (max-width: 600px) {
-  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 [data-theme='dark'] .interview-results {

@@ -1,0 +1,25 @@
+@if (total() > 0) {
+  <section
+    class="achievements-summary"
+    [attr.aria-label]="label()"
+  >
+    <span
+      class="achievements-summary__icon"
+      aria-hidden="true"
+    >
+      🏆
+    </span>
+    <span
+      class="achievements-summary__label"
+      aria-hidden="true"
+    >
+      <ng-container i18n>Achievements</ng-container>
+    </span>
+    <span
+      class="achievements-summary__count"
+      aria-hidden="true"
+    >
+      {{ earned() }} / {{ total() }}
+    </span>
+  </section>
+}

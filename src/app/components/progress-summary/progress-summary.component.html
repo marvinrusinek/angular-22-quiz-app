@@ -1,0 +1,195 @@
+@if (summary(); as s) {
+  @if (s.totalCount > 0) {
+    <section
+      class="progress-summary"
+      [class.progress-summary--details]="variant() === 'details'"
+      [attr.aria-labelledby]="variant() === 'full' ? 'progress-summary-heading' : null"
+      [attr.aria-label]="variant() === 'details' ? 'Progress details' : null"
+    >
+      @if (variant() === 'full') {
+        <h2
+          id="progress-summary-heading"
+          class="progress-summary__heading"
+          i18n
+        >
+          Your Progress
+        </h2>
+      }
+
+      <!-- Completed count is header-owned in the accordion, so it's shown only
+           in the 'full' variant. The Overall Progress bar shows in both. -->
+      <dl class="progress-summary__rows">
+        @if (variant() === 'full') {
+          <div class="progress-summary__row">
+            <dt
+              class="progress-summary__label"
+              i18n
+            >
+              Completed
+            </dt>
+            <dd class="progress-summary__value">{{ s.completedCount }} / {{ s.totalCount }}</dd>
+          </div>
+        }
+
+        <div class="progress-summary__row">
+          <dt
+            class="progress-summary__label"
+            i18n
+          >
+            Overall Progress
+          </dt>
+          <dd class="progress-summary__value">
+            <span class="progress-summary__pct">{{ s.completionPercentage }}%</span>
+            <span
+              class="progress-summary__bar"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              [attr.aria-valuenow]="s.completionPercentage"
+              [attr.aria-label]="'Overall progress: ' + s.completionPercentage + ' percent'"
+            >
+              <span
+                class="progress-summary__bar-fill"
+                [style.width.%]="s.completionPercentage"
+              ></span>
+            </span>
+          </dd>
+        </div>
+      </dl>
+
+      @if (s.byDifficulty.length > 0) {
+        <dl class="progress-summary__rows progress-summary__rows--difficulty">
+          @for (level of s.byDifficulty; track level.difficulty) {
+            <div class="progress-summary__row">
+              <dt class="progress-summary__label">{{ level.difficulty | titlecase }}</dt>
+              <dd class="progress-summary__value">
+                <span class="progress-summary__count">
+                  {{ level.completed }} / {{ level.total }}
+                </span>
+                <span
+                  class="progress-summary__bar"
+                  role="progressbar"
+                  aria-valuemin="0"
+                  [attr.aria-valuemax]="level.total"
+                  [attr.aria-valuenow]="level.completed"
+                  [attr.aria-label]="
+                    (level.difficulty | titlecase) +
+                    ': ' +
+                    level.completed +
+                    ' of ' +
+                    level.total +
+                    ' completed'
+                  "
+                >
+                  <span
+                    class="progress-summary__bar-fill"
+                    [style.width.%]="
+                      level.total > 0 ? (level.completed / level.total) * 100 : 0
+                    "
+                  ></span>
+                </span>
+              </dd>
+            </div>
+          }
+        </dl>
+      }
+
+      <!-- Key stats (derived in ProgressService). Shown beneath the existing
+           progress info; always present so 0-values appear when nothing is
+           completed yet. -->
+      <dl
+        class="progress-summary__stats"
+        aria-label="Key stats"
+        i18n-aria-label
+      >
+        <div class="progress-summary__stat">
+          <dt
+            class="progress-summary__stat-label"
+            i18n
+          >
+            Average Score
+          </dt>
+          <dd class="progress-summary__stat-value">{{ s.averageScore }}%</dd>
+        </div>
+        <div class="progress-summary__stat">
+          <dt
+            class="progress-summary__stat-label"
+            i18n
+          >
+            Perfect Scores
+          </dt>
+          <dd class="progress-summary__stat-value">{{ s.perfectScores }}</dd>
+        </div>
+        <div class="progress-summary__stat">
+          <dt
+            class="progress-summary__stat-label"
+            i18n
+          >
+            Questions Completed
+          </dt>
+          <dd class="progress-summary__stat-value">{{ s.questionsCompleted }}</dd>
+        </div>
+      </dl>
+
+      @if (s.strongestQuiz || s.weakestQuiz || weakTopics().length > 0) {
+        <dl class="progress-summary__rows progress-summary__rows--highlights">
+          @if (s.strongestQuiz; as strong) {
+            <div class="progress-summary__row">
+              <dt
+                class="progress-summary__label"
+                i18n
+              >
+                Strongest
+              </dt>
+              <dd class="progress-summary__value">
+                {{ strong.milestone }} — {{ strong.bestScore }}%
+              </dd>
+            </div>
+          }
+          <!-- Needs Review is driven by WeakAreasService, NOT the
+               best-score percentage that used to feed it: the practice
+               action below must offer exactly the topics named here, and a
+               best-score percentage cannot say how many questions were
+               answered. There is deliberately no percentage fallback. -->
+          <div class="progress-summary__row">
+            <dt
+              class="progress-summary__label"
+              i18n
+            >
+              Needs Review
+            </dt>
+            <dd class="progress-summary__value">
+              @if (weakTopics().length > 0) {
+                <ul class="progress-summary__weak-list">
+                  @for (t of weakTopics(); track t.topicId) {
+                    <!-- prettier-ignore -->
+                    <li class="progress-summary__weak-topic">{{ t.topicName }} — {{ t.percentage }}%</li>
+                  }
+                </ul>
+              } @else if (insufficientData()) {
+                <span i18n>Complete a quiz or interview to identify weak areas.</span>
+              } @else {
+                <span i18n>No weak areas detected.</span>
+              }
+            </dd>
+          </div>
+        </dl>
+
+        <!-- Rendered directly from eligibility: shown ONLY when there are
+             weak topics to practise. The other two states are messages,
+             never a disabled button. -->
+        @if (weakTopics().length > 0) {
+          <button
+            type="button"
+            class="progress-summary__practice"
+            [attr.aria-label]="practiceAriaLabel()"
+            (click)="startPractice()"
+            i18n
+          >
+            Practice Weak Areas
+          </button>
+        }
+      }
+    </section>
+  }
+}

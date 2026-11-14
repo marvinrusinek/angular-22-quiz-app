@@ -1,0 +1,61 @@
+<section
+  class="icc"
+  aria-labelledby="icc-title"
+>
+  <!-- One screen-reader sentence (static — not a live region). -->
+  <p class="icc__sr">{{ srSummary() }}</p>
+
+  @if (unlocked()) {
+    <p class="icc__earned">
+      <span
+        class="icc__badge"
+        aria-hidden="true"
+      >
+        🎓
+      </span>
+      <span i18n>Certificate Earned</span>
+      <span
+        class="icc__check"
+        aria-hidden="true"
+      >
+        ✓
+      </span>
+    </p>
+    <a
+      class="icc__cta"
+      routerLink="/interview/certificate"
+      aria-label="View your Angular Interview Master certificate"
+      i18n-aria-label
+      i18n
+    >
+      View Certificate
+    </a>
+  } @else {
+    <h3
+      id="icc-title"
+      class="icc__title"
+      i18n
+    >
+      Angular Interview Master Certificate
+    </h3>
+
+    @if (progress().angularExplorerEarned) {
+      <p class="icc__line icc__line--ok">
+        <span
+          class="icc__ok"
+          aria-hidden="true"
+        >
+          ✓
+        </span>
+        <ng-container i18n>Angular Explorer unlocked</ng-container>
+      </p>
+    }
+    <p
+      class="icc__line"
+      i18n
+    >
+      Interviews completed: {{ interviewsShown() }} / {{ progress().requiredInterviews }}
+    </p>
+    <p class="icc__action">{{ nextAction() }}</p>
+  }
+</section>

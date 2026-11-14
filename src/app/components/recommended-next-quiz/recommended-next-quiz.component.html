@@ -1,0 +1,63 @@
+@if (state(); as s) {
+  @if (s.allComplete) {
+    <section
+      class="rec"
+      aria-labelledby="rec-heading"
+    >
+      <p
+        id="rec-heading"
+        class="rec__eyebrow"
+        i18n
+      >
+        Learning Path Complete
+      </p>
+      <p
+        class="rec__done"
+        i18n
+      >
+        You have completed all {{ s.totalCount }} topic quizzes.
+      </p>
+      <button
+        type="button"
+        class="rec__btn"
+        (click)="buildInterview.emit()"
+        aria-label="Build an interview"
+        i18n-aria-label
+        i18n
+      >
+        Build an Interview
+      </button>
+    </section>
+  } @else if (s.recommendation; as r) {
+    <section
+      class="rec"
+      aria-labelledby="rec-heading"
+    >
+      <p
+        id="rec-heading"
+        class="rec__eyebrow"
+        i18n
+      >
+        Recommended Next Quiz
+      </p>
+
+      <div class="rec__head">
+        <h3 class="rec__title">{{ r.title }}</h3>
+        @if (r.difficulty) {
+          <span class="rec__difficulty">{{ r.difficulty | titlecase }}</span>
+        }
+      </div>
+
+      <p class="rec__reason">{{ r.reason }}</p>
+
+      <button
+        type="button"
+        class="rec__btn"
+        (click)="startQuiz.emit(r.quizId)"
+        [attr.aria-label]="r.actionLabel + ': ' + r.title"
+      >
+        {{ r.actionLabel }}
+      </button>
+    </section>
+  }
+}

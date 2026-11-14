@@ -1,0 +1,26 @@
+.achievements-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 999px;
+  background: var(--bg-secondary, #f5f5f5);
+  font-size: 13px;
+  color: var(--text-primary, #212121);
+  white-space: nowrap; /* keep "Achievements X / N" on ONE line (never wraps) */
+}
+
+.achievements-summary__icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.achievements-summary__label {
+  font-weight: 600;
+}
+
+.achievements-summary__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary, #555555);
+}

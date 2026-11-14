@@ -1,0 +1,177 @@
+.progress-summary {
+  max-width: 560px;
+  margin: 4px auto 18px;
+  padding: 14px 20px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 12px;
+  background: var(--bg-secondary, rgba(255, 255, 255, 0.6));
+  box-sizing: border-box;
+}
+
+.progress-summary__heading {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, #212121);
+}
+
+.progress-summary__rows {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.progress-summary__rows--difficulty,
+.progress-summary__rows--highlights {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+}
+
+/* Three understated stat cells beneath the progress rows. */
+.progress-summary__stats {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.progress-summary__stat {
+  margin: 0;
+  /* column-reverse: DOM is label→value (screen readers hear "Average Score,
+   80%"), but the value shows on top like a stat tile. */
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.progress-summary__stat-value {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-primary, #212121);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-summary__stat-label {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--text-secondary, #555555);
+}
+
+/* Details variant lives inside the expansion panel: drop the card chrome and
+ the leading divider so it sits flush in the panel body. */
+.progress-summary--details {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.progress-summary--details .progress-summary__rows:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.progress-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.progress-summary__label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #555555);
+  white-space: nowrap;
+}
+
+.progress-summary__value {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #212121);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-summary__pct,
+.progress-summary__count {
+  min-width: 44px;
+  text-align: right;
+}
+
+/* Needs Review: ONE TOPIC PER LINE. These were bare inline spans with no
+ separator, so several topics ran together ("A — 33%B — 67%"). A real list,
+ left-aligned beneath its heading. */
+.progress-summary__weak-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  text-align: left;
+  /* On a narrow screen a long name wraps; balance the lines so the
+   percentage stays attached to a word instead of stranding alone. */
+  text-wrap: balance;
+}
+
+/* Strongest and Needs Review: heading on top, value(s) beneath it, left-
+ aligned. ONE shared rule, so the two rows can never drift apart. The gap
+ between the two blocks exceeds the heading-to-value gap so each block
+ reads as one group. */
+.progress-summary__rows--highlights {
+  gap: 12px;
+}
+
+.progress-summary__rows--highlights .progress-summary__row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.progress-summary__bar {
+  display: inline-block;
+  width: 120px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-hover, rgba(0, 0, 0, 0.1));
+  overflow: hidden;
+}
+
+.progress-summary__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--text-link, #3b98fd);
+}
+
+@media (max-width: 600px) {
+  .progress-summary {
+    margin: 4px 8px 16px;
+    padding: 12px 14px;
+  }
+
+  .progress-summary__bar {
+    width: 84px;
+  }
+}

@@ -1,0 +1,99 @@
+@if (recommendation(); as r) {
+  <section
+    class="dr"
+    aria-labelledby="dr-heading"
+    [class.dr--complete]="r.level === 'complete'"
+  >
+    @if (r.level === 'complete') {
+      @if (certUnlocked()) {
+        <!-- Certificate earned -->
+        <p
+          id="dr-heading"
+          class="dr__heading"
+        >
+          <span
+            class="dr__icon"
+            aria-hidden="true"
+          >
+            🎖
+          </span>
+          <ng-container i18n>Certificate Earned</ng-container>
+        </p>
+        <p
+          class="dr__message"
+          i18n
+        >
+          View your Angular Interview Master Certificate.
+        </p>
+        <a
+          class="dr__btn"
+          routerLink="/interview/certificate"
+          aria-label="View your Angular Interview Master certificate"
+          i18n-aria-label
+          i18n
+        >
+          View Certificate
+        </a>
+      } @else {
+        <!-- Curriculum done — certificate journey -->
+        <p
+          id="dr-heading"
+          class="dr__heading"
+        >
+          <span
+            class="dr__icon"
+            aria-hidden="true"
+          >
+            💼
+          </span>
+          <ng-container i18n>Ready for Interview Mode?</ng-container>
+        </p>
+        @if (certProgress().interviewMasterEarned) {
+          <!-- Same next-action sentence the Results card and Builder callout
+               show, so all three surfaces agree and it reflects ACTUAL
+               progress ("2 more interviews") rather than restating the bar. -->
+          <p class="dr__message">{{ certNextAction() }}</p>
+        } @else {
+          <p
+            class="dr__message"
+            i18n
+          >
+            Build a mixed-topic interview and become an Interview Master.
+          </p>
+        }
+        @if (r.action; as a) {
+          <button
+            type="button"
+            class="dr__btn"
+            (click)="act(a)"
+            [attr.aria-label]="a.label"
+          >
+            {{ a.label }}
+          </button>
+        }
+      }
+    } @else {
+      <!-- Difficulty advice (non-complete levels) -->
+      <p
+        id="dr-heading"
+        class="dr__heading"
+      >
+        {{ r.heading }}
+      </p>
+      @if (r.message) {
+        <p class="dr__message">{{ r.message }}</p>
+      }
+      @if (r.action; as a) {
+        <button
+          type="button"
+          class="dr__btn"
+          [class.dr__btn--ghost]="a.kind === 'browse'"
+          (click)="act(a)"
+          [attr.aria-label]="a.label"
+        >
+          {{ a.label }}
+        </button>
+      }
+    }
+  </section>
+}

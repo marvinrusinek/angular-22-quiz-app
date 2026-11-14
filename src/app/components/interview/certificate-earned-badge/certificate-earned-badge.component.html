@@ -1,0 +1,21 @@
+@if (unlocked()) {
+  <a
+    class="cert-badge"
+    routerLink="/interview/certificate"
+    aria-label="Certificate earned. View your Angular Interview Master certificate."
+    i18n-aria-label
+  >
+    <span
+      class="cert-badge__icon"
+      aria-hidden="true"
+    >
+      🎖
+    </span>
+    <span
+      class="cert-badge__text"
+      i18n
+    >
+      Certificate Earned
+    </span>
+  </a>
+}

@@ -31,7 +31,7 @@ mat-card-header {
   border-radius: 0 !important;
 
   .header-image {
-    margin: 5px 0 0 0;
+    margin: 5px 16px 14px 0;
   }
 
   mat-card-title {
@@ -189,7 +189,7 @@ mat-card-actions {
 @media (max-width: 600px) {
   mat-card-header {
     .header-image {
-      margin: 5px auto 0 !important;
+      margin: 5px auto 14px !important;
       display: block;
     }
 

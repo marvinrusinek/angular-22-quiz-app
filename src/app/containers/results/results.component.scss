@@ -61,7 +61,7 @@ mat-card {
 .results-header {
   display: grid;
   // Allocation: Hamburger | Title (Flexible) | Logo
-  grid-template-columns: 80px 1fr 120px; 
+  grid-template-columns: 80px 1fr 170px;
   align-items: center;
   margin-top: -100px !important;
   padding: 20px 12px 10px 12px; // Top padding 20px as requested
@@ -255,10 +255,12 @@ mat-card {
     img {
       cursor: pointer;
       transition: all 0.3s ease;
-      height: 80px;
+      height: 46px;
       width: auto;
+      padding: 3px 10px;
+      box-sizing: border-box;
       border-radius: 8px;
-      // Clean white background (JPEG limitation)
+      // The logo's navy lettering needs a light backing in dark theme.
       background: white;
 
       &:hover {
@@ -467,7 +469,8 @@ mat-card {
     margin-top: 0 !important;
 
     .logo img {
-      width: 70px;
+      height: 36px;
+      width: auto;
     }
 
     .results-title {

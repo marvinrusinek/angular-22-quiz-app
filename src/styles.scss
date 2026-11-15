@@ -294,11 +294,9 @@ mat-card {
     .header-image[mat-card-avatar],
     img.header-image.mat-mdc-card-avatar {
       float: left;
-      background: url(vars.$header-image) no-repeat center center;
-      background-size: contain;
-      margin: -10px 0 0 0;
-      height: 90px !important;
-      width: 160px !important;
+      margin: -10px 16px 4px 0;
+      height: 48px !important;
+      width: auto !important;
       border-radius: 0 !important;
       overflow: visible !important;
       object-fit: contain;
@@ -543,15 +541,19 @@ button.mat-mdc-menu-trigger {
   cursor: not-allowed !important;
 }
 
+/* Dark theme: the logo's navy lettering needs a light backing. */
+[data-theme="dark"] mat-card mat-card-header .header-image,
+[data-theme="dark"] mat-card mat-card-header img.header-image.mat-mdc-card-avatar {
+  padding: 3px 10px;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 10px !important;
+}
+
 /* ─────────────────────────────────────────────
    DARK MODE OVERRIDES (QuizComponent only)
 ───────────────────────────────────────────────*/
 [data-theme="dark"] codelab-quiz-component {
-  // Blend codelab logo white background into dark card
-  .header-image {
-    mix-blend-mode: multiply;
-  }
-
   // Material card on quiz page
   .mat-mdc-card,
   mat-card {

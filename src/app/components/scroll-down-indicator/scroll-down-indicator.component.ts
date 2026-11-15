@@ -4,7 +4,9 @@ import {
   DestroyRef,
   HostListener,
   OnInit,
+  computed,
   inject,
+  input,
   signal
 } from '@angular/core';
 
@@ -15,6 +17,11 @@ import { swallow } from '@shared/utils/error-logging';
  * only while the page is scrollable; it points DOWN when there is more content
  * below and flips to UP once the bottom is reached, so it doubles as a "back to
  * top" control.
+ *
+ * Two modes (`mode` input):
+ *  - 'elevator' (default): described below; every page but Quiz Selection.
+ *  - 'jump': Quiz Selection. Chevron down in the upper half of the page,
+ *    chevron up in the lower half; down jumps to the bottom, up jumps to the top.
  *
  * Mirrors the Interview Results scroll cue. Behaves like an elevator: each click
  * pages ~a screenful in the current direction. The direction flips at the
@@ -36,8 +43,8 @@ import { swallow } from '@shared/utils/error-logging';
         [class.scroll-indicator--up]="direction() === 'up'"
         [class.scroll-indicator--bounce]="!hasInteracted()"
         (click)="onClick()"
-        [attr.aria-label]="direction() === 'up' ? upAria : downAria"
-        [attr.title]="direction() === 'up' ? upTitle : downTitle"
+        [attr.aria-label]="ariaLabel()"
+        [attr.title]="title()"
       >
         <i
           class="material-icons"
@@ -55,6 +62,9 @@ export class ScrollDownIndicatorComponent implements OnInit {
   // Shown only when the page can actually scroll.
   private readonly destroyRef = inject(DestroyRef);
 
+  /** 'elevator' pages a screenful per click; 'jump' goes to the extremes. */
+  readonly mode = input<'elevator' | 'jump'>('elevator');
+
   readonly visible = signal(false);
   // Travel direction. Flips at the extremes, persists in between.
   readonly direction = signal<'down' | 'up'>('down');
@@ -66,6 +76,17 @@ export class ScrollDownIndicatorComponent implements OnInit {
   readonly upAria = $localize`Scroll back to top`;
   readonly downTitle = $localize`Scroll down`;
   readonly upTitle = $localize`Back to top`;
+  private readonly jumpDownAria = $localize`Scroll to bottom`;
+  private readonly jumpDownTitle = $localize`Scroll to bottom`;
+
+  readonly ariaLabel = computed(() => {
+    if (this.direction() === 'up') return this.upAria;
+    return this.mode() === 'jump' ? this.jumpDownAria : this.downAria;
+  });
+  readonly title = computed(() => {
+    if (this.direction() === 'up') return this.upTitle;
+    return this.mode() === 'jump' ? this.jumpDownTitle : this.downTitle;
+  });
 
   private resizeObserver?: ResizeObserver;
 
@@ -111,6 +132,12 @@ export class ScrollDownIndicatorComponent implements OnInit {
     const scrollable = doc.scrollHeight - window.innerHeight;
     this.visible.set(scrollable > 20); // hide entirely on non-scrolling pages
 
+    if (this.mode() === 'jump') {
+      // Position-based: upper half points down, lower half points up.
+      this.direction.set(window.scrollY >= scrollable / 2 ? 'up' : 'down');
+      return;
+    }
+
     // 4px slack for sub-pixel rounding. Only the extremes change direction; in
     // between we keep the current one so repeated clicks travel the same way.
     if (window.scrollY >= scrollable - 4) this.direction.set('up');
@@ -119,8 +146,29 @@ export class ScrollDownIndicatorComponent implements OnInit {
 
   onClick(): void {
     this.hasInteracted.set(true);
+
+    if (this.mode() === 'jump') {
+      const doc = document.documentElement;
+      const bottom = Math.max(0, doc.scrollHeight - window.innerHeight);
+      window.scrollTo({
+        top: this.direction() === 'up' ? 0 : bottom,
+        left: 0,
+        behavior: this.prefersReducedMotion() ? 'auto' : 'smooth'
+      });
+      return;
+    }
+
     const step = Math.round(window.innerHeight * 0.85);
     const top = this.direction() === 'up' ? -step : step;
     window.scrollBy({ top, left: 0, behavior: 'smooth' });
+  }
+
+  // Jump mode honours the user's reduced-motion setting (instant, not smooth).
+  private prefersReducedMotion(): boolean {
+    try {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      return false;
+    }
   }
 }

@@ -795,8 +795,10 @@ codelab-quiz-selection {
   }
 
   // ── footer ──────────────────────────────────────────────────────────
+  // Bottom clearance for the fixed scroll chevron (25px offset + 48px button +
+  // gap) so the copyright is never covered at the end of the page.
   .qd-footer {
-    padding: 8px 0 24px;
+    padding: 8px 0 88px;
     text-align: center;
     font-size: 13.5px;
     color: var(--qd-muted);
@@ -1060,4 +1062,10 @@ codelab-quiz-selection {
   .quiz-dashboard .quiz-stats .stat .stat-num.count-up-pop {
     animation: none;
   }
+}
+
+// Keyboard focus scrolls into view above the fixed scroll chevron (this page
+// only; :has() keeps the rule from touching other routes).
+:root:has(.quiz-dashboard) {
+  scroll-padding-bottom: 88px;
 }

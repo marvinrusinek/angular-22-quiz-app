@@ -336,7 +336,7 @@ codelab-quiz-selection {
       width: 2px;
       height: 40px;
       border-radius: 1px;
-      background: rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.75);
     }
   }
 
@@ -829,10 +829,6 @@ codelab-quiz-selection {
 // ── tablet: two columns of cards, stacked progress/continue ──────────
 @media (max-width: 900px) {
   .quiz-dashboard {
-    .quiz-stats .stat-divider {
-      display: none;
-    }
-
     .qd-row {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -851,6 +847,18 @@ codelab-quiz-selection {
 // ── phone ─────────────────────────────────────────────────────────────
 @media (max-width: 760px) {
   .quiz-dashboard {
+    .quiz-tile {
+      grid-template-columns: 132px minmax(0, 1fr);
+    }
+
+    .quiz-tile .quiz-tile__image {
+      width: 132px;
+    }
+
+    .quiz-tile .quiz-summary {
+      -webkit-line-clamp: 3;
+    }
+
     .qd-hero__art {
       display: none;
     }
@@ -914,13 +922,58 @@ codelab-quiz-selection {
       gap: 8px 16px;
       padding: 8px 12px;
 
-      .stat-divider {
-        display: none;
-      }
+      justify-content: center;
 
       .stat .stat-num {
         font-size: 22px;
       }
+
+      // Row 1: Quizzes | Questions. Row 2: the three levels, each separated.
+      .stat-divider--before-levels {
+        display: none;
+      }
+
+      .difficulty-stats {
+        display: flex;
+        flex: 1 1 100%;
+        align-items: center;
+        justify-content: space-around;
+        gap: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.55);
+      }
+    }
+
+    // Stacked topic card (the previous mobile arrangement): image on top at
+    // its natural 300:210 proportions, then title, a longer summary, meta.
+    .quiz-tile {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 0;
+      padding: 14px;
+    }
+
+    .quiz-tile .quiz-tile__image {
+      grid-column: 1;
+      grid-row: auto;
+      justify-self: center;
+      width: 100%;
+      // !important: the global <600px img{max-width:100%!important} rule would win.
+      max-width: 300px !important;
+      margin-bottom: 12px;
+    }
+
+    .quiz-tile .quiz-info,
+    .quiz-tile .quiz-card-footer {
+      grid-column: 1;
+      grid-row: auto;
+    }
+
+    .quiz-tile .quiz-info {
+      padding-right: 0;
+    }
+
+    .quiz-tile .quiz-summary {
+      -webkit-line-clamp: 4;
     }
 
     .qd-card,

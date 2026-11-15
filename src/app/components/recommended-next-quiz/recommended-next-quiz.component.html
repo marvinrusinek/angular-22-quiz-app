@@ -1,4 +1,31 @@
-@if (state(); as s) {
+@if (review(); as rv) {
+  <!-- The parent supplies the "Recommended for Review" heading. -->
+  <div class="rec rec--review">
+    <div class="rec__head">
+      <h3 class="rec__title">{{ rv.title }}</h3>
+      @if (rv.difficulty) {
+        <span class="rec__difficulty">{{ rv.difficulty | titlecase }}</span>
+      }
+    </div>
+
+    <p class="rec__score">
+      <span i18n>Latest score:</span>&nbsp;<strong>{{ rv.latestPercent }}%</strong>
+    </p>
+
+    <p class="rec__reason" i18n>
+      Recommended based on your available quiz history.
+    </p>
+
+    <button
+      type="button"
+      class="rec__btn"
+      (click)="reviewQuiz.emit(rv.quizId)"
+      [attr.aria-label]="reviewLabel + ': ' + rv.title"
+    >
+      <ng-container i18n>Review Quiz</ng-container>
+    </button>
+  </div>
+} @else if (state(); as s) {
   @if (s.allComplete) {
     <section
       class="rec"

@@ -43,7 +43,8 @@ import {
   QuizProgress,
   QuizRoutes,
   QuizSelectionParams,
-  QuizStatus
+  QuizStatus,
+  ReviewRecommendation
 } from '@shared/models';
 
 import { QuizService } from '@shared/services/data/quiz.service';
@@ -54,6 +55,7 @@ import { ProgressService } from '@shared/services/progress/progress.service';
 import { BestScoreService } from '@shared/services/progress/best-score.service';
 import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
 import { WeakAreasService } from '@shared/services/progress/weak-areas.service';
+import { TopicPerformanceHistoryService } from '@shared/services/progress/topic-performance-history.service';
 import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 import { LearningPathService } from '@shared/services/features/learning-path/learning-path.service';
 import { DifficultyRecommendationService } from '@shared/services/features/learning-path/difficulty-recommendation.service';
@@ -80,6 +82,7 @@ import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metada
 
 import { SlideLeftToRightAnimation } from '../../animations/animations';
 import { swallow } from '@shared/utils/error-logging';
+import { selectReviewCandidate } from '@shared/utils/review-candidate';
 import {
   hasSearchTokens,
   matchesTitleFuzzy,
@@ -132,6 +135,7 @@ export class QuizSelectionComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly liveAnnouncer = inject(LiveAnnouncer);
   private readonly weakAreas = inject(WeakAreasService);
+  private readonly topicHistory = inject(TopicPerformanceHistoryService);
   private readonly practiceSession = inject(PracticeSessionService);
 
   // Gates the progress-driven pieces on THIS screen. Shown whenever the user has
@@ -571,6 +575,23 @@ export class QuizSelectionComponent implements OnInit {
     return this.learningPathService.recommend(this.quizzes(), completed, inProgress);
   });
 
+  // "Recommended for Review": only once EVERY topic quiz is complete, the
+  // completed quiz whose LATEST valid topic-quiz attempt scored lowest. Reads
+  // the existing history signal (no best-score fallback); null when no valid
+  // history exists, which simply hides the card.
+  readonly reviewRecommendation = computed<ReviewRecommendation | null>(() => {
+    if (!this.learningPath().allComplete) return null;
+    const completed = new Set<string>();
+    for (const [quizId, entry] of this.quizCardProgress()) {
+      if (entry.state === 'completed') completed.add(quizId);
+    }
+    return selectReviewCandidate(
+      this.quizzes(),
+      completed,
+      this.topicHistory.records()
+    );
+  });
+
   // Advisory difficulty-readiness message. Reuses the existing best-score store
   // (same completion definition as Your Progress). Touch quizCardProgress() so it
   // re-evaluates whenever progress changes (a completed quiz / better score),
@@ -719,6 +740,24 @@ export class QuizSelectionComponent implements OnInit {
       await this.router.navigate([QuizRoutes.INTRO, quizId]);
     } catch (err) {
       swallow('quiz-selection.component#1', err);
+    }
+  }
+
+  // "Recommended for Review" → the quiz's Introduction. The Results route only
+  // serves the most recent in-session result (QuizResultGuard), so a completed
+  // quiz is reviewed by opening its Introduction directly. This is not a new
+  // access: the quiz is already completed, so no access tracking is written.
+  async onReviewQuiz(quizId: string): Promise<void> {
+    try {
+      if (!quizId) return;
+      this.sessionEngagement.markEngaged();
+      this.quizService.setQuizId(quizId);
+      this.quizService.quizCompleted = true;
+      this.quizService.setQuizStatus(QuizStatus.COMPLETED);
+      this.quizService.setCompletedQuizId(quizId);
+      await this.router.navigate([QuizRoutes.INTRO, quizId]);
+    } catch (err) {
+      swallow('quiz-selection.component#review', err);
     }
   }
 

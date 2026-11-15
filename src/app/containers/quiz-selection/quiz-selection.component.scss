@@ -343,6 +343,25 @@ codelab-quiz-selection {
     margin: 0 0 8px;
   }
 
+  // All quizzes complete: "Recommended for Review" beside the completion card.
+  .qd-complete-row--pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: stretch;
+    margin: 0 0 16px;
+
+    .qd-card {
+      margin: 0;
+    }
+
+    .dr {
+      max-width: none;
+      height: 100%;
+      margin: 0;
+    }
+  }
+
   .qd-weak-status {
     margin: 0 0 12px;
     padding: 10px 14px;
@@ -852,6 +871,10 @@ codelab-quiz-selection {
 @media (max-width: 900px) {
   .quiz-dashboard {
     .qd-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .qd-complete-row--pair {
       grid-template-columns: minmax(0, 1fr);
     }
 

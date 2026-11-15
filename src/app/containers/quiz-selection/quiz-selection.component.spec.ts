@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WeakAreasService } from '@shared/services/progress/weak-areas.service';
+import { TopicPerformanceHistoryService } from '@shared/services/progress/topic-performance-history.service';
 import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
@@ -3385,5 +3386,221 @@ describe('QuizSelectionComponent — no resume promise (recommendation + tile st
     await comp.onSelect('directives', 0); // opened, not completed
     expect(rec(comp)?.quizId).toBe('directives'); // next in the topic order
     noResumeWording(comp);
+  });
+});
+
+/**
+ * "Recommended for Review": once every quiz is complete, the completed quiz
+ * whose LATEST valid topic-quiz attempt scored lowest. History only; never a
+ * best-score fallback. Pure rules are covered in review-candidate.spec.ts.
+ */
+describe('QuizSelectionComponent — Recommended for Review', () => {
+  const catalog: Array<[id: string, title: string, difficulty: string]> = [
+    ['forms', 'Forms', 'intermediate'],
+    ['pipes', 'Pipes', 'beginner'],
+    ['http', 'HTTP', 'advanced']
+  ];
+  const IDS = catalog.map(([id]) => id);
+  let router: { navigate: jest.Mock };
+
+  const rec = (
+    topicId: string,
+    correct: number,
+    total: number,
+    completedAt: string,
+    source = 'topic-quiz'
+  ) => ({
+    attemptId: source + ':' + topicId + ':' + completedAt,
+    source,
+    completedAt,
+    topicId,
+    topicName: topicId,
+    correct,
+    total
+  });
+
+  function setup(opts: { completed?: string[]; records?: unknown[] } = {}) {
+    sessionStorage.clear();
+    localStorage.clear();
+    sessionStorage.setItem('completedQuizIds', JSON.stringify(opts.completed ?? IDS));
+    if (opts.records) {
+      localStorage.setItem(
+        'topicPerformanceHistory:v1',
+        JSON.stringify({ version: 1, records: opts.records })
+      );
+    }
+    router = { navigate: jest.fn().mockResolvedValue(true) };
+    const metadata: any = {
+      load: jest.fn(() => of(catalog.map(([quizId]) => ({ quizId })))),
+      difficultyByQuiz: signal(new Map(catalog.map(([id, , d]) => [id, d]))),
+      milestoneByQuiz: signal(new Map(catalog.map(([id, tt]) => [id, tt]))),
+      summaryByQuiz: signal(new Map(catalog.map(([id]) => [id, 'About ' + id]))),
+      imageByQuiz: signal(new Map<string, string>()),
+      factsByQuiz: signal(new Map<string, readonly string[]>()),
+      questionCountByQuiz: signal(new Map(catalog.map(([id]) => [id, 5]))),
+      imageFor: () => '',
+      factsFor: () => []
+    };
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        QuizSelectionComponent,
+        {
+          provide: QuizService,
+          useValue: {
+            setQuizId: jest.fn(),
+            setQuizStatus: jest.fn(),
+            setCompletedQuizId: jest.fn(),
+            setCheckedShuffle: jest.fn(),
+            returnQuizSelectionParams: () => ({
+              startedQuizId: '',
+              continueQuizId: '',
+              quizCompleted: false
+            }),
+            quizCompleted: false
+          }
+        },
+        {
+          provide: AchievementService,
+          useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() }
+        },
+        {
+          provide: ProgressService,
+          useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) }
+        },
+        { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+        { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+        { provide: SessionEngagementService, useValue: { engaged: () => true, markEngaged: jest.fn() } },
+        { provide: TopicQuizMetadataService, useValue: metadata },
+        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
+        { provide: Router, useValue: router }
+        // LearningPathService and TopicPerformanceHistoryService are REAL.
+      ]
+    });
+    const comp = TestBed.inject(QuizSelectionComponent);
+    comp.ngOnInit();
+    return comp;
+  }
+
+  const D1 = '2026-10-01T10:00:00.000Z';
+  const D2 = '2026-10-02T10:00:00.000Z';
+  const D3 = '2026-10-03T10:00:00.000Z';
+
+  it('recommends the lowest latest score when every quiz is complete', () => {
+    const comp = setup({
+      records: [rec('forms', 9, 10, D1), rec('pipes', 4, 10, D1), rec('http', 7, 10, D1)]
+    });
+    expect(comp.learningPath().allComplete).toBe(true);
+    expect(comp.reviewRecommendation()).toEqual({
+      quizId: 'pipes',
+      title: 'Pipes',
+      difficulty: 'beginner',
+      latestPercent: 40,
+      completedAt: D1
+    });
+  });
+
+  it('keeps the Learning Path Complete state (no next-quiz recommendation)', () => {
+    const comp = setup({ records: [rec('pipes', 4, 10, D1)] });
+    const lp = comp.learningPath();
+    expect(lp.allComplete).toBe(true);
+    expect(lp.recommendation).toBeNull();
+    expect(lp.totalCount).toBe(3);
+  });
+
+  it('is absent while any quiz is incomplete', () => {
+    const comp = setup({
+      completed: ['forms', 'pipes'],
+      records: [rec('forms', 1, 10, D1), rec('pipes', 2, 10, D1)]
+    });
+    expect(comp.learningPath().allComplete).toBe(false);
+    expect(comp.reviewRecommendation()).toBeNull();
+  });
+
+  it('is absent when there is no valid history (no best-score fallback)', () => {
+    expect(setup().reviewRecommendation()).toBeNull();
+    expect(
+      setup({ records: [rec('pipes', 0, 0, D1), rec('forms', 3, 10, 'nope')] })
+        .reviewRecommendation()
+    ).toBeNull();
+  });
+
+  it('skips completed quizzes without history and ignores malformed records', () => {
+    const comp = setup({
+      records: [
+        rec('forms', 6, 10, D1),
+        rec('http', 99, 10, D1), // correct > total: ignored
+        { not: 'a record' },
+        rec('pipes', 0, 10, D1, 'weak-areas-practice') // excluded source
+      ]
+    });
+    const r = comp.reviewRecommendation();
+    expect(r?.quizId).toBe('forms');
+    expect(r?.latestPercent).toBe(60);
+  });
+
+  it('uses the latest attempt, not the best', () => {
+    const comp = setup({
+      records: [
+        rec('pipes', 10, 10, D1), // best
+        rec('pipes', 5, 10, D3), // latest
+        rec('forms', 7, 10, D2),
+        rec('http', 8, 10, D2)
+      ]
+    });
+    expect(comp.reviewRecommendation()?.quizId).toBe('pipes');
+    expect(comp.reviewRecommendation()?.latestPercent).toBe(50);
+  });
+
+  it('a retake updates the recommendation reactively', () => {
+    const comp = setup({
+      records: [rec('forms', 6, 10, D1), rec('pipes', 4, 10, D1), rec('http', 8, 10, D1)]
+    });
+    expect(comp.reviewRecommendation()?.quizId).toBe('pipes');
+    // Pipes retaken and improved; the history signal drives the computed.
+    TestBed.inject(TopicPerformanceHistoryService).record(
+      'quiz:pipes:retake',
+      'topic-quiz',
+      [{ topicId: 'pipes', topicName: 'Pipes', correct: 10, total: 10 }]
+    );
+    expect(comp.reviewRecommendation()?.quizId).toBe('forms');
+    expect(comp.reviewRecommendation()?.latestPercent).toBe(60);
+  });
+
+  it('breaks ties deterministically', () => {
+    const records = [rec('forms', 5, 10, D2), rec('pipes', 5, 10, D1), rec('http', 9, 10, D1)];
+    expect(setup({ records }).reviewRecommendation()?.quizId).toBe('pipes');
+    expect(setup({ records: [...records].reverse() }).reviewRecommendation()?.quizId).toBe('pipes');
+  });
+
+  it('survives a reload: the same result is rebuilt from stored history', () => {
+    const records = [rec('forms', 3, 10, D1), rec('pipes', 8, 10, D1), rec('http', 9, 10, D1)];
+    const first = setup({ records }).reviewRecommendation();
+    const reloaded = setup({ records }).reviewRecommendation();
+    expect(reloaded).toEqual(first);
+    expect(reloaded?.quizId).toBe('forms');
+  });
+
+  it('"Review Quiz" opens the quiz Introduction, never Results', async () => {
+    const comp = setup({ records: [rec('pipes', 4, 10, D1)] });
+    await comp.onReviewQuiz(comp.reviewRecommendation()!.quizId);
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledWith(['intro/', 'pipes']);
+    expect(router.navigate).not.toHaveBeenCalledWith(['results/', 'pipes']);
+  });
+
+  it('reviewing does not write quiz-access tracking or change progress', async () => {
+    const comp = setup({ records: [rec('pipes', 4, 10, D1)] });
+    const before = sessionStorage.getItem('startedQuizIds');
+    await comp.onReviewQuiz('pipes');
+    expect(sessionStorage.getItem('startedQuizIds')).toBe(before);
+    expect(comp.learningPath().allComplete).toBe(true);
+    expect(comp.reviewRecommendation()?.quizId).toBe('pipes');
+  });
+
+  it('ignores an empty quiz id', async () => {
+    const comp = setup({ records: [rec('pipes', 4, 10, D1)] });
+    await comp.onReviewQuiz('');
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 });

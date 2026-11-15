@@ -18,3 +18,18 @@ export interface LearningPathState {
   /** Total topic quizzes — used by the "completed all N" message. */
   totalCount: number;
 }
+
+/**
+ * "Recommended for Review": the COMPLETED quiz whose latest valid attempt
+ * scored lowest. `latestPercent` comes from that attempt's correct / total,
+ * never from a best score.
+ */
+export interface ReviewRecommendation {
+  quizId: string;
+  title: string;
+  difficulty: string;
+  /** Rounded 0-100 score of the latest valid attempt. */
+  latestPercent: number;
+  /** ISO time of that attempt. */
+  completedAt: string;
+}

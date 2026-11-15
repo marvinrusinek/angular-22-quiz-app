@@ -26,6 +26,17 @@
   grid-row: 1 / span 3;
 }
 
+.rec--review .rec__btn {
+  grid-row: 1 / span 4;
+}
+
+.rec__score {
+  grid-column: 1;
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--text-primary, #212121);
+}
+
 .rec__eyebrow {
   margin: 0 0 8px;
   font-size: 11px;
@@ -98,7 +109,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .rec__btn {
+  .rec__btn,
+  .rec--review .rec__btn {
     grid-column: 1;
     grid-row: auto;
     width: 100%;

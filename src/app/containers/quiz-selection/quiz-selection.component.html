@@ -169,12 +169,36 @@
         <p class="accessed-subline">{{ completionParts().subline }}</p>
       }
 
-      <!-- Difficulty recommendation offers quiz browsing or interview building. -->
-      <codelab-difficulty-recommendation
-        [recommendation]="difficultyRecommendation()"
-        (browse)="browseQuizzes($event)"
-        (buildInterview)="startBuildingInterview()"
-      />
+      <!-- Difficulty recommendation offers quiz browsing or interview building.
+           With every quiz complete it can sit beside "Recommended for Review"
+           (stacked on small screens). -->
+      <div
+        class="qd-complete-row"
+        [class.qd-complete-row--pair]="reviewRecommendation()"
+      >
+        @if (reviewRecommendation(); as review) {
+          <section
+            class="qd-card qd-review"
+            aria-labelledby="qd-review-title"
+          >
+            <h2 id="qd-review-title" class="qd-card__title">
+              <mat-icon class="qd-card__title-icon" aria-hidden="true">history</mat-icon>
+              <ng-container i18n>Recommended for Review</ng-container>
+            </h2>
+            <codelab-recommended-next-quiz
+              [state]="learningPath()"
+              [review]="review"
+              (reviewQuiz)="onReviewQuiz($event)"
+            />
+          </section>
+        }
+
+        <codelab-difficulty-recommendation
+          [recommendation]="difficultyRecommendation()"
+          (browse)="browseQuizzes($event)"
+          (buildInterview)="startBuildingInterview()"
+        />
+      </div>
     }
 
     <section class="qd-card qd-browse" aria-labelledby="qd-browse-title">

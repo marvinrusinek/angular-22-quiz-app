@@ -75,9 +75,11 @@ function singleRuns(
       .map(([first]) => first)
   );
   const runs: Run[] = [];
-  titleWords.forEach((titleWord, i) => {
-    if (!spelledAsRun.has(i) && fits(word, titleWord)) runs.push([i, i]);
-  });
+  for (const [index, titleWord] of titleWords.entries()) {
+    if (!spelledAsRun.has(index) && fits(word, titleWord)) {
+      runs.push([index, index]);
+    }
+  }
   return runs;
 }
 

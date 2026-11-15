@@ -94,25 +94,20 @@ codelab-quiz-selection {
 
   .qd-brand__img {
     display: block;
-    flex: none;
-    width: 40px;
-    height: auto;
-  }
-
-  .qd-brand__text {
-    min-width: 0;
+    width: auto;
+    height: 48px;
+    border-radius: 6px;
   }
 
   .qd-brand__name {
     margin: 0;
-    font-size: 22px;
-    font-weight: 800;
-    line-height: 1.2;
-    color: var(--qd-text);
+    line-height: 0;
   }
 
   .qd-brand__tagline {
-    margin: 2px 0 0;
+    margin: 0;
+    padding-left: 14px;
+    border-left: 2px solid var(--qd-border);
     font-size: 14px;
     color: var(--qd-muted);
   }
@@ -785,6 +780,12 @@ codelab-quiz-selection {
 }
 
 // ── dark theme ────────────────────────────────────────────────────────
+[data-theme='dark'] .quiz-dashboard .qd-brand__img {
+  padding: 3px 10px;
+  background: #fff;
+  border-radius: 10px;
+}
+
 [data-theme='dark'] .quiz-dashboard {
   --qd-page-bg: #1c1e26;
   --qd-surface: #2a2d38;
@@ -881,20 +882,9 @@ codelab-quiz-selection {
       gap: 8px;
     }
 
-    .qd-brand {
-      gap: 10px;
-    }
-
-    .qd-brand__name {
-      font-size: 17px;
-    }
-
-    .qd-brand__tagline {
-      font-size: 12.5px;
-    }
-
     .qd-brand__img {
-      width: 30px;
+      // !important: beats the global <600px img{height:auto!important} rule.
+      height: 34px !important;
     }
 
     .qd-header__actions {
@@ -1000,8 +990,8 @@ codelab-quiz-selection {
   }
 }
 
-// Very narrow phones: the tagline would only wrap the brand into a tall block.
-@media (max-width: 420px) {
+// The logo already carries the name; the tagline only fits beside it on wider screens.
+@media (max-width: 760px) {
   .quiz-dashboard .qd-brand__tagline {
     display: none;
   }

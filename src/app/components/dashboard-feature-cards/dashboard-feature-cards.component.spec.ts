@@ -61,11 +61,22 @@ describe('DashboardFeatureCardsComponent', () => {
   });
 
   it('keeps Weak Areas clickable and changes its wording by readiness', () => {
-    expect(cards()[2].textContent).toContain('Finish a few quizzes');
+    expect(cards()[2].textContent).toContain('Find the topics you need to improve');
     fixture.componentRef.setInput('weakAreasReady', true);
     fixture.detectChanges();
     expect(cards()[2].textContent).toContain('Focus on topics you need to improve');
     expect(cards()[2].hasAttribute('disabled')).toBe(false);
+  });
+
+  it('shows a busy state on the Weak Areas card only', () => {
+    const weak = cards()[2];
+    expect(weak.getAttribute('aria-busy')).toBeNull();
+    fixture.componentRef.setInput('weakAreasBusy', true);
+    fixture.detectChanges();
+    expect(weak.getAttribute('aria-busy')).toBe('true');
+    expect(weak.textContent).toContain('Preparing your practice session');
+    expect(weak.hasAttribute('disabled')).toBe(false);
+    expect(cards()[0].getAttribute('aria-busy')).toBeNull();
   });
 
   it('names each card from its visible text and hides decorative arrows', () => {

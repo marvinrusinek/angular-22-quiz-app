@@ -33,6 +33,7 @@
     <button
       type="button"
       class="dfc__card dfc__card--weak"
+      [attr.aria-busy]="weakAreasBusy() ? 'true' : null"
       (click)="practiceWeakAreas.emit()"
     >
       <span class="dfc__icon" aria-hidden="true">
@@ -40,12 +41,12 @@
       </span>
       <span class="dfc__text">
         <span class="dfc__title" i18n>Weak Areas Practice</span>
-        @if (weakAreasReady()) {
+        @if (weakAreasBusy()) {
+          <span class="dfc__desc" i18n>Preparing your practice session…</span>
+        } @else if (weakAreasReady()) {
           <span class="dfc__desc" i18n>Focus on topics you need to improve</span>
         } @else {
-          <span class="dfc__desc" i18n>
-            Finish a few quizzes to find your weak areas
-          </span>
+          <span class="dfc__desc" i18n>Find the topics you need to improve</span>
         }
       </span>
       <mat-icon class="dfc__arrow" aria-hidden="true">arrow_forward</mat-icon>

@@ -546,6 +546,27 @@ export class QuizSelectionComponent implements OnInit {
   // generated. Drives only the card's wording; the action re-checks.
   readonly weakAreasReady = computed(() => this.weakAreas.hasWeakTopics());
 
+  /**
+   * Why Weak Areas Practice can or cannot start, from existing signals only:
+   *  - 'no-history'   nothing recorded yet
+   *  - 'insufficient' attempts exist but no topic has enough answers to judge
+   *  - 'no-weak'      enough data, every judged topic is above the threshold
+   *  - 'ready'        at least one weak topic
+   */
+  readonly weakAreasState = computed<
+    'no-history' | 'insufficient' | 'no-weak' | 'ready'
+  >(() => {
+    if (this.weakAreas.hasWeakTopics()) return 'ready';
+    if (this.weakAreas.mergedAttempts().length === 0) return 'no-history';
+    return this.weakAreas.hasInsufficientData() ? 'insufficient' : 'no-weak';
+  });
+
+  /** True while a Weak Areas session is being started. */
+  readonly weakAreasBusy = signal(false);
+
+  /** Visible explanation under the feature cards; also announced politely. */
+  readonly weakAreasMessage = signal('');
+
   readonly accessedCount = signal(0);
   readonly totalQuizCountSig = signal(0);
   readonly hasAccessedQuizzes = computed(() => this.accessedCount() > 0);
@@ -689,15 +710,54 @@ export class QuizSelectionComponent implements OnInit {
   }
 
   async onPracticeWeakAreas(): Promise<void> {
+    // One start at a time: a second click while loading is ignored.
+    if (this.weakAreasBusy()) return;
+    this.weakAreasMessage.set('');
+
+    const unavailable = this.weakAreasUnavailableMessage();
+    if (unavailable) {
+      this.showWeakAreasMessage(unavailable);
+      return;
+    }
+
+    this.weakAreasBusy.set(true);
+    this.liveAnnouncer.announce($localize`Preparing your practice session`, 'polite');
     try {
-      if (this.weakAreas.hasWeakTopics() && (await this.practiceSession.start())) {
+      // Navigate only after the session exists, so the guard always passes.
+      if (await this.practiceSession.start()) {
         await this.router.navigate(['/practice/weak-areas']);
         return;
       }
-      await this.router.navigate(['/progress']);
+      this.showWeakAreasMessage(this.weakAreasFailureMessage());
     } catch (err: unknown) {
       swallow('quiz-selection.component#weak-areas', err);
+      this.showWeakAreasMessage(this.weakAreasFailureMessage());
+    } finally {
+      this.weakAreasBusy.set(false);
     }
+  }
+
+  private weakAreasUnavailableMessage(): string {
+    switch (this.weakAreasState()) {
+      case 'no-history':
+        return $localize`You have no quiz history yet. Complete a topic quiz to start finding your weak areas.`;
+      case 'insufficient':
+        return $localize`Not enough answers yet. Answer at least 3 questions in a topic so we can find your weak areas.`;
+      case 'no-weak':
+        return $localize`No weak areas right now. Every topic you have practised is above the weak-area threshold.`;
+      default:
+        return '';
+    }
+  }
+
+  private weakAreasFailureMessage(): string {
+    return $localize`We could not load your practice questions. Check your connection and try again.`;
+  }
+
+  /** Shows the text and announces it (LiveAnnouncer re-announces repeats). */
+  private showWeakAreasMessage(message: string): void {
+    this.weakAreasMessage.set(message);
+    this.liveAnnouncer.announce(message, 'polite');
   }
 
   // "12 questions" pill on a topic card, from the catalog metadata. '' (so no

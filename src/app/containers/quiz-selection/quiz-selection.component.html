@@ -113,9 +113,16 @@
     <codelab-dashboard-feature-cards
       class="qd-features"
       [weakAreasReady]="weakAreasReady()"
+      [weakAreasBusy]="weakAreasBusy()"
       (browse)="browseQuizzes('all')"
       (practiceWeakAreas)="onPracticeWeakAreas()"
     />
+
+    <!-- Plain visible text; it is announced once through LiveAnnouncer
+         (polite), so it carries no live role of its own. -->
+    @if (weakAreasMessage(); as weakMessage) {
+      <p class="qd-weak-status">{{ weakMessage }}</p>
+    }
 
     <!-- The Progress page is always available, even before quiz activity. -->
     <p class="progress-entry">

@@ -19,6 +19,10 @@ export class DashboardFeatureCardsComponent {
   /** True when weak topics exist, i.e. a practice session can be started. */
   readonly weakAreasReady = input(false);
 
+  /** True while a Weak Areas session is being started (blocks nothing here;
+   *  the parent ignores clicks, this only reflects the state). */
+  readonly weakAreasBusy = input(false);
+
   /** "Topic Quizzes": scroll to the topic list. */
   readonly browse = output<void>();
 

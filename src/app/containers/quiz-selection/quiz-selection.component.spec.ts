@@ -373,34 +373,139 @@ describe('QuizSelectionComponent — Your Progress visibility gate', () => {
   });
 
   describe('Weak Areas card handler (guarded route)', () => {
-    const wire = (hasWeak: boolean, started: boolean) => {
+    type Wire = {
+      weak?: boolean;
+      attempts?: number;
+      insufficient?: boolean;
+      start?: () => Promise<boolean>;
+    };
+    const wire = (o: Wire = {}) => {
       const comp = setup();
-      jest.spyOn(TestBed.inject(WeakAreasService), 'hasWeakTopics').mockReturnValue(hasWeak);
+      const wa = TestBed.inject(WeakAreasService);
+      jest.spyOn(wa, 'hasWeakTopics').mockReturnValue(o.weak ?? false);
+      jest
+        .spyOn(wa, 'mergedAttempts')
+        .mockReturnValue(new Array(o.attempts ?? 0).fill({}) as never);
+      jest.spyOn(wa, 'hasInsufficientData').mockReturnValue(o.insufficient ?? false);
       const start = jest
         .spyOn(TestBed.inject(PracticeSessionService), 'start')
-        .mockResolvedValue(started);
-      return { comp, start };
+        .mockImplementation(o.start ?? (() => Promise.resolve(true)));
+      const announce = jest
+        .spyOn(TestBed.inject(LiveAnnouncer), 'announce')
+        .mockResolvedValue(undefined);
+      return { comp, start, announce };
     };
+    const neverToProgress = () =>
+      expect(router.navigate).not.toHaveBeenCalledWith(['/progress']);
 
     it('starts the session BEFORE navigating to the guarded route', async () => {
-      const { comp, start } = wire(true, true);
+      const order: string[] = [];
+      const { comp, start } = wire({
+        weak: true,
+        attempts: 3,
+        start: async () => {
+          order.push('start');
+          return true;
+        }
+      });
+      router.navigate.mockImplementation(async () => {
+        order.push('navigate');
+        return true;
+      });
       await comp.onPracticeWeakAreas();
       expect(start).toHaveBeenCalledTimes(1);
+      expect(order).toEqual(['start', 'navigate']);
       expect(router.navigate).toHaveBeenCalledWith(['/practice/weak-areas']);
+      expect(comp.weakAreasMessage()).toBe('');
+      expect(comp.weakAreasBusy()).toBe(false);
     });
 
-    it('falls back to /progress when no session could be generated', async () => {
-      const { comp } = wire(true, false);
-      await comp.onPracticeWeakAreas();
-      expect(router.navigate).toHaveBeenCalledWith(['/progress']);
-      expect(router.navigate).not.toHaveBeenCalledWith(['/practice/weak-areas']);
+    it('classifies the four availability states from existing signals', () => {
+      expect(wire({ weak: true, attempts: 2 }).comp.weakAreasState()).toBe('ready');
+      expect(wire({ attempts: 0 }).comp.weakAreasState()).toBe('no-history');
+      expect(wire({ attempts: 2, insufficient: true }).comp.weakAreasState()).toBe(
+        'insufficient'
+      );
+      expect(wire({ attempts: 2, insufficient: false }).comp.weakAreasState()).toBe(
+        'no-weak'
+      );
     });
 
-    it('never starts a session or visits the route without weak topics', async () => {
-      const { comp, start } = wire(false, true);
+    it.each([
+      ['no-history', { attempts: 0 }, /no quiz history/i],
+      ['insufficient', { attempts: 2, insufficient: true }, /at least 3 questions/i],
+      ['no-weak', { attempts: 2, insufficient: false }, /No weak areas right now/i]
+    ] as [string, Wire, RegExp][])(
+      'stays on the dashboard with a clear message: %s',
+      async (_name, o, text) => {
+        const { comp, start, announce } = wire(o);
+        await comp.onPracticeWeakAreas();
+        expect(start).not.toHaveBeenCalled();
+        expect(router.navigate).not.toHaveBeenCalled();
+        expect(comp.weakAreasMessage()).toMatch(text);
+        expect(announce).toHaveBeenCalledWith(comp.weakAreasMessage(), 'polite');
+      }
+    );
+
+    it('start() returning false shows the failure message and stays put', async () => {
+      const { comp, announce } = wire({
+        weak: true,
+        attempts: 3,
+        start: () => Promise.resolve(false)
+      });
       await comp.onPracticeWeakAreas();
-      expect(start).not.toHaveBeenCalled();
-      expect(router.navigate).toHaveBeenCalledWith(['/progress']);
+      expect(router.navigate).not.toHaveBeenCalled();
+      neverToProgress();
+      expect(comp.weakAreasMessage()).toMatch(/could not load your practice questions/i);
+      expect(announce).toHaveBeenCalledWith(comp.weakAreasMessage(), 'polite');
+      expect(comp.weakAreasBusy()).toBe(false);
+    });
+
+    it('start() throwing is handled the same way and clears busy', async () => {
+      const { comp } = wire({
+        weak: true,
+        attempts: 3,
+        start: () => Promise.reject(new Error('boom'))
+      });
+      await expect(comp.onPracticeWeakAreas()).resolves.toBeUndefined();
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(comp.weakAreasMessage()).toMatch(/could not load your practice questions/i);
+      expect(comp.weakAreasBusy()).toBe(false);
+    });
+
+    it('is busy while starting and ignores duplicate clicks', async () => {
+      let release!: (v: boolean) => void;
+      const { comp, start, announce } = wire({
+        weak: true,
+        attempts: 3,
+        start: () => new Promise<boolean>((r) => (release = r))
+      });
+      const first = comp.onPracticeWeakAreas();
+      expect(comp.weakAreasBusy()).toBe(true);
+      await comp.onPracticeWeakAreas(); // ignored
+      await comp.onPracticeWeakAreas(); // ignored
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(announce).toHaveBeenCalledWith('Preparing your practice session', 'polite');
+      release(true);
+      await first;
+      expect(comp.weakAreasBusy()).toBe(false);
+      expect(router.navigate).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows a retry after a failure and clears the old message', async () => {
+      let ok = false;
+      const { comp, start } = wire({
+        weak: true,
+        attempts: 3,
+        start: () => Promise.resolve(ok)
+      });
+      await comp.onPracticeWeakAreas();
+      expect(comp.weakAreasMessage()).not.toBe('');
+      ok = true;
+      await comp.onPracticeWeakAreas();
+      expect(start).toHaveBeenCalledTimes(2);
+      expect(comp.weakAreasMessage()).toBe('');
+      expect(router.navigate).toHaveBeenCalledWith(['/practice/weak-areas']);
     });
   });
 

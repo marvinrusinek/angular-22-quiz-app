@@ -340,6 +340,18 @@ codelab-quiz-selection {
     margin: 0 0 8px;
   }
 
+  .qd-weak-status {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--qd-border);
+    border-left: 4px solid var(--qd-accent);
+    border-radius: 10px;
+    background: var(--qd-surface);
+    color: var(--qd-text);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
   .progress-entry {
     margin: 6px auto 16px;
     text-align: center;

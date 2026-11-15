@@ -45,11 +45,15 @@ describe('ReturnComponent — Results actions', () => {
     expect(progress.hasAttribute('href')).toBe(true);
   });
 
-  it('keeps the three existing actions, unchanged', () => {
+  it('keeps the remaining actions, unchanged', () => {
     expect(label(byTitle('restart'))).toContain('Restart Quiz');
     expect(label(byTitle('select quiz'))).toContain('Select Quiz');
-    expect(label(byTitle('back to Codelab'))).toContain('Back to Codelab');
-    expect(anchors()).toHaveLength(4);
+    expect(anchors()).toHaveLength(3);
+  });
+
+  it('no longer offers a "Back to Codelab" action or external link', () => {
+    expect(fixture.nativeElement.textContent).not.toContain('Back to Codelab');
+    expect(fixture.nativeElement.querySelector('a[href*="codelab.fun"]')).toBeNull();
   });
 
   it('navigates to /progress when activated, without running the quiz-reset paths', () => {

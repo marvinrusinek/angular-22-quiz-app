@@ -52,7 +52,6 @@ export class ReturnComponent implements OnInit {
 
   // ── remaining variables ─────────────────────────────────────────
   readonly quizId = signal<string>('');
-  readonly codelabUrl = 'https://www.codelab.fun';
 
   ngOnInit(): void {
     this.quizId.set(this.quizService.quizId);

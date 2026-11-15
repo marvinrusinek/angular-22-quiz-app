@@ -304,6 +304,10 @@
     padding: 28px 20px 24px;
     outline-offset: 4px;
   }
+  // styles.scss sets `img { height: auto !important }` on small screens, which
+  // would let these logos grow to their natural size. Keep them at 40px.
+  .ic-cert__logo,
+  .ic-cert__angular { height: 40px !important; }
   .ic-cert__title { font-size: 30px; }
   .ic-cert__name { font-size: 24px; padding: 2px 12px 6px; }
   .ic-cert__facts { grid-template-columns: 1fr; gap: 10px; text-align: center; }

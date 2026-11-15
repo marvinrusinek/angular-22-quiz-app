@@ -717,44 +717,54 @@ describe('QuizSelectionComponent — Your Progress entry point', () => {
     localStorage.clear();
   });
 
-  describe('the entry link', () => {
-    it('is present with NO progress at all — a new user can reach /progress', () => {
+  describe('the old "View Your Progress" link is gone', () => {
+    it('is not rendered, with no progress or with progress', () => {
+      for (const opts of [{}, { engaged: true }]) {
+        const f = render(opts);
+        expect(q(f, 'a.progress-entry__link')).toBeNull();
+        expect(q(f, '.progress-entry')).toBeNull();
+        expect(f.nativeElement.textContent).not.toContain('View Your Progress');
+      }
+    });
+
+    it('a user with no progress has no /progress link on this screen', () => {
       const f = render();
-      const link = q(f, 'a.progress-entry__link') as HTMLAnchorElement;
-      expect(link).not.toBeNull();
-      expect((link.textContent ?? '').trim()).toBe('View Your Progress');
-      expect(link.getAttribute('href')).toBe('/progress');
-      // ...while the gated content is (correctly) still hidden for that same user.
-      expect(q(f, '.achievements-summary-row')).toBeNull();
+      expect(q(f, 'codelab-dashboard-progress')).toBeNull();
+      expect(f.nativeElement.querySelectorAll('a[href="/progress"]')).toHaveLength(0);
     });
+  });
 
-    it('is present WITH progress too', () => {
+  describe('the Your Progress card keeps its "View Progress" link', () => {
+    it('is the single /progress link, a real link to /progress', () => {
       const f = render({ engaged: true });
-      expect(q(f, 'a.progress-entry__link')).not.toBeNull();
-      expect(q(f, '.achievements-summary-row')).not.toBeNull();
-    });
-
-    it('is a real link, and appears exactly once', () => {
-      const f = render({ engaged: true });
-      const links = f.nativeElement.querySelectorAll('a.progress-entry__link');
+      const links = f.nativeElement.querySelectorAll('a[href="/progress"]');
       expect(links).toHaveLength(1);
       expect(links[0].tagName).toBe('A');
+      expect(links[0].classList.contains('dp__link')).toBe(true);
+      expect((links[0].textContent ?? '').replace(/\s+/g, ' ')).toContain('View Progress');
+      expect(q(f, 'codelab-dashboard-progress')?.contains(links[0])).toBe(true);
     });
 
     it('navigates to /progress with NO side effects: no engagement, no storage, no history change', () => {
-      const f = render();
+      const f = render({ engaged: true });
       const before = {
         local: JSON.stringify({ ...localStorage }),
         session: JSON.stringify({ ...sessionStorage })
       };
 
-      (q(f, 'a.progress-entry__link') as HTMLAnchorElement).click();
+      (q(f, 'a.dp__link') as HTMLAnchorElement).click();
 
       expect(navigateByUrl).toHaveBeenCalledTimes(1);
       expect(navigateByUrl.mock.calls[0][0].toString()).toBe('/progress');
       expect(markEngaged).not.toHaveBeenCalled();
       expect(JSON.stringify({ ...localStorage })).toBe(before.local);
       expect(JSON.stringify({ ...sessionStorage })).toBe(before.session);
+    });
+
+    it('still appears with persisted Interview history alone', () => {
+      const f = render({ seed: () => seedInterview() });
+      expect(q(f, 'a.dp__link')).not.toBeNull();
+      expect(q(f, '.achievements-summary-row')).not.toBeNull();
     });
   });
 

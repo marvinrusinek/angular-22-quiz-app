@@ -124,11 +124,6 @@
       <p class="qd-weak-status">{{ weakMessage }}</p>
     }
 
-    <!-- The Progress page is always available, even before quiz activity. -->
-    <p class="progress-entry">
-      <a class="progress-entry__link" routerLink="/progress" i18n>View Your Progress</a>
-    </p>
-
     <!-- Show progress-driven content only after quiz engagement. -->
     @if (showSelectionProgress()) {
       <div class="qd-row" [class.qd-row--single]="difficultyRecommendation()?.level === 'complete'">

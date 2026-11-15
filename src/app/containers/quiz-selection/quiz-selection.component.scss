@@ -340,7 +340,7 @@ codelab-quiz-selection {
 
   // ── entry cards + progress link ─────────────────────────────────────
   .qd-features {
-    margin: 0 0 8px;
+    margin: 0 0 16px;
   }
 
   // All quizzes complete: "Recommended for Review" beside the completion card.
@@ -372,27 +372,6 @@ codelab-quiz-selection {
     color: var(--qd-text);
     font-size: 14px;
     line-height: 1.4;
-  }
-
-  .progress-entry {
-    margin: 6px auto 16px;
-    text-align: center;
-
-    &__link {
-      display: inline-block;
-      padding: 2px 4px;
-      color: var(--qd-accent);
-      font-size: 14px;
-      font-weight: 600;
-      text-decoration: underline;
-      text-underline-offset: 2px;
-
-      &:focus-visible {
-        outline: 3px solid var(--qd-focus);
-        outline-offset: 2px;
-        border-radius: 3px;
-      }
-    }
   }
 
   // ── progress + continue ─────────────────────────────────────────────

@@ -3,7 +3,7 @@ import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading, correct
 
 const PANEL_DETAILS = '.progress-summary';
 const GATED = '.achievements-summary-row';
-const PROGRESS_LINK = 'a.progress-entry__link';
+const PROGRESS_LINK = 'a.dp__link'; // "View Progress" on the Your Progress card
 const TS_TILE = '.quiz-tile:has(.quiz-title:text-is("Fixture Widgets"))';
 const BEST_SCORES_KEY = 'quizBestScores';
 
@@ -116,7 +116,7 @@ test('progress: score persists durably, the dashboard reflects it, gated content
   // ── the gated content is visible for an ENGAGED session ────────────────
   await expect(page.locator(GATED)).toBeVisible();
 
-  // ── the dashboard is a separate page, reached through the always-on link ──
+  // ── the dashboard is a separate page, reached through the card's View Progress link ──
   await page.locator(PROGRESS_LINK).click();
   await expect(page).toHaveURL(/\/progress$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Your Progress' })).toBeVisible();
@@ -183,7 +183,7 @@ test('progress: score persists durably, the dashboard reflects it, gated content
  * The gate from a BRAND-NEW user's starting point.
  *
  * With nothing stored, every source of `showSelectionProgress()` is false, so
- * the screen starts clean (apart from the always-on View Your Progress link).
+ * the screen starts clean (with no progress card or link yet).
  * Engaging then opens the gate — and note that the very act of opening a quiz is
  * itself RECORDED (the quiz is added to the sessionStorage accessed list), so
  * from that point on the gated content survives a reload of this tab. The "clean start" is the state of a user with no stored
@@ -204,9 +204,9 @@ test('progress: a brand-new user starts clean, and engaging opens the gate durab
   }));
   expect(Object.values(stored).every((v) => v === null || v === '{}' || v === '[]')).toBe(true);
 
-  // Fresh load: nothing gated, but the entry point is still offered.
+  // Fresh load: nothing gated, and no progress link (the card is gated too).
   await expect(page.locator(GATED)).toHaveCount(0);
-  await expect(page.locator(PROGRESS_LINK)).toBeVisible();
+  await expect(page.locator(PROGRESS_LINK)).toHaveCount(0);
 
   // Tile click calls onSelect() -> markEngaged(), which opens the gate.
   await page.locator(TS_TILE).click();

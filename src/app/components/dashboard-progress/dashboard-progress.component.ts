@@ -8,7 +8,7 @@ import { ProgressSummary } from '@shared/models';
  * Compact "Your Progress" snapshot for the dashboard. Presentational: it only
  * formats a ProgressSummary the parent already derived from the durable
  * best-score store, so Topic Quiz numbers are never mixed with Interview Mode.
- * The full breakdown stays on the /progress page ("View Details").
+ * The full breakdown stays on the /progress page ("View Progress").
  */
 @Component({
   selector: 'codelab-dashboard-progress',

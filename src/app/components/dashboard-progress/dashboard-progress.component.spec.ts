@@ -75,6 +75,8 @@ describe('DashboardProgressComponent', () => {
     const heading = root().querySelector('h2')!;
     expect(region.getAttribute('aria-labelledby')).toBe(heading.id);
     expect(heading.textContent).toContain('Your Progress');
-    expect(root().querySelector('a.dp__link')?.getAttribute('href')).toBe('/progress');
+    const link = root().querySelector('a.dp__link');
+    expect(link?.getAttribute('href')).toBe('/progress');
+    expect(link?.textContent).toContain('View Progress');
   });
 });

@@ -29,7 +29,8 @@ import { SPRING_HEALTH_URL } from './support/e2e-backends';
 // longer lives there (it is on /progress), so the gate is asserted through the
 // achievements row it continues to control.
 const GATED = '.achievements-summary-row';
-const PROGRESS_LINK = 'a.progress-entry__link';
+// The Your Progress card's link; it only exists once the progress gate is open.
+const PROGRESS_LINK = 'a.dp__link';
 const PANEL_DETAILS = '.progress-summary';
 const INSIGHTS = 'codelab-performance-insights';
 const HISTORY_KEY = 'interviewAttemptHistory:v2';
@@ -122,8 +123,8 @@ test.describe('Your Progress visibility — Interview history alone is sufficien
     expect(Object.values(preState).every((v) => v === null)).toBe(true);
     // No Topic Quiz tile is ever touched anywhere in this test.
     await expect(page.locator(GATED)).toHaveCount(0);
-    // ...but the entry point is always there, even for a user with nothing.
-    await expect(page.locator(PROGRESS_LINK)).toBeVisible();
+    // ...and the card's "View Progress" link is not offered to a user with nothing.
+    await expect(page.locator(PROGRESS_LINK)).toHaveCount(0);
 
     await completeCustomInterview(page);
 

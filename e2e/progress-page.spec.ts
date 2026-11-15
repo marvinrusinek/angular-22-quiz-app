@@ -142,12 +142,14 @@ test.describe('Your Progress page — states', () => {
 
 test.describe('Your Progress page — navigation', () => {
   test('Choose a Quiz and Start an Interview go where they say', async ({ page }) => {
+    await seed(page, { [INTERVIEW_KEY]: INTERVIEW_STORE });
     await openProgress(page);
     await page.getByRole('link', { name: 'Choose a Quiz' }).click();
     await expect(page).toHaveURL(/\/quiz$/);
     await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
 
-    await page.locator('a.progress-entry__link').click();
+    // Quiz Selection's progress card is gated; open the gate with stored history.
+    await page.locator('a.dp__link').click();
     await expect(page).toHaveURL(/\/progress$/);
     await page.getByRole('link', { name: 'Start an Interview' }).click();
     await expect(page).toHaveURL(/\/interview$/);
@@ -160,16 +162,16 @@ test.describe('Your Progress page — navigation', () => {
     await expect(page).toHaveURL(/\/interview\/history$/);
   });
 
-  test('Quiz Selection offers View Your Progress to a brand-new user, and following it changes nothing stored', async ({ page }) => {
+  test('Quiz Selection offers no progress link to a brand-new user; /progress still shows its empty state and nothing is stored', async ({ page }) => {
     await page.goto('/quiz');
     await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
-    // Nothing but the entry point — no "X of N completed" or embedded dashboard.
-    await expect(page.locator('a.progress-entry__link')).toBeVisible();
+    // Nothing embedded, and no entry: the card with "View Progress" is gated.
+    await expect(page.locator('a.progress-entry__link')).toHaveCount(0);
+    await expect(page.locator('a.dp__link')).toHaveCount(0);
     await expect(page.locator('body')).not.toContainText(/\d+ of \d+ completed/);
 
     const before = await page.evaluate(() => JSON.stringify({ l: { ...localStorage }, s: { ...sessionStorage } }));
-    await page.locator('a.progress-entry__link').click();
-    await expect(page).toHaveURL(/\/progress$/);
+    await page.goto('/progress');
     await expect(emptyState(page)).toBeVisible();
     const after = await page.evaluate(() => JSON.stringify({ l: { ...localStorage }, s: { ...sessionStorage } }));
     expect(after).toBe(before);
@@ -192,10 +194,11 @@ test.describe('Your Progress page — navigation', () => {
 
 test.describe('Your Progress page — focus and structure', () => {
   test('moves focus to the heading on entry, and leaving the page still works', async ({ page }) => {
+    await seed(page, { [INTERVIEW_KEY]: INTERVIEW_STORE });
     await page.goto('/quiz');
     await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
 
-    await page.locator('a.progress-entry__link').click();
+    await page.locator('a.dp__link').click();
     await expect(page).toHaveURL(/\/progress$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Your Progress' })).toBeFocused();
 

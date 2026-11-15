@@ -207,6 +207,14 @@
         </div>
       </div>
 
+      <!-- Plain visible text; the same wording is announced once through
+           LiveAnnouncer, so this carries no live role of its own. -->
+      @if (showingCloseMatches()) {
+        <p class="close-match-note" i18n>
+          No exact matches. Showing close matches.
+        </p>
+      }
+
       <!-- LiveAnnouncer handles search results; avoid a second live region here. -->
       @if (quizzes().length > 0 && displayedQuizzes().length === 0) {
         <span class="no-results">

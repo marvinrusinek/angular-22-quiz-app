@@ -496,6 +496,12 @@ codelab-quiz-selection {
     }
   }
 
+  .close-match-note {
+    margin: 12px 0 0;
+    font-size: 14px;
+    color: var(--qd-muted);
+  }
+
   .no-results {
     display: block;
     margin: 18px auto 0;

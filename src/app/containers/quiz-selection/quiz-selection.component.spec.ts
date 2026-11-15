@@ -3029,7 +3029,9 @@ describe('QuizSelectionComponent — search (token matching)', () => {
     expect(found(comp, 'ange')).toEqual([]); // inside "cHANGE Detection"
     expect(found(comp, 'orms')).toEqual([]); // inside "Angular fORMS"
     expect(found(comp, 'forms')).not.toContain('platforms'); // "Platforms" contains "forms" but does not start with it
-    expect(found(comp, 'angularf')).toEqual([]); // words are not run together
+    // "angularf" is "Angular" + the start of "Forms": an EXACT joined match.
+    expect(found(comp, 'angularf')).toEqual(ANGULAR_FORMS);
+    expect(comp.searchMatchMode()).toBe('exact');
   });
 
   it('INTENTIONAL CHANGE: word order and adjacency no longer matter', () => {
@@ -3101,6 +3103,111 @@ describe('QuizSelectionComponent — search (token matching)', () => {
     comp.searchTerm.set('');
     comp.difficultyFilter.set('advanced');
     expect(comp.displayedQuizzes().map((q) => q.quizId).sort()).toEqual(['change-detection', 'dependency-injection-advanced']);
+  });
+
+  describe('typo fallback (close matches)', () => {
+    it('shows close matches only when nothing matches exactly', () => {
+      const comp = setup();
+      comp.searchTerm.set('dependancy');
+      expect(comp.searchMatchMode()).toBe('close');
+      expect(comp.showingCloseMatches()).toBe(true);
+      expect(comp.displayedQuizzes().map((q) => q.quizId)).toEqual([
+        'dependency-injection-advanced'
+      ]);
+    });
+
+    it('never mixes: an exact hit anywhere suppresses fuzzy results', () => {
+      const comp = setup();
+      comp.searchTerm.set('angular');
+      expect(comp.searchMatchMode()).toBe('exact');
+      expect(comp.showingCloseMatches()).toBe(false);
+      expect(found(comp, 'angular').sort()).toEqual(ANGULAR_FORMS);
+    });
+
+    it('a difficulty filter hiding the exact hit does not trigger fuzzy', () => {
+      const comp = setup();
+      comp.searchTerm.set('angular');
+      comp.difficultyFilter.set('advanced');
+      expect(comp.searchMatchMode()).toBe('exact');
+      expect(comp.displayedQuizzes()).toEqual([]);
+      expect(comp.showingCloseMatches()).toBe(false);
+    });
+
+    it('applies the difficulty filter to close matches', () => {
+      const comp = setup();
+      comp.searchTerm.set('detecton');
+      expect(comp.displayedQuizzes().map((q) => q.quizId)).toEqual([
+        'change-detection'
+      ]);
+      comp.difficultyFilter.set('beginner');
+      expect(comp.displayedQuizzes()).toEqual([]);
+      expect(comp.showingCloseMatches()).toBe(false);
+    });
+
+    it('does not fuzzy-match short words or unrelated words', () => {
+      const comp = setup();
+      expect(found(comp, 'chnage')).toEqual(['change-detection']); // swap, 6
+      expect(found(comp, 'fors')).toEqual([]); // 4 letters: swaps only
+      expect(found(comp, 'fmo')).toEqual([]); // 3 letters: exact only
+      expect(found(comp, 'react')).toEqual([]);
+      expect(comp.searchMatchMode()).toBe('exact');
+    });
+
+    it('four-letter swaps are close matches (fomr, tmep, cahn)', () => {
+      const comp = setup();
+      expect(found(comp, 'fomr')).toEqual(ANGULAR_FORMS);
+      expect(comp.searchMatchMode()).toBe('close');
+      expect(found(comp, 'cahn')).toEqual(['change-detection']);
+      expect(comp.searchMatchMode()).toBe('close');
+      expect(comp.searchResultAnnouncementSig()).toBe(
+        'No exact matches. 1 close match shown'
+      );
+    });
+
+    it('joined words are exact matches and suppress fuzzy catalog-wide', () => {
+      const comp = setup();
+      expect(found(comp, 'angularf')).toEqual(ANGULAR_FORMS);
+      expect(comp.searchMatchMode()).toBe('exact');
+      expect(comp.showingCloseMatches()).toBe(false);
+      expect(comp.searchResultAnnouncementSig()).toBe('2 quizzes found');
+      expect(found(comp, 'angularfo')).toEqual(ANGULAR_FORMS);
+      expect(found(comp, 'changede')).toEqual(['change-detection']);
+      expect(comp.searchMatchMode()).toBe('exact');
+      // A joined word uses up the words it spans.
+      expect(found(comp, 'angularf forms')).toEqual([]);
+    });
+
+    it('announces close matches distinctly and exactly once per state', () => {
+      const comp = setup();
+      comp.searchTerm.set('dependancy');
+      expect(comp.searchResultAnnouncementSig()).toBe(
+        'No exact matches. 1 close match shown'
+      );
+      comp.searchTerm.set('angualr');
+      expect(comp.searchResultAnnouncementSig()).toBe(
+        'No exact matches. 2 close matches shown'
+      );
+      comp.searchTerm.set('angular');
+      expect(comp.searchResultAnnouncementSig()).toBe('2 quizzes found');
+      comp.searchTerm.set('');
+      expect(comp.searchResultAnnouncementSig()).toBe('');
+    });
+
+    it('keeps the empty-state message when even fuzzy finds nothing', () => {
+      const comp = setup();
+      comp.searchTerm.set('zzzzzz');
+      expect(comp.displayedQuizzes()).toEqual([]);
+      expect(comp.noResultsMessage()).toBe('No quizzes match your search.');
+    });
+
+    it('inactive searches never enter close mode', () => {
+      const comp = setup();
+      for (const term of ['', '   ', '!!!']) {
+        comp.searchTerm.set(term);
+        expect(comp.searchMatchMode()).toBe('exact');
+        expect(comp.showingCloseMatches()).toBe(false);
+      }
+    });
   });
 
   it('the no-results message still names the search when nothing matches', () => {

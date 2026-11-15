@@ -80,7 +80,11 @@ import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metada
 
 import { SlideLeftToRightAnimation } from '../../animations/animations';
 import { swallow } from '@shared/utils/error-logging';
-import { hasSearchTokens, matchesTitleTokens } from '@shared/utils/quiz-search';
+import {
+  hasSearchTokens,
+  matchesTitleFuzzy,
+  matchesTitleTokens
+} from '@shared/utils/quiz-search';
 
 @Component({
   selector: 'codelab-quiz-selection',
@@ -346,16 +350,42 @@ export class QuizSelectionComponent implements OnInit {
   // filter only decides which quizzes remain; the sort — unchanged — orders
   // whatever remains. Neither step mutates the source array (filter returns a
   // new array; sortQuizzes spreads before sorting).
+  // 'close' only when a search is active, NOTHING in the whole catalog matches
+  // strictly (difficulty is ignored here, so a strict hit hidden by the
+  // difficulty filter never triggers fuzzy results) and at least one title is
+  // a near miss. Strict and typo matches are never mixed.
+  readonly searchMatchMode = computed<'exact' | 'close'>(() => {
+    if (!this.isSearchActive()) return 'exact';
+    const term = this.searchTerm();
+    const catalog = this.quizzes() ?? [];
+    if (catalog.some((quiz) => matchesTitleTokens(quiz?.milestone, term))) {
+      return 'exact';
+    }
+    return catalog.some((quiz) => matchesTitleFuzzy(quiz?.milestone, term))
+      ? 'close'
+      : 'exact';
+  });
+
   readonly displayedQuizzes = computed<Quiz[]>(() => {
     const term = this.searchTerm();
+    const close = this.searchMatchMode() === 'close';
     const difficultyFilter = this.difficultyFilter();
     const difficultyDir = this.sortDifficulty();
     const alphaDir = this.sortAlpha();
     const filtered = (this.quizzes() ?? []).filter(
-      (quiz) => this.matchesSearch(quiz, term) && this.matchesDifficulty(quiz, difficultyFilter)
+      (quiz) =>
+        (close
+          ? matchesTitleFuzzy(quiz?.milestone, term)
+          : this.matchesSearch(quiz, term)) &&
+        this.matchesDifficulty(quiz, difficultyFilter)
     );
     return this.sortQuizzes(filtered, difficultyDir, alphaDir);
   });
+
+  // True while the visible list is the close-match fallback.
+  readonly showingCloseMatches = computed(
+    () => this.searchMatchMode() === 'close' && this.displayedQuizzes().length > 0
+  );
 
   // True while the difficulty filter is narrowing the list (anything but 'all').
   readonly isDifficultyFiltered = computed(() => this.difficultyFilter() !== 'all');
@@ -388,6 +418,11 @@ export class QuizSelectionComponent implements OnInit {
       this.displayedQuizzes().length > 0;
     if (!announceable) return '';
     const n = this.displayedQuizzes().length;
+    if (this.showingCloseMatches()) {
+      return n === 1
+        ? $localize`No exact matches. 1 close match shown`
+        : $localize`No exact matches. ${n} close matches shown`;
+    }
     return n === 1 ? $localize`${n} quiz found` : $localize`${n} quizzes found`;
   });
 

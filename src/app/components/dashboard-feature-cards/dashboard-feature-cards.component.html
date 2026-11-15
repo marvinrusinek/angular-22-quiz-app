@@ -1,0 +1,66 @@
+<ul class="dfc">
+  <li>
+    <button
+      type="button"
+      class="dfc__card dfc__card--topics"
+      (click)="browse.emit()"
+    >
+      <span class="dfc__icon" aria-hidden="true">
+        <mat-icon>layers</mat-icon>
+      </span>
+      <span class="dfc__text">
+        <span class="dfc__title" i18n>Topic Quizzes</span>
+        <span class="dfc__desc" i18n>Practice by Angular topic</span>
+      </span>
+      <mat-icon class="dfc__arrow" aria-hidden="true">arrow_forward</mat-icon>
+    </button>
+  </li>
+  <li>
+    <a class="dfc__card dfc__card--interview" routerLink="/interview">
+      <span class="dfc__icon" aria-hidden="true">
+        <mat-icon>person</mat-icon>
+      </span>
+      <span class="dfc__text">
+        <span class="dfc__title" i18n>Interview Mode</span>
+        <span class="dfc__desc" i18n>
+          Mixed Angular questions like a real interview
+        </span>
+      </span>
+      <mat-icon class="dfc__arrow" aria-hidden="true">arrow_forward</mat-icon>
+    </a>
+  </li>
+  <li>
+    <button
+      type="button"
+      class="dfc__card dfc__card--weak"
+      (click)="practiceWeakAreas.emit()"
+    >
+      <span class="dfc__icon" aria-hidden="true">
+        <mat-icon>track_changes</mat-icon>
+      </span>
+      <span class="dfc__text">
+        <span class="dfc__title" i18n>Weak Areas Practice</span>
+        @if (weakAreasReady()) {
+          <span class="dfc__desc" i18n>Focus on topics you need to improve</span>
+        } @else {
+          <span class="dfc__desc" i18n>
+            Finish a few quizzes to find your weak areas
+          </span>
+        }
+      </span>
+      <mat-icon class="dfc__arrow" aria-hidden="true">arrow_forward</mat-icon>
+    </button>
+  </li>
+  <li>
+    <a class="dfc__card dfc__card--cert" routerLink="/interview/certificate">
+      <span class="dfc__icon" aria-hidden="true">
+        <mat-icon>card_membership</mat-icon>
+      </span>
+      <span class="dfc__text">
+        <span class="dfc__title" i18n>Certificate</span>
+        <span class="dfc__desc" i18n>Earn your Certificate of Achievement</span>
+      </span>
+      <mat-icon class="dfc__arrow" aria-hidden="true">arrow_forward</mat-icon>
+    </a>
+  </li>
+</ul>

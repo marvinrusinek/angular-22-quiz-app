@@ -1,0 +1,168 @@
+:host {
+  display: block;
+}
+
+.dp {
+  height: 100%;
+  padding: 20px 24px;
+  border: 1px solid var(--qd-border, #e3e6f3);
+  border-radius: 16px;
+  background: var(--qd-surface, #fff);
+  box-shadow: 0 2px 10px rgba(40, 50, 120, 0.06);
+  color: var(--qd-text, #1b1f3b);
+  box-sizing: border-box;
+}
+
+.dp__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 18px;
+}
+
+.dp__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.dp__title-icon {
+  color: var(--qd-accent, #4f46e5);
+}
+
+.dp__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  color: var(--qd-accent, #4f46e5);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+    line-height: 18px;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--qd-focus, #4f46e5);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+.dp__stats {
+  display: grid;
+  // minmax(0, 1fr): a long label may wrap but must never widen the page.
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dp__stat {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 0 8px;
+
+  & + & {
+    border-left: 1px solid var(--qd-border, #e3e6f3);
+    padding-left: 16px;
+  }
+}
+
+.dp__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dp__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--dp-icon-bg);
+  color: var(--dp-icon);
+
+  mat-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 26px;
+    line-height: 26px;
+  }
+}
+
+.dp__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dp__value {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.dp__label {
+  color: var(--qd-muted, #4b5170);
+  font-size: 13.5px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.dp__stat--done {
+  --dp-icon-bg: var(--qd-tint-green-icon-bg, #d0eddd);
+  --dp-icon: var(--qd-tint-green-icon, #1c7a44);
+}
+
+.dp__stat--avg {
+  --dp-icon-bg: var(--qd-tint-amber-icon-bg, #fbe9b8);
+  --dp-icon: var(--qd-tint-amber-icon, #9a6200);
+}
+
+.dp__stat--perfect {
+  --dp-icon-bg: var(--qd-tint-violet-icon-bg, #e3d8fa);
+  --dp-icon: var(--qd-tint-violet-icon, #5b3bb8);
+}
+
+// Three stats side by side need room; stack them below a comfortable width.
+@media (max-width: 560px) {
+  .dp__stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dp__stat + .dp__stat {
+    padding-left: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--qd-border, #e3e6f3);
+    border-left: 0;
+  }
+}

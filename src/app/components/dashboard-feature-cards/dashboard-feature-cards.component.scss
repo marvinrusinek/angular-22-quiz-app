@@ -1,0 +1,132 @@
+// Four tinted entry cards. Colours come from --qd-* tokens that the
+// dashboard defines (with a dark variant); fallbacks keep it legible alone.
+:host {
+  display: block;
+}
+
+.dfc {
+  display: grid;
+  // minmax(0, 1fr) is deliberate: nothing in a card may widen the page.
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dfc li {
+  display: flex;
+  min-width: 0;
+}
+
+.dfc__card {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--dfc-border);
+  border-radius: 14px;
+  background: var(--dfc-bg);
+  color: var(--qd-text, #1b1f3b);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(40, 50, 120, 0.14);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--qd-focus, #4f46e5);
+    outline-offset: 2px;
+  }
+}
+
+.dfc__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--dfc-icon-bg);
+  color: var(--dfc-icon);
+
+  mat-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 28px;
+    line-height: 28px;
+  }
+}
+
+.dfc__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.dfc__title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.dfc__desc {
+  color: var(--qd-muted, #4b5170);
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.dfc__arrow {
+  flex: none;
+  color: var(--dfc-icon);
+}
+
+.dfc__card--topics {
+  --dfc-bg: var(--qd-tint-blue, #e8f2ff);
+  --dfc-border: var(--qd-tint-blue-border, #cfe2fb);
+  --dfc-icon-bg: var(--qd-tint-blue-icon-bg, #d3e6fd);
+  --dfc-icon: var(--qd-tint-blue-icon, #1f5fbf);
+}
+
+.dfc__card--interview {
+  --dfc-bg: var(--qd-tint-green, #e7f6ee);
+  --dfc-border: var(--qd-tint-green-border, #c9e8d7);
+  --dfc-icon-bg: var(--qd-tint-green-icon-bg, #d0eddd);
+  --dfc-icon: var(--qd-tint-green-icon, #1c7a44);
+}
+
+.dfc__card--weak {
+  --dfc-bg: var(--qd-tint-amber, #fff6e1);
+  --dfc-border: var(--qd-tint-amber-border, #f3e0ad);
+  --dfc-icon-bg: var(--qd-tint-amber-icon-bg, #fbe9b8);
+  --dfc-icon: var(--qd-tint-amber-icon, #9a6200);
+}
+
+.dfc__card--cert {
+  --dfc-bg: var(--qd-tint-violet, #f1ebfd);
+  --dfc-border: var(--qd-tint-violet-border, #ddd0f7);
+  --dfc-icon-bg: var(--qd-tint-violet-icon-bg, #e3d8fa);
+  --dfc-icon: var(--qd-tint-violet-icon, #5b3bb8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dfc__card {
+    transition: none;
+
+    &:hover {
+      transform: none;
+    }
+  }
+}

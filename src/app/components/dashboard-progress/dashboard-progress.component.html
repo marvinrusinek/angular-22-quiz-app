@@ -1,0 +1,48 @@
+<section class="dp" aria-labelledby="dp-heading">
+  <div class="dp__head">
+    <h2 id="dp-heading" class="dp__title">
+      <mat-icon class="dp__title-icon" aria-hidden="true">bar_chart</mat-icon>
+      <ng-container i18n>Your Progress</ng-container>
+    </h2>
+    <a class="dp__link" routerLink="/progress">
+      <ng-container i18n>View Details</ng-container>
+      <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+    </a>
+  </div>
+
+  <!-- One spoken phrase per stat, as REAL text in a visually hidden group
+       (the pattern this app already uses for its other stat rows); the
+       visible number and label are aria-hidden so nothing is read twice. -->
+  <ul class="dp__stats">
+    <li class="dp__stat dp__stat--done">
+      <span class="dp__sr" role="group">{{ completedLabel() }}</span>
+      <span class="dp__icon" aria-hidden="true">
+        <mat-icon>check_circle_outline</mat-icon>
+      </span>
+      <span class="dp__text" aria-hidden="true">
+        <span class="dp__value">{{ completed() }}</span>
+        <span class="dp__label" i18n>Quizzes Completed</span>
+      </span>
+    </li>
+    <li class="dp__stat dp__stat--avg">
+      <span class="dp__sr" role="group">{{ averageLabel() }}</span>
+      <span class="dp__icon" aria-hidden="true">
+        <mat-icon>emoji_events</mat-icon>
+      </span>
+      <span class="dp__text" aria-hidden="true">
+        <span class="dp__value">{{ average() }}</span>
+        <span class="dp__label" i18n>Average Score</span>
+      </span>
+    </li>
+    <li class="dp__stat dp__stat--perfect">
+      <span class="dp__sr" role="group">{{ perfectLabel() }}</span>
+      <span class="dp__icon" aria-hidden="true">
+        <mat-icon>trending_up</mat-icon>
+      </span>
+      <span class="dp__text" aria-hidden="true">
+        <span class="dp__value">{{ perfect() }}</span>
+        <span class="dp__label" i18n>Perfect Scores</span>
+      </span>
+    </li>
+  </ul>
+</section>

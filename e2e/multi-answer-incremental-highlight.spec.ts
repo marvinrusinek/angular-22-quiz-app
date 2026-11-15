@@ -281,7 +281,7 @@ test.describe('multi-answer highlighting survives a completed-then-re-entered qu
     await page.waitForTimeout(500);
 
     // Leave via the header link (NOT an explicit Restart).
-    await page.locator('a[matTooltip="Back to Codelab Quiz Selection"]').click({ timeout: 15_000 });
+    await page.locator('a[matTooltip="Back to Quiz Selection"]').click({ timeout: 15_000 });
     await page.locator('.quiz-tile:not(.interview-tile)').first().waitFor({ state: 'visible', timeout: 30_000 });
 
     // Re-enter the SAME quiz — a genuinely fresh attempt.

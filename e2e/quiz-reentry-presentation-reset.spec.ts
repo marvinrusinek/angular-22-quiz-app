@@ -104,7 +104,7 @@ test.describe('Quiz re-entry starts a genuinely fresh attempt (presentation AND 
     await page.waitForTimeout(500);
 
     // Leave via the real in-app header link, not a hard navigation.
-    await page.locator('a[matTooltip="Back to Codelab Quiz Selection"]').click({ timeout: 15000 });
+    await page.locator('a[matTooltip="Back to Quiz Selection"]').click({ timeout: 15000 });
     await page.locator('.quiz-tile:not(.interview-tile)').first().waitFor({ state: 'visible', timeout: 30000 });
 
     await enterQuizFromSelection(page, 'Fixture Widgets');
@@ -139,7 +139,7 @@ test.describe('Quiz re-entry starts a genuinely fresh attempt (presentation AND 
     await answerFirstQuestionCorrectly(page);
     await page.waitForTimeout(500);
 
-    await page.locator('a[matTooltip="Back to Codelab Quiz Selection"]').click({ timeout: 15000 });
+    await page.locator('a[matTooltip="Back to Quiz Selection"]').click({ timeout: 15000 });
     await page.locator('.quiz-tile:not(.interview-tile)').first().waitFor({ state: 'visible', timeout: 30000 });
 
     await enterQuizFromSelection(page, 'Fixture Widgets');

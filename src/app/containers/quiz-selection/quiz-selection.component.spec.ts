@@ -3657,3 +3657,91 @@ describe('QuizSelectionComponent — Recommended for Review', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * The old tile slide-in trigger is gone. This renders the real template with
+ * NO animations provider: a leftover `[@trigger]` binding would throw
+ * ("Please include either BrowserAnimationsModule or NoopAnimationsModule").
+ */
+describe('QuizSelectionComponent — renders without the old slide-in animation', () => {
+  const catalog: Array<[id: string, title: string]> = [
+    ['forms', 'Forms'],
+    ['pipes', 'Pipes']
+  ];
+  let navigate: jest.SpyInstance;
+
+  function render(): ComponentFixture<QuizSelectionComponent> {
+    sessionStorage.clear();
+    localStorage.clear();
+    const metadata: any = {
+      load: jest.fn(() => of(catalog.map(([quizId]) => ({ quizId })))),
+      difficultyByQuiz: signal(new Map(catalog.map(([id]) => [id, 'beginner']))),
+      milestoneByQuiz: signal(new Map(catalog.map(([id, tt]) => [id, tt]))),
+      summaryByQuiz: signal(new Map(catalog.map(([id]) => [id, 'About ' + id]))),
+      imageByQuiz: signal(new Map<string, string>()),
+      factsByQuiz: signal(new Map<string, readonly string[]>()),
+      questionCountByQuiz: signal(new Map(catalog.map(([id]) => [id, 5]))),
+      imageFor: () => '',
+      factsFor: () => []
+    };
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        {
+          provide: QuizService,
+          useValue: {
+            setQuizId: jest.fn(),
+            setQuizStatus: jest.fn(),
+            setCompletedQuizId: jest.fn(),
+            setCheckedShuffle: jest.fn(),
+            returnQuizSelectionParams: () => ({ startedQuizId: '', continueQuizId: '', quizCompleted: false }),
+            quizCompleted: false
+          }
+        },
+        {
+          provide: AchievementService,
+          useValue: { evaluate: jest.fn(() => []), summary: () => ({ earned: 0, total: 6 }), earnedIds: () => new Set() }
+        },
+        { provide: ProgressService, useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) } },
+        { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+        { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+        { provide: SessionEngagementService, useValue: { engaged: () => false, markEngaged: jest.fn() } },
+        { provide: TopicQuizMetadataService, useValue: metadata },
+        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } }
+        // NOTE: no provideAnimations / provideNoopAnimations on purpose.
+      ]
+    });
+    navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const f = TestBed.createComponent(QuizSelectionComponent);
+    f.detectChanges();
+    return f;
+  }
+
+  it('renders every topic tile immediately, with no animation machinery', () => {
+    const f = render();
+    const tiles = f.nativeElement.querySelectorAll('.quiz-tile:not(.interview-tile)');
+    expect(tiles).toHaveLength(2);
+    expect(f.componentInstance).not.toHaveProperty('animationStateSig');
+    expect(f.componentInstance).not.toHaveProperty('animationDoneHandler');
+  });
+
+  it('topic tiles stay interactive and open their Introduction', async () => {
+    const f = render();
+    const first = f.nativeElement.querySelector(
+      '.quiz-tile:not(.interview-tile) .quiz-tile__activate'
+    ) as HTMLButtonElement;
+    expect(first.tagName).toBe('BUTTON');
+    first.click();
+    await f.whenStable();
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate.mock.calls[0][0][0]).toBe('intro/');
+  });
+
+  it('re-renders on signal changes without any animation callback', () => {
+    const f = render();
+    f.componentInstance.searchTerm.set('pipes');
+    f.detectChanges();
+    expect(f.nativeElement.querySelectorAll('.quiz-tile:not(.interview-tile)')).toHaveLength(1);
+  });
+});

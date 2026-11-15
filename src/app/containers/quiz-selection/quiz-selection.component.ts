@@ -9,7 +9,6 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { toObservable } from '@angular/core/rxjs-interop';
 import { NgClass, NgOptimizedImage, TitleCasePipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -35,7 +34,6 @@ import {
   AchievementCatalogEntry,
   AchievementId,
   AlphaDirection,
-  AnimationState,
   DifficultyDirection,
   DifficultyFilter,
   Quiz,
@@ -80,7 +78,6 @@ import { CountUpDirective } from '../../directives/count-up.directive';
 
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
 
-import { SlideLeftToRightAnimation } from '../../animations/animations';
 import { swallow } from '@shared/utils/error-logging';
 import { selectReviewCandidate } from '@shared/utils/review-candidate';
 import {
@@ -116,7 +113,6 @@ import {
   ],
   templateUrl: './quiz-selection.component.html',
   styleUrls: ['./quiz-selection.component.scss'],
-  animations: [SlideLeftToRightAnimation.slideLeftToRight],
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -657,9 +653,6 @@ export class QuizSelectionComponent implements OnInit {
       : { headline: msg.slice(0, nl), subline: msg.slice(nl + 1) };
   });
 
-  private animationStateSignal = signal<AnimationState>('none');
-  readonly animationState$ = toObservable(this.animationStateSignal);
-  readonly animationStateSig = this.animationStateSignal.asReadonly();
   readonly selectionParams = signal<QuizSelectionParams | null>(null);
 
   ngOnInit(): void {
@@ -966,10 +959,6 @@ export class QuizSelectionComponent implements OnInit {
         if (this.completedQuizIds().has(quiz.quizId)) return 'done';
         return '';
     }
-  }
-
-  animationDoneHandler(): void {
-    this.animationStateSignal.set('none');
   }
 
   public isCompleted(quiz: any): boolean {

@@ -269,8 +269,6 @@
           <div
             class="quiz-tile"
             [class.completed]="isCompleted(quiz)"
-            [@slideLeftToRight]="animationStateSig()"
-            (@slideLeftToRight.done)="animationDoneHandler()"
             routerLinkActive="active"
           >
             <!-- Use separate eager/lazy image branches: NgOptimizedImage initializes loading only once. Eager tiles do not compete with the priority header logo. -->

@@ -291,7 +291,12 @@
 
 @media (max-width: 600px) {
   .tt-summary { grid-template-columns: repeat(2, 1fr); }
-  .tt-card__metrics { grid-template-columns: 1fr 1fr; }
+  // minmax(0, 1fr): the nowrap hidden labels in each tile must not set the
+  // track width, or the whole page grows wider than the screen.
+  .tt-card__metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  // The history table scrolls inside its own box. Without size containment
+  // its minimum width still widens the page (min-width: 0 does not stop it).
+  .tt-history { contain: inline-size; }
 }
 
 @media (prefers-reduced-motion: reduce) {

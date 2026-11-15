@@ -643,22 +643,10 @@ export class QuizSelectionComponent implements OnInit {
     () => this.totalQuizCountSig() > 0 && this.accessedCount() >= this.totalQuizCountSig()
   );
 
-  readonly accessedQuizLabel = computed(() => (this.accessedCount() === 1 ? 'quiz' : 'quizzes'));
-
-  // Completion banner — reflects ACTUAL achievement state, never implying "all
-  // done" at 4 / 6. Once every topic quiz is accessed it guides the user toward
-  // the remaining achievements (Interview Master → Angular Explorer).
-  readonly accessedBannerMessage = computed(() => {
-    const accessedCount = this.accessedCount();
-
-    if (this.allQuizzesAccessed()) {
-      return achievementCompletionMessage(this.achievementsEarnedIds());
-    }
-
-    return `You accessed ${accessedCount} ${this.accessedQuizLabel()}. Keep going!`;
-  });
-
-  // Split the completion message into a headline (sits inline with the
+  // Completion message — shown only once every topic quiz is accessed, and it
+  // reflects ACTUAL achievement state (never implying "all done" at 4 / 6),
+  // guiding the user toward the remaining achievements (Interview Master →
+  // Angular Explorer). Split into a headline (sits inline with the
   // "Achievements X / N" badge) and a subline (its own centered line below).
   // The message uses '\n' as the split point; states without one are headline-only.
   readonly completionParts = computed(() => {
@@ -708,10 +696,9 @@ export class QuizSelectionComponent implements OnInit {
       // driven pieces on the Quiz Selection screen from here on (until reload).
       this.sessionEngagement.markEngaged();
 
-      // Track this quiz as accessed AT SELECTION TIME so the
-      // "You've accessed N quizzes" / "ALL quizzes accessed" banner
-      // counts every quiz the user has clicked into, not just ones
-      // that reached the results page.
+      // Track this quiz as accessed AT SELECTION TIME so the accessed count
+      // (which keeps the progress gate open) includes every quiz the user has
+      // clicked into, not just ones that reached the results page.
       this.recordQuizAccess(quizId);
 
       // this.quizService.quizId = quizId;

@@ -768,6 +768,49 @@ describe('QuizSelectionComponent — Your Progress entry point', () => {
     });
   });
 
+  describe('no "You accessed N quizzes" message', () => {
+    const quizzesAccessed = (f: ComponentFixture<QuizSelectionComponent>, n: number, of: number) => {
+      f.componentInstance.totalQuizCountSig.set(of);
+      f.componentInstance.accessedCount.set(n);
+      f.detectChanges();
+    };
+
+    it('is never rendered, however many quizzes were accessed', () => {
+      const f = render({ engaged: true });
+      for (const [n, of] of [[0, 20], [1, 20], [5, 20], [19, 20]]) {
+        quizzesAccessed(f, n, of);
+        expect(q(f, '.accessed-banner')).toBeNull();
+        expect(f.nativeElement.textContent).not.toMatch(/You accessed|Keep going/);
+      }
+    });
+
+    it('does not appear next to the Your Progress card (the reported case)', () => {
+      const f = render({ engaged: true });
+      quizzesAccessed(f, 1, 20);
+      expect(q(f, 'codelab-dashboard-progress')).not.toBeNull();
+      expect(f.nativeElement.textContent).not.toContain('You accessed');
+    });
+
+    it('the accessed count still drives the progress gate', () => {
+      const f = render({
+        seed: () => sessionStorage.setItem('startedQuizIds', JSON.stringify(['create-first-app']))
+      });
+      expect(f.componentInstance.accessedCount()).toBe(1);
+      expect(f.componentInstance.hasAccessedQuizzes()).toBe(true);
+      expect(f.componentInstance.showSelectionProgress()).toBe(true);
+      expect(q(f, 'codelab-dashboard-progress')).not.toBeNull();
+    });
+
+    it('keeps the achievement completion message once ALL quizzes are accessed', () => {
+      const f = render({ engaged: true });
+      quizzesAccessed(f, 20, 20);
+      const banner = q(f, '.accessed-banner');
+      expect(banner).not.toBeNull();
+      expect(banner!.textContent).toBe(f.componentInstance.completionParts().headline);
+      expect(banner!.textContent).not.toMatch(/You accessed|Keep going/);
+    });
+  });
+
   describe('the embedded dashboard is gone', () => {
     it.each([
       ['a new user', {}],

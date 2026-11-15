@@ -153,10 +153,8 @@
 
         <app-certificate-earned-badge />
 
-        @if (hasAccessedQuizzes()) {
-          <span class="accessed-banner">{{
-            allQuizzesAccessed() ? completionParts().headline : accessedBannerMessage()
-          }}</span>
+        @if (allQuizzesAccessed()) {
+          <span class="accessed-banner">{{ completionParts().headline }}</span>
         }
       </div>
 

@@ -1,187 +1,62 @@
-@use '../../../variables' as vars;
-@use 'sass:color';
+// Quiz Selection dashboard.
+//
+// ViewEncapsulation.None, so everything here is global: every rule is nested
+// under `.quiz-dashboard` (this component's own root) or uses a `qd-` prefix,
+// so nothing leaks into other pages. The page is FLUID: no fixed widths, and
+// every grid track that can hold long text uses minmax(0, …) so a label can
+// wrap but never widen the page (the cause of the earlier mobile clipping).
 
-.container {
-  margin-top: 1%;
-  margin-bottom: 20px;
-  width: 1100px;
-  height: fit-content;
+// The host element must fill the app shell (`main` is a flex row).
+codelab-quiz-selection {
+  display: block;
+  // The browser's 8px body margin would leave a gutter around the full-bleed
+  // header; cancel it for this page only.
+  width: calc(100% + 16px);
+  margin: -8px;
+}
 
-  // Glassmorphism Effect (matches QuizComponent)
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+.quiz-dashboard {
+  --qd-page-bg: #f5f6fc;
+  --qd-surface: #ffffff;
+  --qd-border: #e3e6f3;
+  --qd-text: #1b1f3b;
+  --qd-muted: #4b5170;
+  --qd-accent: #4f46e5;
+  --qd-accent-soft: #e9ebff;
+  --qd-accent-strong: #3a38c9;
+  --qd-focus: #4f46e5;
+  --qd-shadow: 0 2px 10px rgba(40, 50, 120, 0.07);
+  --qd-pill-bg: #e8ebff;
+  --qd-pill-text: #2f3d99;
 
-  header {
-    height: 100px;
-    display: grid;
-    grid-template-columns: 280px 850px 50px;
-    padding-bottom: 60px;
+  --qd-tint-blue: #e8f2ff;
+  --qd-tint-blue-border: #cfe2fb;
+  --qd-tint-blue-icon-bg: #d3e6fd;
+  --qd-tint-blue-icon: #1f5fbf;
+  --qd-tint-green: #e7f6ee;
+  --qd-tint-green-border: #c9e8d7;
+  --qd-tint-green-icon-bg: #d0eddd;
+  --qd-tint-green-icon: #1c7a44;
+  --qd-tint-amber: #fff6e1;
+  --qd-tint-amber-border: #f3e0ad;
+  --qd-tint-amber-icon-bg: #fbe9b8;
+  --qd-tint-amber-icon: #9a6200;
+  --qd-tint-violet: #f1ebfd;
+  --qd-tint-violet-border: #ddd0f7;
+  --qd-tint-violet-icon-bg: #e3d8fa;
+  --qd-tint-violet-icon: #5b3bb8;
 
-    .logo {
-      padding-top: 20px;
-      padding-left: 30px;
+  min-height: 100vh;
+  background: var(--qd-page-bg);
+  color: var(--qd-text);
+  box-sizing: border-box;
 
-      .header-img {
-        text-align: center;
-        width: 160px;
-        height: 80px;
-        cursor: pointer;
-        background: url('../../../assets/images/codelab_logo.jpeg') no-repeat;
-        background-size: 300px 210px !important;
-      }
-    }
-
-    .intro-titles {
-      text-align: center;
-      margin-left: -200px;
-
-      h1 {
-        font-family: vars.$font-stack;
-        font-weight: vars.$font-weight-max;
-        font-size: 36px;
-        color: vars.$dodger-blue;
-        margin-top: 15px;
-      }
-
-      h4 {
-        font-style: italic;
-        font-size: 18px;
-        margin: 0;
-        // Nudged up ~8px (was -18px) to tighten the header spacing.
-        margin-top: -26px;
-      }
-
-      .version-note {
-        margin: 6px 0 0;
-        font-size: 13px;
-        font-weight: 600;
-        letter-spacing: 0.3px;
-        color: vars.$dodger-blue;
-      }
-    }
-
-    .info {
-      display: flex;
-      align-items: center;      // vertically align the info + theme-toggle icons
-      gap: 14px;
-      margin-top: -50px;
-      margin-left: -125px;
-
-      mat-icon {
-        // Match the dark-mode toggle's footprint (36px button) so the two icons
-        // read as the same size.
-        font-size: 30px;
-        width: 30px;
-        height: 30px;
-        line-height: 30px;
-
-        &:hover {
-          -webkit-transform: scale(1.1);
-          transform: scale(1.1);
-        }
-      }
-    }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
   }
 
-  .toolbar {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 32px;
-    flex-wrap: wrap;
-    width: fit-content;
-    padding-bottom: 10px;
-    margin: 18px auto 0;
-    position: relative;
-
-    button {
-      &:hover {
-        border: 1px solid vars.$dodger-blue;
-      }
-
-      span {
-        font-size: 24px;
-        font-weight: 700;
-        color: vars.$fire-red;
-      }
-    }
-
-    mat-menu button {
-      outline: none !important;
-      border: none !important;
-    }
-
-    .quiz-menu-label {
-      margin-left: 10px;
-    }
-
-    // Difficulty filter + sort buttons, kept together as ONE group so that on a
-    // narrow screen they wrap as a unit (filter on one row, the two sort buttons
-    // on the next) instead of splitting arbitrarily.
-    .toolbar-controls {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      max-width: 100%;
-    }
-  }
-
-  // Override Material menu panel background to white
-  ::ng-deep .mat-mdc-menu-panel {
-    background: white !important;
-  }
-
-  // Milestone menu item styling (::ng-deep needed for mat-menu overlay)
-  ::ng-deep .milestone-menu-item {
-    // Flex container for the button content
-    .milestone-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-    }
-
-    // Direct targeting of the span
-    .milestone-text {
-      text-align: left;
-      flex-grow: 1; // Ensure text takes available space
-    }
-    
-    // Explicit targeting for the completed class
-    .completed-text {
-      text-decoration: line-through !important;
-      opacity: 0.7;
-    }
-
-    .completed-check {
-      color: vars.$green-angular-leaf;
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      margin-left: 12px;
-    }
-  }
-
-  // Empty state shown when the search and/or the difficulty filter leaves no quiz.
-  .no-results {
-    display: block;
-    text-align: center;
-    padding: 24px 20px;
-    margin: 10px auto 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: vars.$gray;
-  }
-
-  // Screen-reader-only content: present in the accessibility tree, removed
-  // from visual layout without display:none (which would also hide it from
-  // assistive tech). Standard clip-based pattern; no layout shift.
   .visually-hidden {
     position: absolute;
     width: 1px;
@@ -194,90 +69,238 @@
     border: 0;
   }
 
-  // "View Your Progress" — the compact, always-available entry to the /progress
-  // page. Same palette blue as the stat numbers beneath it (~6.6:1 on this
-  // surface) and underlined, so it reads as a link without relying on colour.
-  .progress-entry {
-    margin: 0 auto 12px;
-    text-align: center;
+  // ── header ──────────────────────────────────────────────────────────
+  .qd-header {
+    background: var(--qd-surface);
+    border-bottom: 1px solid var(--qd-border);
+  }
 
-    &__link {
-      color: vars.$chambray-blue;
-      font-size: 14px;
-      font-weight: 600;
-      text-decoration: underline;
-      text-underline-offset: 2px;
+  .qd-header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: min(1320px, 100% - 32px);
+    margin: 0 auto;
+    padding: 10px 0;
+  }
 
-      &:focus-visible {
-        outline: 2px solid vars.$chambray-blue;
-        outline-offset: 2px;
-        border-radius: 3px;
-      }
+  .qd-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .qd-brand__img {
+    display: block;
+    flex: none;
+    width: 40px;
+    height: auto;
+  }
+
+  .qd-brand__text {
+    min-width: 0;
+  }
+
+  .qd-brand__name {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--qd-text);
+  }
+
+  .qd-brand__tagline {
+    margin: 2px 0 0;
+    font-size: 14px;
+    color: var(--qd-muted);
+  }
+
+  .qd-header__actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .qd-star {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--qd-border);
+    border-radius: 999px;
+    background: var(--qd-surface);
+    color: var(--qd-text);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+
+    &:hover {
+      border-color: var(--qd-accent);
+      color: var(--qd-accent);
+    }
+
+    &:focus-visible {
+      outline: 3px solid var(--qd-focus);
+      outline-offset: 2px;
     }
   }
 
-  .achievements-summary-row {
+  .qd-star__icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+    color: #f5a623;
+  }
+
+  // In-flow row under the header controls: never overlaps the hero.
+  .qd-star-thanks {
+    width: min(1320px, 100% - 32px);
+    margin: 0 auto;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--qd-text);
+    text-align: right;
+
+    &:not(:empty) {
+      padding: 0 0 4px;
+    }
+  }
+
+  // ── page column ─────────────────────────────────────────────────────
+  .qd-page {
+    width: min(1320px, 100% - 32px);
+    margin: 0 auto;
+    padding: 18px 0 8px;
+  }
+
+  // ── hero ────────────────────────────────────────────────────────────
+  .qd-hero {
+    position: relative;
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;     // on narrow screens let the accessed note reflow instead of squishing the badge
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin: 0 0 16px;
+    padding: 32px 40px;
+    border-radius: 16px;
+    background:
+      radial-gradient(
+        ellipse at 82% 120%,
+        rgba(126, 105, 255, 0.55),
+        transparent 55%
+      ),
+      linear-gradient(110deg, #5b2fb0 0%, #5a3fcf 48%, #3f5bd9 100%);
+    color: #fff;
+    overflow: hidden;
+  }
+
+  .qd-hero__copy {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+    max-width: 980px;
+  }
+
+  .qd-hero__title {
+    margin: 0 0 10px;
+    font-size: clamp(26px, 3.6vw, 40px);
+    font-weight: 800;
+    line-height: 1.15;
+    color: #fff;
+  }
+
+  .qd-hero__sub {
+    margin: 0;
+    font-size: clamp(15px, 1.6vw, 18px);
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.94);
+  }
+
+  .version-note {
+    margin: 10px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .qd-hero__art {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    padding-right: 8px;
+  }
+
+  // Decorative laptop, drawn in CSS: it carries no information.
+  .qd-laptop {
+    width: 230px;
+  }
+
+  .qd-laptop__screen {
+    display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px 16px;       // row/column gap
-    margin: 0 auto 14px;
-
-    // The "Achievements X / N" badge must never shrink — it always stays on one line.
-    codelab-achievements-summary {
-      flex: 0 0 auto;
-    }
-
-    // Mobile: the badge stays on one line; the "You accessed…" note is too long
-    // to sit beside it on a phone, so it reflows to its own CENTERED line below
-    // (cleaner than cramming both onto one tight row).
-    @media (max-width: 600px) {
-      justify-content: center;
-      gap: 6px 12px;
-
-      .accessed-banner {
-        font-size: 13px;
-        width: 100%;
-        text-align: center;
-      }
-    }
+    gap: 12px;
+    height: 128px;
+    border: 5px solid rgba(255, 255, 255, 0.55);
+    border-bottom-width: 7px;
+    border-radius: 10px 10px 0 0;
+    background: linear-gradient(135deg, #1f2a6b, #2e3f9e);
   }
 
-  // Catalog summary stats row
+  .qd-laptop__logo {
+    width: 56px;
+    height: 56px;
+  }
+
+  .qd-laptop__code {
+    font-size: 34px;
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .qd-laptop__base {
+    height: 9px;
+    margin: 0 -14px;
+    border-radius: 0 0 14px 14px;
+    background: rgba(255, 255, 255, 0.6);
+  }
+
+  // Catalog counters, shown as a translucent strip inside the hero.
   .quiz-stats {
     display: flex;
-    justify-content: center;
-    align-items: center;
     flex-wrap: wrap;
-    gap: 22px;
+    align-items: center;
+    gap: 10px 22px;
     width: fit-content;
     max-width: 100%;
-    margin: 22px auto 18px;
-    padding: 12px 26px;
-    background: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.7);
+    margin: 20px 0 0;
+    padding: 10px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(31, 38, 135, 0.15);
-    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.14);
 
     .stat {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
       line-height: 1.05;
-      color: vars.$chambray-blue;
+      color: #fff;
       white-space: nowrap;
 
       .stat-num {
         display: inline-block;
-        font-size: 30px;
+        min-width: 1ch;
+        font-size: 26px;
         font-weight: 800;
         font-variant-numeric: tabular-nums;
-        min-width: 1ch;
 
-        // Scale-bounce added by CountUpDirective when the number finishes counting.
         &.count-up-pop {
           animation: stat-count-pop 380ms ease-out;
         }
@@ -287,576 +310,656 @@
         margin-top: 3px;
         font-size: 12px;
         font-weight: 700;
-        text-transform: uppercase;
         letter-spacing: 0.6px;
-        color: vars.$medium-gray;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.88);
       }
     }
 
-    // On desktop the difficulty group is transparent — its children flow into
-    // the single stats row exactly as before. (On mobile it becomes its own row.)
     .difficulty-stats {
       display: contents;
     }
 
-    // Color-code the difficulty cells to match the tile badges.
-    .stat.level-beginner .stat-num { color: vars.$green-angular-leaf; }
-    .stat.level-intermediate .stat-num { color: vars.$fuel-yellow; }
-    .stat.level-advanced .stat-num { color: vars.$fire-red; }
+    .stat.level-beginner .stat-num {
+      color: #9af2b8;
+    }
 
-    // Tall vertical rule between the stat cells.
+    .stat.level-intermediate .stat-num {
+      color: #ffdc82;
+    }
+
+    .stat.level-advanced .stat-num {
+      color: #ffb9ae;
+    }
+
     .stat-divider {
       width: 2px;
-      height: 46px;
-      background: vars.$medium-gray;
-      opacity: 0.45;
+      height: 40px;
       border-radius: 1px;
+      background: rgba(255, 255, 255, 0.4);
+    }
+  }
+
+  // ── entry cards + progress link ─────────────────────────────────────
+  .qd-features {
+    margin: 0 0 8px;
+  }
+
+  .progress-entry {
+    margin: 6px auto 16px;
+    text-align: center;
+
+    &__link {
+      display: inline-block;
+      padding: 2px 4px;
+      color: var(--qd-accent);
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+
+      &:focus-visible {
+        outline: 3px solid var(--qd-focus);
+        outline-offset: 2px;
+        border-radius: 3px;
+      }
+    }
+  }
+
+  // ── progress + continue ─────────────────────────────────────────────
+  .qd-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+    gap: 16px;
+    margin: 0 0 16px;
+
+    &--single {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .qd-card {
+    min-width: 0;
+    padding: 20px 24px;
+    border: 1px solid var(--qd-border);
+    border-radius: 16px;
+    background: var(--qd-surface);
+    box-shadow: var(--qd-shadow);
+  }
+
+  .qd-card__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--qd-text);
+  }
+
+  .qd-card__title-icon {
+    color: var(--qd-accent);
+  }
+
+  .qd-continue codelab-recommended-next-quiz {
+    display: block;
+    margin-top: 14px;
+  }
+
+  .achievements-summary-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 16px;
+    margin: 0 auto 14px;
+
+    codelab-achievements-summary {
+      flex: 0 0 auto;
     }
   }
 
   .accessed-banner {
-    // Now sits inline to the right of the achievements summary (see
-    // .achievements-summary-row), so no block/auto-centering or padding.
     margin: 0;
     padding: 0;
     font-size: 15px;
     font-weight: 600;
-    color: vars.$green-angular-leaf;
+    color: var(--qd-tint-green-icon);
   }
 
-  // Completion subline — a plain centered block on its OWN line, directly below
-  // the "Achievements X / N  All topic quizzes completed!" row.
   .accessed-subline {
     max-width: 560px;
-    margin: -8px auto 14px;   // pull up close beneath the badge row
+    margin: -8px auto 14px;
     text-align: center;
     font-size: 15px;
     font-weight: 600;
     line-height: 1.4;
-    color: vars.$green-angular-leaf;
+    color: var(--qd-tint-green-icon);
+  }
+
+  // ── browse ──────────────────────────────────────────────────────────
+  .qd-browse {
+    margin: 0 0 16px;
+    padding: 20px 24px 24px;
+  }
+
+  .qd-browse__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px 24px;
+  }
+
+  .toolbar {
+    display: flex;
+    flex: 1 1 420px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    min-width: 0;
+
+    // The search box may shrink to whatever room there is (its own styles
+    // ask for 300px, which does not fit a 320px phone).
+    app-quiz-search {
+      display: block;
+      flex: 1 1 260px;
+      min-width: 0;
+      max-width: 520px;
+    }
+
+    .quiz-search {
+      display: flex;
+      min-width: 0;
+      width: 100%;
+    }
+
+    .search-input {
+      min-width: 0;
+    }
+
+    .toolbar-controls {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      max-width: 100%;
+    }
+  }
+
+  .no-results {
+    display: block;
+    margin: 18px auto 0;
+    padding: 24px 20px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--qd-muted);
   }
 
   .quiz-grid {
-    margin: 10px 0 0 15px;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-column-gap: 20px;
-    grid-row-gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+    gap: 16px;
+    margin: 18px 0 0;
+  }
 
-    .quiz-tile {
+  // ── topic cards ─────────────────────────────────────────────────────
+  .quiz-tile {
+    position: relative;
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    column-gap: 14px;
+    align-items: start;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--qd-border);
+    border-radius: 14px;
+    background: var(--qd-surface);
+    box-shadow: var(--qd-shadow);
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+
+    &:hover {
+      border-color: var(--qd-accent);
+      box-shadow: 0 6px 16px rgba(40, 50, 120, 0.16);
+    }
+
+    &.completed {
+      opacity: 0.72;
+    }
+
+    // Native, full-tile activation control: transparent and covering the whole
+    // card, so the card is one click target and is named by its visible text.
+    .quiz-tile__activate {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      border: none;
+      border-radius: 14px;
+      background: transparent;
+      cursor: pointer;
+
+      &:focus-visible {
+        outline: 3px solid var(--qd-focus);
+        outline-offset: -3px;
+      }
+    }
+
+    .quiz-tile__image {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      width: 76px;
+      height: auto;
+      aspect-ratio: 300 / 210;
+      border-radius: 10px;
+      object-fit: cover;
+      pointer-events: none;
+    }
+
+    .quiz-info {
+      grid-column: 2;
+      grid-row: 1;
+      min-width: 0;
+      padding-right: 34px; // room for the status icon in the corner
+    }
+
+    .quiz-title {
+      margin: 0 0 4px;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.25;
+      color: var(--qd-text);
+      overflow-wrap: anywhere;
+    }
+
+    .quiz-summary {
+      display: -webkit-box;
+      margin: 0 0 10px;
+      overflow: hidden;
+      font-size: 13.5px;
+      font-weight: 400;
+      line-height: 1.4;
+      color: var(--qd-muted);
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .quiz-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 8px;
+    }
+
+    .qd-pill {
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--qd-pill-bg);
+      color: var(--qd-pill-text);
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .difficulty-badge {
       position: relative;
+      z-index: 2;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: #fff;
 
-      // Native, full-tile activation control (see the template comment).
-      // Transparent + absolutely-positioned so it covers exactly the area the
-      // tile has always been clickable across, without touching the layout of
-      // the visible content it sits above. outline-offset is NEGATIVE because
-      // the tile clips overflow — a positive offset would draw the ring
-      // outside the tile and get clipped away.
-      .quiz-tile__activate {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        margin: 0;
+      &.difficulty-beginner {
+        background: #1c7a44;
+      }
+
+      &.difficulty-intermediate {
+        background: #8a5a00;
+      }
+
+      &.difficulty-advanced {
+        background: #a03800;
+      }
+    }
+
+    .status-icon {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 2;
+
+      mat-card-actions {
         padding: 0;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        z-index: 1;
+        margin: 0;
+      }
+
+      a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #1c7a44;
+        color: #fff;
+        text-decoration: none;
 
         &:focus-visible {
-          outline: 3px solid vars.$dodger-blue;
-          outline-offset: -3px;
+          outline: 3px solid var(--qd-focus);
+          outline-offset: 2px;
+        }
+
+        mat-icon {
+          width: 22px;
+          height: 22px;
+          font-size: 22px;
+          line-height: 22px;
         }
       }
+    }
 
-      // Real <img> replacing the old CSS background-image (see the template
-      // comment). Positioned to occupy the EXACT same box the background used
-      // to (center-aligned, 10px from the top, 300x210) so the swap is
-      // pixel-for-pixel invisible. object-fit: fill replicates
-      // `background-size: 300px 210px`'s own non-uniform stretch — the CSS
-      // background never preserved aspect ratio either, so this is not a new
-      // distortion, just the same one via a different mechanism. z-index is
-      // deliberately NOT set: this stays behind both .quiz-tile__activate
-      // (explicit z-index: 1) and the normal-flow text content below it,
-      // which — per standard CSS stacking rules — paints above a positioned
-      // element at the default stacking level regardless of DOM order, the
-      // same way the text already painted above a CSS background. Purely
-      // decorative and never interactive: pointer-events: none so it can
-      // never intercept a click/tap/long-press meant for the tile beneath it.
-      .quiz-tile__image {
-        position: absolute;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 300px;
-        height: 210px;
-        object-fit: fill;
-        pointer-events: none;
-      }
-
-      // Flex column so the difficulty badge can be pinned to the bottom of every
-      // tile (via margin-top:auto) and line up across the row, regardless of how
-      // long each summary is.
+    .quiz-card-footer {
+      grid-column: 2;
+      grid-row: 2;
       display: flex;
-      flex-direction: column;
-      margin: 0 10px 20px 0;
-      width: 320px;
-      // Fixed height so EVERY tile is the same size (long-summary quizzes like
-      // RxJS/Testing/Signals no longer grow taller). The summary is line-clamped
-      // to fit; the footer row is pinned to the bottom via margin-top:auto.
-      height: 375px;
-      overflow: hidden;
-      padding-bottom: 2px;
-      background-color: vars.$off-white;
-      border: 1px solid vars.$black;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+      margin-top: 8px;
+
+      .quiz-card-progress-line {
+        min-width: 0;
+      }
+    }
+
+    .qd-tile-arrow {
+      flex: none;
+      margin-left: auto;
+      color: var(--qd-accent);
+    }
+  }
+
+  // Interview Mode promo, first card of the grid. Kept as a card of its own.
+  .quiz-tile.interview-tile {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 20px;
+    border-color: transparent;
+    background: linear-gradient(135deg, #4527a0 0%, #3f5bd9 100%);
+    color: #fff;
+    cursor: default;
+
+    &:hover {
+      border-color: transparent;
+      box-shadow: 0 8px 20px rgba(63, 91, 217, 0.4);
+    }
+
+    .interview-tile__eyebrow {
+      display: inline-block;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .interview-tile__headline {
+      margin: 0 0 8px;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #fff;
+    }
+
+    .interview-tile__sub {
+      margin: 0;
+      font-size: 14.5px;
+      line-height: 1.4;
+      color: rgba(255, 255, 255, 0.94);
+    }
+
+    .interview-tile__footer {
+      display: flex;
+    }
+
+    .interview-tile__cta {
+      padding: 10px 22px;
+      border: none;
       border-radius: 10px;
+      background: #fff;
+      color: #2d2a8f;
+      font-size: 15px;
+      font-weight: 700;
       cursor: pointer;
 
       &:hover {
-        background-color: vars.$very-light-gray;
-        border: 2px solid vars.$dodger-blue;
-        box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
-        transition: 0.3s;
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
       }
 
-      &:active,
-      &:visited {
-        border: 2px solid vars.$dodger-blue;
-        box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
-        transition: 0.3s;
-      }
-
-      &.completed {
-        opacity: 0.6 !important;
-      }
-
-      .quiz-info {
-        list-style-type: none;
-        margin: 65% 0 0 5px;
-        padding: 10px;
-        width: 370px;
-        // Fixed height + clip so the title/summary region can NEVER grow and
-        // push the footer up. Sized (border-box) to fit a 1-line title + a
-        // 4-line summary without slicing the last line.
-        height: 132px;
-        overflow: hidden;
-
-        .quiz-title {
-          font-size: 18px;
-          font-weight: vars.$font-weight-max;
-          color: vars.$fire-red;
-          // Up 5px (15→10) with 5px of breathing room beneath the title. Zeroing
-          // the default h5 bottom margin (~30px) earlier freed the summary's 4th
-          // line; this keeps a deliberate 5px title-to-summary gap. (Watch the bg
-          // image: its bottom is ~220px and the info block starts ~208px.)
-          margin: 10px 0 5px 0;
-          line-height: 1.2;
-          // Keep the title on ONE line so a long milestone can't wrap to two
-          // lines and push the summary + footer past the fixed tile height
-          // (which is what crowded the footer up against the summary).
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .quiz-summary {
-          font:
-            700 14px 'Helvetica Neue',
-            sans-serif;
-          text-align: justify;
-          line-height: 17px;
-          width: 280px;
-          // Sit directly under the title (the title's default bottom margin is
-          // now zeroed, so no negative pull is needed — a negative margin here
-          // would overlap the title).
-          margin-top: 0;
-          // Trim the default h6 bottom margin (~32px) so the difficulty badge
-          // sits closer under the summary text.
-          margin-bottom: 6px;
-          // Clamp to 4 lines and clip at a CLEAN line boundary (no mid-glyph
-          // "tops of letters" cut). line-clamp is the only reliable way to
-          // truncate without slicing a line, so it shows a trailing "…" when a
-          // summary is longer; the full summary is shown in the Introduction.
-          display: -webkit-box;
-          -webkit-line-clamp: 4;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-      }
-
-      // Bottom row shared by the progress text (left) and the difficulty badge
-      // (right). margin-top:auto pins it to the bottom so every tile's row lines
-      // up regardless of summary length — keeping tile height fixed (one line,
-      // in every progress state) and content above the fold.
-      .quiz-card-footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        margin-top: auto;
-        // Sits close to the bottom border (moved the row back down ~5px and
-        // trimmed the space beneath it).
-        padding: 0 10px 8px;
-
-        .quiz-card-progress-line {
-          min-width: 0;  // truncate rather than grow the row
-          // Nudge right to line up with the summary text, which starts ~5px
-          // further in (the info block has a 5px left margin the footer lacks).
-          margin-left: 5px;
-        }
-      }
-
-      .difficulty-badge {
-        // Sits at the right of the shared bottom row (see .quiz-card-footer).
-        // margin-left:auto keeps it right-aligned even when the progress line
-        // is hidden (fresh load, before the session is engaged).
-        display: block;
-        width: fit-content;
-        margin: 0 0 0 auto;
-        flex: 0 0 auto;
-        z-index: 2;
-        padding: 3px 11px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: vars.$white;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-
-        &.difficulty-beginner {
-          background: vars.$green-angular-leaf;
-        }
-
-        &.difficulty-intermediate {
-          background: vars.$fuel-yellow;
-        }
-
-        &.difficulty-advanced {
-          background: vars.$fire-red;
-        }
-      }
-
-      .status-icon {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        // Above .quiz-tile__activate (z-index: 1) so its own link stays
-        // independently clickable/focusable rather than being swallowed by
-        // the full-tile overlay button.
-        z-index: 2;
-
-        mat-card-actions {
-          padding: 0;
-          margin: 0;
-        }
-
-        a {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          background-color: vars.$green-angular-leaf;
-          color: vars.$white;
-          text-decoration: none;
-          
-          mat-icon {
-            font-size: 24px;
-            width: 24px;
-            height: 24px;
-          }
-        }
+      &:focus-visible {
+        outline: 3px solid #fff;
+        outline-offset: 3px;
       }
     }
   }
 
-  footer {
-    margin-bottom: 5px;
-    padding-top: 50px;
-    padding-bottom: 20px;
+  // ── footer ──────────────────────────────────────────────────────────
+  .qd-footer {
+    padding: 8px 0 24px;
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--qd-muted);
 
-    h3 {
-      font-weight: vars.$font-weight-max;
-      color: vars.$fire-red;
-      text-align: center;
-    }
-
-    a {
-      color: vars.$fire-red;
-      text-decoration: none;
+    p {
+      margin: 0;
     }
   }
 }
 
-/* Extra small devices (portrait phones, max 600px) */
-@media (max-width: 600px) {
-  .container {
-    position: relative;
-    width: 100% !important;
-    max-width: 100vw;
-    padding: 0 12px;
-    box-sizing: border-box;
-    height: fit-content;
+@keyframes stat-count-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
 
-    header {
-      display: flex !important;
-      flex-direction: column !important;
-      align-items: center !important;
-      height: fit-content !important;
-      padding: 10px 0 !important;
-      grid-template-columns: none !important;
+// ── dark theme ────────────────────────────────────────────────────────
+[data-theme='dark'] .quiz-dashboard {
+  --qd-page-bg: #1c1e26;
+  --qd-surface: #2a2d38;
+  --qd-border: #454959;
+  --qd-text: #eceef7;
+  --qd-muted: #b9bed3;
+  --qd-accent: #a3a8ff;
+  --qd-accent-soft: #3b3f66;
+  --qd-accent-strong: #d0d3ff;
+  --qd-focus: #b4b8ff;
+  --qd-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  --qd-pill-bg: #3b3f66;
+  --qd-pill-text: #d0d3ff;
 
-      .logo {
-        width: auto;
-        height: auto;
-        margin-left: 0 !important;
-        padding: 10px 0 !important;
-        padding-left: 0 !important;
-      }
+  --qd-tint-blue: #22344f;
+  --qd-tint-blue-border: #34507a;
+  --qd-tint-blue-icon-bg: #2c4468;
+  --qd-tint-blue-icon: #9cc4ff;
+  --qd-tint-green: #1f3a2e;
+  --qd-tint-green-border: #2f5a46;
+  --qd-tint-green-icon-bg: #28493a;
+  --qd-tint-green-icon: #86dca8;
+  --qd-tint-amber: #43391d;
+  --qd-tint-amber-border: #6a5a2c;
+  --qd-tint-amber-icon-bg: #55481f;
+  --qd-tint-amber-icon: #f3cf6a;
+  --qd-tint-violet: #342b4f;
+  --qd-tint-violet-border: #54468a;
+  --qd-tint-violet-icon-bg: #43386a;
+  --qd-tint-violet-icon: #c9b6ff;
 
-      .intro-titles {
-        text-align: center !important;
-        margin-left: 0 !important;
-        width: 100% !important;
+  .toolbar .quiz-search {
+    background: var(--qd-surface);
+    border-color: var(--qd-border);
+  }
 
-        h1 {
-          margin-left: 0 !important;
-          font-size: 24px !important;
-        }
+  .toolbar .search-input {
+    color: var(--qd-text);
+  }
+}
 
-        h4 {
-          margin-left: 0 !important;
-          margin-top: 5px !important;
-          font-size: 14px !important;
-        }
-      }
-
-      .info {
-        position: fixed !important;
-        top: 10px !important;
-        right: 10px !important;
-        margin: 0 !important;
-        margin-left: 0 !important;
-        z-index: 100;
-      }
+// ── tablet: two columns of cards, stacked progress/continue ──────────
+@media (max-width: 900px) {
+  .quiz-dashboard {
+    .quiz-stats .stat-divider {
+      display: none;
     }
 
-    // All five stats on ONE line on mobile — compressed gap, padding, and fonts
-    // so Quizzes | Questions | Beginner | Intermediate | Advanced fit without
-    // wrapping (the difficulty group flows inline via display: contents).
-    .quiz-stats {
-      flex-wrap: nowrap !important;
-      gap: 5px !important;
-      padding: 8px 6px !important;
-      max-width: 100% !important;
-
-      .stat-num {
-        font-size: 18px !important;
-      }
-
-      .stat-label {
-        font-size: 8px !important;
-        letter-spacing: 0 !important;
-      }
-
-      .stat-divider {
-        width: 1px !important;
-        height: 26px !important;
-      }
-
-      .difficulty-stats {
-        display: contents !important;
-      }
+    .qd-row {
+      grid-template-columns: minmax(0, 1fr);
     }
 
     .toolbar {
-      margin-top: 0;
-      left: 0 !important;
-      position: static !important;
-      margin-left: auto !important;
-      margin-right: auto !important;
-      text-align: center !important;
+      flex-basis: 100%;
+      justify-content: flex-start;
     }
 
-    .quiz-grid {
-      width: 100% !important;
-      padding: 0 !important;
-      margin: 10px 0 0 0 !important;
-      display: flex !important;
-      flex-direction: column !important;
-      align-items: center !important;
-      gap: 16px !important;
+    .toolbar app-quiz-search {
+      max-width: none;
+    }
+  }
+}
 
-      .quiz-tile {
-        width: calc(100% - 24px) !important;
-        max-width: 100% !important;
-        // Let the tile grow to fit the summary + badge instead of the fixed
-        // 375px, which clipped the summary and forced the badge to overlap the
-        // last lines of text on mobile.
-        height: auto !important;
-        min-height: 375px !important;
-        padding-bottom: 8px !important;
-        margin: 0 !important;
-        // At narrow/stacked widths the desktop approach — an absolutely
-        // positioned image plus a magic-number top margin on .quiz-info to
-        // clear it — is exactly the brittle setup that caused the reported
-        // text/image overlap: the offset (previously a fixed 230px) was
-        // tuned for one assumed tile width and silently drifts out of sync
-        // whenever the tile's actual rendered width differs (a narrow
-        // StackBlitz embed, an unusually narrow phone, etc.), since the
-        // absolutely positioned image doesn't participate in the layout the
-        // margin is trying to clear. Switching the image to NORMAL FLOW here
-        // removes the need for any offset at all — .quiz-tile is already
-        // `display: flex; flex-direction: column` (set outside this media
-        // query), so a normal-flow image is simply the first flex child and
-        // .quiz-info flows directly beneath it, at whatever height the image
-        // actually renders at. object-fit stays `fill` (unchanged — see the
-        // base .quiz-tile__image rule) so the image keeps exactly the same
-        // stretch it has always had; only ITS POSITIONING changes here.
-        .quiz-tile__image {
-          position: static !important;
-          top: auto !important;
-          left: auto !important;
-          transform: none !important;
-          display: block !important;
-          width: 100% !important;
-          max-width: 300px !important;
-          height: auto !important;
-          aspect-ratio: 300 / 210 !important;
-          margin: 0 auto !important;
-        }
+// ── phone ─────────────────────────────────────────────────────────────
+@media (max-width: 760px) {
+  .quiz-dashboard {
+    .qd-hero__art {
+      display: none;
+    }
 
-        .quiz-info {
-          margin: 8px 0 0 5px !important;
-          width: calc(100% - 10px) !important;
-          height: auto !important;
-          padding: 10px 10px 2px !important;
-          box-sizing: border-box;
+    .qd-hero {
+      padding: 24px 22px;
+    }
+  }
+}
 
-          .quiz-summary {
-            width: 100% !important;
-            margin-bottom: 0 !important;
-          }
-        }
+@media (max-width: 600px) {
+  .quiz-dashboard {
+    .qd-page,
+    .qd-header__inner,
+    .qd-star-thanks {
+      width: calc(100% - 24px);
+    }
 
-        // Line the progress text up with the summary text on mobile.
-        .quiz-card-footer .quiz-card-progress-line {
-          margin-left: 5px !important;
-        }
+    .qd-header__inner {
+      gap: 8px;
+    }
 
-        // On mobile the badge flows BELOW the summary (right-aligned) instead
-        // of being absolutely pinned over the text, so it never overlaps.
-        .difficulty-badge {
-          position: static !important;
-          display: block !important;
-          width: fit-content !important;
-          margin: 6px 6px 0 auto !important;
-          bottom: auto !important;
-          right: auto !important;
-        }
+    .qd-brand {
+      gap: 10px;
+    }
+
+    .qd-brand__name {
+      font-size: 17px;
+    }
+
+    .qd-brand__tagline {
+      font-size: 12.5px;
+    }
+
+    .qd-brand__img {
+      width: 30px;
+    }
+
+    .qd-header__actions {
+      gap: 8px;
+    }
+
+    .qd-star {
+      padding: 0 10px;
+    }
+
+    .qd-star__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .qd-hero {
+      padding: 20px 16px;
+    }
+
+    .quiz-stats {
+      gap: 8px 16px;
+      padding: 8px 12px;
+
+      .stat-divider {
+        display: none;
+      }
+
+      .stat .stat-num {
+        font-size: 22px;
       }
     }
 
-    footer {
-      width: 100% !important;
-      margin: 0 auto !important;
-      padding-top: 20px !important;
+    .qd-card,
+    .qd-browse {
+      padding: 16px;
+    }
+
+    .qd-card__title {
+      font-size: 18px;
+    }
+
+    .toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .toolbar app-quiz-search {
+      flex-basis: auto;
+    }
+
+    .toolbar .toolbar-controls {
+      justify-content: flex-start;
     }
   }
 }
 
-
-// Scale-bounce for a stat number as it lands (toggled by CountUpDirective).
-@keyframes stat-count-pop {
-  0%   { transform: scale(1); }
-  45%  { transform: scale(1.18); }
-  100% { transform: scale(1); }
-}
-
-// ── Featured Interview Mode card ──────────────────────────────────
-// Same footprint as a topic tile (so the grid layout is preserved) but a
-// distinct accented fill, no background image, and its own body/CTA layout.
-.quiz-grid .quiz-tile.interview-tile {
-  background-color: transparent;
-  background-image: linear-gradient(150deg, #0a3d62 0%, #1e6091 55%, #0b7285 100%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: vars.$white;
-  justify-content: space-between;
-  padding: 24px 22px;
-  cursor: default;
-
-  &:hover {
-    // Keep the accented fill on hover (don't fall back to the tile's gray).
-    background-color: transparent;
-    border: 2px solid vars.$white;
-    box-shadow: 0 10px 22px 0 rgba(0, 0, 0, 0.35);
-    transition: 0.3s;
-  }
-
-  .interview-tile__body {
-    margin-top: 8px;
-  }
-
-  .interview-tile__eyebrow {
-    display: inline-block;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    opacity: 0.85;
-    margin-bottom: 14px;
-  }
-
-  .interview-tile__headline {
-    margin: 0 0 10px;
-    font-size: 26px;
-    font-weight: vars.$font-weight-max;
-    line-height: 1.2;
-    color: vars.$white;
-  }
-
-  .interview-tile__sub {
-    margin: 0;
-    font-size: 15px;
-    opacity: 0.92;
-  }
-
-  .interview-tile__footer {
-    display: flex;
-    justify-content: center;   // center the "Start Building" CTA in the tile
-  }
-
-  .interview-tile__cta {
-    padding: 12px 26px;
-    border: none;
-    border-radius: 10px;
-    background: vars.$white;
-    color: #0a3d62;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
-    }
-
-    &:focus-visible {
-      outline: 3px solid vars.$white;
-      outline-offset: 3px;
-    }
+// Very narrow phones: the tagline would only wrap the brand into a tall block.
+@media (max-width: 420px) {
+  .quiz-dashboard .qd-brand__tagline {
+    display: none;
   }
 }
 
-// The quiz tiles keep a light card in dark mode, so the app's global dark text
-// color leaves the summary washed out and unreadable. Force it dark. This
-// component uses ViewEncapsulation.None, so a plain global [data-theme] selector
-// (not :host-context) is what actually matches here.
-[data-theme='dark'] .quiz-summary {
-  color: #212121 !important;
+@media (prefers-reduced-motion: reduce) {
+  .quiz-dashboard .quiz-tile {
+    transition: none;
+  }
+
+  .quiz-dashboard .quiz-stats .stat .stat-num.count-up-pop {
+    animation: none;
+  }
 }

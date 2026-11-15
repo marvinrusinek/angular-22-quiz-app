@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { WeakAreasService } from '@shared/services/progress/weak-areas.service';
+import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { provideRouter, Router } from '@angular/router';
@@ -368,6 +370,64 @@ describe('QuizSelectionComponent — Your Progress visibility gate', () => {
   beforeEach(() => {
     sessionStorage.clear();
     localStorage.clear();
+  });
+
+  describe('Weak Areas card handler (guarded route)', () => {
+    const wire = (hasWeak: boolean, started: boolean) => {
+      const comp = setup();
+      jest.spyOn(TestBed.inject(WeakAreasService), 'hasWeakTopics').mockReturnValue(hasWeak);
+      const start = jest
+        .spyOn(TestBed.inject(PracticeSessionService), 'start')
+        .mockResolvedValue(started);
+      return { comp, start };
+    };
+
+    it('starts the session BEFORE navigating to the guarded route', async () => {
+      const { comp, start } = wire(true, true);
+      await comp.onPracticeWeakAreas();
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(router.navigate).toHaveBeenCalledWith(['/practice/weak-areas']);
+    });
+
+    it('falls back to /progress when no session could be generated', async () => {
+      const { comp } = wire(true, false);
+      await comp.onPracticeWeakAreas();
+      expect(router.navigate).toHaveBeenCalledWith(['/progress']);
+      expect(router.navigate).not.toHaveBeenCalledWith(['/practice/weak-areas']);
+    });
+
+    it('never starts a session or visits the route without weak topics', async () => {
+      const { comp, start } = wire(false, true);
+      await comp.onPracticeWeakAreas();
+      expect(start).not.toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalledWith(['/progress']);
+    });
+  });
+
+  describe('Star on GitHub thank-you', () => {
+    afterEach(() => jest.useRealTimers());
+
+    it('starts hidden, shows after a click, then clears itself', () => {
+      jest.useFakeTimers();
+      const comp = setup();
+      expect(comp.starThanks()).toBe(false);
+      comp.onStarClick();
+      expect(comp.starThanks()).toBe(true);
+      jest.advanceTimersByTime(8000);
+      expect(comp.starThanks()).toBe(false);
+    });
+
+    it('a second click restarts the timer instead of clearing early', () => {
+      jest.useFakeTimers();
+      const comp = setup();
+      comp.onStarClick();
+      jest.advanceTimersByTime(5000);
+      comp.onStarClick();
+      jest.advanceTimersByTime(5000);
+      expect(comp.starThanks()).toBe(true);
+      jest.advanceTimersByTime(3000);
+      expect(comp.starThanks()).toBe(false);
+    });
   });
 
   it('is HIDDEN with no qualifying state at all', () => {

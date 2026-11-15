@@ -1,290 +1,344 @@
-<div class="container">
-  <header class="row">
-    <div class="logo">
-      <a
-        href="https://www.codelab.fun"
-        title="Angular Codelab"
-        i18n-title
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+<div class="quiz-dashboard">
+  <header class="qd-header">
+    <div class="qd-header__inner">
+      <div class="qd-brand">
+        <!-- Decorative: the adjacent h1 names the product. -->
         <img
-          mat-card-avatar
-          class="header-image"
-          ngSrc="assets/images/codelab_logo.jpeg"
-          width="200"
-          height="113"
-          alt="Angular Codelab logo"
-          priority
+          class="qd-brand__img"
+          src="assets/images/quiz-platform-shield.svg"
+          width="64"
+          height="72"
+          alt=""
         />
-      </a>
-    </div>
+        <div class="qd-brand__text">
+          <h1 class="qd-brand__name" i18n>Angular Quiz Platform</h1>
+          <p class="qd-brand__tagline" i18n>Learn • Practice • Assess • Improve</p>
+        </div>
+      </div>
 
-    <div class="intro-titles">
-      <h1 i18n>Angular Codelab Quiz App</h1>
-      <h4 i18n>How well do you know Angular 22? Find out!</h4>
-      <p class="version-note" i18n>Questions updated for Angular 22</p>
-    </div>
-
-    <div class="info">
-      <a
-        href="https://github.com/codelab-fun/codelab/blob/master/README.md"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <mat-icon
-          class="material-icons"
-          matTooltip="Angular Codelab info"
-          i18n-matTooltip
-          matTooltipPosition="right"
+      <div class="qd-header__actions">
+        <!-- A plain link: opening GitHub does not confirm a star, so the
+             message below only thanks the user. -->
+        <a
+          class="qd-star"
+          href="https://github.com/marvinrusinek/angular-22-quiz-app"
+          target="_blank"
+          rel="noopener noreferrer"
+          (click)="onStarClick()"
         >
-          info
-        </mat-icon>
-      </a>
-      <codelab-theme-toggle class="selection-theme-toggle" />
-    </div>
-  </header>
-
-  @if (quizzes().length > 0) {
-    <div
-      class="quiz-stats"
-      role="status"
-      aria-live="polite"
-    >
-      <!-- Stats use visually hidden grouped text for Narrator; visible animated counters are aria-hidden to avoid duplicate announcements. -->
-      <span class="stat">
-        <span class="visually-hidden" role="group">{{ quizCountAccessibleLabelSig() }}</span>
-        <span class="stat-num" aria-hidden="true" [appCountUp]="quizStats().quizCount" [countUpDelay]="0"></span>
-        <span class="stat-label" aria-hidden="true" i18n>Quizzes</span>
-      </span>
-      <span class="stat-divider" aria-hidden="true"></span>
-      <span class="stat">
-        <span class="visually-hidden" role="group">{{ questionCountAccessibleLabelSig() }}</span>
-        <span class="stat-num" aria-hidden="true" [appCountUp]="quizStats().questionCount" [countUpDelay]="140"></span>
-        <span class="stat-label" aria-hidden="true" i18n>Questions</span>
-      </span>
-      <span class="stat-divider stat-divider--before-levels" aria-hidden="true"></span>
-      <!-- Keep difficulty levels together on mobile without changing desktop layout. -->
-      <div class="difficulty-stats">
-        @for (level of quizStats().levels; track level.key; let i = $index) {
-          @if (i > 0) {
-            <span class="stat-divider" aria-hidden="true"></span>
-          }
-          <span class="stat" [class]="'level-' + level.key">
-            <span class="visually-hidden" role="group">{{ levelAccessibleLabel(level) }}</span>
-            <span class="stat-num" aria-hidden="true" [appCountUp]="level.count" [countUpDelay]="(i + 2) * 140"></span>
-            <span class="stat-label" aria-hidden="true">{{ level.label }}</span>
-          </span>
-        }
+          <mat-icon class="qd-star__icon" aria-hidden="true">star</mat-icon>
+          <span class="qd-star__label" i18n>Star on GitHub</span>
+          <span class="visually-hidden" i18n> (opens in a new tab)</span>
+        </a>
+        <codelab-theme-toggle class="selection-theme-toggle" />
       </div>
     </div>
-  }
 
-  <!-- The Progress page is always available, even before quiz activity. -->
-  <p class="progress-entry">
-    <a class="progress-entry__link" routerLink="/progress" i18n>View Your Progress</a>
-  </p>
-
-  <!-- Show progress-driven content only after quiz engagement. -->
-  @if (showSelectionProgress()) {
-    <div class="achievements-summary-row">
-      <codelab-achievements-summary
-        [earned]="achievementsEarned()"
-        [total]="achievementsTotal()"
-      />
-
-      <app-certificate-earned-badge />
-
-      @if (hasAccessedQuizzes()) {
-        <span class="accessed-banner">{{
-          allQuizzesAccessed() ? completionParts().headline : accessedBannerMessage()
-        }}</span>
+    <p class="qd-star-thanks" role="status">
+      @if (starThanks()) {
+        <ng-container i18n>Thanks for supporting Angular Quiz Platform! ⭐</ng-container>
       }
-    </div>
+    </p>
+  </header>
 
-    @if (hasAccessedQuizzes() && allQuizzesAccessed() && completionParts().subline) {
-      <p class="accessed-subline">{{ completionParts().subline }}</p>
-    }
+  <div class="qd-page">
+    <section class="qd-hero" aria-labelledby="qd-hero-title">
+      <div class="qd-hero__copy">
+        <h2 id="qd-hero-title" class="qd-hero__title" i18n>
+          Master Angular with Interactive Quizzes
+        </h2>
+        <p class="qd-hero__sub" i18n>
+          Topic quizzes, interview practice, and focused review to build your
+          Angular skills.
+        </p>
+        <p class="version-note" i18n>Questions updated for Angular 22</p>
 
-    <!-- Hide the next-quiz recommendation once the completion state is handled by the difficulty card. -->
-    @if (difficultyRecommendation()?.level !== 'complete') {
-      <codelab-recommended-next-quiz
-        [state]="learningPath()"
-        (startQuiz)="onSelect($event, -1)"
+        @if (quizzes().length > 0) {
+          <div
+            class="quiz-stats"
+            role="status"
+            aria-live="polite"
+          >
+            <!-- Stats use visually hidden grouped text for Narrator; visible animated counters are aria-hidden to avoid duplicate announcements. -->
+            <span class="stat">
+              <span class="visually-hidden" role="group">{{ quizCountAccessibleLabelSig() }}</span>
+              <span class="stat-num" aria-hidden="true" [appCountUp]="quizStats().quizCount" [countUpDelay]="0"></span>
+              <span class="stat-label" aria-hidden="true" i18n>Quizzes</span>
+            </span>
+            <span class="stat-divider" aria-hidden="true"></span>
+            <span class="stat">
+              <span class="visually-hidden" role="group">{{ questionCountAccessibleLabelSig() }}</span>
+              <span class="stat-num" aria-hidden="true" [appCountUp]="quizStats().questionCount" [countUpDelay]="140"></span>
+              <span class="stat-label" aria-hidden="true" i18n>Questions</span>
+            </span>
+            <span class="stat-divider stat-divider--before-levels" aria-hidden="true"></span>
+            <!-- Keep difficulty levels together on mobile without changing desktop layout. -->
+            <div class="difficulty-stats">
+              @for (level of quizStats().levels; track level.key; let i = $index) {
+                @if (i > 0) {
+                  <span class="stat-divider" aria-hidden="true"></span>
+                }
+                <span class="stat" [class]="'level-' + level.key">
+                  <span class="visually-hidden" role="group">{{ levelAccessibleLabel(level) }}</span>
+                  <span class="stat-num" aria-hidden="true" [appCountUp]="level.count" [countUpDelay]="(i + 2) * 140"></span>
+                  <span class="stat-label" aria-hidden="true">{{ level.label }}</span>
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Decorative only: nothing here carries information. -->
+      <div class="qd-hero__art" aria-hidden="true">
+        <div class="qd-laptop">
+          <div class="qd-laptop__screen">
+            <img
+              class="qd-laptop__logo"
+              src="assets/images/angular.svg"
+              alt=""
+              width="56"
+              height="56"
+            />
+            <span class="qd-laptop__code">&lt;/&gt;</span>
+          </div>
+          <div class="qd-laptop__base"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Entry cards. "Topic Quizzes" scrolls to the list below; "Weak Areas
+         Practice" starts a session through the existing workflow (never a
+         bare link: the route is guarded). -->
+    <codelab-dashboard-feature-cards
+      class="qd-features"
+      [weakAreasReady]="weakAreasReady()"
+      (browse)="browseQuizzes('all')"
+      (practiceWeakAreas)="onPracticeWeakAreas()"
+    />
+
+    <!-- The Progress page is always available, even before quiz activity. -->
+    <p class="progress-entry">
+      <a class="progress-entry__link" routerLink="/progress" i18n>View Your Progress</a>
+    </p>
+
+    <!-- Show progress-driven content only after quiz engagement. -->
+    @if (showSelectionProgress()) {
+      <div class="qd-row" [class.qd-row--single]="difficultyRecommendation()?.level === 'complete'">
+        <codelab-dashboard-progress [summary]="progressSummary()" />
+
+        <!-- Hide the next-quiz recommendation once the completion state is handled by the difficulty card. -->
+        @if (difficultyRecommendation()?.level !== 'complete') {
+          <section class="qd-card qd-continue" aria-labelledby="qd-continue-title">
+            <h2 id="qd-continue-title" class="qd-card__title">
+              <mat-icon class="qd-card__title-icon" aria-hidden="true">play_circle_outline</mat-icon>
+              <ng-container i18n>Continue Practicing</ng-container>
+            </h2>
+            <codelab-recommended-next-quiz
+              [state]="learningPath()"
+              (startQuiz)="onSelect($event, -1)"
+              (buildInterview)="startBuildingInterview()"
+            />
+          </section>
+        }
+      </div>
+
+      <div class="achievements-summary-row">
+        <codelab-achievements-summary
+          [earned]="achievementsEarned()"
+          [total]="achievementsTotal()"
+        />
+
+        <app-certificate-earned-badge />
+
+        @if (hasAccessedQuizzes()) {
+          <span class="accessed-banner">{{
+            allQuizzesAccessed() ? completionParts().headline : accessedBannerMessage()
+          }}</span>
+        }
+      </div>
+
+      @if (hasAccessedQuizzes() && allQuizzesAccessed() && completionParts().subline) {
+        <p class="accessed-subline">{{ completionParts().subline }}</p>
+      }
+
+      <!-- Difficulty recommendation offers quiz browsing or interview building. -->
+      <codelab-difficulty-recommendation
+        [recommendation]="difficultyRecommendation()"
+        (browse)="browseQuizzes($event)"
         (buildInterview)="startBuildingInterview()"
       />
     }
 
-    <!-- Difficulty recommendation offers quiz browsing or interview building. -->
-    <codelab-difficulty-recommendation
-      [recommendation]="difficultyRecommendation()"
-      (browse)="browseQuizzes($event)"
-      (buildInterview)="startBuildingInterview()"
-    />
-  }
+    <section class="qd-card qd-browse" aria-labelledby="qd-browse-title">
+      <div class="qd-browse__head">
+        <h2 id="qd-browse-title" class="qd-card__title">
+          <mat-icon class="qd-card__title-icon" aria-hidden="true">menu_book</mat-icon>
+          <ng-container i18n>Browse Topic Quizzes</ng-container>
+        </h2>
 
-  <!-- Search, difficulty filtering, and sorting work independently. -->
-  <div class="toolbar">
-    <app-quiz-search
-      [searchTerm]="searchTerm()"
-      (searchTermChange)="onSearchTermChange($event)"
-    ></app-quiz-search>
+        <!-- Search, difficulty filtering, and sorting work independently. -->
+        <div class="toolbar">
+          <app-quiz-search
+            [searchTerm]="searchTerm()"
+            (searchTermChange)="onSearchTermChange($event)"
+          ></app-quiz-search>
 
-    <div class="toolbar-controls">
-      <app-quiz-difficulty-filter
-        [difficulty]="difficultyFilter()"
-        (difficultyChange)="onDifficultyFilterChange($event)"
-      ></app-quiz-difficulty-filter>
+          <div class="toolbar-controls">
+            <app-quiz-difficulty-filter
+              [difficulty]="difficultyFilter()"
+              (difficultyChange)="onDifficultyFilterChange($event)"
+            ></app-quiz-difficulty-filter>
 
-      <app-quiz-sort
-        [difficultyDirection]="sortDifficulty()"
-        (difficultyDirectionChange)="sortDifficulty.set($event)"
-        [alphaDirection]="sortAlpha()"
-        (alphaDirectionChange)="sortAlpha.set($event)"
-      ></app-quiz-sort>
-    </div>
-  </div>
-
-  <!-- LiveAnnouncer handles search results; avoid a second live region here. -->
-  @if (quizzes().length > 0 && displayedQuizzes().length === 0) {
-    <span class="no-results">
-      {{ noResultsMessage() }}
-    </span>
-  }
-
-  <div class="quiz-grid">
-    <!-- Interview Mode is separate from topic quiz counts and achievements. -->
-    <div
-      class="quiz-tile interview-tile"
-      role="group"
-      aria-labelledby="interview-card-title"
-    >
-      <div class="interview-tile__body">
-        <span class="interview-tile__eyebrow" i18n>Interview Mode</span>
-        <h5 id="interview-card-title" class="interview-tile__headline" i18n>
-          Are you interview ready?
-        </h5>
-        <p class="interview-tile__sub" i18n>Build a timed, mixed-topic Angular interview.</p>
+            <app-quiz-sort
+              [difficultyDirection]="sortDifficulty()"
+              (difficultyDirectionChange)="sortDifficulty.set($event)"
+              [alphaDirection]="sortAlpha()"
+              (alphaDirectionChange)="sortAlpha.set($event)"
+            ></app-quiz-sort>
+          </div>
+        </div>
       </div>
-      <div class="interview-tile__footer">
-        <button
-          type="button"
-          class="interview-tile__cta"
-          (click)="startBuildingInterview()"
-          i18n
+
+      <!-- LiveAnnouncer handles search results; avoid a second live region here. -->
+      @if (quizzes().length > 0 && displayedQuizzes().length === 0) {
+        <span class="no-results">
+          {{ noResultsMessage() }}
+        </span>
+      }
+
+      <div class="quiz-grid">
+        <!-- Interview Mode is separate from topic quiz counts and achievements. -->
+        <div
+          class="quiz-tile interview-tile"
+          role="group"
+          aria-labelledby="interview-card-title"
         >
-          Start Building
-        </button>
-      </div>
-    </div>
-
-    @for (quiz of displayedQuizzes(); let i = $index; track quiz?.quizId) {
-      <div
-        class="quiz-tile"
-        [class.completed]="isCompleted(quiz)"
-        [@slideLeftToRight]="animationStateSig()"
-        (@slideLeftToRight.done)="animationDoneHandler()"
-        routerLinkActive="active"
-      >
-        <!-- Use separate eager/lazy image branches: NgOptimizedImage initializes loading only once. Eager tiles do not compete with the priority header logo. -->
-        @if (i < priorityTileCount) {
-          <img
-            class="quiz-tile__image"
-            [ngSrc]="tileImageUrl(quiz)"
-            width="300"
-            height="210"
-            alt=""
-            aria-hidden="true"
-            loading="eager"
-          />
-        } @else {
-          <img
-            class="quiz-tile__image"
-            [ngSrc]="tileImageUrl(quiz)"
-            width="300"
-            height="210"
-            alt=""
-            aria-hidden="true"
-          />
-        }
-
-        <!-- Full-tile button is named by visible content and stays separate from the status link. -->
-        <button
-          type="button"
-          class="quiz-tile__activate"
-          [attr.aria-labelledby]="'quiz-title-' + i + ' quiz-summary-' + i"
-          (click)="onSelect(quiz.quizId, i)"
-        ></button>
-
-        <summary class="quiz-info">
-          <h5
-            [id]="'quiz-title-' + i"
-            class="quiz-title"
-            i18n
-          >
-            {{ quiz?.milestone || 'Milestone not found' }}
-          </h5>
-
-          <h6
-            [id]="'quiz-summary-' + i"
-            class="quiz-summary"
-            i18n
-          >
-            {{ quiz?.summary || 'Summary not found' }}
-          </h6>
-        </summary>
-
-        <div class="status-icon">
-          <mat-card-actions>
-            @if (shouldShowLink(quiz)) {
-              <a
-                (click)="$event.stopPropagation()"
-                [ngClass]="getLinkClass(quiz)"
-                [matTooltip]="getTooltip(quiz)"
-                [attr.aria-label]="getTooltip(quiz)"
-                [routerLink]="getLinkRouterLink(quiz)"
-              >
-                <mat-icon>{{ getIconClass(quiz) }}</mat-icon>
-              </a>
-            }
-          </mat-card-actions>
-        </div>
-
-        <div class="quiz-card-footer">
-          @if (showSelectionProgress()) {
-            @let cardProgress = quizCardProgress().get(quiz.quizId);
-            <codelab-quiz-card-progress
-              class="quiz-card-progress-line"
-              [state]="cardProgress?.state ?? 'not-started'"
-              [bestScore]="cardProgress?.bestScore ?? null"
-            />
-          }
-
-          @if (quiz?.difficulty; as difficulty) {
-            <span
-              class="difficulty-badge"
-              [ngClass]="'difficulty-' + difficulty"
+          <div class="interview-tile__body">
+            <span class="interview-tile__eyebrow" i18n>Interview Mode</span>
+            <h3 id="interview-card-title" class="interview-tile__headline" i18n>
+              Are you interview ready?
+            </h3>
+            <p class="interview-tile__sub" i18n>Build a timed, mixed-topic Angular interview.</p>
+          </div>
+          <div class="interview-tile__footer">
+            <button
+              type="button"
+              class="interview-tile__cta"
+              (click)="startBuildingInterview()"
+              i18n
             >
-              {{ difficulty | titlecase }}
-            </span>
-          }
+              Start Building
+            </button>
+          </div>
         </div>
-      </div>
-    }
-  </div>
 
-  <footer>
-    <h3 i18n>
-      Copyright © 2026
-      <a
-        target="_blank"
-        rel="noopener noreferrer"
-        href="https://www.codelab.fun"
-      >
-        codelab.fun
-      </a>
-    </h3>
-  </footer>
+        @for (quiz of displayedQuizzes(); let i = $index; track quiz?.quizId) {
+          <div
+            class="quiz-tile"
+            [class.completed]="isCompleted(quiz)"
+            [@slideLeftToRight]="animationStateSig()"
+            (@slideLeftToRight.done)="animationDoneHandler()"
+            routerLinkActive="active"
+          >
+            <!-- Use separate eager/lazy image branches: NgOptimizedImage initializes loading only once. Eager tiles do not compete with the priority header logo. -->
+            @if (i < priorityTileCount) {
+              <img
+                class="quiz-tile__image"
+                [ngSrc]="tileImageUrl(quiz)"
+                width="300"
+                height="210"
+                alt=""
+                aria-hidden="true"
+                loading="eager"
+              />
+            } @else {
+              <img
+                class="quiz-tile__image"
+                [ngSrc]="tileImageUrl(quiz)"
+                width="300"
+                height="210"
+                alt=""
+                aria-hidden="true"
+              />
+            }
+
+            <!-- Full-tile button is named by visible content and stays separate from the status link. -->
+            <button
+              type="button"
+              class="quiz-tile__activate"
+              [attr.aria-labelledby]="'quiz-title-' + i + ' quiz-summary-' + i"
+              (click)="onSelect(quiz.quizId, i)"
+            ></button>
+
+            <div class="quiz-info">
+              <h3
+                [id]="'quiz-title-' + i"
+                class="quiz-title"
+                i18n
+              >
+                {{ quiz?.milestone || 'Milestone not found' }}
+              </h3>
+
+              <p
+                [id]="'quiz-summary-' + i"
+                class="quiz-summary"
+                i18n
+              >
+                {{ quiz?.summary || 'Summary not found' }}
+              </p>
+
+              <div class="quiz-meta">
+                @if (questionCountLabel(quiz); as countLabel) {
+                  <span class="qd-pill">{{ countLabel }}</span>
+                }
+                @if (quiz?.difficulty; as difficulty) {
+                  <span
+                    class="difficulty-badge"
+                    [ngClass]="'difficulty-' + difficulty"
+                  >
+                    {{ difficulty | titlecase }}
+                  </span>
+                }
+              </div>
+            </div>
+
+            <div class="status-icon">
+              <mat-card-actions>
+                @if (shouldShowLink(quiz)) {
+                  <a
+                    (click)="$event.stopPropagation()"
+                    [ngClass]="getLinkClass(quiz)"
+                    [matTooltip]="getTooltip(quiz)"
+                    [attr.aria-label]="getTooltip(quiz)"
+                    [routerLink]="getLinkRouterLink(quiz)"
+                  >
+                    <mat-icon>{{ getIconClass(quiz) }}</mat-icon>
+                  </a>
+                }
+              </mat-card-actions>
+            </div>
+
+            <div class="quiz-card-footer">
+              @if (showSelectionProgress()) {
+                @let cardProgress = quizCardProgress().get(quiz.quizId);
+                <codelab-quiz-card-progress
+                  class="quiz-card-progress-line"
+                  [state]="cardProgress?.state ?? 'not-started'"
+                  [bestScore]="cardProgress?.bestScore ?? null"
+                />
+              }
+              <mat-icon class="qd-tile-arrow" aria-hidden="true">arrow_forward</mat-icon>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <footer class="qd-footer">
+      <p i18n>© 2026 Angular Quiz Platform. All rights reserved.</p>
+    </footer>
+  </div>
 </div>
 
 @defer (on idle) {

@@ -4,7 +4,7 @@ import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading, correct
 const PANEL_DETAILS = '.progress-summary';
 const GATED = '.achievements-summary-row';
 const PROGRESS_LINK = 'a.progress-entry__link';
-const TS_TILE = '.quiz-tile:has(h5.quiz-title:text-is("Fixture Widgets"))';
+const TS_TILE = '.quiz-tile:has(.quiz-title:text-is("Fixture Widgets"))';
 const BEST_SCORES_KEY = 'quizBestScores';
 
 /**

@@ -53,6 +53,8 @@ import { CertificateEarnedBadgeComponent } from '../../components/interview/cert
 import { ProgressService } from '@shared/services/progress/progress.service';
 import { BestScoreService } from '@shared/services/progress/best-score.service';
 import { InterviewHistoryService } from '@shared/services/features/interview/interview-history.service';
+import { WeakAreasService } from '@shared/services/progress/weak-areas.service';
+import { PracticeSessionService } from '@shared/services/features/practice/practice-session.service';
 import { LearningPathService } from '@shared/services/features/learning-path/learning-path.service';
 import { DifficultyRecommendationService } from '@shared/services/features/learning-path/difficulty-recommendation.service';
 import { SessionEngagementService } from '@shared/services/state/session-engagement.service';
@@ -70,6 +72,8 @@ import { QuizSortComponent } from '../../components/quiz-sort/quiz-sort.componen
 import { QuizDifficultyFilterComponent } from '../../components/quiz-difficulty-filter/quiz-difficulty-filter.component';
 import { ThemeToggleComponent } from '../../components/theme-toggle/theme-toggle.component';
 import { ScrollDownIndicatorComponent } from '../../components/scroll-down-indicator/scroll-down-indicator.component';
+import { DashboardFeatureCardsComponent } from '../../components/dashboard-feature-cards/dashboard-feature-cards.component';
+import { DashboardProgressComponent } from '../../components/dashboard-progress/dashboard-progress.component';
 import { CountUpDirective } from '../../directives/count-up.directive';
 
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
@@ -98,6 +102,8 @@ import { swallow } from '@shared/utils/error-logging';
     AchievementsSummaryComponent,
     CertificateEarnedBadgeComponent,
     QuizCardProgressComponent,
+    DashboardFeatureCardsComponent,
+    DashboardProgressComponent,
     CountUpDirective
   ],
   templateUrl: './quiz-selection.component.html',
@@ -120,6 +126,8 @@ export class QuizSelectionComponent implements OnInit {
   private readonly warmupCoordinator = inject(InterviewWarmupCoordinatorService);
   private readonly router = inject(Router);
   private readonly liveAnnouncer = inject(LiveAnnouncer);
+  private readonly weakAreas = inject(WeakAreasService);
+  private readonly practiceSession = inject(PracticeSessionService);
 
   // Gates the progress-driven pieces on THIS screen. Shown whenever the user has
   // ACTUAL progress — engaged this session (tile click), OR has accessed quizzes
@@ -525,6 +533,19 @@ export class QuizSelectionComponent implements OnInit {
     return this.difficultyService.recommend(this.quizzes(), this.bestScoreService.getBestScores());
   });
 
+  // "Your Progress" snapshot for the dashboard card: the SAME summary the
+  // /progress page builds (durable best-score store), over this catalog. The
+  // best-score store is not reactive, so touch quizCardProgress() to
+  // re-evaluate whenever progress changes, exactly like the recommendation.
+  readonly progressSummary = computed(() => {
+    this.quizCardProgress();
+    return this.progressService.getProgressSummary(this.quizzes());
+  });
+
+  // True when at least one weak topic exists, i.e. a Weak Areas session can be
+  // generated. Drives only the card's wording; the action re-checks.
+  readonly weakAreasReady = computed(() => this.weakAreas.hasWeakTopics());
+
   readonly accessedCount = signal(0);
   readonly totalQuizCountSig = signal(0);
   readonly hasAccessedQuizzes = computed(() => this.accessedCount() > 0);
@@ -647,7 +668,44 @@ export class QuizSelectionComponent implements OnInit {
   // (e.g. highlighting a level) without changing the recommendation contract.
   browseQuizzes(_difficulty: string): void {
     if (typeof document === 'undefined') return;
-    document.querySelector('.quiz-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const target = document.querySelector('.qd-browse') ?? document.querySelector('.quiz-grid');
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Weak Areas Practice card. The practice route is GUARDED (a session must
+  // exist), so this reuses the established workflow — generate the session,
+  // THEN navigate — exactly as the Your Progress page does. start() returns
+  // false, creating nothing, when there is nothing to practise; the user is
+  // then taken to Your Progress, which explains why, rather than the card
+  // doing nothing. The guard is never bypassed.
+  /** Visible thank-you after the GitHub link is used. Not a star confirmation. */
+  readonly starThanks = signal(false);
+  private starThanksTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onStarClick(): void {
+    this.starThanks.set(true);
+    clearTimeout(this.starThanksTimer);
+    this.starThanksTimer = setTimeout(() => this.starThanks.set(false), 8000);
+  }
+
+  async onPracticeWeakAreas(): Promise<void> {
+    try {
+      if (this.weakAreas.hasWeakTopics() && (await this.practiceSession.start())) {
+        await this.router.navigate(['/practice/weak-areas']);
+        return;
+      }
+      await this.router.navigate(['/progress']);
+    } catch (err: unknown) {
+      swallow('quiz-selection.component#weak-areas', err);
+    }
+  }
+
+  // "12 questions" pill on a topic card, from the catalog metadata. '' (so no
+  // pill) when the count is unknown — never a made-up number.
+  questionCountLabel(quiz: Quiz): string {
+    const n = quiz?.questionCount;
+    if (typeof n !== 'number' || n <= 0) return '';
+    return n === 1 ? $localize`${n} question` : $localize`${n} questions`;
   }
 
   // Tile background image. `quiz.image` comes from assets/data/quiz.json, which

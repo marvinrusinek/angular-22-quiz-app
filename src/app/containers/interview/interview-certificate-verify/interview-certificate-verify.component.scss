@@ -42,6 +42,13 @@
   border-bottom: 1px solid var(--ir-border);
 }
 
+// A single very long word in the claimed name, or in the recipient value,
+// must wrap rather than widen the page past the screen.
+.icv-card strong,
+.icv-facts dd {
+  overflow-wrap: anywhere;
+}
+
 .icv-btn {
   display: inline-flex;
   align-items: center;

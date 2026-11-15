@@ -130,6 +130,9 @@
     border-bottom: 2px solid var(--ic-frame);
     display: inline-block;
     padding: 2px 24px 6px;
+    // A single very long word (a handle, a compound surname) must wrap
+    // rather than widen the certificate past the screen.
+    overflow-wrap: anywhere;
 
     &--placeholder { color: #8a8578; font-style: italic; }
   }

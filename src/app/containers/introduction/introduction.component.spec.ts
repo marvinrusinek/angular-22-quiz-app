@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { firstValueFrom, of, ReplaySubject, Subject } from 'rxjs';
@@ -1196,5 +1198,70 @@ describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 
     const svg = await firstValueFrom(TestBed.inject(MatIconRegistry).getNamedSvgIcon(QUESTION_COUNT_ICON));
     expect(svg.tagName.toLowerCase()).toBe('svg');
     expect(svg.querySelector('path')).not.toBeNull();
+  });
+});
+
+/**
+ * Entrance animation (CSS only). jsdom cannot run CSS animations, so these
+ * assert how the stylesheet is scoped rather than any timing.
+ */
+describe('IntroductionComponent — entrance animation stylesheet', () => {
+  const scss = readFileSync(
+    join(__dirname, 'introduction.component.scss'),
+    'utf8'
+  ).replace(/\r\n/g, '\n');
+
+  /** The body of the @media block that contains the animation. */
+  const motionBlock = (): string => {
+    const start = scss.indexOf('@media (prefers-reduced-motion: no-preference)');
+    expect(start).toBeGreaterThan(-1);
+    let depth = 0;
+    for (let i = scss.indexOf('{', start); i < scss.length; i++) {
+      if (scss[i] === '{') depth++;
+      if (scss[i] === '}' && --depth === 0) return scss.slice(start, i + 1);
+    }
+    throw new Error('unbalanced @media block');
+  };
+
+  it('is scoped to prefers-reduced-motion: no-preference (never runs for reduce)', () => {
+    const outside = scss.replace(motionBlock(), '');
+    expect(outside).not.toMatch(/animation\s*:/);
+    expect(outside).not.toContain('@keyframes introduction-enter');
+    expect(motionBlock()).toMatch(/animation:\s*introduction-enter\s+250ms\s+ease-out/);
+  });
+
+  it('animates only opacity and transform, once, without lingering styles', () => {
+    const block = motionBlock();
+    const keyframes = block.slice(block.indexOf('@keyframes'));
+    const props = [...keyframes.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]);
+    expect(new Set(props)).toEqual(new Set(['opacity', 'transform']));
+    expect(block).not.toMatch(/infinite|animation-iteration-count|animation-delay/);
+    // 'backwards', not 'both'/'forwards': no transform or stacking context remains.
+    expect(block).toMatch(/ease-out\s+backwards/);
+    expect(block).not.toMatch(/\b(forwards|both)\b/);
+  });
+
+  it('targets only the card, not buttons or text', () => {
+    const block = motionBlock();
+    expect(block).toContain(':host ::ng-deep mat-card.quiz-card');
+    expect(block).not.toMatch(/button|mat-card-title|h1|\.mat-mdc-button/);
+  });
+
+  it('keeps the .ng-animating clone-hide workaround exactly as it was', () => {
+    expect(scss).toContain(`:host ::ng-deep .ng-animating {
+  opacity: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+}`);
+  });
+
+  it('uses no Angular animation trigger (the workaround would hide the card)', () => {
+    const ts = readFileSync(join(__dirname, 'introduction.component.ts'), 'utf8');
+    const html = readFileSync(join(__dirname, 'introduction.component.html'), 'utf8');
+    expect(ts).not.toMatch(/animations\s*:|@angular\/animations/);
+    expect(html).not.toMatch(/\[@|\(@|@[a-zA-Z]+\.(start|done)/);
   });
 });

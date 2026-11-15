@@ -3219,3 +3219,171 @@ describe('QuizSelectionComponent — search (token matching)', () => {
     expect(comp.noResultsMessage()).toBe('No quizzes match your search and difficulty filter.');
   });
 });
+
+/**
+ * Recommendation and tile state never promise a resume. Opening a quiz (tile
+ * click / Introduction) is ACCESS tracking only; Topic Quizzes cannot resume,
+ * so nothing may say "Continue" or "In Progress" for an unfinished quiz.
+ * Question 1 navigation from the Introduction is covered by
+ * introduction.component.spec.ts (resetUIAndNavigate(0)).
+ */
+describe('QuizSelectionComponent — no resume promise (recommendation + tile state)', () => {
+  const catalog: Array<[id: string, title: string, difficulty: string]> = [
+    ['create-first-app', 'Create Your First App', 'beginner'],
+    ['templates', 'Templates', 'beginner'],
+    ['directives', 'Directives', 'beginner']
+  ];
+  let router: { navigate: jest.Mock };
+
+  function setup(): QuizSelectionComponent {
+    sessionStorage.clear();
+    localStorage.clear();
+    router = { navigate: jest.fn().mockResolvedValue(true) };
+    const metadata: any = {
+      load: jest.fn(() => of(catalog.map(([quizId]) => ({ quizId })))),
+      difficultyByQuiz: signal(new Map(catalog.map(([id, , d]) => [id, d]))),
+      milestoneByQuiz: signal(new Map(catalog.map(([id, t]) => [id, t]))),
+      summaryByQuiz: signal(new Map(catalog.map(([id]) => [id, 'About ' + id]))),
+      imageByQuiz: signal(new Map<string, string>()),
+      factsByQuiz: signal(new Map<string, readonly string[]>()),
+      questionCountByQuiz: signal(new Map(catalog.map(([id]) => [id, 5]))),
+      imageFor: () => '',
+      factsFor: () => []
+    };
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        QuizSelectionComponent,
+        {
+          provide: QuizService,
+          useValue: {
+            setQuizId: jest.fn(),
+            setQuizStatus: jest.fn(),
+            setCompletedQuizId: jest.fn(),
+            setCheckedShuffle: jest.fn(),
+            returnQuizSelectionParams: () => ({
+              startedQuizId: '',
+              continueQuizId: '',
+              quizCompleted: false
+            }),
+            quizCompleted: false
+          }
+        },
+        {
+          provide: AchievementService,
+          useValue: {
+            evaluate: jest.fn(() => []),
+            summary: () => ({ earned: 0, total: 6 }),
+            earnedIds: () => new Set()
+          }
+        },
+        {
+          provide: ProgressService,
+          useValue: { getProgressSummary: jest.fn(() => ({})), getQuizProgress: jest.fn(() => []) }
+        },
+        { provide: BestScoreService, useValue: { getBestScores: () => ({}) } },
+        { provide: DifficultyRecommendationService, useValue: { recommend: jest.fn(() => null) } },
+        { provide: SessionEngagementService, useValue: { engaged: () => true, markEngaged: jest.fn() } },
+        { provide: TopicQuizMetadataService, useValue: metadata },
+        { provide: InterviewWarmupCoordinatorService, useValue: { warmUp: jest.fn(() => of(undefined)) } },
+        { provide: Router, useValue: router }
+        // LearningPathService is deliberately REAL: it is the unit under test.
+      ]
+    });
+    const comp = TestBed.inject(QuizSelectionComponent);
+    comp.ngOnInit();
+    return comp;
+  }
+
+  const rec = (comp: QuizSelectionComponent) => comp.learningPath().recommendation;
+  const stateOf = (comp: QuizSelectionComponent, id: string) =>
+    comp.quizCardProgress().get(id)?.state;
+  const noResumeWording = (comp: QuizSelectionComponent): void => {
+    const r = rec(comp);
+    expect(r?.actionLabel).toBe('Start Quiz');
+    expect(r?.reason ?? '').not.toMatch(/left off|continue/i);
+  };
+
+  it('never-opened quiz: not started, recommends the intro quiz with "Start Quiz"', () => {
+    const comp = setup();
+    expect(stateOf(comp, 'directives')).toBe('not-started');
+    expect(rec(comp)?.quizId).toBe('create-first-app');
+    noResumeWording(comp);
+    expect(comp.accessedCount()).toBe(0);
+  });
+
+  it('Introduction-only visit: still "Start Quiz"; access is tracked separately', async () => {
+    const comp = setup();
+    await comp.onSelect('directives', 0);
+
+    // Navigates to the Introduction of that quiz (Start there begins at Q1).
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledWith(['intro/', 'directives']);
+
+    // Access tracking is intact: counter + sessionStorage keep the quiz id.
+    expect(comp.accessedCount()).toBe(1);
+    expect(JSON.parse(sessionStorage.getItem('startedQuizIds') ?? '[]')).toEqual([
+      'directives'
+    ]);
+
+    // ...but it is NOT presented as a resumable attempt.
+    expect(stateOf(comp, 'directives')).toBe('not-started');
+    expect(comp.quizCardProgress().get('directives')?.state).not.toBe('in-progress');
+    noResumeWording(comp);
+    for (const [, entry] of comp.quizCardProgress()) {
+      expect(entry.state).not.toBe('in-progress');
+    }
+  });
+
+  it('partially answered quiz: leftover answer data does not create "Continue"', async () => {
+    const comp = setup();
+    await comp.onSelect('directives', 0);
+    // What an abandoned, half-answered run leaves behind.
+    localStorage.setItem('savedQuestionIndex', '3');
+    localStorage.setItem('selectedOptionsMap', JSON.stringify({ 0: [1], 1: [2] }));
+    sessionStorage.setItem('userAnswers', JSON.stringify([1, 2]));
+
+    expect(stateOf(comp, 'directives')).toBe('not-started');
+    noResumeWording(comp);
+    // Opening it again still goes to the Introduction, not a question.
+    await comp.onSelect('directives', 0);
+    expect(router.navigate).toHaveBeenLastCalledWith(['intro/', 'directives']);
+  });
+
+  it('completed quiz: unchanged — completed state, follow-up recommendation, Results', async () => {
+    const comp = setup();
+    sessionStorage.setItem('completedQuizIds', JSON.stringify(['create-first-app']));
+    comp.ngOnInit(); // re-read sessionStorage
+
+    expect(stateOf(comp, 'create-first-app')).toBe('completed');
+    expect(rec(comp)?.quizId).toBe('templates'); // follow-up of the completed quiz
+    noResumeWording(comp);
+
+    await comp.onSelect('create-first-app', 0);
+    expect(router.navigate).toHaveBeenLastCalledWith(['results/', 'create-first-app']);
+  });
+
+  it('accessed-quizzes counter still counts every opened quiz (and completed ones)', async () => {
+    const comp = setup();
+    await comp.onSelect('directives', 0);
+    await comp.onSelect('templates', 1);
+    await comp.onSelect('directives', 0); // same quiz again: no double count
+    expect(comp.accessedCount()).toBe(2);
+    expect(
+      JSON.parse(sessionStorage.getItem('startedQuizIds') ?? '[]').sort()
+    ).toEqual(['directives', 'templates']);
+    // Nothing is promoted to a resumable state.
+    for (const [, entry] of comp.quizCardProgress()) {
+      expect(entry.state).toBe('not-started');
+    }
+  });
+
+  it('the opened quiz is still recommended only on its merits, never as "Continue"', async () => {
+    const comp = setup();
+    sessionStorage.setItem('completedQuizIds', JSON.stringify(['create-first-app', 'templates']));
+    comp.ngOnInit();
+    await comp.onSelect('directives', 0); // opened, not completed
+    expect(rec(comp)?.quizId).toBe('directives'); // next in the topic order
+    noResumeWording(comp);
+  });
+});

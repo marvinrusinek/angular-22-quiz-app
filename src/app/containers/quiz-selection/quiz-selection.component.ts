@@ -541,9 +541,13 @@ export class QuizSelectionComponent implements OnInit {
         completedIds.has(quiz.quizId)
       ) {
         state = 'completed';
-      } else if (quiz.status === QuizStatus.STARTED || quiz.status === QuizStatus.CONTINUE) {
-        state = 'in-progress';
       } else {
+        // STARTED only means the quiz was OPENED (tile click / Introduction
+        // visit, tracked for the "accessed" banner). Topic Quizzes cannot be
+        // resumed: the Introduction's Start always begins again at Question 1.
+        // So an opened-but-unfinished quiz is "not started" here, which keeps
+        // the tile line and the recommendation from implying a resumable
+        // attempt ("In Progress" / "Continue Quiz").
         state = 'not-started';
       }
       map.set(quiz.quizId, { state, bestScore: progress?.bestScore ?? null });

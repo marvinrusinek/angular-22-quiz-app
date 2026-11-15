@@ -10,9 +10,12 @@
 codelab-quiz-selection {
   display: block;
   // The browser's 8px body margin would leave a gutter around the full-bleed
-  // header; cancel it for this page only.
+  // header; cancel it for this page only (top and sides). NOT the bottom: a
+  // negative bottom margin makes the host overflow the body by 8px, and
+  // because html/body have overflow-x: hidden that turns body into a second
+  // vertical scroller.
   width: calc(100% + 16px);
-  margin: -8px;
+  margin: -8px -8px 0;
 }
 
 .quiz-dashboard {

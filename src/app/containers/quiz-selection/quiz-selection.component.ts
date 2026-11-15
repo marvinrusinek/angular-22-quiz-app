@@ -80,6 +80,7 @@ import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metada
 
 import { SlideLeftToRightAnimation } from '../../animations/animations';
 import { swallow } from '@shared/utils/error-logging';
+import { hasSearchTokens, matchesTitleTokens } from '@shared/utils/quiz-search';
 
 @Component({
   selector: 'codelab-quiz-selection',
@@ -225,6 +226,13 @@ export class QuizSelectionComponent implements OnInit {
   // primary grouping, and the alphabetical direction orders quizzes WITHIN
   // each difficulty group.
   readonly searchTerm = signal('');
+
+  // True only when the term has at least one searchable word. Empty,
+  // whitespace-only and punctuation-only terms are inactive searches: they
+  // filter nothing, so they must not drive result or empty-state messages.
+  private readonly isSearchActive = computed(() =>
+    hasSearchTokens(this.searchTerm())
+  );
   readonly sortDifficulty = signal<DifficultyDirection>('asc');
   readonly sortAlpha = signal<AlphaDirection>('az');
 
@@ -307,7 +315,7 @@ export class QuizSelectionComponent implements OnInit {
       return;
     }
     const catalogLoaded = this.quizzes().length > 0;
-    const narrowing = this.searchTerm().trim().length > 0 || this.isDifficultyFiltered();
+    const narrowing = this.isSearchActive() || this.isDifficultyFiltered();
     if (catalogLoaded && narrowing) {
       this.liveAnnouncer.announce(this.noResultsMessage(), 'polite');
     } else {
@@ -356,7 +364,7 @@ export class QuizSelectionComponent implements OnInit {
   // list, so it reads correctly whether zero results came from the search, the
   // difficulty filter, or both together.
   readonly noResultsMessage = computed(() => {
-    const searching = this.searchTerm().trim().length > 0;
+    const searching = this.isSearchActive();
     if (searching && this.isDifficultyFiltered()) {
       return $localize`No quizzes match your search and difficulty filter.`;
     }
@@ -376,7 +384,7 @@ export class QuizSelectionComponent implements OnInit {
    */
   readonly searchResultAnnouncementSig = computed(() => {
     const announceable =
-      (this.searchTerm().trim().length > 0 || this.isDifficultyFiltered()) &&
+      (this.isSearchActive() || this.isDifficultyFiltered()) &&
       this.displayedQuizzes().length > 0;
     if (!announceable) return '';
     const n = this.displayedQuizzes().length;
@@ -906,23 +914,11 @@ export class QuizSelectionComponent implements OnInit {
     );
   }
 
-  // Case-insensitive match against the quiz's milestone/title ONLY (not the
-  // summary or difficulty). An empty term matches everything. Each search word
-  // must be the START of a title word, and the search words must hit CONSECUTIVE
-  // title words in order: "ang" finds "Angular" but NOT "chANGe detection", and
-  // "angular f" finds "Angular Forms" but "forms angular" does not.
+  // Case-insensitive, title-only token match (see matchesTitleTokens): search
+  // words may come in any order, need not be adjacent, and each needs its own
+  // title word that it starts. A term with no words matches everything.
   private matchesSearch(quiz: Quiz, term: string): boolean {
-    const searchWords = term.toLowerCase().match(/[a-z0-9]+/g) ?? [];
-    if (!searchWords.length) return true;
-
-    const titleWords =
-      (quiz?.milestone ?? '').toLowerCase().match(/[a-z0-9]+/g) ?? [];
-
-    return titleWords.some((_, startIndex) =>
-      searchWords.every((searchWord, offset) =>
-        titleWords[startIndex + offset]?.startsWith(searchWord)
-      )
-    );
+    return matchesTitleTokens(quiz?.milestone, term);
   }
 
   // 'all' keeps every quiz (including any with a missing/unknown difficulty);

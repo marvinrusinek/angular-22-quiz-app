@@ -2900,13 +2900,13 @@ describe('QuizSelectionComponent — catalog stats accessible phrase (2026-10-16
 });
 
 /**
- * Search: single-word prefixes AND consecutive multi-word prefixes.
+ * Search: token matching (any order, non-consecutive, distinct title words).
  *
- * Every search word must be the START of a title word, and the search words must hit CONSECUTIVE title words in order
- * ("angular f" finds "Angular Forms"; "forms angular" does not; "forms" does not match inside "Platforms"). Driven through the
- * component's own `searchTerm` / `difficultyFilter` signals and read back from `displayedQuizzes()`.
+ * Every search word must be the START of its own title word; order and adjacency no longer matter
+ * ("angular f" and "forms angular" both find "Angular Forms"; "forms" does not match inside "Platforms").
+ * Driven through the component's own `searchTerm` / `difficultyFilter` signals and read back from `displayedQuizzes()`.
  */
-describe('QuizSelectionComponent — search (single-word and consecutive multi-word prefixes)', () => {
+describe('QuizSelectionComponent — search (token matching)', () => {
   const catalog: Array<[id: string, title: string, difficulty: string]> = [
     ['forms', 'Angular Forms', 'intermediate'],
     ['change-detection', 'Change Detection', 'advanced'],
@@ -2999,11 +2999,11 @@ describe('QuizSelectionComponent — search (single-word and consecutive multi-w
     ['dependency inj', ['dependency-injection-advanced']],
     ['injection adv', ['dependency-injection-advanced']],
     ['change det', ['change-detection']]
-  ])('multi-word "%s" matches consecutive word prefixes', (term, expected) => {
+  ])('multi-word "%s" matches word prefixes', (term, expected) => {
     expect(found(setup(), term)).toEqual(expected);
   });
 
-  it('a multi-word search can match consecutive words that start LATER in a longer title', () => {
+  it('a multi-word search can match words that start LATER in a longer title', () => {
     const comp = setup();
     expect(found(comp, 'with angular f')).toEqual(['getting-started']);
     expect(found(comp, 'started with angular')).toEqual(['getting-started']);
@@ -3032,11 +3032,42 @@ describe('QuizSelectionComponent — search (single-word and consecutive multi-w
     expect(found(comp, 'angularf')).toEqual([]); // words are not run together
   });
 
-  it('keeps word ORDER and ADJACENCY', () => {
+  it('INTENTIONAL CHANGE: word order and adjacency no longer matter', () => {
     const comp = setup();
-    expect(found(comp, 'forms angular')).toEqual([]);
-    expect(found(comp, 'started angular')).toEqual([]); // "with" sits between them
-    expect(found(comp, 'detection change')).toEqual([]);
+    expect(found(comp, 'forms angular')).toEqual(ANGULAR_FORMS);
+    expect(found(comp, 'started angular')).toEqual(['getting-started']);
+    expect(found(comp, 'detection change')).toEqual(['change-detection']);
+    expect(found(comp, 'getting forms')).toEqual(['getting-started']);
+  });
+
+  it('each search word needs its OWN title word', () => {
+    const comp = setup();
+    expect(found(comp, 'angular angular')).toEqual([]);
+    expect(found(comp, 'forms forms')).toEqual([]);
+  });
+
+  it('empty, whitespace-only and punctuation-only searches match all', () => {
+    const comp = setup();
+    expect(found(comp, '   ')).toEqual(ALL);
+    expect(found(comp, '!!!')).toEqual(ALL);
+    expect(found(comp, ' - . , ')).toEqual(ALL);
+  });
+
+  it('a punctuation-only search is inactive: no result announcement', () => {
+    const comp = setup();
+    comp.searchTerm.set('!!!');
+    expect(comp.searchResultAnnouncementSig()).toBe('');
+    comp.searchTerm.set('   ');
+    expect(comp.searchResultAnnouncementSig()).toBe('');
+    comp.searchTerm.set('angular');
+    expect(comp.searchResultAnnouncementSig()).toBe('2 quizzes found');
+    // With only the difficulty filter narrowing, punctuation adds nothing.
+    comp.difficultyFilter.set('advanced');
+    comp.searchTerm.set('!!!');
+    expect(comp.searchResultAnnouncementSig()).toBe('2 quizzes found');
+    expect(comp.noResultsMessage()).toBe(
+      'No quizzes match the selected difficulty.'
+    );
   });
 
   it('a non-matching term shows nothing', () => {
@@ -3074,7 +3105,7 @@ describe('QuizSelectionComponent — search (single-word and consecutive multi-w
 
   it('the no-results message still names the search when nothing matches', () => {
     const comp = setup();
-    comp.searchTerm.set('forms angular');
+    comp.searchTerm.set('zzz angular');
     expect(comp.displayedQuizzes()).toEqual([]);
     expect(comp.noResultsMessage()).toBe('No quizzes match your search.');
     comp.difficultyFilter.set('advanced');

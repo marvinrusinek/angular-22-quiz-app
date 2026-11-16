@@ -93,6 +93,7 @@ export class StatisticsComponent implements OnInit {
   );
 
   readonly minuteLabel = computed(() => (this.elapsedMinutes() === 1 ? 'minute' : 'minutes'));
+  readonly secondLabel = computed(() => (this.elapsedSeconds() === 1 ? 'second' : 'seconds'));
 
   /** Congratulations / Not Bad / Try Again — matches the feedback image's wording. */
   readonly feedbackTitle = computed(() => {
@@ -124,10 +125,12 @@ export class StatisticsComponent implements OnInit {
     [`${this.feedbackTitle()}!`, this.feedbackScoreText()].join('\n')
   );
 
-  readonly elapsedAria = computed(
+  /** The elapsed-time sentence: the visible text and the exposed text share it. */
+  readonly elapsedText = computed(
     () =>
-      $localize`Timer. Completed in ${this.elapsedMinutes()} ${this.minuteLabel()} and ${this.elapsedSeconds()} seconds.`
+      $localize`Completed in ${this.elapsedMinutes()} ${this.minuteLabel()} and ${this.elapsedSeconds()} ${this.secondLabel()}.`
   );
+
 
   CONGRATULATIONS =
     'https://raw.githubusercontent.com/marvinrusinek/angular-9-quiz-app/master/src/assets/images/congratulations.jpg';

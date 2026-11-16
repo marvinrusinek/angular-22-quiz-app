@@ -15,13 +15,19 @@ import {
  *    exactly like it (the subtitle).
  *  - `justify`: one line per visible row, fitted to the visible content box
  *    (the metadata rows with their icons).
+ *  - `cover`: a sentence beside an icon. The sentence is laid out as it is
+ *    wrapped on screen (the same font, normal spacing), one text line per
+ *    visible line, then every line is justified across the WHOLE visible
+ *    content (icon included) and the lines are spread over its height. A
+ *    single visible line becomes two text lines so the box can span the
+ *    icon's height; no blank or no-break-space padding is used.
  *  - `spread`: the width reference's own font and spacing, so the lines wrap
  *    like it, with the line-height spread so the lines span the visible
  *    content's height. For content that is much taller than its text (the
  *    feedback image above its sentence). No letter-spacing: a text range's
  *    rectangles ignore it, so Narrator would draw a far wider box.
  */
-export type IntroExposedTextMode = 'clone' | 'justify' | 'spread';
+export type IntroExposedTextMode = 'clone' | 'justify' | 'spread' | 'cover';
 
 /**
  * The ONE text item a Narrator scan-mode stop on a group exposes.
@@ -155,7 +161,14 @@ export class IntroExposedTextDirective {
     group.style.maxWidth = '100%';
     const ref = visible.querySelector<HTMLElement>('[data-intro-width-ref]');
     const range = document.createRange();
-    if (!ref || typeof range.getClientRects !== 'function') return;
+    if (typeof range.getClientRects !== 'function') return;
+    if (!ref) {
+      // No width reference: the group is as wide as ALL its visible content
+      // (an icon beside its sentence), measured with the group unconstrained.
+      const all = this.contentBox(visible);
+      if (all) group.style.width = `${all.r - all.l + 0.25}px`;
+      return;
+    }
     range.selectNodeContents(ref);
     const lines = Array.from(range.getClientRects()).filter((r) => r.width > 0 && r.height > 0);
     if (!lines.length) return;
@@ -171,7 +184,11 @@ export class IntroExposedTextDirective {
     group: HTMLElement
   ): void {
     const style = this.host.style;
-    const ref = group.querySelector<HTMLElement>('[data-intro-width-ref]');
+    // Typography comes from the width reference, else from a font-only
+    // reference (data-intro-font-ref), so the lines wrap like the visible text.
+    const ref =
+      group.querySelector<HTMLElement>('[data-intro-width-ref]') ??
+      group.querySelector<HTMLElement>('[data-intro-font-ref]');
     const cs = ref ? getComputedStyle(ref) : getComputedStyle(this.host);
     Object.assign(style, {
       whiteSpace: 'pre-line',
@@ -191,6 +208,94 @@ export class IntroExposedTextDirective {
     const lines = this.lineCount();
     const H = box.b - box.t;
     const lineHeight = lines > 1 ? (H - probe.ca) / (lines - 1) : H;
+    style.lineHeight = `${lineHeight}px`;
+    style.top = `${-(lineHeight - probe.ca) / 2}px`;
+    const placed = this.textBox();
+    if (placed) style.top = `${parseFloat(style.top) - (placed.top - g.top) + (box.t - g.top)}px`;
+  }
+
+  /** The sentence's lines as the browser wraps it at the host's current width. */
+  private wrappedLines(text: string): string[] {
+    const node = this.host.firstChild;
+    const probe = document.createRange();
+    if (!node || typeof probe.getClientRects !== 'function') return [text];
+    const lines: string[] = [];
+    let currentTop: number | null = null;
+    let start = 0;
+    const words = text.split(' ');
+    for (const word of words) {
+      const end = start + word.length;
+      probe.setStart(node, start);
+      probe.setEnd(node, end);
+      const top = Math.round(probe.getClientRects()[0]?.top ?? 0);
+      if (currentTop === null || Math.abs(top - currentTop) > 3) {
+        lines.push(word);
+        currentTop = top;
+      } else {
+        lines[lines.length - 1] += ' ' + word;
+      }
+      start = end + 1;
+    }
+    return lines;
+  }
+
+  /** Split one line at the space nearest its middle. */
+  private splitInTwo(text: string): string[] {
+    const mid = text.length / 2;
+    let best = -1;
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === ' ' && (best < 0 || Math.abs(i - mid) < Math.abs(best - mid))) best = i;
+    }
+    return best < 0 ? [text] : [text.slice(0, best), text.slice(best + 1)];
+  }
+
+  private cover(
+    box: { l: number; t: number; r: number; b: number },
+    g: DOMRect,
+    group: HTMLElement
+  ): void {
+    const style = this.host.style;
+    const ref =
+      group.querySelector<HTMLElement>('[data-intro-width-ref]') ??
+      group.querySelector<HTMLElement>('[data-intro-font-ref]');
+    if (!ref) return;
+    const cs = getComputedStyle(ref);
+    const rb = ref.getBoundingClientRect();
+    const text = this.text();
+    // 1. Lay the sentence out exactly where, and as wide as, the visible one,
+    //    to learn where it wraps.
+    this.host.textContent = text;
+    Object.assign(style, {
+      whiteSpace: 'normal',
+      textAlign: 'left',
+      textAlignLast: 'auto',
+      fontFamily: cs.fontFamily,
+      fontSize: cs.fontSize,
+      fontWeight: cs.fontWeight,
+      letterSpacing: cs.letterSpacing,
+      lineHeight: cs.lineHeight,
+      left: `${rb.left - g.left}px`,
+      top: `${rb.top - g.top}px`,
+      width: `${rb.width + 0.25}px`
+    });
+    const visibleLines = this.wrappedLines(text);
+    const rows = visibleLines.length >= 2 ? visibleLines : this.splitInTwo(text);
+    // 2. One text line per row, each justified across the whole visible content
+    //    (icon included), spread over its full height. Still ONE text node.
+    this.host.textContent = rows.join('\n');
+    const H = box.b - box.t;
+    Object.assign(style, {
+      whiteSpace: 'pre-line',
+      textAlign: 'justify',
+      textAlignLast: 'justify',
+      lineHeight: 'normal',
+      left: `${box.l - g.left}px`,
+      width: `${box.r - box.l}px`,
+      top: '0px'
+    });
+    const probe = this.textBox();
+    if (!probe) return;
+    const lineHeight = rows.length > 1 ? (H - probe.ca) / (rows.length - 1) : H;
     style.lineHeight = `${lineHeight}px`;
     style.top = `${-(lineHeight - probe.ca) / 2}px`;
     const placed = this.textBox();
@@ -234,6 +339,11 @@ export class IntroExposedTextDirective {
       // inline text's; align the glyph boxes themselves with the visible ones.
       const placed = this.textBox();
       if (placed) style.top = `${parseFloat(style.top) + (box.t - placed.top)}px`;
+      return;
+    }
+
+    if (this.mode() === 'cover') {
+      this.cover(box, g, group);
       return;
     }
 

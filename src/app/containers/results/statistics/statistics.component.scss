@@ -90,6 +90,17 @@
   }
 }
 
+@keyframes timeSlideIn {
+  from {
+    opacity: 0;
+    top: 20px;
+  }
+  to {
+    opacity: 1;
+    top: 0;
+  }
+}
+
 @keyframes slideInUp {
   from {
     opacity: 0;
@@ -133,7 +144,28 @@
   border-radius: 12px;
   margin: 8px auto; // Reduced margin (was 24px)
   max-width: 400px;
-  animation: slideInUp 0.5s ease-out 0.6s both;
+  // Same slide-up and timing as before, but animating `top` (a layout change)
+  // instead of a transform: UI Automation kept a transform animation's start
+  // offset, so Narrator's box for this group sat ~15px below its content.
+  position: relative;
+  animation: timeSlideIn 0.5s ease-out 0.6s both;
+
+  // The Narrator group: the icon beside its sentence, laid out exactly as the
+  // section laid them out. IntroExposedTextDirective sets its width to the
+  // visible content (fitGroupWidth), and the section centres it.
+  .time-group {
+    position: relative; // anchors the exposed text
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  // Holds the icon and the sentence so they can be hidden from AT as one unit;
+  // it generates no box.
+  .time-visible {
+    display: contents;
+  }
 
   .time-icon {
     font-size: 28px;

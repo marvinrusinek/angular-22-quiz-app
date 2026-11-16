@@ -80,14 +80,18 @@
           </div>
         </div>
 
-        <!-- TIME SECTION -->
-        <div
-          class="time-section"
-          role="img"
-          [attr.aria-label]="elapsedAria()"
-        >
-          <span class="time-icon" aria-hidden="true">⏱️</span>
-          <span class="elapsed-time" aria-hidden="true" i18n>Completed in {{ elapsedMinutes() }} {{ minuteLabel() }} and {{ elapsedSeconds() }} seconds.</span>
+        <!-- TIME SECTION: the clock icon and the sentence are one Narrator group.
+             Both are hidden from AT and the group exposes ONE text item (see
+             IntroExposedTextDirective), so Narrator reads the sentence once as a
+             group, never the clock on its own. -->
+        <div class="time-section">
+          <div class="time-group" role="group">
+            <div class="time-visible" data-intro-visible aria-hidden="true">
+              <span class="time-icon">⏱️</span>
+              <span class="elapsed-time" data-intro-font-ref>{{ elapsedText() }}</span>
+            </div>
+            <span [appIntroExposedText]="elapsedText()" exposedTextMode="cover" fitGroupWidth></span>
+          </div>
         </div>
       </div>
     }

@@ -16,9 +16,12 @@
     <!-- HAMBURGER MENU (Left) -->
     <div class="hamburger-menu">
       <button 
+        #menuToggle
         class="hamburger-btn" 
         (click)="toggleMenu()"
         [class.open]="menuOpen()"
+        [attr.aria-expanded]="menuOpen()"
+        [attr.aria-controls]="menuOpen() ? 'results-nav-menu' : null"
         aria-label="Toggle navigation menu"
         i18n-aria-label
       >
@@ -29,14 +32,20 @@
 
       <!-- Dropdown Menu -->
       @if (menuOpen()) {
-        <nav class="nav-dropdown" (click)="$event.stopPropagation()">
+        <nav
+          id="results-nav-menu"
+          class="nav-dropdown"
+          aria-label="Results sections"
+          i18n-aria-label
+          (click)="$event.stopPropagation()"
+        >
           <button 
             type="button" 
             class="nav-item" 
             (click)="setActiveSection('score')"
             [class.active]="activeSection() === 'score'"
           >
-            <span class="nav-icon">📊</span>
+            <span class="nav-icon" aria-hidden="true">📊</span>
             <span i18n>Score Analysis</span>
           </button>
 
@@ -46,7 +55,7 @@
             (click)="setActiveSection('report')"
             [class.active]="activeSection() === 'report'"
           >
-            <span class="nav-icon">📈</span>
+            <span class="nav-icon" aria-hidden="true">📈</span>
             <span i18n>Summary Report</span>
           </button>
           
@@ -56,7 +65,7 @@
             (click)="setActiveSection('summary')"
             [class.active]="activeSection() === 'summary'"
           >
-            <span class="nav-icon">📋</span>
+            <span class="nav-icon" aria-hidden="true">📋</span>
             <span i18n>Quiz Review</span>
           </button>
           
@@ -66,7 +75,7 @@
             (click)="setActiveSection('highscores')"
             [class.active]="activeSection() === 'highscores'"
           >
-            <span class="nav-icon">🏆</span>
+            <span class="nav-icon" aria-hidden="true">🏆</span>
             <span i18n>High Scores</span>
           </button>
           
@@ -76,7 +85,7 @@
             (click)="setActiveSection('resources')"
             [class.active]="activeSection() === 'resources'"
           >
-            <span class="nav-icon">📚</span>
+            <span class="nav-icon" aria-hidden="true">📚</span>
             <span i18n>Resources</span>
           </button>
 
@@ -87,7 +96,7 @@
             class="nav-item" 
             (click)="selectQuiz()"
           >
-            <span class="nav-icon">🔙</span>
+            <span class="nav-icon" aria-hidden="true">🔙</span>
             <span i18n>Return to Quiz Selection</span>
           </button>
         </nav>
@@ -111,7 +120,7 @@
         type="button"
         class="logo-btn"
         [attr.aria-label]="backToQuizSelectionLabel"
-        title="Back to quiz selection"
+        title="Angular Quiz Platform — back to quiz selection"
         i18n-title
         (click)="selectQuiz()"
       >

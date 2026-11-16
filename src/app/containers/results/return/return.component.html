@@ -1,7 +1,8 @@
 <section class="return">
   <mat-card-actions>
     <mat-nav-list>
-      <a
+      <button
+        type="button"
         class="btn hvr-radial-out mdc-button mdc-button--outlined"
         title="restart"
         i18n-title
@@ -12,8 +13,9 @@
           >power_settings_new</i
         >&nbsp;&nbsp;
         <span class="mdc-button__label"><strong i18n>Restart Quiz</strong></span>
-      </a>
-      <a
+      </button>
+      <button
+        type="button"
         class="btn hvr-radial-out mdc-button mdc-button--outlined"
         title="select quiz"
         i18n-title
@@ -24,9 +26,9 @@
           >select_all</i
         >&nbsp;&nbsp;
         <span class="mdc-button__label"><strong i18n>Select Quiz</strong></span>
-      </a>
-      <!-- A REAL link (routerLink → href), unlike the click-only anchors around it,
-           so it is keyboard-reachable and works with open-in-new-tab. Navigation
+      </button>
+      <!-- A REAL link (routerLink → href), so it works with open-in-new-tab.
+           Restart and Select are native buttons: keyboard-reachable. Navigation
            only: Your Progress is the aggregate across attempts, not this result. -->
       <a
         class="btn hvr-radial-out mdc-button mdc-button--outlined"

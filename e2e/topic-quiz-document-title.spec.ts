@@ -2,10 +2,10 @@ import { test, expect } from '@playwright/test';
 import { quizData, startQuizViaUi, NEXT_BTN } from './helpers';
 
 /**
- * Document-title fix: src/index.html's static "Angular Quiz App" title
+ * Document-title fix: src/index.html's static "Angular Quiz Platform" title
  * never updated for a Topic Quiz in progress (confirmed by exhaustive grep
  * — nothing in the Topic Quiz flow ever called Angular's `Title` service
- * before this fix). Narrator was observed announcing "Angular Quiz App" on
+ * before this fix). Narrator was observed announcing "Angular Quiz Platform" on
  * Q1 arrival — this is the only mechanism in the app that could produce
  * that exact string as the page title; it does not by itself prove that
  * string is what Narrator spoke (no automated check here can observe
@@ -16,8 +16,8 @@ import { quizData, startQuizViaUi, NEXT_BTN } from './helpers';
  */
 
 const doohickeys = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-doohickeys');
-const EXPECTED_TITLE = 'Fixture Doohickeys Quiz | Angular Quiz App';
-const DEFAULT_TITLE = 'Angular Quiz App';
+const EXPECTED_TITLE = 'Fixture Doohickeys Quiz | Angular Quiz Platform';
+const DEFAULT_TITLE = 'Angular Quiz Platform';
 
 test.describe('Topic Quiz browser tab title (document-title fix)', () => {
   test('Introduction already shows the quiz-specific title, before Q1 even loads', async ({ page }) => {

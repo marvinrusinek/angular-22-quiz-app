@@ -925,7 +925,7 @@ describe('IntroductionComponent — bounded 45s Start Quiz timeout', () => {
 });
 
 /**
- * Document-title fix: index.html's static "Angular Quiz App" title never
+ * Document-title fix: index.html's static "Angular Quiz Platform" title never
  * updated for a Topic Quiz in progress. These specs use the REAL Angular
  * `Title` service (not a fake) so `document.title` itself is the
  * assertion target, exactly as a browser tab would show it.
@@ -976,25 +976,25 @@ describe('IntroductionComponent — browser tab title (document-title fix)', () 
     });
   }
 
-  const ORIGINAL_TITLE = 'Angular Quiz App';
+  const ORIGINAL_TITLE = 'Angular Quiz Platform';
 
   beforeEach(() => {
     document.title = ORIGINAL_TITLE;
   });
 
-  it('sets the tab title to "<milestone> Quiz | Angular Quiz App" once the quiz loads', () => {
+  it('sets the tab title to "<milestone> Quiz | Angular Quiz Platform" once the quiz loads', () => {
     configureTestBed();
     const fixture = TestBed.createComponent(IntroductionComponent);
     fixture.detectChanges();
 
-    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz App');
+    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz Platform');
   });
 
   it('restores the original title on destroy, if this instance ever changed it', () => {
     configureTestBed();
     const fixture = TestBed.createComponent(IntroductionComponent);
     fixture.detectChanges();
-    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz App');
+    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz Platform');
 
     fixture.destroy();
     expect(document.title).toBe(ORIGINAL_TITLE);

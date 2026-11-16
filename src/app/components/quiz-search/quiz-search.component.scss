@@ -38,6 +38,13 @@
     }
   }
 
+  // Dark theme: this component owns the input, so a parent rule cannot reach
+  // it under emulated encapsulation. Without this the typed text stays near-black
+  // on the dark surface (about 1.5:1).
+  :host-context([data-theme='dark']) & .search-input {
+    color: var(--qd-text, #eceef7);
+  }
+
   .clear-btn {
     display: inline-flex;
     align-items: center;

@@ -873,7 +873,7 @@ describe('QuizComponent — progression unlock call sites', () => {
 });
 
 /**
- * Document-title fix: index.html's static "Angular Quiz App" title never
+ * Document-title fix: index.html's static "Angular Quiz Platform" title never
  * updated for a Topic Quiz in progress. A self-contained setup (not the
  * shared `mountQuiz()` above, which fixes `quizService` to a shape with no
  * `selectedQuizSig`) so each test controls that signal directly. Uses the
@@ -881,7 +881,7 @@ describe('QuizComponent — progression unlock call sites', () => {
  * assertion target, exactly as a browser tab would show it.
  */
 describe('QuizComponent — browser tab title (document-title fix)', () => {
-  const ORIGINAL_TITLE = 'Angular Quiz App';
+  const ORIGINAL_TITLE = 'Angular Quiz Platform';
 
   function mountWithSelectedQuiz(selectedQuiz: { milestone: string } | null): {
     fixture: ComponentFixture<QuizComponent>;
@@ -948,14 +948,14 @@ describe('QuizComponent — browser tab title (document-title fix)', () => {
     document.title = ORIGINAL_TITLE;
   });
 
-  it('sets the tab title to "<milestone> Quiz | Angular Quiz App" once selectedQuizSig resolves', () => {
+  it('sets the tab title to "<milestone> Quiz | Angular Quiz Platform" once selectedQuizSig resolves', () => {
     mountWithSelectedQuiz({ milestone: 'Dependency Injection' });
-    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz App');
+    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz Platform');
   });
 
   it('restores the original title on destroy, if this instance ever changed it', () => {
     const { fixture: f } = mountWithSelectedQuiz({ milestone: 'Dependency Injection' });
-    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz App');
+    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz Platform');
 
     f.destroy();
     expect(document.title).toBe(ORIGINAL_TITLE);
@@ -973,11 +973,11 @@ describe('QuizComponent — browser tab title (document-title fix)', () => {
     const { fixture: f, selectedQuizSig } = mountWithSelectedQuiz({
       milestone: 'Dependency Injection'
     });
-    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz App');
+    expect(document.title).toBe('Dependency Injection Quiz | Angular Quiz Platform');
 
     selectedQuizSig.set({ milestone: 'TypeScript' });
     f.detectChanges();
-    expect(document.title).toBe('TypeScript Quiz | Angular Quiz App');
+    expect(document.title).toBe('TypeScript Quiz | Angular Quiz Platform');
 
     f.destroy();
     expect(document.title).toBe(ORIGINAL_TITLE);

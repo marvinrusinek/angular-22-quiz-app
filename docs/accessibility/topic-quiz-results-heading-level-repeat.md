@@ -26,7 +26,7 @@ Note: an earlier session recorded this heading as reading together under Down Ar
 
 - The Results header logo is no longer wrapped in an external
   `https://www.codelab.fun` link. It is a native `<button>` named
-  "Back to quiz selection" (`[attr.aria-label]` bound to a `$localize`
+  "Angular Quiz Platform — back to quiz selection" (`[attr.aria-label]` bound to a `$localize`
   field) containing a decorative image (`alt=""`), with the click handler
   moved onto the button and a visible `:focus-visible` ring. This removed
   the word split.

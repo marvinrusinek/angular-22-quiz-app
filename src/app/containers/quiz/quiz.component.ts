@@ -152,7 +152,7 @@ export class QuizComponent implements OnInit, AfterViewInit {
   /**
    * The document title captured the FIRST time this instance ever applies
    * a quiz-specific title — the real pre-quiz value (normally the static
-   * "Angular Quiz App" from index.html), restored on destroy. Captured
+   * "Angular Quiz Platform" from index.html), restored on destroy. Captured
    * only once (never overwritten by a later quiz-title write) so a genuine
    * quiz-to-quiz change mid-instance still restores to the true original,
    * not to an intermediate quiz title.
@@ -495,7 +495,7 @@ export class QuizComponent implements OnInit, AfterViewInit {
     effect(() => this.restoreShowResultsMessageOnReturn());
 
     // Browser tab title fix: the document title set by index.html
-    // ("Angular Quiz App") never updated for a Topic Quiz in progress — it
+    // ("Angular Quiz Platform") never updated for a Topic Quiz in progress — it
     // stayed generic through Introduction, every question, and Next/
     // Previous. `quizService.selectedQuizSig()` is the SAME root-singleton
     // signal IntroductionComponent already populates with the full `Quiz`

@@ -23,7 +23,8 @@
     padding: 0;
   }
 
-  a.btn {
+  // Native <button>s (Restart / Select) and the progress <a> share one look.
+  .btn {
     margin-right: 15px;
     padding: 5px 10px;
     background-color: vars.$light-sea-green;
@@ -34,6 +35,8 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    font: inherit;
+    cursor: pointer;
   }
 
   .mdc-button {
@@ -43,7 +46,7 @@
 }
 
 // Add ripple effect to buttons
-a.btn {
+.btn {
   position: relative;
   overflow: hidden;
 

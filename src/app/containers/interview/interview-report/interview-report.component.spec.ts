@@ -137,7 +137,7 @@ describe('InterviewReportComponent', () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
-    document.title = 'Angular Quiz App';
+    document.title = 'Angular Quiz Platform';
     result = signal<InterviewResultViewModel | null>(makeResult());
     printSpy = jest.spyOn(window, 'print').mockImplementation(() => undefined);
     scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => undefined); // jsdom: not implemented
@@ -358,7 +358,7 @@ describe('InterviewReportComponent', () => {
     it('sets the report title for printing and restores the previous title afterwards', async () => {
       const component = await open();
       const title = TestBed.inject(Title);
-      expect(title.getTitle()).toBe('Angular Quiz App');
+      expect(title.getTitle()).toBe('Angular Quiz Platform');
 
       printSpy.mockImplementation(() => {
         expect(document.title).toBe(EXPECTED);
@@ -367,7 +367,7 @@ describe('InterviewReportComponent', () => {
       expect(document.title).toBe(EXPECTED);
 
       window.dispatchEvent(new Event('afterprint'));
-      expect(document.title).toBe('Angular Quiz App');
+      expect(document.title).toBe('Angular Quiz Platform');
     });
 
     it('also applies to Ctrl/Cmd+P (beforeprint) and restores on afterprint', async () => {
@@ -375,7 +375,7 @@ describe('InterviewReportComponent', () => {
       window.dispatchEvent(new Event('beforeprint'));
       expect(document.title).toBe(EXPECTED);
       window.dispatchEvent(new Event('afterprint'));
-      expect(document.title).toBe('Angular Quiz App');
+      expect(document.title).toBe('Angular Quiz Platform');
     });
 
     it('restores after a CANCELLED print too (afterprint fires either way)', async () => {
@@ -383,7 +383,7 @@ describe('InterviewReportComponent', () => {
       component.print();
       window.dispatchEvent(new Event('afterprint'));
       window.dispatchEvent(new Event('afterprint')); // idempotent
-      expect(document.title).toBe('Angular Quiz App');
+      expect(document.title).toBe('Angular Quiz Platform');
     });
 
     it('never captures its own title as the "original" on a repeated print', async () => {
@@ -391,7 +391,7 @@ describe('InterviewReportComponent', () => {
       component.print();
       component.print();
       window.dispatchEvent(new Event('afterprint'));
-      expect(document.title).toBe('Angular Quiz App');
+      expect(document.title).toBe('Angular Quiz Platform');
     });
 
     it('restores the title if the user leaves the page without an afterprint', async () => {
@@ -399,7 +399,7 @@ describe('InterviewReportComponent', () => {
       component.print();
       expect(document.title).toBe(EXPECTED);
       TestBed.resetTestingModule(); // destroys the component
-      expect(document.title).toBe('Angular Quiz App');
+      expect(document.title).toBe('Angular Quiz Platform');
       expect(component).toBeTruthy();
     });
 
@@ -414,7 +414,7 @@ describe('InterviewReportComponent', () => {
       result.set(null);
       const component = await open();
       component.print();
-      expect(document.title).toBe('Angular Quiz App');
+      expect(document.title).toBe('Angular Quiz Platform');
     });
   });
 

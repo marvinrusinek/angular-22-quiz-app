@@ -11,6 +11,9 @@ $vivid-blue: #3b98fd;
 $soft-blue: #59adeb;
 $chambray-blue: #385d8a;
 $dodger-blue: #007aff;
+// Dodger blue is 4.0:1 on white. For NORMAL-size text use this one: 5.8:1 on
+// white and 5.0:1 on the #eee hover fill (WCAG AA needs 4.5:1).
+$dodger-blue-text: #0062cc;
 $green: #43e756;
 $green-angular-leaf: #36a34a;
 $dark-green: #006400;

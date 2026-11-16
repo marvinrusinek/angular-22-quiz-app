@@ -1,4 +1,5 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
@@ -7,6 +8,7 @@ import {
   effect,
   ElementRef,
   inject,
+  Injector,
   OnInit,
   signal,
   viewChild
@@ -148,6 +150,10 @@ export class ResultsComponent implements OnInit {
   // This page's own heading — the entry-focus target (see
   // focusResultsHeadingOnce()'s own comment in the constructor).
   private readonly resultsHeading = viewChild<ElementRef<HTMLElement>>('resultsHeading');
+  // The hamburger toggle: where focus returns when the menu closes while
+  // focus is inside it (see closeMenuKeepingFocus()).
+  private readonly menuToggle = viewChild<ElementRef<HTMLElement>>('menuToggle');
+  private readonly injector = inject(Injector);
   // Guards focusResultsHeadingOnce()'s effect: the quizId most recently
   // focused for, NOT a one-shot boolean (see that effect's own comment).
   private lastFocusedResultsQuizId: string | null = null;
@@ -159,7 +165,7 @@ export class ResultsComponent implements OnInit {
   private readonly mountTimeMs = performance.now();
 
   // Accessible name for the Results logo button (see results.component.html).
-  readonly backToQuizSelectionLabel = $localize`Back to quiz selection`;
+  readonly backToQuizSelectionLabel = $localize`Angular Quiz Platform — back to quiz selection`;
 
   // Achievements newly earned by THIS completed quiz (shown once, not after refresh).
   readonly newlyEarnedAchievements = signal<AchievementDefinition[]>([]);
@@ -475,15 +481,31 @@ export class ResultsComponent implements OnInit {
     this.closeMenu();
   }
 
+  /**
+   * Closes the menu for a keyboard/item interaction. If focus is inside the
+   * dropdown, closing removes that focused button from the DOM and focus would
+   * fall to <body> (a screen reader then reads the page title). So once the
+   * dropdown is gone, focus goes back to the toggle. An outside click keeps
+   * using closeMenu(): focus must stay on whatever the user clicked.
+   */
+  private closeMenuKeepingFocus(): void {
+    const focusWasInMenu = !!document.activeElement?.closest('.nav-dropdown');
+    this.closeMenu();
+    if (!focusWasInMenu) return;
+    afterNextRender(() => this.menuToggle()?.nativeElement.focus(), {
+      injector: this.injector
+    });
+  }
+
   /** Escape closes the open menu (keyboard accessibility), nothing more. */
   onEscapeKey(): void {
-    if (this.menuOpen()) this.closeMenu();
+    if (this.menuOpen()) this.closeMenuKeepingFocus();
   }
 
   setActiveSection(section: 'score' | 'report' | 'summary' | 'highscores' | 'resources'): void {
     this.activeSection.set(section);
     writeSessionString('resultsActiveSection', section);
-    this.closeMenu();
+    this.closeMenuKeepingFocus();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     this.cdRef.markForCheck();
   }

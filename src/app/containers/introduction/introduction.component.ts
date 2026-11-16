@@ -287,7 +287,7 @@ export class IntroductionComponent implements OnInit {
 
     // Browser tab title fix: see QuizComponent's own equivalent effect for
     // the full rationale (same root cause — index.html's static
-    // "Angular Quiz App" title never updated for a Topic Quiz in
+    // "Angular Quiz Platform" title never updated for a Topic Quiz in
     // progress). This component sets it from its OWN local `selectedQuiz`
     // signal (already populated before `quizService.setSelectedQuiz()` is
     // even called — see onStartQuiz below), so the tab title is already

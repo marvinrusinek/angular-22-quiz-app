@@ -2,11 +2,11 @@
  * The document title set by `src/index.html` and the only fallback this
  * module ever restores to — never hardcoded elsewhere.
  */
-export const DEFAULT_DOCUMENT_TITLE = 'Angular Quiz App';
+export const DEFAULT_DOCUMENT_TITLE = 'Angular Quiz Platform';
 
 /**
  * Composes the browser tab title for a Topic Quiz's Introduction/Question
- * pages, e.g. "Dependency Injection Quiz | Angular Quiz App". Never
+ * pages, e.g. "Dependency Injection Quiz | Angular Quiz Platform". Never
  * duplicates "Quiz" if the quiz's own milestone already ends with it.
  * `milestone` is public catalog metadata (the same text already shown on
  * the Introduction page and the Quiz Selection tile) — never an answer,

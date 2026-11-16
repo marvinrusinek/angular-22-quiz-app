@@ -27,6 +27,7 @@ import { catchError, map, switchMap, tap, timeout } from 'rxjs/operators';
 import { Quiz, QuizDifficulty, QuizQuestion } from '@shared/models';
 
 import { SlideLeftToRightAnimation } from '../../animations/animations';
+import { IntroExposedTextDirective } from './intro-exposed-text.directive';
 import { QUESTION_COUNT_ICON, registerQuestionCountIcon } from './question-count-icon';
 
 import { QuizDataService } from '@shared/services/data/quizdata.service';
@@ -54,6 +55,7 @@ export interface QuizPreferencesModel {
   selector: 'codelab-quiz-intro',
   standalone: true,
   imports: [
+    IntroExposedTextDirective,
     NgClass,
     TitleCasePipe,
     MatButtonModule,
@@ -200,18 +202,10 @@ export class IntroductionComponent implements OnInit {
   });
 
   /**
-   * CONFIRMED, 2026-10-15: the SPOKEN wording for the quiz-meta time
-   * piece — "approximately N minutes" — kept separate from the VISIBLE
-   * "~N min" text (unchanged, in the template). Uses `$localize` (the
-   * same mechanism already used for dynamic localizable strings
-   * elsewhere in this codebase, e.g. interview-certificate-progress.ts),
-   * not a template `i18n-X` + interpolation attribute — see
-   * `quizMetaLabelIdsSig`'s own comment for why that combination doesn't
-   * actually render in this project. Bound via a plain `[attr.aria-label]`
-   * on the time span only; the group's own `aria-labelledby` mechanism
-   * is unchanged. A real Narrator retest, on both localhost:4200 and a
-   * local production build served at localhost:8104, confirmed the
-   * group announces this wording while the visible text stays "~N min".
+   * The SPOKEN wording for the time piece, "approximately N minutes", kept
+   * separate from the VISIBLE "~N min". Composed in TypeScript with
+   * `$localize`: an `i18n-X` template attribute combined with `{{ }}`
+   * interpolation does not render in this project's build.
    */
   readonly quizMetaTimeAccessibleLabelSig = computed(() =>
     $localize`approximately ${this.estimatedMinutesSig()} minutes`
@@ -219,54 +213,42 @@ export class IntroductionComponent implements OnInit {
 
   readonly introImgSig = signal('');
 
+  // ── Narrator: one exposed text item per group ───────────────────
+  // The subtitle and the metadata are each a focusable role="group" whose
+  // visible markup is hidden from AT; the group exposes ONE transparent text
+  // node (IntroExposedTextDirective) so Narrator's scan mode stops on the
+  // group once, reads it once as "group", draws one box, and moves on.
+  // The exposed text and the visible text come from the SAME signals below.
+
+  /** The two subtitle sentences, one per visible line. */
+  readonly subtitleLinesSig = computed(() => [
+    $localize`How well versed are you in ${this.selectedQuiz()?.milestone ?? ''}?`,
+    $localize`Take the quiz and find out!`
+  ]);
+  readonly subtitleExposedTextSig = computed(() => this.subtitleLinesSig().join('\n'));
+
+  private readonly titleCase = new TitleCasePipe();
+  /** Visible difficulty row (also the first exposed line), or '' without one. */
+  readonly quizMetaDifficultyTextSig = computed(() =>
+    this.titleCase.transform(this.selectedQuiz()?.difficulty ?? '')
+  );
+  /** Visible count row, e.g. "7 Questions". */
+  readonly quizMetaCountTextSig = computed(
+    () => `${this.questionCountSig()} ${this.titleCase.transform(this.questionLabelSig())}`
+  );
   /**
-   * CONFIRMED, 2026-10-15: the `aria-labelledby` id list for the
-   * quiz-meta group below, in reading order (difficulty, then count,
-   * then time). Computed rather than a static attribute because the
-   * difficulty id only exists in the DOM when `quiz.difficulty` is
-   * truthy (the `@if` in the template) — referencing a nonexistent id is
-   * harmless per the ARIA accname spec (browsers simply skip it), but
-   * this keeps the reference list honest rather than relying on that.
-   *
-   * A real Narrator retest, on both localhost:4200 and a local
-   * production build served at localhost:8104, confirmed `role="group"`
-   * + `aria-labelledby` DOES announce the computed name here as one
-   * combined utterance (difficulty + count + the "approximately N
-   * minutes" wording below) — the subtitle's own separate comparison,
-   * for different content, found a plain element with no name also
-   * passed, which only means a computed name isn't universally required,
-   * not that it doesn't work here.
-   *
-   * RESTORED 2026-10-15 after a real Narrator retest: an `aria-label`
-   * replacement (tried so the spoken time could say "approximately N
-   * minutes" instead of the visible "~N min" verbatim) made Narrator
-   * announce NO text at all here — strictly worse than this method,
-   * which DOES correctly announce difficulty/count/time (just verbatim
-   * wording).
-   *
-   * ROOT CAUSE FOUND, 2026-10-15: NOT an aria-labelledby/browser-
-   * precedence issue. A narrower retry — `aria-label` on ONLY the time
-   * leaf span, written as a plain template attribute with `{{ }}`
-   * interpolation and marked `i18n-aria-label` — confirmed via a direct
-   * DOM check that the attribute never rendered at all
-   * (`el.getAttribute('aria-label') === null`). The two i18n-aria-label
-   * attributes elsewhere in this file that DO work are both pure STATIC
-   * strings with no interpolation; this project's build does not
-   * correctly render `i18n-X` combined with `{{ interpolation }}` on a
-   * plain attribute. See `quizMetaTimeAccessibleLabelSig` below for the
-   * fix: `$localize` (already used elsewhere in this codebase for
-   * exactly this — a localizable string with a dynamic value, composed
-   * in TypeScript) + an ordinary `[attr.aria-label]` binding, which
-   * sidesteps the broken template-attribute-i18n-interpolation path
-   * entirely.
+   * The metadata as spoken: difficulty, count and "approximately N minutes",
+   * one line per visible row. The visible time row stays the compact "~N min".
    */
-  readonly quizMetaLabelIdsSig = computed(() => {
-    const ids = ['quiz-meta-count-text', 'quiz-meta-time-text'];
-    if (this.selectedQuiz()?.difficulty) {
-      ids.unshift('quiz-meta-difficulty-text');
-    }
-    return ids.join(' ');
-  });
+  readonly quizMetaExposedTextSig = computed(() =>
+    [
+      this.quizMetaDifficultyTextSig(),
+      this.quizMetaCountTextSig(),
+      this.quizMetaTimeAccessibleLabelSig()
+    ]
+      .filter(Boolean)
+      .join('\n')
+  );
 
   // The in-flight start attempt's OWN handle, retained immediately after
   // showForStart() and cleared once that attempt completes normally. The

@@ -161,41 +161,61 @@ describe('IntroductionComponent — API-backed question count (Stage 14 regressi
    * are unchanged since the underlying markup (text, `<br>` placement)
    * never changed.
    */
-  it('has no leading-space text node after the subtitle line break; is a Tab stop reading both sentences together (Tab navigation only — scan-mode Down Arrow reading is unchanged and still separate)', () => {
+  it('keeps the visible subtitle two lines with no leading-space text node after the line break, in one Tab stop', () => {
     configureTestBed();
     const fixture = TestBed.createComponent(IntroductionComponent);
     fixture.detectChanges();
+    const subtitle = (fixture.nativeElement as HTMLElement).querySelector(
+      'mat-card-subtitle .intro-subtitle-text'
+    )!;
+    const visible = subtitle.querySelector('[data-intro-visible]')!;
 
-    const subtitleSpan = (fixture.nativeElement as HTMLElement).querySelector(
-      'mat-card-subtitle span'
+    // The visible line break is still there: text, <br>, text.
+    const nodes = Array.from(visible.childNodes);
+    expect(nodes.map((n) => n.nodeName)).toEqual(['#text', 'BR', '#text']);
+    expect(nodes[0].textContent).toBe('How well versed are you in TypeScript?');
+    // No leading space/newline before "Take" — the original regression.
+    expect(nodes[2].textContent).toBe('Take the quiz and find out!');
+
+    // One Tab stop on the group itself, carrying the focus-outline class.
+    expect(subtitle.getAttribute('tabindex')).toBe('0');
+    expect(subtitle.classList.contains('intro-subtitle-text')).toBe(true);
+  });
+
+  /**
+   * The <br> splits the subtitle into two UIA Text elements: Narrator
+   * highlighted and stepped through them separately. The group hides its
+   * visible lines and exposes ONE text item built from the SAME signal that
+   * renders the visible lines (no second hand-written copy), so Narrator
+   * reads it once as "group", draws one box, and Down Arrow moves past it.
+   * Narrator retests ruled out role="group" with exposed children (children
+   * read again), role="group" with only hidden children (scan mode skipped
+   * the block), and role="img" with aria-roledescription (jumped back).
+   */
+  it('exposes the subtitle as ONE group with one text item from the same source as the visible lines', () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const subtitle = root.querySelector('.intro-subtitle-text')!;
+
+    expect(subtitle.getAttribute('role')).toBe('group');
+    expect(subtitle.hasAttribute('aria-roledescription')).toBe(false);
+    expect(subtitle.hasAttribute('aria-labelledby')).toBe(false);
+    expect(subtitle.getAttribute('tabindex')).toBe('0');
+    expect(subtitle.querySelector('[data-intro-visible]')?.getAttribute('aria-hidden')).toBe('true');
+
+    const exposed = subtitle.querySelector('.intro-exposed-text')!;
+    // Exactly one text node, with both sentences, a newline where the <br> is.
+    expect(exposed.childNodes).toHaveLength(1);
+    expect(exposed.firstChild?.nodeType).toBe(Node.TEXT_NODE);
+    expect(exposed.textContent).toBe(
+      'How well versed are you in TypeScript?\nTake the quiz and find out!'
     );
-    expect(subtitleSpan).toBeTruthy();
-
-    const childNodes = Array.from(subtitleSpan!.childNodes);
-    const brIndex = childNodes.findIndex((n) => n.nodeName === 'BR');
-    expect(brIndex).toBeGreaterThanOrEqual(0);
-
-    // The line break itself is still there (visible line break preserved).
-    const textAfterBr = childNodes[brIndex + 1];
-    expect(textAfterBr?.nodeType).toBe(Node.TEXT_NODE);
-    // No leading space/newline before "Take" — the actual regression.
-    expect(textAfterBr?.textContent).toMatch(/^Take the quiz and find out!/);
-    expect(textAfterBr?.textContent?.startsWith(' ')).toBe(false);
-
-    // Wording and reading order are unchanged end to end. The two lines are
-    // separated by the <br> itself (a real line break), which contributes no
-    // text of its own, so there is no space between them at the text-node
-    // level — exactly the point of this fix.
-    const fullText = (subtitleSpan!.textContent ?? '').replace(/\s+/g, ' ').trim();
-    expect(fullText).toBe('How well versed are you in TypeScript?Take the quiz and find out!');
-
-    // The Tab-stop fix: this exact element is keyboard-focusable, and
-    // carries the class the SCSS uses for its visible :focus-visible
-    // outline (that outline itself can't be asserted in jsdom, which has
-    // no real layout/pseudo-elements — confirmed separately via CDP
-    // against a real browser).
-    expect(subtitleSpan!.getAttribute('tabindex')).toBe('0');
-    expect(subtitleSpan!.classList.contains('intro-subtitle-text')).toBe(true);
+    expect(exposed.textContent).toBe(fixture.componentInstance.subtitleExposedTextSig());
+    // The exposed text is not itself hidden or focusable.
+    expect(exposed.closest('[aria-hidden="true"]')).toBeNull();
+    expect(subtitle.querySelectorAll('[tabindex], a, button')).toHaveLength(0);
   });
 
   /**
@@ -1140,32 +1160,32 @@ describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 
     ]);
   });
 
-  it('the metadata is ONE named graphic (role="img"), aria-labelledby the difficulty/count/time spans in reading order, and announces difficulty + count + "approximately N minutes"', () => {
+  it('the metadata is ONE group: visible rows hidden from AT, one text item with difficulty + count + "approximately N minutes"', () => {
     configureTestBed();
     const fixture = TestBed.createComponent(IntroductionComponent);
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
+    const group = root.querySelector('.quiz-meta')!;
 
-    const group = root.querySelector('.quiz-meta');
-    // role="img" makes the three spans presentational: one UIA element with
-    // the full bounds, so Narrator reads it once and Down Arrow skips its
-    // children. A role="group" exposed them and they were read again.
-    expect(group?.getAttribute('role')).toBe('img');
-    expect(group?.getAttribute('tabindex')).toBe('0');
-    expect(group?.getAttribute('aria-labelledby')).toBe(
-      'quiz-meta-difficulty-text quiz-meta-count-text quiz-meta-time-text'
+    expect(group.getAttribute('role')).toBe('group');
+    expect(group.hasAttribute('aria-roledescription')).toBe(false);
+    expect(group.hasAttribute('aria-labelledby')).toBe(false);
+    expect(group.getAttribute('tabindex')).toBe('0');
+
+    // Visible rows: hidden from AT, same wording and short "~N min" as before.
+    const visible = group.querySelector('[data-intro-visible]')!;
+    expect(visible.getAttribute('aria-hidden')).toBe('true');
+    const rows = Array.from(visible.querySelectorAll('.meta-item > span')).map((r) =>
+      (r.textContent ?? '').replace(/\s+/g, ' ').trim()
     );
+    expect(rows).toEqual(['Beginner', '10 Questions', '~5 min']);
 
-    const difficultyEl = root.querySelector('#quiz-meta-difficulty-text');
-    const countEl = root.querySelector('#quiz-meta-count-text');
-    const timeEl = root.querySelector('#quiz-meta-time-text');
-    expect(difficultyEl?.textContent?.trim()).toBe('Beginner');
-    expect(countEl?.textContent?.trim()).toBe('10 Questions');
-
-    // Visible text stays the short "~N min" form; the spoken wording is
-    // carried separately via aria-label, not the element's own text.
-    expect(timeEl?.textContent?.trim()).toBe('~5 min');
-    expect(timeEl?.getAttribute('aria-label')).toBe('approximately 5 minutes');
+    // Exactly one exposed text node, one line per row, from the shared signals.
+    const exposed = group.querySelector('.intro-exposed-text')!;
+    expect(exposed.childNodes).toHaveLength(1);
+    expect(exposed.textContent).toBe('Beginner\n10 Questions\napproximately 5 minutes');
+    expect(exposed.textContent).toBe(fixture.componentInstance.quizMetaExposedTextSig());
+    expect(exposed.closest('[aria-hidden="true"]')).toBeNull();
   });
 
   it('keeps the metadata a single Tab stop with no focusable descendants', () => {
@@ -1174,24 +1194,36 @@ describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 
     fixture.detectChanges();
     const group = (fixture.nativeElement as HTMLElement).querySelector('.quiz-meta')!;
     expect(group.querySelectorAll('[tabindex], a, button, input')).toHaveLength(0);
-    // Every id it is named from exists inside it, so the name is never empty.
-    for (const id of group.getAttribute('aria-labelledby')!.split(' ')) {
-      expect(group.querySelector('#' + id)).not.toBeNull();
-    }
   });
 
-  it('omits the difficulty id from aria-labelledby when the quiz has no difficulty (the @if branch never renders that span)', () => {
+  it('drops the difficulty row and its exposed line when the quiz has no difficulty', () => {
     difficultyMap.set('typescript', null as unknown as string);
     configureTestBed();
     const fixture = TestBed.createComponent(IntroductionComponent);
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
 
-    expect(root.querySelector('#quiz-meta-difficulty-text')).toBeNull();
-    expect(root.querySelector('.quiz-meta')?.getAttribute('aria-labelledby')).toBe(
-      'quiz-meta-count-text quiz-meta-time-text'
+    expect(root.querySelector('.meta-difficulty')).toBeNull();
+    expect(root.querySelector('.quiz-meta .intro-exposed-text')?.textContent).toBe(
+      '10 Questions\napproximately 5 minutes'
     );
     difficultyMap.set('typescript', 'beginner'); // restore for later tests in this file
+  });
+
+  it('follows the same signals when the question count changes (singular "Question")', () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.questionCountSig.set(1);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const rows = Array.from(root.querySelectorAll('.quiz-meta-visible .meta-item > span')).map((r) =>
+      (r.textContent ?? '').replace(/\s+/g, ' ').trim()
+    );
+    expect(rows[1]).toBe('1 Question');
+    expect(root.querySelector('.quiz-meta .intro-exposed-text')?.textContent).toBe(
+      'Beginner\n1 Question\napproximately 1 minutes'
+    );
   });
 
   it('the topic image is one named image (dynamic alt), not a Tab stop, with no duplicate naming attributes', () => {
@@ -1212,7 +1244,7 @@ describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
 
-    const countIcon = root.querySelector('#quiz-meta-count-text')?.previousElementSibling;
+    const countIcon = root.querySelectorAll('.quiz-meta-visible .meta-item')[1]?.querySelector('mat-icon');
     expect(countIcon?.tagName.toLowerCase()).toBe('mat-icon');
     // No ligature text left behind — svgIcon mode renders an inline <svg>,
     // never the literal word "quiz" as text content.

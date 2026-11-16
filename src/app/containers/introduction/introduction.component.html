@@ -21,10 +21,16 @@
           {{ quiz.milestone }} Quiz
         </h1>
 
-        <mat-card-subtitle i18n>
-          <!-- Keep the visual line break hidden from Narrator; the subtitle is one Tab stop. -->
-          <span class="intro-subtitle-text" tabindex="0">
-            How well versed are you in {{ quiz.milestone }}?<br aria-hidden="true" />Take the quiz and find out!
+        <mat-card-subtitle>
+          <!-- One focusable group, one Tab stop. The visible lines are hidden from
+               AT and the group exposes ONE text item (see
+               IntroExposedTextDirective): the <br> otherwise splits the text into
+               two UIA Text elements that Narrator highlights and steps through
+               separately. Keep the text tight to the <br>: whitespace there
+               becomes a stray text node. -->
+          <span class="intro-subtitle-text" role="group" tabindex="0">
+            <span class="intro-subtitle-visible" data-intro-visible aria-hidden="true">{{ subtitleLinesSig()[0] }}<br />{{ subtitleLinesSig()[1] }}</span>
+            <span [appIntroExposedText]="subtitleExposedTextSig()" exposedTextMode="clone"></span>
           </span>
         </mat-card-subtitle>
       </mat-card-title-group>
@@ -43,35 +49,31 @@
         priority
       />
 
-      <!-- One named graphic: its children are presentational, so Narrator reads
-           it once, highlights the whole box, and Down Arrow moves past it. -->
-      <div
-        class="quiz-meta"
-        role="img"
-        tabindex="0"
-        [attr.aria-labelledby]="quizMetaLabelIdsSig()"
-      >
-        @if (quiz.difficulty; as difficulty) {
-          <span class="meta-item meta-difficulty" [ngClass]="'difficulty-' + difficulty">
-            <mat-icon aria-hidden="true">signal_cellular_alt</mat-icon>
-            <span id="quiz-meta-difficulty-text">{{ difficulty | titlecase }}</span>
+      <!-- One focusable group, one Tab stop: the rows are hidden from AT and the
+           group exposes ONE text item sized to the visible rows and icons (see
+           IntroExposedTextDirective), so Narrator reads it once as "group",
+           draws one box, and Down Arrow moves past it. -->
+      <div class="quiz-meta" role="group" tabindex="0">
+        <div class="quiz-meta-visible" data-intro-visible aria-hidden="true">
+          @if (quiz.difficulty; as difficulty) {
+            <span class="meta-item meta-difficulty" [ngClass]="'difficulty-' + difficulty">
+              <mat-icon aria-hidden="true">signal_cellular_alt</mat-icon>
+              <span>{{ quizMetaDifficultyTextSig() }}</span>
+            </span>
+          }
+
+          <span class="meta-item">
+            <!-- SVG icon avoids a missing glyph in the self-hosted icon font. -->
+            <mat-icon [svgIcon]="questionCountIcon" aria-hidden="true"></mat-icon>
+            <span>{{ quizMetaCountTextSig() }}</span>
           </span>
-        }
 
-        <span class="meta-item">
-          <!-- SVG icon avoids a missing glyph in the self-hosted icon font. -->
-          <mat-icon [svgIcon]="questionCountIcon" aria-hidden="true"></mat-icon>
-          <span id="quiz-meta-count-text">{{ questionCountSig() }} {{ questionLabelSig() | titlecase }}</span>
-        </span>
-
-        <span class="meta-item">
-          <mat-icon aria-hidden="true">schedule</mat-icon>
-          <!-- Use a localized accessible time label while displaying the compact estimate. -->
-          <span
-            id="quiz-meta-time-text"
-            [attr.aria-label]="quizMetaTimeAccessibleLabelSig()"
-          >~{{ estimatedMinutesSig() }} min</span>
-        </span>
+          <span class="meta-item">
+            <mat-icon aria-hidden="true">schedule</mat-icon>
+            <span>~{{ estimatedMinutesSig() }} min</span>
+          </span>
+        </div>
+        <span [appIntroExposedText]="quizMetaExposedTextSig()" exposedTextMode="justify"></span>
       </div>
     </div>
 

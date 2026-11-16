@@ -49,6 +49,7 @@ mat-card-header {
     // Same visible-focus convention as elsewhere in this file/app.
     .intro-subtitle-text {
       display: inline-block;
+      position: relative;
 
       &:focus-visible {
         outline: 2px solid vars.$dodger-blue;
@@ -360,14 +361,19 @@ mat-card-actions {
 // reached by Tab in the requested order and announces difficulty, count,
 // and the "approximately N minutes" wording as one combined utterance.
 .quiz-meta {
-  display: flex;
-  flex-direction: column;   // each item on its own line
-  align-items: center;
-  gap: 8px;
+  position: relative; // anchors the exposed text (IntroExposedTextDirective)
 
   &:focus-visible {
     outline: 2px solid var(--intro-accent);
     outline-offset: 2px;
+  }
+
+  // The visible rows (hidden from AT; the group exposes one text item instead).
+  .quiz-meta-visible {
+    display: flex;
+    flex-direction: column; // each item on its own line
+    align-items: center;
+    gap: 8px;
   }
 
   .meta-item {
@@ -400,4 +406,16 @@ mat-card-actions {
   color: vars.$fire-red;
   font-size: 13px;
   font-weight: 600;
+}
+
+// The one text item a group exposes to Narrator: transparent, never hit-tested,
+// never selectable; its box is set by IntroExposedTextDirective.
+.intro-exposed-text {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  color: transparent;
+  pointer-events: none;
+  user-select: none;
+  white-space: pre-line;
 }

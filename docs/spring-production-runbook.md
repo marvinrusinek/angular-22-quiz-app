@@ -238,7 +238,7 @@ Names only — no values are recorded anywhere in this document.
   `backend/src/config.ts`'s `parseAllowedOrigins`): a comma-separated list of
   **exact origins** — scheme + host + optional port, **no path, no query, no
   fragment** (an HTTP `Origin` header never carries a path, so
-  `https://marvinrusinek.github.io/angular-22-quiz-app/` is invalid; use
+  `https://marvinrusinek.github.io/angular-quiz-platform/` is invalid; use
   `https://marvinrusinek.github.io`). A literal `*` is rejected outright.
   HTTPS is required for every entry once the service considers itself in
   production.

@@ -369,8 +369,8 @@ routes to Spring.
 
 ### 5.2 GitHub Pages base path — a real bug found and fixed
 
-`angular.json` sets `"baseHref": "/angular-22-quiz-app/"` — the production
-app is served at `https://marvinrusinek.github.io/angular-22-quiz-app/`, NOT
+`angular.json` sets `"baseHref": "/angular-quiz-platform/"` — the production
+app is served at `https://marvinrusinek.github.io/angular-quiz-platform/`, NOT
 at the bare domain root (confirmed against README.md's own live-demo link
 and `spring-production-runbook.md`, which explains the SEPARATE, correctly
 bare-origin case: an HTTP `Origin` header never carries a path, so
@@ -382,7 +382,7 @@ link).
 was wrong — it used the bare origin, which would have produced a broken
 emailed link (`https://marvinrusinek.github.io/interview/certificate/
 verify#token=...`, missing the app's own subpath entirely). **Fixed**: now
-`https://marvinrusinek.github.io/angular-22-quiz-app` (no trailing slash —
+`https://marvinrusinek.github.io/angular-quiz-platform` (no trailing slash —
 the code strips one before appending its own route).
 
 ### 5.3 Deep-link fallback — confirmed already correct
@@ -532,7 +532,7 @@ traffic:**
 7. In the Render dashboard (never in `render.yaml`), set the five
    non-secret-shaped values from §3/render.yaml's commented block
    (`EMAIL_FROM_ADDRESS`, `OWNER_NOTIFICATION_EMAIL`,
-   `CERTIFICATE_CLAIM_BASE_URL` — **with the `/angular-22-quiz-app` path,
+   `CERTIFICATE_CLAIM_BASE_URL` — **with the `/angular-quiz-platform` path,
    §5.2** — `CERTIFICATE_EMAIL_PROVIDER=postmark`,
    `CERTIFICATE_POSTMARK_MESSAGE_STREAM=outbound`) plus the two secrets
    (`CERTIFICATE_OUTBOX_ENCRYPTION_KEY`, freshly generated;
@@ -776,7 +776,7 @@ one."
    step.
 2. Set `CERTIFICATE_CLAIMS_ENABLED=true` and redeploy/restart.
 3. Confirm the startup log line from §6.3 step 9.
-4. From the live site (`https://marvinrusinek.github.io/angular-22-quiz-app/`),
+4. From the live site (`https://marvinrusinek.github.io/angular-quiz-platform/`),
    navigate to the claim form and submit with an email address you
    personally control.
 5. Confirm the email arrives (allow a few minutes — greylisting on a first

@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://marvinrusinek.github.io/angular-22-quiz-app/">▶ <strong>Live Demo</strong></a>
+  <a href="https://marvinrusinek.github.io/angular-quiz-platform/">▶ <strong>Live Demo</strong></a>
   ·
   <a href="#-screenshots">📸 Screenshots</a>
   ·
@@ -129,7 +129,7 @@
 <h2>📁 Project Structure</h2>
 <p>The project is organized into an Angular frontend, dedicated Node/Express and Spring Boot APIs, automated end-to-end testing, and deployment infrastructure, with focused service layers and clear separation between application domains.</p>
 <pre><code>
-angular-22-quiz-app/
+angular-quiz-platform/
 ├── src/
 │   └── app/
 │       ├── components/
@@ -179,8 +179,8 @@ angular-22-quiz-app/
 
 <h3>Installation</h3>
 
-<pre><code>git clone https://github.com/marvinrusinek/angular-22-quiz-app.git
-cd angular-22-quiz-app
+<pre><code>git clone https://github.com/marvinrusinek/angular-quiz-platform.git
+cd angular-quiz-platform
 npm install</code></pre>
 
 <h3>Database Configuration</h3>

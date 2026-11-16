@@ -65,7 +65,7 @@ function basePrefix(buildDir) {
   return m ? m[1] : '/';
 }
 
-/** ngsw.json key ('/angular-22-quiz-app/main-X.js') -> path relative to the build root. */
+/** ngsw.json key ('/angular-quiz-platform/main-X.js') -> path relative to the build root. */
 function relFromNgswKey(key, prefix) {
   return key.startsWith(prefix) ? key.slice(prefix.length) : key.replace(/^\//, '');
 }

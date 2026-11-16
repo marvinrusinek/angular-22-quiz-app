@@ -19,7 +19,7 @@
             },
             "production": {
               "aot": true,
-              "baseHref": "/angular-22-quiz-app/",
+              "baseHref": "/angular-quiz-platform/",
               "extractLicenses": true,
               "namedChunks": false,
               "optimization": {

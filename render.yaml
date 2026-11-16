@@ -111,7 +111,7 @@ services:
       #     sync: false
       #   - key: OWNER_NOTIFICATION_EMAIL
       #     sync: false
-      #   # NOTE the path: angular.json sets "baseHref": "/angular-22-quiz-app/",
+      #   # NOTE the path: angular.json sets "baseHref": "/angular-quiz-platform/",
       #   # so the app is served at this subpath, NOT at the bare domain root
       #   # (confirmed against README.md's own live-demo link and
       #   # spring-production-runbook.md). This is DIFFERENT from
@@ -121,7 +121,7 @@ services:
       #   # which does need the full path. No trailing slash — the code strips
       #   # one if present before appending its own route.
       #   - key: CERTIFICATE_CLAIM_BASE_URL
-      #     value: https://marvinrusinek.github.io/angular-22-quiz-app
+      #     value: https://marvinrusinek.github.io/angular-quiz-platform
       #   - key: CERTIFICATE_OUTBOX_ENCRYPTION_KEY
       #     sync: false
       #   - key: CERTIFICATE_EMAIL_PROVIDER
@@ -187,7 +187,7 @@ services:
 
       # EXACT origin allowed to call this API — scheme + host only, no path
       # (an HTTP Origin header never carries a path, so NOT
-      # https://marvinrusinek.github.io/angular-22-quiz-app/). Spring's CORS
+      # https://marvinrusinek.github.io/angular-quiz-platform/). Spring's CORS
       # filter rejects a wildcard outright, the same fail-closed posture as
       # Node's ALLOWED_ORIGINS above.
       #

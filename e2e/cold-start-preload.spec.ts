@@ -36,8 +36,8 @@ const FONT_URLS = [
   'https://raw.githubusercontent.com/marvinrusinek/angular-9-quiz-app/master/src/assets/fonts/LucidaUnicodeCalligraphy.ttf',
 ];
 const SOUND_URLS = [
-  'https://cdn.jsdelivr.net/gh/marvinrusinek/angular-22-quiz-app@main/src/assets/sounds/correct.mp3',
-  'https://cdn.jsdelivr.net/gh/marvinrusinek/angular-22-quiz-app@main/src/assets/sounds/incorrect.mp3',
+  'https://cdn.jsdelivr.net/gh/marvinrusinek/angular-quiz-platform@main/src/assets/sounds/correct.mp3',
+  'https://cdn.jsdelivr.net/gh/marvinrusinek/angular-quiz-platform@main/src/assets/sounds/incorrect.mp3',
 ];
 
 test.describe('cold-start preload — scoreboard font + sound cues', () => {

@@ -1,6 +1,6 @@
 {
-  "name": "Angular Quiz App",
-  "short_name": "Quiz App",
+  "name": "Angular Quiz Platform",
+  "short_name": "Quiz Platform",
   "theme_color": "#1e88e5",
   "background_color": "#ffffff",
   "display": "standalone",

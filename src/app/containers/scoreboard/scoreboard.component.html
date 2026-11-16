@@ -4,9 +4,7 @@
       <codelab-scoreboard-score class="scoreboard__score" />
 
       @if (badgeParts()) {
-        <!-- Each badge version is ONE real text node so Narrator reads (and highlights) it as one phrase.
-             Exactly one version is rendered at a time: the other is display:none (removed from the accessibility
-             tree), switched at the 600px breakpoint, so it is never announced twice. -->
+        <!-- Keep badge text together for Narrator; show one version at a time. -->
         <span class="scoreboard__badge" role="status">
           <span class="badge-full">{{ badgeFullText() }}</span>
           <span class="badge-short">{{ badgeShortText() }}</span>

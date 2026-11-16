@@ -1140,14 +1140,17 @@ describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 
     ]);
   });
 
-  it('the metadata group is role="group", aria-labelledby the difficulty/count/time spans in reading order, and announces difficulty + count + "approximately N minutes"', () => {
+  it('the metadata is ONE named graphic (role="img"), aria-labelledby the difficulty/count/time spans in reading order, and announces difficulty + count + "approximately N minutes"', () => {
     configureTestBed();
     const fixture = TestBed.createComponent(IntroductionComponent);
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
 
     const group = root.querySelector('.quiz-meta');
-    expect(group?.getAttribute('role')).toBe('group');
+    // role="img" makes the three spans presentational: one UIA element with
+    // the full bounds, so Narrator reads it once and Down Arrow skips its
+    // children. A role="group" exposed them and they were read again.
+    expect(group?.getAttribute('role')).toBe('img');
     expect(group?.getAttribute('tabindex')).toBe('0');
     expect(group?.getAttribute('aria-labelledby')).toBe(
       'quiz-meta-difficulty-text quiz-meta-count-text quiz-meta-time-text'
@@ -1163,6 +1166,18 @@ describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 
     // carried separately via aria-label, not the element's own text.
     expect(timeEl?.textContent?.trim()).toBe('~5 min');
     expect(timeEl?.getAttribute('aria-label')).toBe('approximately 5 minutes');
+  });
+
+  it('keeps the metadata a single Tab stop with no focusable descendants', () => {
+    configureTestBed();
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+    const group = (fixture.nativeElement as HTMLElement).querySelector('.quiz-meta')!;
+    expect(group.querySelectorAll('[tabindex], a, button, input')).toHaveLength(0);
+    // Every id it is named from exists inside it, so the name is never empty.
+    for (const id of group.getAttribute('aria-labelledby')!.split(' ')) {
+      expect(group.querySelector('#' + id)).not.toBeNull();
+    }
   });
 
   it('omits the difficulty id from aria-labelledby when the quiz has no difficulty (the @if branch never renders that span)', () => {

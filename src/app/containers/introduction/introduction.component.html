@@ -43,10 +43,11 @@
         priority
       />
 
-      <!-- Group difficulty, question count, and time into one keyboard-accessible label. -->
+      <!-- One named graphic: its children are presentational, so Narrator reads
+           it once, highlights the whole box, and Down Arrow moves past it. -->
       <div
         class="quiz-meta"
-        role="group"
+        role="img"
         tabindex="0"
         [attr.aria-labelledby]="quizMetaLabelIdsSig()"
       >

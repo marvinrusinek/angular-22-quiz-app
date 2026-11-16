@@ -98,28 +98,9 @@
 
 <h3>High-Level Flow</h3>
 
-```mermaid
-flowchart TD
-    A["Angular 22 Frontend<br/>Signals · RxJS · Angular Material"]
-    B["Node.js / Express<br/>Topic Quiz API<br/>Certificate Claims"]
-    C["Spring Boot / Java 21<br/>Interview Mode API<br/>Spring JDBC · Spring Data JPA"]
-    D[("PostgreSQL<br/>Neon in Production")]
-
-    A --> B
-    A --> C
-    B --> D
-    C --> D
-
-    classDef frontend fill:#dbeafe,stroke:#2563eb,color:#1e40af
-    classDef node fill:#ccfbf1,stroke:#0d9488,color:#115e59
-    classDef spring fill:#fef3c7,stroke:#d97706,color:#92400e
-    classDef database fill:#e2e8f0,stroke:#64748b,color:#334155
-
-    class A frontend
-    class B node
-    class C spring
-    class D database
-```
+<p align="center">
+  <img src="docs/architecture-high-level.svg" alt="Angular 22 frontend connects to Node/Express and Spring Boot APIs, both backed by PostgreSQL on Neon." width="600">
+</p>
 
 *Interview Mode primarily uses Spring JDBC for persistence, while Spring Data JPA supports quiz metadata access.*
 

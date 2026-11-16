@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 446" role="img" aria-labelledby="t d" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title id="t">High-level architecture</title>
+  <desc id="d">The Angular 22 frontend calls two backends: a Node.js and Express API for Topic Quizzes and certificate claims, and a Spring Boot API on Java 21 for Interview Mode. Both backends connect to one PostgreSQL database, hosted on Neon in production.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <!-- opaque panel keeps contrast identical on light and dark pages -->
+  <rect width="600" height="446" rx="14" fill="#ffffff" stroke="#cbd5e1"/>
+
+  <g fill="none" stroke="#475569" stroke-width="2" marker-end="url(#a)">
+    <path d="M232 106 V140 H150 V170"/>
+    <path d="M368 106 V140 H450 V170"/>
+    <path d="M150 284 V318 H250 V346"/>
+    <path d="M450 284 V318 H350 V346"/>
+  </g>
+
+  <g text-anchor="middle">
+    <rect x="130" y="22" width="340" height="84" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+    <text x="300" y="56" font-size="19" font-weight="700" fill="#1e40af">Angular 22 Frontend</text>
+    <text x="300" y="84" font-size="16" fill="#1e40af">Signals · RxJS · Angular Material</text>
+
+    <rect x="16" y="170" width="268" height="114" rx="8" fill="#ccfbf1" stroke="#0d9488" stroke-width="2"/>
+    <text x="150" y="203" font-size="19" font-weight="700" fill="#115e59">Node.js / Express</text>
+    <text x="150" y="231" font-size="16" fill="#115e59">Topic Quiz API</text>
+    <text x="150" y="257" font-size="16" fill="#115e59">Certificate Claims</text>
+
+    <rect x="316" y="170" width="268" height="114" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+    <text x="450" y="199" font-size="19" font-weight="700" fill="#92400e">Spring Boot / Java 21</text>
+    <text x="450" y="226" font-size="16" fill="#92400e">Interview Mode API</text>
+    <text x="450" y="252" font-size="15" fill="#92400e">Spring JDBC · Spring Data JPA</text>
+
+    <path d="M180 360 V404 A120 14 0 0 0 420 404 V360" fill="#e2e8f0" stroke="#64748b" stroke-width="2"/>
+    <ellipse cx="300" cy="360" rx="120" ry="14" fill="#e2e8f0" stroke="#64748b" stroke-width="2"/>
+    <text x="300" y="389" font-size="19" font-weight="700" fill="#334155">PostgreSQL</text>
+    <text x="300" y="411" font-size="16" fill="#334155">Neon in Production</text>
+  </g>
+</svg>

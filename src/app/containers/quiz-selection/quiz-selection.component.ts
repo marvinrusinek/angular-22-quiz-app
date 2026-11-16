@@ -159,11 +159,18 @@ export class QuizSelectionComponent implements OnInit {
   // Compact "Achievements X / N" progress for the catalog header. Populated
   // silently on init (evaluating any achievements the user's existing progress
   // already qualifies for — NO "Unlocked" celebration on this screen).
-  readonly achievementsEarned = signal(0);
-  readonly achievementsTotal = signal(0);
+  // Derived from AchievementService (reactive), not copied into snapshots, so the
+  // badge follows earns and storage changes from other tabs.
+  private readonly achievementSummary = computed(() =>
+    this.achievementService.summary()
+  );
+  readonly achievementsEarned = computed(() => this.achievementSummary().earned);
+  readonly achievementsTotal = computed(() => this.achievementSummary().total);
   // Earned achievement ids — drives the completion banner off ACTUAL achievement
   // state (not merely "all quizzes accessed"). Refreshed after each evaluate().
-  readonly achievementsEarnedIds = signal<ReadonlySet<AchievementId>>(new Set());
+  readonly achievementsEarnedIds = computed<ReadonlySet<AchievementId>>(() =>
+    this.achievementService.earnedIds()
+  );
 
   // ── remaining variables ─────────────────────────────────────────
   private readonly completedQuizIds = signal<ReadonlySet<string>>(new Set());
@@ -1018,7 +1025,7 @@ export class QuizSelectionComponent implements OnInit {
   }
 
   // Silently evaluate achievements from existing progress (persists any newly
-  // qualified, but shows no celebration here) and publish the X / N summary.
+  // qualified, but shows no celebration here) The X / N badge derives from AchievementService.
   // S6d: the catalog comes from TopicQuizMetadataService (quizId + difficulty
   // only), not getQuizData()'s answer-bearing bundled bank. Called reactively
   // by refreshAchievementsEffect above, not directly from init.
@@ -1027,11 +1034,9 @@ export class QuizSelectionComponent implements OnInit {
       const catalog: AchievementCatalogEntry[] = [...this.metadataApi.difficultyByQuiz()].map(
         ([quizId, difficulty]) => ({ quizId, difficulty })
       );
-      this.achievementService.evaluate(catalog); // silent: return value ignored
-      const { earned, total } = this.achievementService.summary();
-      this.achievementsEarned.set(earned);
-      this.achievementsTotal.set(total);
-      this.achievementsEarnedIds.set(this.achievementService.earnedIds());
+      // Silent: persists anything newly qualified; the badge updates itself
+      // from AchievementService (see achievementsEarned above).
+      this.achievementService.evaluate(catalog);
     } catch (err: unknown) {
       swallow('quiz-selection.component.ts', err);
     }

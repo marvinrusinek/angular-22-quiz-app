@@ -163,8 +163,11 @@ export class ResultsComponent implements OnInit {
 
   // Achievements newly earned by THIS completed quiz (shown once, not after refresh).
   readonly newlyEarnedAchievements = signal<AchievementDefinition[]>([]);
-  // Every achievement + earned/locked state, for the expandable catalog section.
-  readonly achievementsCatalog = signal<AchievementView[]>([]);
+  // Every achievement + earned/locked state, for the catalog section. Derived
+  // from AchievementService, so it follows earns and other-tab changes.
+  readonly achievementsCatalog = computed<AchievementView[]>(() =>
+    this.achievementService.catalog()
+  );
   private achievementsProcessed = false;
   // S6d: the result to evaluate achievements for, once recordQuizResult() has
   // run. Drives evaluateAchievementsEffect below, separately from
@@ -248,8 +251,6 @@ export class ResultsComponent implements OnInit {
       ].map(([quizId, difficulty]) => ({ quizId, difficulty }));
       const newly = this.achievementService.evaluate(achievementCatalog);
       if (newly.length > 0) this.newlyEarnedAchievements.set(newly);
-      // Refresh the catalog so any just-earned achievement flips to "Earned".
-      this.achievementsCatalog.set(this.achievementService.catalog());
       this.cdRef.markForCheck();
     });
 
@@ -440,10 +441,6 @@ export class ResultsComponent implements OnInit {
       }
     }
     // No snapshot: the constructor effect picks up finalResult$ emissions.
-
-    // Always show the catalog with the current earned/locked state (even on a
-    // refresh, when no new achievement is being announced).
-    this.achievementsCatalog.set(this.achievementService.catalog());
   }
 
   /**

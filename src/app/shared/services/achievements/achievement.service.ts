@@ -1,4 +1,4 @@
-import { computed, inject, Service, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
 
 import {
   AchievementCatalogEntry,
@@ -43,6 +43,31 @@ export class AchievementService {
   // served a stale value until some unrelated signal invalidated it, silently
   // blocking the certificate unlock.
   private readonly _rev = signal(0);
+
+  constructor() {
+    this.watchOtherTabs();
+  }
+
+  /**
+   * localStorage is shared by every tab of this origin, but `earnedIds` only
+   * re-reads it when `_rev` changes. The browser fires a `storage` event in
+   * the OTHER tabs when a key changes (never in the tab that wrote it), so
+   * bump `_rev` for this key, or for a full `clear()` (key === null). Other
+   * keys and sessionStorage are ignored. One listener per service instance,
+   * removed when the injector is destroyed.
+   */
+  private watchOtherTabs(): void {
+    if (typeof window === 'undefined') return;
+    const onStorage = (event: StorageEvent): void => {
+      if (event.key !== null && event.key !== SK_QUIZ_ACHIEVEMENTS) return;
+      if (!isLocalStorage(event.storageArea)) return;
+      this._rev.update((n) => n + 1);
+    };
+    window.addEventListener('storage', onStorage);
+    inject(DestroyRef).onDestroy(() =>
+      window.removeEventListener('storage', onStorage)
+    );
+  }
 
   /**
    * Record a completed quiz's score, keeping the BEST per quiz. A later, lower
@@ -113,10 +138,14 @@ export class AchievementService {
   }
 
   /** Ids of every achievement earned so far. Reactive (see `_rev`). */
-  readonly earnedIds = computed(() => {
-    this._rev(); // reactive dependency — recompute after each new earn
-    return new Set<AchievementId>(this.readEarned().map((e) => e.id));
-  });
+  readonly earnedIds = computed(
+    () => {
+      this._rev(); // reactive dependency — recompute after each new earn
+      return new Set<AchievementId>(this.readEarned().map((e) => e.id));
+    },
+    // Same ids → same value, so dependents do not recompute for a no-op refresh.
+    { equal: sameIds }
+  );
 
   /** Compact progress summary for the catalog UI (e.g. "3 / 6"). */
   summary(): { earned: number; total: number } {
@@ -217,5 +246,20 @@ export class AchievementService {
       });
     }
     return out;
+  }
+}
+
+function sameIds(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const id of a) if (!b.has(id)) return false;
+  return true;
+}
+
+/** True when a storage event came from localStorage (not sessionStorage). */
+function isLocalStorage(area: Storage | null): boolean {
+  try {
+    return area !== null && area === window.localStorage;
+  } catch {
+    return false; // storage disabled
   }
 }

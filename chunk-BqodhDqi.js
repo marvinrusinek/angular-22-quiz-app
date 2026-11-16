@@ -1,0 +1,1 @@
+import"./chunk-BcR-gcGq.js";import{m as R}from"./main-VLWZ577C.js";export{R as ScrollDownIndicatorComponent};

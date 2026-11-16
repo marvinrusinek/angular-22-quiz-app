@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { TestBed } from '@angular/core/testing';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { signal } from '@angular/core';
 import { firstValueFrom, of, ReplaySubject, Subject } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconRegistry } from '@angular/material/icon';
 
+import { SlideLeftToRightAnimation } from '../../animations/animations';
 import { IntroductionComponent } from './introduction.component';
 import { QUESTION_COUNT_ICON } from './question-count-icon';
 import { Quiz, QuizDifficulty, QuizQuestion } from '@shared/models';
@@ -56,6 +58,7 @@ describe('IntroductionComponent — API-backed question count (Stage 14 regressi
     TestBed.configureTestingModule({
       imports: [IntroductionComponent],
       providers: [
+        provideNoopAnimations(),
         { provide: QuizDotStatusService, useValue: {} },
         { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
         { provide: QuizDataService, useValue: { clearQuizQuestionCache: jest.fn() } },
@@ -282,6 +285,7 @@ describe('IntroductionComponent — instant first paint from seeded metadata (St
     TestBed.configureTestingModule({
       imports: [IntroductionComponent],
       providers: [
+        provideNoopAnimations(),
         { provide: QuizDotStatusService, useValue: {} },
         { provide: TopicQuizMetadataService, useValue: metadataApi },
         { provide: QuizDataService, useValue: { clearQuizQuestionCache: jest.fn() } },
@@ -429,6 +433,7 @@ describe('IntroductionComponent — Start Quiz spinner lifecycle (cold-start fix
     TestBed.configureTestingModule({
       imports: [IntroductionComponent],
       providers: [
+        provideNoopAnimations(),
         { provide: QuizDotStatusService, useValue: { clearAllMaps: jest.fn() } },
         {
           provide: TopicQuizMetadataService,
@@ -713,6 +718,7 @@ describe('IntroductionComponent — bounded 45s Start Quiz timeout', () => {
     TestBed.configureTestingModule({
       imports: [IntroductionComponent],
       providers: [
+        provideNoopAnimations(),
         { provide: QuizDotStatusService, useValue: { clearAllMaps: jest.fn() } },
         {
           provide: TopicQuizMetadataService,
@@ -950,6 +956,7 @@ describe('IntroductionComponent — browser tab title (document-title fix)', () 
     TestBed.configureTestingModule({
       imports: [IntroductionComponent],
       providers: [
+        provideNoopAnimations(),
         { provide: QuizDotStatusService, useValue: {} },
         { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
         { provide: QuizDataService, useValue: { clearQuizQuestionCache: jest.fn() } },
@@ -997,6 +1004,7 @@ describe('IntroductionComponent — browser tab title (document-title fix)', () 
     TestBed.configureTestingModule({
       imports: [IntroductionComponent],
       providers: [
+        provideNoopAnimations(),
         { provide: QuizDotStatusService, useValue: {} },
         {
           provide: TopicQuizMetadataService,
@@ -1079,6 +1087,7 @@ describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 
     TestBed.configureTestingModule({
       imports: [IntroductionComponent],
       providers: [
+        provideNoopAnimations(),
         { provide: QuizDotStatusService, useValue: {} },
         { provide: TopicQuizMetadataService, useValue: makeMetadataApi() },
         { provide: QuizDataService, useValue: { clearQuizQuestionCache: jest.fn() } },
@@ -1202,53 +1211,113 @@ describe('IntroductionComponent — Narrator/keyboard accessibility (2026-10-15 
 });
 
 /**
- * Entrance animation (CSS only). jsdom cannot run CSS animations, so these
- * assert how the stylesheet is scoped rather than any timing.
+ * Entrance animation: the shared Angular trigger (animations/animations.ts) on
+ * the intro card. jsdom cannot run real animations, so these assert wiring and
+ * scoping; the actual motion, visibility and accessibility tree were verified
+ * in a real browser.
  */
-describe('IntroductionComponent — entrance animation stylesheet', () => {
-  const scss = readFileSync(
-    join(__dirname, 'introduction.component.scss'),
-    'utf8'
-  ).replace(/\r\n/g, '\n');
+describe('IntroductionComponent — Angular entrance animation', () => {
+  const dir = __dirname;
+  const read = (name: string) => readFileSync(join(dir, name), 'utf8').replace(/\r\n/g, '\n');
+  const html = read('introduction.component.html');
+  const scss = read('introduction.component.scss');
+  const animationsTs = readFileSync(join(dir, '../../animations/animations.ts'), 'utf8');
 
-  /** The body of the @media block that contains the animation. */
-  const motionBlock = (): string => {
-    const start = scss.indexOf('@media (prefers-reduced-motion: no-preference)');
-    expect(start).toBeGreaterThan(-1);
-    let depth = 0;
-    for (let i = scss.indexOf('{', start); i < scss.length; i++) {
-      if (scss[i] === '{') depth++;
-      if (scss[i] === '}' && --depth === 0) return scss.slice(start, i + 1);
-    }
-    throw new Error('unbalanced @media block');
-  };
-
-  it('is scoped to prefers-reduced-motion: no-preference (never runs for reduce)', () => {
-    const outside = scss.replace(motionBlock(), '');
-    expect(outside).not.toMatch(/animation\s*:/);
-    expect(outside).not.toContain('@keyframes introduction-enter');
-    expect(motionBlock()).toMatch(/animation:\s*introduction-enter\s+250ms\s+ease-out/);
+  const questionCountMap = new Map<string, number | null>([['typescript', 10]]);
+  const milestoneMap = new Map<string, string>([['typescript', 'TypeScript']]);
+  const metadata = (): any => ({
+    load: jest.fn(() => of([{ quizId: 'typescript' }])),
+    questionCountByQuiz: signal(questionCountMap),
+    milestoneByQuiz: signal(milestoneMap),
+    difficultyByQuiz: signal(new Map<string, string | null>([['typescript', 'beginner']])),
+    imageByQuiz: signal(new Map<string, string>()),
+    factsByQuiz: signal(new Map<string, readonly string[]>()),
+    summaryByQuiz: signal(new Map<string, string>([['typescript', 'TypeScript summary.']])),
+    milestoneFor: (id: string) => milestoneMap.get(id) ?? id,
+    imageFor: () => '',
+    factsFor: () => [],
+    summaryFor: () => 'TypeScript summary.'
   });
 
-  it('animates only opacity and transform, once, without lingering styles', () => {
-    const block = motionBlock();
-    const keyframes = block.slice(block.indexOf('@keyframes'));
-    const props = [...keyframes.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]);
-    expect(new Set(props)).toEqual(new Set(['opacity', 'transform']));
-    expect(block).not.toMatch(/infinite|animation-iteration-count|animation-delay/);
-    // 'backwards', not 'both'/'forwards': no transform or stacking context remains.
-    expect(block).toMatch(/ease-out\s+backwards/);
-    expect(block).not.toMatch(/\b(forwards|both)\b/);
+  const setMatchMedia = (reduce: boolean) =>
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: (query: string) => ({
+        matches: reduce && query.includes('prefers-reduced-motion'),
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      })
+    });
+
+  function create() {
+    TestBed.configureTestingModule({
+      imports: [IntroductionComponent],
+      providers: [
+        provideNoopAnimations(),
+        { provide: QuizDotStatusService, useValue: {} },
+        { provide: TopicQuizMetadataService, useValue: metadata() },
+        { provide: QuizDataService, useValue: { clearQuizQuestionCache: jest.fn() } },
+        { provide: QuizNavigationService, useValue: {} },
+        { provide: QuizPersistenceService, useValue: {} },
+        { provide: QuizService, useValue: { clearStoredCorrectAnswersText: jest.fn(), setCheckedShuffle: jest.fn() } },
+        { provide: QuizShuffleService, useValue: {} },
+        { provide: SelectedOptionService, useValue: {} },
+        { provide: TimerService, useValue: { timePerQuestion: 30 } },
+        { provide: QuizStartSpinnerService, useValue: {} },
+        { provide: ActivatedRoute, useValue: { params: of({ quizId: 'typescript' }) } },
+        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
+      ]
+    });
+    const fixture = TestBed.createComponent(IntroductionComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  afterEach(() => setMatchMedia(false));
+
+  it('reuses the shared trigger from animations.ts (one definition, others intact)', () => {
+    expect(SlideLeftToRightAnimation.slideLeftToRight.name).toBe('slideLeftToRight');
+    expect(animationsTs.match(/trigger\('slideLeftToRight'/g)).toHaveLength(1);
+    expect(animationsTs).toContain('export const ChangeRouteAnimation');
+    expect(animationsTs).toContain('export const correctAnswerAnim');
   });
 
-  it('targets only the card, not buttons or text', () => {
-    const block = motionBlock();
-    expect(block).toContain(':host ::ng-deep mat-card.quiz-card');
-    expect(block).not.toMatch(/button|mat-card-title|h1|\.mat-mdc-button/);
+  it('applies the trigger to the existing card, with no extra wrapper', () => {
+    expect(html).toMatch(/<mat-card\s+class="quiz-card"\s+@slideLeftToRight\s+\[@\.disabled\]="motionDisabled"\s*>/);
+    expect(html).not.toMatch(/\[@slideLeftToRight\]|\(@slideLeftToRight/); // no callbacks
   });
 
-  it('keeps the .ng-animating clone-hide workaround exactly as it was', () => {
-    expect(scss).toContain(`:host ::ng-deep .ng-animating {
+  it('renders the card with the trigger attached and the same structure', () => {
+    setMatchMedia(false);
+    const fixture = create();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelectorAll('mat-card.quiz-card')).toHaveLength(1);
+    expect(root.querySelectorAll('h1')).toHaveLength(1);
+    expect(root.querySelector('h1')?.getAttribute('tabindex')).toBe('-1');
+    const start = root.querySelector('button.start-btn') as HTMLButtonElement;
+    expect(start.getAttribute('aria-label')).toBe('Start the Quiz');
+    expect(root.querySelector('mat-card.quiz-card')?.getAttribute('aria-hidden')).toBeNull();
+    expect(root.querySelector('mat-card.quiz-card')?.hasAttribute('role')).toBe(false);
+  });
+
+  it('honours prefers-reduced-motion by disabling Angular animations for the card', () => {
+    setMatchMedia(true);
+    expect((create().componentInstance as any).motionDisabled).toBe(true);
+    TestBed.resetTestingModule();
+    setMatchMedia(false);
+    expect((create().componentInstance as any).motionDisabled).toBe(false);
+  });
+
+  it('uses no CSS entrance animation (the Angular trigger is the only one)', () => {
+    expect(scss).not.toContain('introduction-enter');
+    expect(scss).not.toMatch(/@keyframes/);
+    expect(scss).not.toMatch(/animation\s*:/);
+  });
+
+  it('keeps the clone-hide rule for every element except the intro card', () => {
+    expect(scss).toContain(`:host ::ng-deep .ng-animating:not(mat-card.quiz-card) {
   opacity: 0 !important;
   border: none !important;
   box-shadow: none !important;
@@ -1258,10 +1327,9 @@ describe('IntroductionComponent — entrance animation stylesheet', () => {
 }`);
   });
 
-  it('uses no Angular animation trigger (the workaround would hide the card)', () => {
-    const ts = readFileSync(join(__dirname, 'introduction.component.ts'), 'utf8');
-    const html = readFileSync(join(__dirname, 'introduction.component.html'), 'utf8');
-    expect(ts).not.toMatch(/animations\s*:|@angular\/animations/);
-    expect(html).not.toMatch(/\[@|\(@|@[a-zA-Z]+\.(start|done)/);
+  it('adds no animation event callbacks (nothing can move focus or announce)', () => {
+    const ts = readFileSync(join(dir, 'introduction.component.ts'), 'utf8');
+    expect(ts).not.toMatch(/AnimationEvent/);
+    expect(ts).toContain('animations: [SlideLeftToRightAnimation.slideLeftToRight]');
   });
 });

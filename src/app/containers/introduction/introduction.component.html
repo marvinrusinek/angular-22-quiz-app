@@ -1,5 +1,9 @@
 @if (selectedQuiz(); as quiz) {
-  <mat-card class="quiz-card">
+  <mat-card
+    class="quiz-card"
+    @slideLeftToRight
+    [@.disabled]="motionDisabled"
+  >
     <mat-card-header>
       <img
         mat-card-avatar

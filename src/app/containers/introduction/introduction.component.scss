@@ -230,8 +230,11 @@ mat-card-actions {
   }
 }
 
-/* ✓ CLEAN clone-hide block — keep this exactly */
-:host ::ng-deep .ng-animating {
+/* ✓ CLEAN clone-hide block. Angular adds .ng-animating to whatever it is
+   animating, and this hides stray animation clones (copied from QuizComponent's
+   ghost-clone fix). The intro card's OWN entrance (@slideLeftToRight) must stay
+   visible, so only that card is excluded; every other element is unchanged. */
+:host ::ng-deep .ng-animating:not(mat-card.quiz-card) {
   opacity: 0 !important;
   border: none !important;
   box-shadow: none !important;
@@ -397,27 +400,4 @@ mat-card-actions {
   color: vars.$fire-red;
   font-size: 13px;
   font-weight: 600;
-}
-
-/* One-time entrance for the intro card. CSS only: no Angular animation trigger,
-   so Angular's .ng-animating clone-hide rule above never activates. Only
-   opacity and transform; the 'backwards' fill means nothing (no transform, no
-   stacking context) lingers once it ends, and the card is fully usable the
-   whole time. Skipped entirely when the user prefers reduced motion. */
-@media (prefers-reduced-motion: no-preference) {
-  :host ::ng-deep mat-card.quiz-card {
-    animation: introduction-enter 250ms ease-out backwards;
-  }
-
-  @keyframes introduction-enter {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 }

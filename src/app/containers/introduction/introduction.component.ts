@@ -26,6 +26,7 @@ import { catchError, map, switchMap, tap, timeout } from 'rxjs/operators';
 
 import { Quiz, QuizDifficulty, QuizQuestion } from '@shared/models';
 
+import { SlideLeftToRightAnimation } from '../../animations/animations';
 import { QUESTION_COUNT_ICON, registerQuestionCountIcon } from './question-count-icon';
 
 import { QuizDataService } from '@shared/services/data/quizdata.service';
@@ -63,6 +64,7 @@ export interface QuizPreferencesModel {
   ],
   templateUrl: './introduction.component.html',
   styleUrls: ['./introduction.component.scss'],
+  animations: [SlideLeftToRightAnimation.slideLeftToRight],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class IntroductionComponent implements OnInit {
@@ -141,6 +143,16 @@ export class IntroductionComponent implements OnInit {
 
   /** The toggle's state, read straight off the field. */
   readonly isChecked = computed(() => this.preferencesForm.shouldShuffleOptions().value());
+  /**
+   * True when the user prefers reduced motion. Bound to `@.disabled` on the
+   * card so Angular skips its entrance animation (Angular animations run on
+   * the Web Animations API, which CSS media queries cannot switch off). Read
+   * once per visit; no NgZone and no change-detection call needed.
+   */
+  protected readonly motionDisabled =
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+
   readonly isStartingQuiz = signal(false);
   /**
    * True after a Start attempt genuinely failed to load real question

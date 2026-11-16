@@ -384,28 +384,14 @@ export class AnswerComponent extends BaseQuestion<OptionClickedPayload> implemen
 
     const savedTexts = new Set(savedSelections.map((selection) => norm(selection.text)));
 
-    // For single-answer, also track the POSITIONAL index of whichever
-    // option matches the saved selection. mat-radio-button's own
-    // [value]="index" (option-item.component.html, index = displayIndex,
-    // itself this array's own $index — see shared-option.component.html's
-    // `@for (b of opts; let i = $index; ...)`) is compared against the
-    // mat-radio-group's form control value, so that control must hold this
-    // POSITION, never the option's own optionId. Before this fix it was
-    // patched with the raw optionId (see git history) — on any question
-    // whose optionId doesn't coincidentally equal its position, the native
-    // input's real `.checked` (and therefore the accessibility tree's
-    // checked state, confirmed via a live trace) silently went false on
-    // revisit, while `option.selected` below (correctly id/text-matched)
-    // kept the VISUAL incorrect/selected highlight — the native control and
-    // the screen simply disagreed. Narrator reports the real, now-correct
-    // native/AX state, which is what actually matters; it was never "given"
-    // an aria-checked override, because none was needed.
+    // The radio group's value is the first match's POSITION, not its optionId.
     let matchedSingleIndex: number | null = null;
 
-    this.optionsToDisplay().forEach((option, i) => {
+    // Restore saved single-answer selections; reset multi-answer options.
+    for (const [optionIndex, option] of this.optionsToDisplay().entries()) {
       if (isMulti) {
         option.selected = false;
-        return;
+        continue;
       }
 
       const idMatch = option.optionId != null && savedIds.has(String(option.optionId));
@@ -413,8 +399,8 @@ export class AnswerComponent extends BaseQuestion<OptionClickedPayload> implemen
       const textMatch = !!(option.text && savedTexts.has(norm(option.text)));
 
       option.selected = idMatch || textMatch;
-      if (option.selected && matchedSingleIndex === null) matchedSingleIndex = i;
-    });
+      if (option.selected && matchedSingleIndex === null) matchedSingleIndex = optionIndex;
+    }
 
     const updatedBindings = this.answerBindingsService.hydrateBindingsFromSavedSelections(
       this.optionBindings(),

@@ -19,13 +19,14 @@ import { TopicQuizResourcesService } from '@shared/services/api/topic-quiz-resou
 import { QuizService } from '@shared/services/data/quiz.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
 
+import { IntroExposedTextDirective } from '../../introduction/intro-exposed-text.directive';
 import { ScoreVisualComponent } from './score-visual/score-visual.component';
 import { QuizResourcesComponent } from './quiz-resources/quiz-resources.component';
 
 @Component({
   selector: 'codelab-results-statistics',
   standalone: true,
-  imports: [ScoreVisualComponent, QuizResourcesComponent],
+  imports: [IntroExposedTextDirective, QuizResourcesComponent, ScoreVisualComponent],
   templateUrl: './statistics.component.html',
   styleUrls: ['./statistics.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -107,9 +108,20 @@ export class StatisticsComponent implements OnInit {
     () => !(this.viewMode() === 'all' && this.feedbackLevel() === 'poor')
   );
 
-  readonly feedbackAria = computed(
+  /** The visible score sentence; also the second line of the exposed text. */
+  readonly feedbackScoreText = computed(
     () =>
-      $localize`${this.feedbackTitle()}! You scored ${this.correctCount()} out of ${this.totalCount()} ${this.questionLabel()} correctly.`
+      $localize`You scored ${this.correctCount()} out of ${this.totalCount()} ${this.questionLabel()} correctly.`
+  );
+
+  /**
+   * What Narrator reads for the feedback image and the score sentence: one
+   * line for the image's feedback and one for the sentence, e.g. "Try Again!"
+   * then "You scored 2 out of 7 questions correctly.". Exposed as ONE text
+   * item by the group (see IntroExposedTextDirective).
+   */
+  readonly feedbackExposedText = computed(() =>
+    [`${this.feedbackTitle()}!`, this.feedbackScoreText()].join('\n')
   );
 
   readonly elapsedAria = computed(

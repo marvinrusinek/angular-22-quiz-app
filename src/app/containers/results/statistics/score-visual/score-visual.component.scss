@@ -130,19 +130,23 @@
 // SCORE BREAKDOWN (Correct / Incorrect / Timed Out)
 // ============================================================
 .score-breakdown {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  // Breathing room inside the named role="img" wrapper so its bounding rectangle
-  // (what Narrator highlights) is not flush with the first/last row. The negative
-  // top / reduced bottom margin cancel the padding, so the visible layout is unchanged.
+  position: relative; // anchors the exposed text (IntroExposedTextDirective)
+  // Padding and the cancelling negative top margin are unchanged, so the
+  // visible layout is too; the group's exposed text follows the visible rows.
   padding: 4px 12px;
   margin: -4px auto 0;
   // Opacity-only entrance (same 0.5s duration and 0.5s delay as before). The old slideInUp held this
   // element at translateY(20px) during the delay, and UI Automation kept that stale offset for the
   // wrapper's bounding rectangle (~15px low), so Narrator's highlight clipped the top rows.
   animation: breakdownFadeIn 0.5s ease-out 0.5s both;
+
+  // The visible rows (hidden from AT; the group exposes one text item instead).
+  .score-breakdown-visible {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
 
   .breakdown-item {
     font-size: 17px;

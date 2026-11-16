@@ -5,53 +5,66 @@
       <div class="score-view">
         <div class="score-grid">
           <!-- LEFT COLUMN: Feedback Image, Score Text -->
-          <div
-            class="score-col-feedback"
-            [attr.role]="feedbackGrouped() ? 'img' : null"
-            [attr.aria-label]="feedbackGrouped() ? feedbackAria() : null"
-          >
-            <div class="quiz-feedback" [attr.aria-hidden]="feedbackGrouped() ? 'true' : null">
-              @if (feedbackLevel() === 'excellent') {
-                <img
-                  mat-card-image
-                  loading="lazy"
-                  [src]="CONGRATULATIONS"
-                  alt="Photo of 'Congratulations'"
-                  i18n-title
-                  title="Congratulations"
-                />
-              } @else if (feedbackLevel() === 'good') {
-                <img
-                  mat-card-image
-                  loading="lazy"
-                  [src]="NOT_BAD"
-                  alt="Photo of 'Not Bad'"
-                  i18n-title
-                  title="Not Bad"
-                />
-              } @else {
-                <img
-                  mat-card-image
-                  loading="lazy"
-                  [src]="TRY_AGAIN"
-                  alt="Photo of 'Try Again'"
-                  i18n-title
-                  title="Try Again"
-                />
-                <!-- If viewMode is 'all', show resources here for low scores -->
-                @if (viewMode() === 'all') {
-                  <app-quiz-resources
-                    [milestoneName]="milestoneName()"
-                    [resources]="resources()"
+          <!-- One group when it holds no links: the image and the sentence are
+               hidden from AT and the group exposes ONE text item sized to them
+               (see IntroExposedTextDirective), so Narrator reads the feedback and
+               the score sentence once as a group and moves on. With the resource
+               links showing (low score, 'all' view) it stays as it was. -->
+          <div class="score-col-feedback">
+           <div class="score-feedback-group" [attr.role]="feedbackGrouped() ? 'group' : null">
+            <div
+              class="score-feedback-visible"
+              [attr.data-intro-visible]="feedbackGrouped() ? '' : null"
+              [attr.aria-hidden]="feedbackGrouped() ? 'true' : null"
+            >
+              <div class="quiz-feedback">
+                @if (feedbackLevel() === 'excellent') {
+                  <img
+                    mat-card-image
+                    loading="lazy"
+                    [src]="CONGRATULATIONS"
+                    alt="Photo of 'Congratulations'"
+                    i18n-title
+                    title="Congratulations"
                   />
+                } @else if (feedbackLevel() === 'good') {
+                  <img
+                    mat-card-image
+                    loading="lazy"
+                    [src]="NOT_BAD"
+                    alt="Photo of 'Not Bad'"
+                    i18n-title
+                    title="Not Bad"
+                  />
+                } @else {
+                  <img
+                    mat-card-image
+                    loading="lazy"
+                    [src]="TRY_AGAIN"
+                    alt="Photo of 'Try Again'"
+                    i18n-title
+                    title="Try Again"
+                  />
+                  <!-- If viewMode is 'all', show resources here for low scores -->
+                  @if (viewMode() === 'all') {
+                    <app-quiz-resources
+                      [milestoneName]="milestoneName()"
+                      [resources]="resources()"
+                    />
+                  }
                 }
-              }
+              </div>
+
+              <!-- Score Text -->
+              <div class="score-text-container">
+                <span class="your-score" data-intro-width-ref>{{ feedbackScoreText() }}</span>
+              </div>
             </div>
 
-            <!-- Score Text -->
-            <div class="score-text-container" [attr.aria-hidden]="feedbackGrouped() ? 'true' : null">
-              <span class="your-score" i18n>You scored {{ quizMetadata().correctAnswersCount?.() ?? 0 }} out of {{ quizMetadata().totalQuestions }} {{ questionLabel() }} correctly.</span>
-            </div>
+            @if (feedbackGrouped()) {
+              <span [appIntroExposedText]="feedbackExposedText()" exposedTextMode="spread" fitGroupWidth></span>
+            }
+           </div>
           </div>
 
           <!-- RIGHT COLUMN: Circle, Stars, Badge -->

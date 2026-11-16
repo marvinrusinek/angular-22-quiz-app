@@ -15,8 +15,13 @@ import {
  *    exactly like it (the subtitle).
  *  - `justify`: one line per visible row, fitted to the visible content box
  *    (the metadata rows with their icons).
+ *  - `spread`: the width reference's own font and spacing, so the lines wrap
+ *    like it, with the line-height spread so the lines span the visible
+ *    content's height. For content that is much taller than its text (the
+ *    feedback image above its sentence). No letter-spacing: a text range's
+ *    rectangles ignore it, so Narrator would draw a far wider box.
  */
-export type IntroExposedTextMode = 'clone' | 'justify';
+export type IntroExposedTextMode = 'clone' | 'justify' | 'spread';
 
 /**
  * The ONE text item a Narrator scan-mode stop on a group exposes.
@@ -26,8 +31,8 @@ export type IntroExposedTextMode = 'clone' | 'justify';
  * group hides its visible markup (`aria-hidden`, marked `data-intro-visible`)
  * and exposes exactly one transparent text node, laid out over the VISIBLE
  * content so its bounds (Narrator's highlight box) follow that content:
- * left/width from the longest visible line (icons included), height from the
- * visible rows. The text is the same source as the visible text.
+ * left/width from the longest visible line (icons included, or the element
+ * marked data-intro-width-ref when there is one), height from the visible rows. The text is the same source as the visible text.
  *
  * Browsers fire no event when this text should be re-fitted, so it is
  * re-fitted when the text changes, when the group or the visible content is
@@ -37,11 +42,25 @@ export type IntroExposedTextMode = 'clone' | 'justify';
 @Directive({
   selector: '[appIntroExposedText]',
   standalone: true,
-  host: { class: 'intro-exposed-text' }
+  host: {
+    class: 'intro-exposed-text',
+    // Self-contained (no component SCSS needed): transparent, never hit-tested,
+    // never selectable. Its box is set by fit().
+    style:
+      'position:absolute;margin:0;padding:0;color:transparent;pointer-events:none;user-select:none;white-space:pre-line'
+  }
 })
 export class IntroExposedTextDirective {
   readonly text = input.required<string>({ alias: 'appIntroExposedText' });
   readonly mode = input<IntroExposedTextMode>('clone', { alias: 'exposedTextMode' });
+  /**
+   * Narrator draws its box around the GROUP, not only the text, so a group
+   * wider than its text gives an over-long box. When set, the group is sized
+   * to the longest rendered line of the [data-intro-width-ref] element (or the
+   * widest image, if wider): it wraps the same, as it is no narrower than that
+   * line, and it is centred by its parent.
+   */
+  readonly fitGroupWidth = input(false, { alias: 'fitGroupWidth', transform: (v: unknown) => v === '' || v === true || v === 'true' });
 
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
@@ -61,7 +80,8 @@ export class IntroExposedTextDirective {
       if (!group) return;
       if (typeof ResizeObserver !== 'undefined') {
         this.observer = new ResizeObserver(() => this.fit());
-        this.observer.observe(group);
+        // Sizing the group ourselves would re-trigger an observer on the group.
+        this.observer.observe(this.fitGroupWidth() && group.parentElement ? group.parentElement : group);
         const visible = this.visible();
         if (visible) this.observer.observe(visible);
       }
@@ -92,12 +112,27 @@ export class IntroExposedTextDirective {
     visible.querySelectorAll('mat-icon, svg, img').forEach((i) => rects.push(i.getBoundingClientRect()));
     const real = rects.filter((r) => r.width > 0 && r.height > 0);
     if (!real.length) return null;
-    return {
+    const box = {
       l: Math.min(...real.map((r) => r.left)),
       t: Math.min(...real.map((r) => r.top)),
       r: Math.max(...real.map((r) => r.right)),
       b: Math.max(...real.map((r) => r.bottom))
     };
+    // Optional horizontal reference: an element marked data-intro-width-ref
+    // (the score sentence) sets the left/right edges from ITS longest rendered
+    // line, so a wider neighbour (the feedback image) does not widen the box.
+    // Vertical coverage still spans ALL of the visible content (image and text).
+    const ref = visible.querySelector<HTMLElement>('[data-intro-width-ref]');
+    if (ref) {
+      const rr = document.createRange();
+      rr.selectNodeContents(ref);
+      const lines = Array.from(rr.getClientRects()).filter((r) => r.width > 0 && r.height > 0);
+      if (lines.length) {
+        box.l = Math.min(...lines.map((r) => r.left));
+        box.r = Math.max(...lines.map((r) => r.right));
+      }
+    }
+    return box;
   }
 
   private textBox(): { top: number; width: number; height: number; ca: number } | null {
@@ -114,11 +149,72 @@ export class IntroExposedTextDirective {
     };
   }
 
+  /** Size the group to the width reference's longest line (see fitGroupWidth). */
+  private fitGroup(group: HTMLElement, visible: HTMLElement): void {
+    group.style.width = '';
+    group.style.maxWidth = '100%';
+    const ref = visible.querySelector<HTMLElement>('[data-intro-width-ref]');
+    const range = document.createRange();
+    if (!ref || typeof range.getClientRects !== 'function') return;
+    range.selectNodeContents(ref);
+    const lines = Array.from(range.getClientRects()).filter((r) => r.width > 0 && r.height > 0);
+    if (!lines.length) return;
+    const text = Math.max(...lines.map((r) => r.right)) - Math.min(...lines.map((r) => r.left));
+    const widest = Math.max(text, ...Array.from(visible.querySelectorAll('img')).map((i) => i.getBoundingClientRect().width));
+    // A quarter pixel of slack keeps the text from re-wrapping on rounding.
+    group.style.width = `${widest + 0.25}px`;
+  }
+
+  private spread(
+    box: { l: number; t: number; r: number; b: number },
+    g: DOMRect,
+    group: HTMLElement
+  ): void {
+    const style = this.host.style;
+    const ref = group.querySelector<HTMLElement>('[data-intro-width-ref]');
+    const cs = ref ? getComputedStyle(ref) : getComputedStyle(this.host);
+    Object.assign(style, {
+      whiteSpace: 'pre-line',
+      textAlign: 'center',
+      textAlignLast: 'auto',
+      fontFamily: cs.fontFamily,
+      fontSize: cs.fontSize,
+      fontWeight: cs.fontWeight,
+      letterSpacing: cs.letterSpacing,
+      lineHeight: 'normal',
+      top: '0px',
+      // A quarter pixel of slack keeps the lines from re-wrapping on rounding.
+      width: `${box.r - box.l + 0.25}px`
+    });
+    const probe = this.textBox();
+    if (!probe) return;
+    const lines = this.lineCount();
+    const H = box.b - box.t;
+    const lineHeight = lines > 1 ? (H - probe.ca) / (lines - 1) : H;
+    style.lineHeight = `${lineHeight}px`;
+    style.top = `${-(lineHeight - probe.ca) / 2}px`;
+    const placed = this.textBox();
+    if (placed) style.top = `${parseFloat(style.top) - (placed.top - g.top) + (box.t - g.top)}px`;
+  }
+
+  private lineCount(): number {
+    const range = document.createRange();
+    if (typeof range.getClientRects !== 'function') return 1;
+    range.selectNodeContents(this.host);
+    const tops = new Set(
+      Array.from(range.getClientRects())
+        .filter((r) => r.width > 0 && r.height > 0)
+        .map((r) => Math.round(r.top))
+    );
+    return Math.max(1, tops.size);
+  }
+
   private fit(): void {
     if (this.destroyed) return;
     const group = this.host.parentElement;
     const visible = this.visible();
     if (!group || !visible) return;
+    if (this.fitGroupWidth()) this.fitGroup(group, visible);
     const box = this.contentBox(visible);
     if (!box) return;
     const g = group.getBoundingClientRect();
@@ -138,6 +234,11 @@ export class IntroExposedTextDirective {
       // inline text's; align the glyph boxes themselves with the visible ones.
       const placed = this.textBox();
       if (placed) style.top = `${parseFloat(style.top) + (box.t - placed.top)}px`;
+      return;
+    }
+
+    if (this.mode() === 'spread') {
+      this.spread(box, g, group);
       return;
     }
 

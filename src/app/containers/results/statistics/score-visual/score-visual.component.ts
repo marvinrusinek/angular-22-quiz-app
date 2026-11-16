@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
+import { IntroExposedTextDirective } from '../../../introduction/intro-exposed-text.directive';
+
 /**
  * Presentational-only score visuals for the results screen: the circular SVG
  * score ring + percentage, the Correct/Incorrect/Timed-Out breakdown, the star
@@ -11,7 +13,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 @Component({
   selector: 'app-score-visual',
   standalone: true,
-  imports: [],
+  imports: [IntroExposedTextDirective],
   templateUrl: './score-visual.component.html',
   styleUrls: ['./score-visual.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -34,8 +36,13 @@ export class ScoreVisualComponent {
     return $localize`Flexed biceps. Keep Practicing!`;
   });
   readonly circleAria = computed(() => $localize`${this.percentage()}% Score`);
-  readonly breakdownAria = computed(
-    () =>
-      $localize`${this.correctCount()} Correct, ${this.incorrectCount()} Incorrect, ${this.timedOutCount()} Timed Out`
+  // The breakdown rows. The VISIBLE rows and the text Narrator reads both come
+  // from these signals (the visible rows add their ✔ ✖ ⏱ symbol).
+  readonly correctText = computed(() => $localize`${this.correctCount()} Correct`);
+  readonly incorrectText = computed(() => $localize`${this.incorrectCount()} Incorrect`);
+  readonly timedOutText = computed(() => $localize`${this.timedOutCount()} Timed Out`);
+  /** One line per visible row; the group exposes it as ONE text item. */
+  readonly breakdownExposedText = computed(() =>
+    [this.correctText(), this.incorrectText(), this.timedOutText()].join('\n')
   );
 }

@@ -21,6 +21,25 @@ class HostComponent {
   readonly mode = signal<'clone' | 'justify'>('clone');
 }
 
+@Component({
+  standalone: true,
+  imports: [IntroExposedTextDirective],
+  template: `
+    <div class="column">
+      <div class="group" role="group">
+        <div data-intro-visible aria-hidden="true">
+          <img alt="" width="10" height="10" />
+          <span data-intro-width-ref>sentence</span>
+        </div>
+        <span [appIntroExposedText]="text" exposedTextMode="spread" fitGroupWidth></span>
+      </div>
+    </div>
+  `
+})
+class SpreadHostComponent {
+  readonly text = 'Title!\nsentence';
+}
+
 /**
  * The directive's job is to expose ONE text node and to release what it
  * observes. Layout fitting itself needs real layout, so the fit maths is
@@ -45,7 +64,7 @@ describe('IntroExposedTextDirective', () => {
       configurable: true,
       value: { ready: new Promise<void>((r) => (fontsResolve = r)) }
     });
-    TestBed.configureTestingModule({ imports: [HostComponent] });
+    TestBed.configureTestingModule({ imports: [HostComponent, SpreadHostComponent] });
   });
 
   afterEach(() => {
@@ -109,6 +128,37 @@ describe('IntroExposedTextDirective', () => {
     await Promise.resolve();
     expect(range).not.toHaveBeenCalled();
     range.mockRestore();
+  });
+
+  describe('spread mode with fitGroupWidth (the feedback group)', () => {
+    const renderSpread = () => {
+      const fixture = TestBed.createComponent(SpreadHostComponent);
+      fixture.detectChanges();
+      TestBed.tick();
+      return fixture.nativeElement as HTMLElement;
+    };
+
+    it('still exposes exactly one text node', () => {
+      const exposed = renderSpread().querySelector('.intro-exposed-text')!;
+      expect(exposed.childNodes).toHaveLength(1);
+      expect(exposed.textContent).toBe('Title!\nsentence');
+    });
+
+    it('observes the parent of the group, not the group it resizes (no feedback loop)', () => {
+      const root = renderSpread();
+      const observed = observers[0].observe.mock.calls.map(([el]) => (el as HTMLElement).className || (el as HTMLElement).tagName);
+      expect(observed).toContain('column');
+      expect(observed).not.toContain('group');
+      expect(root.querySelector('.group')).not.toBeNull();
+    });
+
+    it('releases that observer on destroy too', () => {
+      const fixture = TestBed.createComponent(SpreadHostComponent);
+      fixture.detectChanges();
+      TestBed.tick();
+      fixture.destroy();
+      expect(observers[0].disconnect).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('adds no listeners to the document or window', () => {

@@ -33,15 +33,17 @@
   </div>
 </div>
 
-<!-- Score Breakdown -->
-<div
-  class="score-breakdown"
-  role="img"
-  [attr.aria-label]="breakdownAria()"
->
-  <span class="breakdown-item correct" aria-hidden="true" i18n>✔ {{ correctCount() }} Correct</span>
-  <span class="breakdown-item incorrect" aria-hidden="true" i18n>✖ {{ incorrectCount() }} Incorrect</span>
-  <span class="breakdown-item timed-out" aria-hidden="true" i18n>⏱ {{ timedOutCount() }} Timed Out</span>
+<!-- Score Breakdown: one group, one exposed text item. The visible rows are
+     hidden from AT; the group exposes ONE text node sized to them (see
+     IntroExposedTextDirective), so Narrator reads "N Correct, N Incorrect,
+     N Timed Out" once as a group, draws one box, and moves on. -->
+<div class="score-breakdown" role="group">
+  <div class="score-breakdown-visible" data-intro-visible aria-hidden="true">
+    <span class="breakdown-item correct">✔ {{ correctText() }}</span>
+    <span class="breakdown-item incorrect">✖ {{ incorrectText() }}</span>
+    <span class="breakdown-item timed-out">⏱ {{ timedOutText() }}</span>
+  </div>
+  <span [appIntroExposedText]="breakdownExposedText()" exposedTextMode="justify"></span>
 </div>
 
 <!-- Star Rating -->

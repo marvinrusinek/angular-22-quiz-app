@@ -52,6 +52,26 @@
     gap: 20px;
   }
 
+  // The Narrator group: the image and the score sentence, laid out exactly as
+  // the column laid them out before. Its width is set to the sentence's longest
+  // line by IntroExposedTextDirective (fitGroupWidth), because Narrator's
+  // highlight follows the group's box, and its parent centres it.
+  .score-feedback-group {
+    position: relative; // anchors the exposed text
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 20px;
+  }
+
+  // Holds the image and the score sentence so they can be hidden from AT as one
+  // unit; it generates no box, so the layout is exactly as before.
+  .score-feedback-visible {
+    display: contents;
+  }
+
   // Right Column: Visual Stats
   .score-col-visuals {
     display: flex;

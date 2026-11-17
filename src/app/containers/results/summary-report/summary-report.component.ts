@@ -7,11 +7,12 @@ import {
   effect,
   inject,
   input,
+  LOCALE_ID,
   OnInit,
   signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import { DatePipe, formatDate, NgTemplateOutlet } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { QuizMetadata, QuizScore } from '@shared/models';
@@ -20,6 +21,7 @@ import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metada
 import { QuizService } from '@shared/services/data/quiz.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
 
+import { IntroExposedTextDirective } from '../../introduction/intro-exposed-text.directive';
 import { SummaryIconsComponent } from './summary-icons/summary-icons.component';
 import { SummaryStatsComponent } from './summary-stats/summary-stats.component';
 
@@ -28,6 +30,7 @@ import { SummaryStatsComponent } from './summary-stats/summary-stats.component';
   standalone: true,
   imports: [
     DatePipe,
+    IntroExposedTextDirective,
     NgTemplateOutlet,
     SummaryIconsComponent,
     SummaryStatsComponent,
@@ -44,6 +47,7 @@ export class SummaryReportComponent implements OnInit {
   private readonly timerService = inject(TimerService);
   private readonly cdRef = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly locale = inject(LOCALE_ID);
 
   // ── inputs ──────────────────────────────────────────────────────
   // Signal input aliased to "quizId" so parent template binding stays the same.
@@ -88,6 +92,18 @@ export class SummaryReportComponent implements OnInit {
 
   getMilestoneLabel(quizId: string): string {
     return this.metadataApi.milestoneFor(quizId);
+  }
+
+  /**
+   * One High Scores row as a screen reader says it: "[Quiz]. [Score]%. [Date and time]." Built from the SAME values
+   * as the visible cells: the same milestone label, the same score, and the date formatted exactly as the visible
+   * cell's `date: 'medium'` pipe formats it (same format, same locale), so the two cannot drift apart.
+   */
+  highScoreSpoken(highScore: QuizScore): string {
+    const name = this.getMilestoneLabel(highScore.quizId);
+    const score = highScore.score;
+    const when = formatDate(highScore.attemptDateTime, 'medium', this.locale);
+    return $localize`${name}:name:. ${score}:score:%. ${when}:when:.`;
   }
 
   private initComponent(): void {

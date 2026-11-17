@@ -52,19 +52,32 @@
     <h2 class="high-scores-heading" i18n>High Scores</h2>
   }
 
-  <table>
-    <tr i18n>
-      <th>Milestone</th>
-      <th>Score (%)</th>
-      <th>Date/Time</th>
-    </tr>
-
-    @for (highScore of highScores(); track highScore.attemptDateTime) {
-      <tr i18n>
-        <td>{{ getMilestoneLabel(highScore.quizId) }}</td>
-        <td>{{ highScore.score }}</td>
-        <td>{{ highScore.attemptDateTime | date: 'medium' }}</td>
-      </tr>
-    }
-  </table>
+  <!-- Each score is ONE list item (a complete record), not a row of table cells: Narrator reads table cells one by
+       one, with a highlight per cell. The three visible columns are kept with CSS table layout on these list
+       elements. The visible values are hidden from assistive technology and ONE exposed text item says the whole
+       record, "[Quiz]. [Score]%. [Date and time].", built from the same data (see highScoreSpoken) and fitted to
+       the row's own box. The column titles are visual only: every record already names its three values. -->
+  <div class="high-scores-table">
+    <div class="hs-head" aria-hidden="true">
+      <div class="hs-row">
+        <span class="hs-th" i18n>Milestone</span>
+        <span class="hs-th" i18n>Score (%)</span>
+        <span class="hs-th" i18n>Date/Time</span>
+      </div>
+    </div>
+    <ul class="hs-body" role="list">
+      @for (highScore of highScores(); track highScore.attemptDateTime) {
+        <li class="hs-row score-row" role="listitem">
+          <span class="hs-td" data-intro-visible aria-hidden="true">{{ getMilestoneLabel(highScore.quizId) }}</span>
+          <span class="hs-td" aria-hidden="true">{{ highScore.score }}</span>
+          <span class="hs-td" aria-hidden="true">{{ highScore.attemptDateTime | date: 'medium' }}</span>
+          <span
+            [appIntroExposedText]="highScoreSpoken(highScore)"
+            exposedTextMode="justify"
+            exposedTextBox="group"
+          ></span>
+        </li>
+      }
+    </ul>
+  </div>
 </ng-template>

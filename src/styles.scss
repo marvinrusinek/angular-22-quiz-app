@@ -192,7 +192,7 @@ app-option-item {
   }
 
   /* High scores table in results */
-  codelab-results-summary .summary-report table {
+  codelab-results-summary .summary-report .high-scores-table {
     margin-left: -15px !important;
     margin-right: 0 !important;
     background: transparent !important;
@@ -201,11 +201,11 @@ app-option-item {
 }
 
 /* High scores alternating row colors (global, all screen sizes) */
-codelab-results-summary .summary-report table tr:nth-child(even) {
+codelab-results-summary .summary-report .high-scores-table .hs-body > .hs-row:nth-child(odd) {
   background-color: rgba(0, 0, 0, 0.08) !important;
 }
 
-codelab-results-summary .summary-report table tr:nth-child(odd) {
+codelab-results-summary .summary-report .high-scores-table .hs-body > .hs-row:nth-child(even) {
   background-color: transparent !important;
 }
 

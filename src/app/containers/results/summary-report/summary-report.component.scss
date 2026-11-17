@@ -156,7 +156,10 @@
   // ============================================================
   // HIGH SCORES TABLE
   // ============================================================
-  table {
+  // The three visible columns are CSS table layout on list elements (so they line up and size exactly as the old
+  // <table> did), while the markup is a list of complete score records (see the template).
+  .high-scores-table {
+    display: table;
     width: 90%;
     margin: 0 auto 20px auto;
     font-family: vars.$font-stack;
@@ -166,39 +169,56 @@
     box-shadow: none;
     background: transparent;
 
-    tr {
+    .hs-head {
+      display: table-header-group;
+    }
+
+    .hs-body {
+      display: table-row-group;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .hs-row {
+      display: table-row;
+      position: relative;
       transition: background 0.2s ease;
-
-      &:nth-child(even) {
-        background-color: rgba(0, 0, 0, 0.08) !important;
-      }
-
-      &:nth-child(odd):not(:first-child) {
-        background-color: rgba(255, 255, 255, 0.6) !important;
-      }
 
       &:hover {
         background-color: rgba(vars.$green, 0.2);
       }
+    }
 
-      th {
-        text-transform: uppercase;
-        font-size: 12px;
-        letter-spacing: 0.5px;
-        border-bottom: 2px solid vars.$dark-green;
-        background: linear-gradient(135deg, vars.$dark-green, vars.$green-angular-leaf);
-        color: vars.$white;
-        text-align: center;
-        font-weight: 700;
-        padding: 12px 16px;
-      }
-      
-      td {
-        padding: 10px 16px;
-        text-align: center;
-        font-size: 14px;
-        color: vars.$dark-blue;
-      }
+    .hs-body > .hs-row:nth-child(odd) {
+      background-color: rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .hs-body > .hs-row:nth-child(even) {
+      background-color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    .hs-th {
+      display: table-cell;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid vars.$dark-green;
+      background: linear-gradient(135deg, vars.$dark-green, vars.$green-angular-leaf);
+      color: vars.$white;
+      text-align: center;
+      font-weight: 700;
+      padding: 12px 16px;
+      vertical-align: middle;
+    }
+
+    .hs-td {
+      display: table-cell;
+      padding: 10px 16px;
+      text-align: center;
+      font-size: 14px;
+      color: vars.$dark-blue;
+      vertical-align: middle;
     }
   }
 }
@@ -264,16 +284,12 @@
       padding: 10px;
     }
 
-    table,
-    ::ng-deep table {
+    // Same effective mobile rule as the old <table>: full width, no side margins (its padding override never won).
+    .high-scores-table {
       width: 100% !important;
       font-size: 13px;
       margin-left: 0 !important;
       margin-right: 0 !important;
-
-      th, td {
-        padding: 10px 8px;
-      }
     }
 
     details summary {

@@ -82,6 +82,8 @@ export class IntroExposedTextDirective {
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
   private observer: ResizeObserver | null = null;
+  /** The inputs of the last fit that actually wrote to the DOM (see fit()). */
+  private lastFitSignature = '';
   private destroyed = false;
 
   constructor() {
@@ -89,6 +91,8 @@ export class IntroExposedTextDirective {
     effect(() => {
       this.host.textContent = this.text();
       this.mode();
+      // The host now holds the raw text again, so the next fit must run even if its inputs match the last one.
+      this.lastFitSignature = '';
       afterNextRender(() => this.fit(), { injector: this.injector });
     });
 
@@ -376,6 +380,36 @@ export class IntroExposedTextDirective {
     return Math.max(1, tops.size);
   }
 
+  /** Everything fit() reads, relative to the group so scrolling never changes it. */
+  private fitSignature(
+    group: HTMLElement,
+    visible: HTMLElement,
+    g: DOMRect,
+    box: { l: number; t: number; r: number; b: number }
+  ): string {
+    const n = (v: number): string => (Math.round(v * 100) / 100).toString();
+    const rel = (r: DOMRect): string => [r.left - g.left, r.top - g.top, r.width, r.height].map(n).join(',');
+    const ref =
+      group.querySelector<HTMLElement>('[data-intro-width-ref]') ??
+      group.querySelector<HTMLElement>('[data-intro-font-ref]');
+    let refPart = '';
+    if (ref) {
+      const cs = getComputedStyle(ref);
+      refPart = [rel(ref.getBoundingClientRect()), cs.fontFamily, cs.fontSize, cs.fontWeight, cs.letterSpacing, cs.lineHeight].join('|');
+    }
+    return [
+      this.text(),
+      this.mode(),
+      this.boxFrom(),
+      this.singleRow(),
+      this.fitGroupWidth(),
+      [g.width, g.height].map(n).join(','),
+      [box.l - g.left, box.t - g.top, box.r - g.left, box.b - g.top].map(n).join(','),
+      rel(visible.getBoundingClientRect()),
+      refPart
+    ].join('§');
+  }
+
   private fit(): void {
     if (this.destroyed) return;
     const group = this.host.parentElement;
@@ -390,6 +424,14 @@ export class IntroExposedTextDirective {
           : null
         : this.contentBox(visible);
     if (!box) return;
+    // fit() is triggered several times while a page settles (the text effect, the ResizeObserver's first callback,
+    // fonts.ready), and each run used to rewrite the exposed text node and its styles even when nothing it depends
+    // on had changed. Replacing the text node fires UI Automation text/structure events, so identical re-runs were
+    // pure churn for a screen reader. Skip a re-fit whose inputs match the last one that wrote; the result is
+    // identical by construction.
+    const signature = this.fitSignature(group, visible, g, box);
+    if (signature === this.lastFitSignature) return;
+    this.lastFitSignature = signature;
     const style = this.host.style;
     style.left = `${box.l - g.left}px`;
     style.width = `${box.r - box.l}px`;

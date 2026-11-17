@@ -175,3 +175,95 @@ describe('IntroExposedTextDirective', () => {
     expect(() => render()).not.toThrow();
   });
 });
+
+@Component({
+  standalone: true,
+  imports: [IntroExposedTextDirective],
+  template: `
+    <div class="g" role="group">
+      <div data-intro-visible aria-hidden="true"><span data-intro-font-ref>label</span></div>
+      <span [appIntroExposedText]="text()" exposedTextMode="cover" exposedTextBox="group"></span>
+    </div>
+  `
+})
+class CoverHostComponent {
+  readonly text = signal('Completed in 0 minutes and 1 second.');
+}
+
+/**
+ * fit() runs several times while a page settles (text effect, ResizeObserver's first callback, fonts.ready). Each
+ * run replaced the exposed text node, which fires UI Automation text/structure events, even when nothing it
+ * depends on had changed. A re-fit with identical inputs must now write nothing; a real change must still re-fit.
+ */
+describe('IntroExposedTextDirective: redundant re-fits', () => {
+  const realRO = (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
+  let callbacks: Array<() => void>;
+  let rectSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    callbacks = [];
+    (globalThis as { ResizeObserver?: unknown }).ResizeObserver = class {
+      observe = jest.fn();
+      disconnect = jest.fn();
+      constructor(cb: () => void) {
+        callbacks.push(cb);
+      }
+    };
+    // jsdom has no layout: give every element the same, fixed geometry.
+    rectSpy = jest.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 10, top: 20, right: 210, bottom: 60, width: 200, height: 40, x: 10, y: 20, toJSON: () => ({})
+    } as DOMRect);
+  });
+
+  afterEach(() => {
+    rectSpy.mockRestore();
+    (globalThis as { ResizeObserver?: unknown }).ResizeObserver = realRO;
+  });
+
+  const settle = async (f: ReturnType<typeof TestBed.createComponent<CoverHostComponent>>): Promise<void> => {
+    f.detectChanges();
+    TestBed.tick();
+    await Promise.resolve();
+  };
+
+  it('writes nothing when a re-fit has identical inputs, but still re-fits on a real change', async () => {
+    const f = TestBed.createComponent(CoverHostComponent);
+    await settle(f);
+    const host = f.nativeElement.querySelector('[data-intro-visible] + span') as HTMLElement;
+    expect(host.childNodes).toHaveLength(1);
+    expect(callbacks.length).toBeGreaterThan(0);
+
+    const records: MutationRecord[] = [];
+    const mo = new MutationObserver((rs) => records.push(...rs));
+    mo.observe(host, { childList: true, characterData: true, subtree: true, attributes: true });
+
+    // the ResizeObserver callback fires again and again with the same geometry
+    for (let i = 0; i < 4; i++) callbacks.forEach((cb) => cb());
+    await Promise.resolve();
+    records.push(...mo.takeRecords());
+    expect(records).toHaveLength(0);
+
+    // a real change (the text) still re-fits and updates the single text node
+    f.componentInstance.text.set('Completed in 0 minutes and 2 seconds.');
+    await settle(f);
+    records.push(...mo.takeRecords());
+    expect(records.length).toBeGreaterThan(0);
+    // cover mode lays a single sentence out as two rows (newline-separated) even without layout
+    expect((host.textContent ?? '').replace(/\n/g, ' ')).toBe('Completed in 0 minutes and 2 seconds.');
+    expect(host.childNodes).toHaveLength(1);
+    mo.disconnect();
+  });
+
+  it('re-fits again after the text goes A, B, A (the effect restored the raw text)', async () => {
+    const f = TestBed.createComponent(CoverHostComponent);
+    await settle(f);
+    const host = f.nativeElement.querySelector('[data-intro-visible] + span') as HTMLElement;
+    f.componentInstance.text.set('B');
+    await settle(f);
+    f.componentInstance.text.set('Completed in 0 minutes and 1 second.');
+    await settle(f);
+    // cover mode lays a single sentence out as two rows (newline-separated) even without layout
+    expect((host.textContent ?? '').replace(/\n/g, ' ')).toBe('Completed in 0 minutes and 1 second.');
+    expect(host.childNodes).toHaveLength(1);
+  });
+});

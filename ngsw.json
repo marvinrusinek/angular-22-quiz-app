@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1794873112421,
+  "timestamp": 1794880618135,
   "index": "/angular-quiz-platform/index.html",
   "assetGroups": [
     {
@@ -11,15 +11,15 @@
         "ignoreVary": true
       },
       "urls": [
-        "/angular-quiz-platform/chunk-6dIJzZeH.js",
-        "/angular-quiz-platform/chunk-BAH7sj9S.js",
+        "/angular-quiz-platform/chunk-91keDUhk.js",
         "/angular-quiz-platform/chunk-BcR-gcGq.js",
-        "/angular-quiz-platform/chunk-CjRN4zS3.js",
-        "/angular-quiz-platform/chunk-D7z1VGJa.js",
-        "/angular-quiz-platform/chunk-DQjw43yl.js",
+        "/angular-quiz-platform/chunk-BhvrIB7R.js",
+        "/angular-quiz-platform/chunk-BoTyD0w1.js",
+        "/angular-quiz-platform/chunk-Cu2Czntj.js",
+        "/angular-quiz-platform/chunk-D0K5DM5D.js",
         "/angular-quiz-platform/chunk-DrvfqWzr.js",
         "/angular-quiz-platform/index.html",
-        "/angular-quiz-platform/main-QC36GR2A.js",
+        "/angular-quiz-platform/main-BSTOUDC3.js",
         "/angular-quiz-platform/manifest.webmanifest",
         "/angular-quiz-platform/polyfills-Q3J2IDWG.js",
         "/angular-quiz-platform/styles-3V7YIVXG.css"
@@ -117,12 +117,12 @@
     "/angular-quiz-platform/assets/images/testing.svg": "1f617216212f7bf7862045c7f900e2d945a3c9b3",
     "/angular-quiz-platform/assets/images/twitter.svg": "ab2a6b157ca887ef7333c252aafc133ac68cc3ae",
     "/angular-quiz-platform/assets/images/typescript.webp": "5178d2ba1a82966b8440842fb1363701bfcc5521",
-    "/angular-quiz-platform/chunk-6dIJzZeH.js": "b3566377b1a290919a0b9c8c6ef174641e543c84",
-    "/angular-quiz-platform/chunk-BAH7sj9S.js": "ddd128a878adafde90f1672b725936ffd5be7bff",
+    "/angular-quiz-platform/chunk-91keDUhk.js": "de21d5e63c4aa5a75fd92c439553f1a208228dfc",
     "/angular-quiz-platform/chunk-BcR-gcGq.js": "65e151ae643d744a0b5f9735e821259e69590cb7",
-    "/angular-quiz-platform/chunk-CjRN4zS3.js": "0be813a80b0873677a9efc98e7125e8c25e73dfb",
-    "/angular-quiz-platform/chunk-D7z1VGJa.js": "637c4fbeec576286a1238addefe5102ca8e38d54",
-    "/angular-quiz-platform/chunk-DQjw43yl.js": "08e327c9ed9697a5005f1d3ea17af436170ab2ee",
+    "/angular-quiz-platform/chunk-BhvrIB7R.js": "ceff2ad7749763c50fe812a4f1181dc1bf71572c",
+    "/angular-quiz-platform/chunk-BoTyD0w1.js": "856cec6b11e30301d0ffafcb80e20198e96f212e",
+    "/angular-quiz-platform/chunk-Cu2Czntj.js": "70b3ea7dcbe494c7ed4b2329be0877f9c36f4bc1",
+    "/angular-quiz-platform/chunk-D0K5DM5D.js": "8d6d753f943db363508809df653deff0f90faf4b",
     "/angular-quiz-platform/chunk-DrvfqWzr.js": "6b65998894467a71e99279b2f775dfe1449a3736",
     "/angular-quiz-platform/icons/icon-128x128.png": "f912963bdc6d5a38d8f1dd0afbaab2ce8d657acb",
     "/angular-quiz-platform/icons/icon-144x144.png": "b155fd5f2fd5d2ea7760721063003c4cd95fd783",
@@ -132,8 +132,8 @@
     "/angular-quiz-platform/icons/icon-512x512.png": "1de182f76f7329dfa8f9fcdd1fdcdd695bea6a99",
     "/angular-quiz-platform/icons/icon-72x72.png": "aa88a6096bd973be7f6d7a5489bfa6bc2463f8c4",
     "/angular-quiz-platform/icons/icon-96x96.png": "7fb8f59c30ce2ff12c700321a0b39e14b3dc8f95",
-    "/angular-quiz-platform/index.html": "d53e5f191d4cb0b0c8389e4e06b54f0a87d05379",
-    "/angular-quiz-platform/main-QC36GR2A.js": "f7e3bccb092cc581389207b9eca3ce377decbb8a",
+    "/angular-quiz-platform/index.html": "a7aee6312c9ebbdc3be7248c51be29ffc19d90d4",
+    "/angular-quiz-platform/main-BSTOUDC3.js": "f2f6cf5ee55e508fbac0f201b06940b8b98a9339",
     "/angular-quiz-platform/manifest.webmanifest": "bfd9385ae2c01bcb04fe934aa2b9f1999ab5683b",
     "/angular-quiz-platform/polyfills-Q3J2IDWG.js": "d95d77c85e3638ace2862592b9479ad4e8520cad",
     "/angular-quiz-platform/styles-3V7YIVXG.css": "ab0c1dc677fb5d34060a746b01aba12ff2f57753"

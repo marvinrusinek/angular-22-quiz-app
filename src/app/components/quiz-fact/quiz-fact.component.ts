@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
+import { IntroExposedTextDirective } from '../../containers/introduction/intro-exposed-text.directive';
+
 /**
  * Shows a single "Angular Fact" for a quiz on the Results screen.
  *
@@ -9,40 +11,34 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
  *   recalculates during change detection. A fresh component instance (a new
  *   Results visit) may pick a different fact.
  * - Renders nothing when the quiz has no facts. No side effects; reusable.
+ * - The note is ONE Narrator group: the icon, the "Angular Fact" label and the
+ *   paragraph are hidden from assistive technology and the group exposes a single
+ *   text node, "Angular Fact. <the displayed fact>", from the same signals that
+ *   render the visible parts (see IntroExposedTextDirective). Nothing is
+ *   interactive, and the label is a div, not a heading, on purpose.
  */
 @Component({
   selector: 'codelab-quiz-fact',
   standalone: true,
+  imports: [IntroExposedTextDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (fact(); as text) {
-      <section
-        class="quiz-fact"
-        role="img"
-        [attr.aria-label]="ariaLabel()"
-      >
-        <!-- One named graphic (same pattern as the Results statistics groups): the accessible name is
-             "Angular Fact. <the displayed fact>". The visible label, icon and paragraph keep their
-             appearance but are hidden from assistive technology so they are not also read separately.
-             The label is a div (not an h3) on purpose: no separate heading / H navigation for this note. -->
-        <div
-          class="quiz-fact__heading"
-          aria-hidden="true"
-        >
-          <span
-            class="quiz-fact__icon"
-            aria-hidden="true"
-          >
-            💡
-          </span>
-          <ng-container i18n>Angular Fact</ng-container>
+      <section class="quiz-fact">
+        <!-- One group: the visible label, icon and paragraph are hidden from assistive technology and the group
+             exposes ONE text node, "Angular Fact. <the displayed fact>" (see IntroExposedTextDirective), so
+             Narrator reads the note once, as a group, never as a graphic. The label is a div (not an h3) on
+             purpose: no separate heading / H navigation for this note. -->
+        <div class="quiz-fact__group" role="group">
+          <div class="quiz-fact__visible" data-intro-visible aria-hidden="true">
+            <div class="quiz-fact__heading">
+              <span class="quiz-fact__icon">💡</span>
+              {{ label }}
+            </div>
+            <p class="quiz-fact__text" data-intro-font-ref>{{ text }}</p>
+          </div>
+          <span [appIntroExposedText]="exposedText()" exposedTextMode="cover" exposedTextBox="group"></span>
         </div>
-        <p
-          class="quiz-fact__text"
-          aria-hidden="true"
-        >
-          {{ text }}
-        </p>
       </section>
     }
   `,
@@ -57,6 +53,17 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
         border-radius: 10px;
         background: var(--bg-secondary, #f5f5f5);
         box-sizing: border-box;
+      }
+
+      /* The Narrator group: the label and the paragraph, laid out as the card laid them out
+         (the card keeps its padding, so the group is the content box). */
+      .quiz-fact__group {
+        position: relative; /* anchors the exposed text (IntroExposedTextDirective) */
+      }
+
+      /* Holds the visible parts so they can be hidden from AT as one unit; it generates no box. */
+      .quiz-fact__visible {
+        display: contents;
       }
 
       .quiz-fact__heading {
@@ -94,13 +101,16 @@ export class QuizFactComponent {
   /** The quiz's facts (1-3). Optional — the component renders nothing if empty. */
   readonly facts = input<readonly string[] | undefined>();
 
+  /** The visible "Angular Fact" label; the exposed text starts with the same string. */
+  readonly label = $localize`Angular Fact`;
+
   /**
-   * Accessible name for the note: the label plus exactly the fact being displayed (reads the
+   * What Narrator reads: the label plus exactly the fact being displayed (reads the
    * same memoized `fact()`; never picks a second random fact).
    */
-  readonly ariaLabel = computed(() => {
+  readonly exposedText = computed(() => {
     const text = this.fact();
-    return text ? $localize`Angular Fact. ${text}` : '';
+    return text ? $localize`${this.label}. ${text}` : '';
   });
 
   /**

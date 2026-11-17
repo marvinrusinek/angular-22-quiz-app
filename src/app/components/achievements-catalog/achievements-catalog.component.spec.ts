@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AchievementsCatalogComponent } from './achievements-catalog.component';
 import { AchievementView } from '@shared/models';
 
-// The catalog is an always-visible section (heading + named rows), with no disclosure button.
+// The catalog is an always-visible section (heading + group rows), with no disclosure button.
 const VIEW: AchievementView[] = [
   { id: 'perfect-score', name: 'Perfect Score', description: 'Earn a 100% score on any quiz.', earned: true },
   { id: 'angular-explorer', name: 'Angular Explorer', description: 'Complete every available quiz.', earned: false },
@@ -21,39 +21,73 @@ describe('AchievementsCatalogComponent (always visible)', () => {
   const setAchievements = (list: AchievementView[]): void => {
     fixture.componentRef.setInput('achievements', list);
     fixture.detectChanges();
+    TestBed.tick();
   };
   const root = (): HTMLElement => fixture.nativeElement;
   const items = (): NodeListOf<HTMLElement> => root().querySelectorAll('.achievements-catalog__item');
+  const groups = (): HTMLElement[] =>
+    Array.from(root().querySelectorAll<HTMLElement>('.achievements-catalog__row'));
+  const exposed = (g: HTMLElement): HTMLElement => g.querySelector('.intro-exposed-text') as HTMLElement;
 
   it('renders nothing when the list is empty', () => {
     setAchievements([]);
     expect(root().querySelector('.achievements-catalog')).toBeNull();
   });
 
-  it('shows a heading with the earned count and ALL rows immediately, with no disclosure control', () => {
+  it('keeps the heading with the earned count SEPARATE from the rows, with no disclosure control', () => {
     setAchievements(VIEW);
     const heading = root().querySelector('h3.achievements-catalog__heading') as HTMLElement;
     expect(heading.textContent?.replace(/\s+/g, ' ').trim()).toContain('Achievements, 1 of 3');
+    // The heading is not inside any row group, and no group spans the whole section.
+    expect(heading.closest('[role="group"]')).toBeNull();
     expect(items().length).toBe(3);
+    expect(groups()).toHaveLength(3);
+    expect(root().querySelectorAll('[role="group"]')).toHaveLength(3);
     expect(root().querySelector('button')).toBeNull();
     expect(root().querySelector('[aria-expanded]')).toBeNull();
     expect(root().querySelector('[tabindex]')).toBeNull();
   });
 
-  it('each row is ONE named graphic: "<name>. <description>. <Earned|Locked>."; duplicate visual children hidden; nothing interactive', () => {
+  it('each row is ONE group (not a graphic) exposing one text node: "<name>. <description>. <Earned|Locked>."', () => {
     setAchievements(VIEW);
-    const rows = Array.from(items());
-    expect(rows.map((li) => li.getAttribute('role'))).toEqual(['img', 'img', 'img']);
-    expect(rows.map((li) => li.getAttribute('aria-label'))).toEqual([
+    expect(groups().map((g) => g.getAttribute('role'))).toEqual(['group', 'group', 'group']);
+    expect(root().querySelector('[role="img"]')).toBeNull();
+    expect(groups().map((g) => g.hasAttribute('aria-label'))).toEqual([false, false, false]);
+    for (const g of groups()) {
+      expect(exposed(g).childNodes).toHaveLength(1);
+      expect(exposed(g).firstChild?.nodeType).toBe(Node.TEXT_NODE);
+    }
+    expect(groups().map((g) => exposed(g).textContent)).toEqual([
       'Perfect Score. Earn a 100% score on any quiz. Earned.',
       'Angular Explorer. Complete every available quiz. Locked.',
       'Beginner Complete. Complete every Beginner quiz. Locked.'
     ]);
-    rows.forEach((li) => {
-      expect(li.querySelector('.achievements-catalog__body')?.getAttribute('aria-hidden')).toBe('true');
-      expect(li.querySelector('.achievements-catalog__badge')?.getAttribute('aria-hidden')).toBe('true');
-      expect(li.querySelector('.achievements-catalog__state-icon')?.getAttribute('aria-hidden')).toBe('true');
-      expect(li.querySelectorAll('button, a, input, [tabindex]').length).toBe(0);
+  });
+
+  it('hides every visible part of a row from AT as one unit, and the exposed text is outside it', () => {
+    setAchievements(VIEW);
+    for (const g of groups()) {
+      const visible = g.querySelector('[data-intro-visible]')!;
+      expect(visible.getAttribute('aria-hidden')).toBe('true');
+      expect(visible.querySelector('.achievements-catalog__state-icon')).not.toBeNull();
+      expect(visible.querySelector('.achievements-catalog__body')).not.toBeNull();
+      expect(visible.querySelector('.achievements-catalog__badge')).not.toBeNull();
+      expect(exposed(g).closest('[aria-hidden="true"]')).toBeNull();
+      expect(g.querySelectorAll('button, a, input, [tabindex]').length).toBe(0);
+    }
+  });
+
+  it('shares the same text between the visible parts and the exposed text', () => {
+    setAchievements(VIEW);
+    const c = fixture.componentInstance;
+    groups().forEach((g, i) => {
+      const a = VIEW[i];
+      expect(g.querySelector('.achievements-catalog__name')?.textContent?.trim()).toBe(a.name);
+      expect(g.querySelector('.achievements-catalog__desc')?.textContent?.trim()).toBe(a.description);
+      // The visible badge and the exposed text use the SAME status label.
+      expect(g.querySelector('.achievements-catalog__badge')?.textContent?.trim()).toBe(c.statusLabel(a));
+      expect(exposed(g).textContent).toBe(c.rowLabel(a));
+      expect(exposed(g).textContent!.endsWith(`${c.statusLabel(a)}.`)).toBe(true);
     });
   });
 
@@ -64,6 +98,23 @@ describe('AchievementsCatalogComponent (always visible)', () => {
     expect(rows[0].textContent).toContain('Earned');
     expect(rows[1].classList.contains('is-locked')).toBe(true);
     expect(rows[1].textContent).toContain('Locked');
+  });
+
+  it('follows a change in state: a locked row that becomes earned reads "Earned" in both places', () => {
+    setAchievements(VIEW);
+    setAchievements([VIEW[0], { ...VIEW[1], earned: true }, VIEW[2]]);
+    const g = groups()[1];
+    expect(exposed(g).textContent).toBe('Angular Explorer. Complete every available quiz. Earned.');
+    expect(g.querySelector('.achievements-catalog__badge')?.textContent?.trim()).toBe('Earned');
+    expect(exposed(g).childNodes).toHaveLength(1);
+    expect(root().querySelector('h3')?.textContent).toContain('Achievements, 2 of 3');
+  });
+
+  it('shows the actual count in the heading for any state (0 of 3, 3 of 3)', () => {
+    setAchievements(VIEW.map((a) => ({ ...a, earned: false })));
+    expect(root().querySelector('h3')?.textContent?.replace(/\s+/g, ' ')).toContain('Achievements, 0 of 3');
+    setAchievements(VIEW.map((a) => ({ ...a, earned: true })));
+    expect(root().querySelector('h3')?.textContent?.replace(/\s+/g, ' ')).toContain('Achievements, 3 of 3');
   });
 
   it('rowLabel drops only a terminal period', () => {

@@ -13,9 +13,9 @@
     </h3>
 
       <!-- role="none" on the <ul>: no list semantics, so no item positions ("2 of 6") are announced. Each row is
-           ONE named graphic (role="img") whose name is "<name>. <description>. <Earned|Locked>."; its visible
-           icon, name, description and status are hidden from assistive technology so nothing is read twice.
-           Nothing interactive lives inside a row (no tabindex, focus handling or key handlers). -->
+           ONE group: its icon, name, description and status are hidden from assistive technology and the group
+           exposes a single text node, "<name>. <description>. <Earned|Locked>." (see IntroExposedTextDirective), so
+           Narrator reads the row once, as a group, never as a graphic. Nothing interactive lives inside a row. -->
       <ul
         id="achievements-catalog-list"
         class="achievements-catalog__list"
@@ -23,48 +23,32 @@
       >
         @for (achievement of achievements(); track achievement.id) {
           <li
-            role="img"
-            [attr.aria-label]="rowLabel(achievement)"
             class="achievements-catalog__item"
             [class.is-earned]="achievement.earned"
             [class.is-locked]="!achievement.earned"
           >
-            <span
-              class="achievements-catalog__state-icon"
-              aria-hidden="true"
-            >
-              {{ achievement.earned ? '✓' : '🔒' }}
-            </span>
-            <span
-              class="achievements-catalog__body"
-              aria-hidden="true"
-            >
-              <span class="achievements-catalog__name">
-                @if (achievement.icon) {
-                  <span
-                    class="achievements-catalog__emoji"
-                    aria-hidden="true"
-                  >
-                    {{ achievement.icon }}
+            <div class="achievements-catalog__row" role="group">
+              <div class="achievements-catalog__visible" data-intro-visible aria-hidden="true">
+                <span class="achievements-catalog__state-icon">
+                  {{ achievement.earned ? '✓' : '🔒' }}
+                </span>
+                <span class="achievements-catalog__body">
+                  <span class="achievements-catalog__name">
+                    @if (achievement.icon) {
+                      <span class="achievements-catalog__emoji">
+                        {{ achievement.icon }}
+                      </span>
+                    }
+                    {{ achievement.name }}
                   </span>
-                }
-                {{ achievement.name }}
-              </span>
-              <!-- Trailing U+00A0 (&nbsp;): a plain/collapsible space between this description and the
-                   Earned/Locked status is dropped from the page's accessible text, so UIA exposed
-                   "...quiz.LOCKED" (Narrator spoke a "dot" there). A non-breaking space survives. -->
-              <span class="achievements-catalog__desc">{{ achievement.description }}&nbsp;</span>
-            </span>
-            <span
-              class="achievements-catalog__badge"
-              aria-hidden="true"
-            >
-              @if (achievement.earned) {
-                <ng-container i18n>Earned</ng-container>
-              } @else {
-                <ng-container i18n>Locked</ng-container>
-              }
-            </span>
+                  <!-- The trailing no-break space is kept for the visible layout only: it affects where the last
+                       word wraps in a narrow row. The exposed text no longer depends on it. -->
+                  <span class="achievements-catalog__desc" data-intro-font-ref>{{ achievement.description }}&nbsp;</span>
+                </span>
+                <span class="achievements-catalog__badge">{{ statusLabel(achievement) }}</span>
+              </div>
+              <span [appIntroExposedText]="rowLabel(achievement)" exposedTextMode="cover" exposedTextBox="group"></span>
+            </div>
           </li>
         }
       </ul>

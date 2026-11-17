@@ -1,36 +1,36 @@
-<!-- Circular Score Ring -->
-<div
-  class="circular-score"
-  role="img"
-  [attr.aria-label]="circleAria()"
->
-  <svg
-    aria-hidden="true"
-    class="score-ring"
-    viewBox="0 0 140 140"
-  >
-    <circle
-      class="ring-bg"
-      cx="70"
-      cy="70"
-      r="60"
-    />
-    <circle
-      class="ring-progress"
-      [class.ring-excellent]="feedbackLevel() === 'excellent'"
-      [class.ring-good]="feedbackLevel() === 'good'"
-      [class.ring-poor]="feedbackLevel() === 'poor'"
-      cx="70"
-      cy="70"
-      r="60"
-      [style.stroke-dasharray]="377"
-      [style.stroke-dashoffset]="377 - 377 * (percentage() / 100)"
-    />
-  </svg>
-  <div class="score-value" aria-hidden="true">
-    <div class="percentage">{{ percentage() }}%</div>
-    <div class="label">Score</div>
+<!-- Circular Score Ring: one group. The ring and the value are hidden from AT as one unit and
+     the group exposes ONE text node, "<N>% Score" (see IntroExposedTextDirective), so Narrator
+     reads the value and label once, as a group, never as a graphic. -->
+<div class="circular-score" role="group">
+  <div class="ring-visible" data-intro-visible aria-hidden="true">
+    <svg
+      class="score-ring"
+      viewBox="0 0 140 140"
+    >
+      <circle
+        class="ring-bg"
+        cx="70"
+        cy="70"
+        r="60"
+      />
+      <circle
+        class="ring-progress"
+        [class.ring-excellent]="feedbackLevel() === 'excellent'"
+        [class.ring-good]="feedbackLevel() === 'good'"
+        [class.ring-poor]="feedbackLevel() === 'poor'"
+        cx="70"
+        cy="70"
+        r="60"
+        [style.stroke-dasharray]="377"
+        [style.stroke-dashoffset]="377 - 377 * (percentage() / 100)"
+      />
+    </svg>
+    <div class="score-value">
+      <div class="percentage">{{ percentage() }}%</div>
+      <div class="label" data-intro-font-ref>Score</div>
+    </div>
   </div>
+  <span [appIntroExposedText]="circleAria()" exposedTextMode="cover" exposedTextBox="group"></span>
 </div>
 
 <!-- Score Breakdown: one group, one exposed text item. The visible rows are
@@ -65,32 +65,20 @@
   </span>
 </div>
 
-<!-- Achievement Badge -->
-@if (feedbackLevel() === 'excellent') {
-  <div
-    class="achievement-badge excellent"
-    role="img"
-    [attr.aria-label]="badgeAria()"
-  >
-    <span class="badge-icon" aria-hidden="true">🏆</span>
-    <span aria-hidden="true">Excellent Performance!</span>
+<!-- Achievement Badge: one group for every level. The icon and the text are hidden
+     from AT as one unit and the group exposes ONE text node, the badge text (see
+     IntroExposedTextDirective), so Narrator reads "Keep Practicing!" once, as a
+     group, never as a graphic, and never the emoji on its own. -->
+<div
+  class="achievement-badge"
+  role="group"
+  [class.excellent]="feedbackLevel() === 'excellent'"
+  [class.good]="feedbackLevel() === 'good'"
+  [class.needs-work]="feedbackLevel() === 'poor'"
+>
+  <div class="badge-visible" data-intro-visible aria-hidden="true">
+    <span class="badge-icon">{{ badgeIcon() }}</span>
+    <span class="badge-text" data-intro-font-ref>{{ badgeText() }}</span>
   </div>
-} @else if (feedbackLevel() === 'good') {
-  <div
-    class="achievement-badge good"
-    role="img"
-    [attr.aria-label]="badgeAria()"
-  >
-    <span class="badge-icon" aria-hidden="true">🥈</span>
-    <span aria-hidden="true">Good Job!</span>
-  </div>
-} @else {
-  <div
-    class="achievement-badge needs-work"
-    role="img"
-    [attr.aria-label]="badgeAria()"
-  >
-    <span class="badge-icon" aria-hidden="true">💪</span>
-    <span aria-hidden="true">Keep Practicing!</span>
-  </div>
-}
+  <span [appIntroExposedText]="badgeText()" exposedTextMode="cover" exposedTextBox="group" exposedSingleRow></span>
+</div>

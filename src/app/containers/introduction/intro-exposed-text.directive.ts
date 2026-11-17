@@ -66,6 +66,17 @@ export class IntroExposedTextDirective {
    * widest image, if wider): it wraps the same, as it is no narrower than that
    * line, and it is centred by its parent.
    */
+  /**
+   * Where the exposed text's box comes from: the visible CONTENT (default), or
+   * the GROUP's own box, for a group that is itself the visible row (a bordered
+   * or padded row whose box Narrator draws).
+   */
+  /** Keep the text as ONE row (a one-line pill) instead of the wrapped-lines / split-in-two rows. */
+  readonly singleRow = input(false, {
+    alias: 'exposedSingleRow',
+    transform: (v: unknown) => v === '' || v === true || v === 'true'
+  });
+  readonly boxFrom = input<'content' | 'group'>('content', { alias: 'exposedTextBox' });
   readonly fitGroupWidth = input(false, { alias: 'fitGroupWidth', transform: (v: unknown) => v === '' || v === true || v === 'true' });
 
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -223,16 +234,35 @@ export class IntroExposedTextDirective {
     let currentTop: number | null = null;
     let start = 0;
     const words = text.split(' ');
+    const topAt = (from: number, to: number): number => {
+      probe.setStart(node, from);
+      probe.setEnd(node, to);
+      return Math.round(probe.getClientRects()[0]?.top ?? 0);
+    };
     for (const word of words) {
       const end = start + word.length;
-      probe.setStart(node, start);
-      probe.setEnd(node, end);
-      const top = Math.round(probe.getClientRects()[0]?.top ?? 0);
+      const top = topAt(start, end);
       if (currentTop === null || Math.abs(top - currentTop) > 3) {
         lines.push(word);
         currentTop = top;
       } else {
-        lines[lines.length - 1] += ' ' + word;
+        // The word starts on the current line. A hyphenated word ("tree-shaken") can still
+        // break INSIDE it, so follow its pieces onto the lines the browser really put them on.
+        let from = start;
+        let piece = '';
+        let target = lines.length - 1;
+        let first = true;
+        for (let i = start + 1; i <= end; i++) {
+          const atEnd = i === end;
+          const nextTop = atEnd ? null : topAt(i, i + 1);
+          if (!atEnd && Math.abs((nextTop ?? 0) - (currentTop ?? 0)) <= 3) continue;
+          piece = text.slice(from, i);
+          if (first) lines[target] += ' ' + piece;
+          else lines.push(piece);
+          first = false;
+          if (!atEnd) currentTop = nextTop;
+          from = i;
+        }
       }
       start = end + 1;
     }
@@ -279,7 +309,13 @@ export class IntroExposedTextDirective {
       width: `${rb.width + 0.25}px`
     });
     const visibleLines = this.wrappedLines(text);
-    const rows = visibleLines.length >= 2 ? visibleLines : this.splitInTwo(text);
+    // A single visible line is split in two (so the text range covers a box that has an icon
+    // above it) unless the caller says the content is ONE row, e.g. a one-line pill badge.
+    const rows = this.singleRow()
+      ? [text]
+      : visibleLines.length >= 2
+        ? visibleLines
+        : this.splitInTwo(text);
     // 2. One text line per row, each justified across the whole visible content
     //    (icon included), spread over its full height. Still ONE text node.
     this.host.textContent = rows.join('\n');
@@ -290,11 +326,37 @@ export class IntroExposedTextDirective {
       textAlignLast: 'justify',
       lineHeight: 'normal',
       left: `${box.l - g.left}px`,
-      width: `${box.r - box.l}px`,
+      // The same quarter pixel of slack as the measuring pass above, so a row that fit there cannot re-wrap here.
+      width: `${box.r - box.l + 0.25}px`,
       top: '0px'
     });
-    const probe = this.textBox();
+    let probe = this.textBox();
     if (!probe) return;
+    if (this.singleRow()) {
+      // One row cannot be spread over a taller box with line-height (a text rect is only as
+      // tall as the glyphs), so scale the font until its content height equals the box
+      // height, then take up the width difference with letter-spacing.
+      const size = parseFloat(style.fontSize) * (H / probe.ca);
+      Object.assign(style, { whiteSpace: 'nowrap', textAlign: 'left', textAlignLast: 'auto', fontSize: `${size}px` });
+      probe = this.textBox() ?? probe;
+      const chars = Math.max(text.length, 1);
+      style.letterSpacing = `${(box.r - box.l - probe.width) / chars}px`;
+      probe = this.textBox() ?? probe;
+    }
+    // Single-word rows cannot be justified, so the widest row may fall short of the box:
+    // scale the font (normal spacing) to span it, only if the rows still fit the height.
+    const wanted = box.r - box.l;
+    if (!this.singleRow() && rows.length > 1 && probe.width > 0 && probe.width < wanted - 1) {
+      const before = style.fontSize;
+      // Twice: a fixed letter-spacing does not scale with the font, so one pass undershoots.
+      for (let i = 0; i < 2; i++) {
+        const w = this.textBox()?.width ?? 0;
+        if (w > 0) style.fontSize = `${parseFloat(style.fontSize) * (wanted / w)}px`;
+      }
+      const scaled = this.textBox();
+      if (scaled && scaled.ca * rows.length <= H) probe = scaled;
+      else style.fontSize = before;
+    }
     const lineHeight = rows.length > 1 ? (H - probe.ca) / (rows.length - 1) : H;
     style.lineHeight = `${lineHeight}px`;
     style.top = `${-(lineHeight - probe.ca) / 2}px`;
@@ -320,9 +382,14 @@ export class IntroExposedTextDirective {
     const visible = this.visible();
     if (!group || !visible) return;
     if (this.fitGroupWidth()) this.fitGroup(group, visible);
-    const box = this.contentBox(visible);
-    if (!box) return;
     const g = group.getBoundingClientRect();
+    const box =
+      this.boxFrom() === 'group'
+        ? g.width > 0 && g.height > 0
+          ? { l: g.left, t: g.top, r: g.right, b: g.bottom }
+          : null
+        : this.contentBox(visible);
+    if (!box) return;
     const style = this.host.style;
     style.left = `${box.l - g.left}px`;
     style.width = `${box.r - box.l}px`;

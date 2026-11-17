@@ -68,28 +68,60 @@ describe('QuizFactComponent', () => {
     expect(component.fact()).toBe(first);
   });
 
-  it('exposes the note as ONE named graphic; the visible label, icon and paragraph are hidden from AT', () => {
+  const group = (): HTMLElement => fixture.nativeElement.querySelector('.quiz-fact__group');
+  const exposed = (): HTMLElement => group().querySelector('.intro-exposed-text') as HTMLElement;
+
+  it('is ONE group (not a graphic): the visible label, icon and paragraph are hidden from AT', () => {
     setFacts(['Some fact']);
     const sec = factSection()!;
-    expect(sec.getAttribute('role')).toBe('img');
-    expect(sec.getAttribute('aria-label')).toBe('Angular Fact. Some fact');
-    // Visible content is unchanged but hidden from assistive technology.
-    const label = sec.querySelector('.quiz-fact__heading') as HTMLElement;
+    expect(group().getAttribute('role')).toBe('group');
+    expect(sec.hasAttribute('role')).toBe(false);
+    expect(fixture.nativeElement.querySelector('[role="img"]')).toBeNull();
+    expect(group().hasAttribute('aria-label')).toBe(false);
+    // Visible content is unchanged but hidden from assistive technology as one unit.
+    const visible = group().querySelector('[data-intro-visible]') as HTMLElement;
+    expect(visible.getAttribute('aria-hidden')).toBe('true');
+    const label = visible.querySelector('.quiz-fact__heading') as HTMLElement;
     expect(label.textContent).toContain('Angular Fact');
-    expect(label.getAttribute('aria-hidden')).toBe('true');
-    expect(label.querySelector('.quiz-fact__icon')?.getAttribute('aria-hidden')).toBe('true');
-    expect(sec.querySelector('p.quiz-fact__text')?.getAttribute('aria-hidden')).toBe('true');
+    expect(label.querySelector('.quiz-fact__icon')?.textContent?.trim()).toBe('💡');
     expect(factText()).toBe('Some fact');
-    // No separate heading, nothing interactive hidden inside, no live region.
+    // The icon is never announced on its own, and the exposed text does not contain it.
+    expect(exposed().textContent).not.toContain('💡');
+    expect(exposed().closest('[aria-hidden="true"]')).toBeNull();
+  });
+
+  it('exposes exactly ONE text node: "Angular Fact. <the fact>", from the same signals as the visible parts', () => {
+    setFacts(['Some fact']);
+    expect(exposed().childNodes).toHaveLength(1);
+    expect(exposed().firstChild?.nodeType).toBe(Node.TEXT_NODE);
+    expect(exposed().textContent).toBe('Angular Fact. Some fact');
+    expect(exposed().textContent).toBe(component.exposedText());
+    const visibleLabel = (group().querySelector('.quiz-fact__heading')?.textContent ?? '').replace('💡', '').trim();
+    expect(visibleLabel).toBe(component.label);
+    expect(exposed().textContent!.startsWith(component.label + '. ')).toBe(true);
+    expect(exposed().textContent!.endsWith(factText())).toBe(true);
+  });
+
+  it('has no separate heading, nothing interactive, no live region, and adds no Tab stop', () => {
+    setFacts(['Some fact']);
+    const sec = factSection()!;
     expect(sec.querySelector('h1,h2,h3,h4,h5,h6')).toBeNull();
     expect(sec.querySelector('a,button,input,select,textarea,[tabindex]')).toBeNull();
     expect(sec.querySelector('[aria-live]')).toBeNull();
+    expect(group().hasAttribute('tabindex')).toBe(false);
   });
 
-  it('names the graphic with exactly the fact being displayed (no second random pick)', () => {
+  it('exposes exactly the fact being displayed (no second random pick)', () => {
     setFacts(['Fact A', 'Fact B', 'Fact C', 'Fact D', 'Fact E']);
     for (let i = 0; i < 5; i++) fixture.detectChanges();
-    expect(factSection()!.getAttribute('aria-label')).toBe('Angular Fact. ' + factText());
-    expect(component.ariaLabel()).toBe('Angular Fact. ' + component.fact());
+    expect(exposed().textContent).toBe('Angular Fact. ' + factText());
+    expect(component.exposedText()).toBe('Angular Fact. ' + component.fact());
+  });
+
+  it('keeps the exposed text one text node for facts with punctuation, quotes and long text', () => {
+    const long = 'providedIn: "root" makes a service tree-shakable: if nothing injects it, it is dropped from the production bundle. '.repeat(3).trim();
+    setFacts([long]);
+    expect(exposed().childNodes).toHaveLength(1);
+    expect(exposed().textContent).toBe('Angular Fact. ' + long);
   });
 });

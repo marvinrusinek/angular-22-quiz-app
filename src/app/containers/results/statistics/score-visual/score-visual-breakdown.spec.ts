@@ -76,10 +76,9 @@ describe('ScoreVisualComponent — score breakdown group', () => {
     expect(exposed().childNodes).toHaveLength(1);
   });
 
-  it('leaves the other score visuals as they were (ring, stars, badge stay named graphics)', () => {
-    expect(root.querySelector('.circular-score')?.getAttribute('role')).toBe('img');
-    expect(root.querySelector('.circular-score')?.getAttribute('aria-label')).toBe('0% Score');
+  it('leaves the other score visuals as they were (the stars stay a named graphic; the ring and badge are groups)', () => {
+    expect(root.querySelector('.circular-score')?.getAttribute('role')).toBe('group'); // see score-visual-ring.spec.ts
     expect(root.querySelector('.star-icons')?.getAttribute('role')).toBe('img');
-    expect(root.querySelector('.achievement-badge')?.getAttribute('role')).toBe('img');
+    expect(root.querySelector('.achievement-badge')?.getAttribute('role')).toBe('group'); // now a group (see score-visual-badge.spec.ts)
   });
 });

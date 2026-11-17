@@ -36,10 +36,22 @@
 }
 
 .achievements-catalog__item {
+  padding: 8px 16px;
+}
+
+// The Narrator group: the row's content laid out exactly as the item laid it out
+// before (the item keeps the padding, so the group is the content box).
+.achievements-catalog__row {
+  position: relative; // anchors the exposed text (IntroExposedTextDirective)
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 8px 16px;
+}
+
+// Holds the row's visible parts so they can be hidden from AT as one unit; it
+// generates no box.
+.achievements-catalog__visible {
+  display: contents;
 }
 
 .achievements-catalog__state-icon {

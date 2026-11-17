@@ -12,6 +12,13 @@
 // ============================================================
 .circular-score {
   position: relative;
+
+  // Holds the ring and the value so they can be hidden from AT as one unit; it generates no
+  // box, so the ring and value lay out exactly as before.
+  .ring-visible {
+    display: contents;
+  }
+
   width: 160px;
   height: 160px;
   margin: 0 auto 4px auto;
@@ -190,6 +197,7 @@
 // ACHIEVEMENT BADGES
 // ============================================================
 .achievement-badge {
+  position: relative; // anchors the exposed text (IntroExposedTextDirective)
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -219,6 +227,12 @@
     background: linear-gradient(135deg, #cd7f32, #a66528);
     color: white;
     box-shadow: 0 4px 12px rgba(166, 101, 40, 0.4);
+  }
+
+  // Holds the icon and the text so they can be hidden from AT as one unit; it
+  // generates no box, so the pill lays them out exactly as before.
+  .badge-visible {
+    display: contents;
   }
 
   .badge-icon {

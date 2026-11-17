@@ -76,9 +76,9 @@ describe('ScoreVisualComponent — score breakdown group', () => {
     expect(exposed().childNodes).toHaveLength(1);
   });
 
-  it('leaves the other score visuals as they were (the stars stay a named graphic; the ring and badge are groups)', () => {
+  it('leaves the other score visuals as they were (the ring and badge are groups; the stars are a neutral wrapper with one text node)', () => {
     expect(root.querySelector('.circular-score')?.getAttribute('role')).toBe('group'); // see score-visual-ring.spec.ts
-    expect(root.querySelector('.star-icons')?.getAttribute('role')).toBe('img');
+    expect(root.querySelector('.star-icons')?.hasAttribute('role')).toBe(false); // a neutral wrapper, see score-visual-stars.spec.ts
     expect(root.querySelector('.achievement-badge')?.getAttribute('role')).toBe('group'); // now a group (see score-visual-badge.spec.ts)
   });
 });

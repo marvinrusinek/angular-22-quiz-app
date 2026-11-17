@@ -46,22 +46,25 @@
   <span [appIntroExposedText]="breakdownExposedText()" exposedTextMode="justify"></span>
 </div>
 
-<!-- Star Rating -->
+<!-- Star Rating: a NEUTRAL wrapper (no role, so nothing like "group" or "graphic" is announced). The five
+     stars are hidden from AT as one unit and the wrapper holds ONE text node, "N Stars" ("1 Star" for one),
+     from starsAria() (see IntroExposedTextDirective), so Narrator reads just the rating, once, and the
+     highlight is sized to the visible star row. -->
 <div class="star-rating">
-  <span
-    class="star-icons"
-    role="img"
-    [attr.aria-label]="starsAria()"
-  >
-    @for (star of [1, 2, 3, 4, 5]; track star) {
-      <span
-        class="star"
-        [class.filled]="star <= starCount()"
-        [class.empty]="star > starCount()"
-      >
-        ⭐
-      </span>
-    }
+  <span class="star-icons">
+    <span class="star-visible" data-intro-visible aria-hidden="true">
+      @for (star of [1, 2, 3, 4, 5]; track star; let first = $first) {
+        <span
+          class="star"
+          [attr.data-intro-font-ref]="first ? '' : null"
+          [class.filled]="star <= starCount()"
+          [class.empty]="star > starCount()"
+        >
+          ⭐
+        </span>
+      }
+    </span>
+    <span [appIntroExposedText]="starsAria()" exposedTextMode="cover" exposedTextBox="group" exposedSingleRow></span>
   </span>
 </div>
 

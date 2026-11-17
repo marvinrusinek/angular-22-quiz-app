@@ -95,9 +95,16 @@
   margin: 2px 0 16px;  // pulled up ~14px to line up with the "You scored…" text
 
   .star-icons {
+    position: relative; // anchors the exposed text (IntroExposedTextDirective)
     display: flex;
     justify-content: center;
     gap: 8px;
+  }
+
+  // Holds the stars so they can be hidden from AT as one unit; it generates no box, so the
+  // stars are flex items of .star-icons exactly as before.
+  .star-visible {
+    display: contents;
   }
 
   .star {

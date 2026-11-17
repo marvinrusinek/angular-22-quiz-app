@@ -30,15 +30,15 @@
       <!-- A REAL link (routerLink → href), so it works with open-in-new-tab.
            Restart and Select are native buttons: keyboard-reachable. Navigation
            only: Your Progress is the aggregate across attempts, not this result. -->
+      <!-- The link's label is its ONE exposed text node: no explicit aria-label, no aria-hidden label, and no blank
+           "&nbsp;&nbsp;" text node before it (that was a separate, empty text line inside the link; the gap is CSS
+           now: .progress-link .mdc-button__label). The old title="your progress" was a redundant description. -->
       <a
-        class="btn hvr-radial-out mdc-button mdc-button--outlined"
-        title="your progress"
-        i18n-title
+        class="btn hvr-radial-out mdc-button mdc-button--outlined progress-link"
         routerLink="/progress"
       >
         <div class="mdc-button__ripple"></div>
-        <i class="material-icons mdc-button__icon" aria-hidden="true">score</i
-        >&nbsp;&nbsp;
+        <i class="material-icons mdc-button__icon" aria-hidden="true">score</i>
         <span class="mdc-button__label"><strong i18n>View Your Progress</strong></span>
       </a>
     </mat-nav-list>

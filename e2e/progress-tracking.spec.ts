@@ -105,7 +105,7 @@ test('progress: score persists durably, the dashboard reflects it, gated content
   await answerFixtureWidgets(page);
 
   // Topic Results offers the dashboard as a real link, and it lands on /progress.
-  await page.getByTitle('your progress').click();
+  await page.getByRole('link', { name: 'View Your Progress' }).click();
   await expect(page).toHaveURL(/\/progress$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Your Progress' })).toBeVisible();
   await page.goBack();

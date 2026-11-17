@@ -86,3 +86,10 @@
     transform: scale(10);
   }
 }
+
+// The "View Your Progress" link has no "&nbsp;&nbsp;" text node between its icon and label (a blank text line
+// inside the link made Narrator's scan mode stop on it twice). This margin reproduces that spacing exactly:
+// the pair of no-break spaces were a 0.556em-wide flex item between two 4px flex gaps (0.556em + 4px).
+.progress-link .mdc-button__label {
+  margin-inline-start: calc(0.556em + 4px);
+}

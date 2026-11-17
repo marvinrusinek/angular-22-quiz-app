@@ -39,6 +39,7 @@ import {
 
 import { isOptionCorrect } from '@shared/utils/is-option-correct';
 import { norm } from '@shared/utils/text-norm';
+import { clearCompletedReview } from '@shared/services/features/results/completed-review-store.service';
 import { swallow } from '@shared/utils/error-logging';
 
 @Service()
@@ -1479,6 +1480,7 @@ export class QuizService {
 
   clearFinalResult(): void {
     this.finalResultSig.set(null);
+    clearCompletedReview();
     try {
       sessionStorage.removeItem('finalResult');
     } catch (err: unknown) {

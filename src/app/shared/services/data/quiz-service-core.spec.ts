@@ -23,7 +23,7 @@ import { of } from 'rxjs';
 
 import { Option, Quiz, QuizStatus } from '@shared/models';
 
-import { SK_USER_ANSWERS } from '@shared/constants/session-keys';
+import { SK_COMPLETED_REVIEW, SK_USER_ANSWERS } from '@shared/constants/session-keys';
 
 import { QuizService } from './quiz.service';
 
@@ -203,6 +203,19 @@ describe('QuizService core state + query methods', () => {
       expect(service.userAnswers[2]).toEqual([9]);
       expect(JSON.parse(localStorage.getItem(SK_USER_ANSWERS) ?? '[]')[2]).toEqual([9]);
       expect(checkSpy).toHaveBeenCalledWith(2, false);
+    });
+  });
+
+  // ── the earned review record follows the saved result ───────────────
+  describe('completed-review record', () => {
+    it('clearFinalResult removes the saved result AND the scoped review record', () => {
+      sessionStorage.setItem('finalResult', JSON.stringify({ quizId: 'angular', completedAt: 1, analysis: [] }));
+      sessionStorage.setItem(SK_COMPLETED_REVIEW, '{"v":1}');
+
+      service.clearFinalResult();
+
+      expect(sessionStorage.getItem('finalResult')).toBeNull();
+      expect(sessionStorage.getItem(SK_COMPLETED_REVIEW)).toBeNull();
     });
   });
 });

@@ -15,6 +15,7 @@ import { readSessionJson, removeSessionKey, writeSessionJson } from '@shared/uti
 
 import { QuizService } from '@shared/services/data/quiz.service';
 import { SelectedOptionService } from './selectedoption.service';
+import { clearCompletedReview } from '@shared/services/features/results/completed-review-store.service';
 import { swallow } from '@shared/utils/error-logging';
 
 /**
@@ -194,6 +195,7 @@ export class QuizPersistenceService {
       sessionStorage.removeItem('selectionHistory');
       sessionStorage.removeItem(SK_IS_ANSWERED);
       sessionStorage.removeItem('finalResult');
+      clearCompletedReview();
       sessionStorage.removeItem('elapsedTimes');
       sessionStorage.removeItem('completionTime');
       localStorage.removeItem('quizElapsedTime:' + quizId);

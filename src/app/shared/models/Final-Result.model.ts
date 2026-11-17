@@ -34,9 +34,11 @@ export interface ScoreAnalysisItem {
  * What survives is the user's OWN data plus their outcome: which options they
  * picked, and whether the question was right. Neither discloses the key.
  *
- * TRADEOFF: after a reload, Review can no longer highlight the correct answers
- * for a completed quiz, because that fact is deliberately no longer stored.
- * Same-session Review is unaffected — it reads the in-memory verdict history.
+ * The saved result therefore stays stripped. So that a reload does not leave Quiz Review empty,
+ * the reveal the player ALREADY earned in THIS completed attempt is kept separately by
+ * CompletedReviewStoreService: scoped to one exact result (quizId + completedAt), bounded, validated
+ * on read, cleared with this result, and restored without any request or receipt. It is not the
+ * answer bank: only questions the player legitimately reached a reveal for are ever in it.
  */
 export function toDurableFinalResult(result: FinalResult): FinalResult {
   return {

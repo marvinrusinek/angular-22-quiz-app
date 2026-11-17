@@ -56,6 +56,10 @@ import { SelectedOptionService } from '@shared/services/state/selectedoption.ser
 import { TimerService } from '@shared/services/features/timer/timer.service';
 import { ScoreAnalysisService } from '@shared/services/features/results/score-analysis.service';
 import {
+  CompletedReviewStoreService,
+  clearCompletedReview
+} from '@shared/services/features/results/completed-review-store.service';
+import {
   ReviewReveal,
   ReviewRevealService,
   mergeReviewReveals
@@ -116,6 +120,7 @@ export class ResultsComponent implements OnInit {
   private readonly timerService = inject(TimerService);
   private readonly scoreAnalysisService = inject(ScoreAnalysisService);
   private readonly reviewRevealService = inject(ReviewRevealService);
+  private readonly completedReview = inject(CompletedReviewStoreService);
   private readonly achievementService = inject(AchievementService);
   private readonly topicPerformanceHistory = inject(TopicPerformanceHistoryService);
   private readonly themeService = inject(ThemeService);
@@ -139,11 +144,18 @@ export class ResultsComponent implements OnInit {
   // Answers fetched AFTER completion for questions that already had a receipt.
   // In memory only, and never merged into the persisted result.
   private readonly reviewReveals = signal<ReadonlyMap<string, ReviewReveal>>(new Map());
+  // The questions a reveal is checked against. After a full page reload this page's own list is empty until
+  // the questions are loaded again (the accordion reads the same shared signal), so fall back to it: a restored
+  // reveal is still only shown when it matches a question's displayed option texts.
+  private readonly reviewQuestions = computed<readonly QuizQuestion[]>(() => {
+    const own = this.detailedSummaryQuestions();
+    return own.length > 0 ? own : this.quizService.questionsSig();
+  });
   readonly scoreAnalysis = computed<ScoreAnalysisItem[]>(() =>
     mergeReviewReveals(
       this.finalResult()?.analysis ?? [],
       this.reviewReveals(),
-      this.detailedSummaryQuestions()
+      this.reviewQuestions()
     )
   );
 
@@ -560,6 +572,7 @@ export class ResultsComponent implements OnInit {
       sessionStorage.removeItem(SK_SELECTED_OPTIONS_MAP);
       sessionStorage.removeItem('selectionHistory');
       sessionStorage.removeItem('finalResult');
+      clearCompletedReview();
       sessionStorage.removeItem('resultsActiveSection');
 
       const lsKeysToRemove: string[] = [];
@@ -767,15 +780,52 @@ export class ResultsComponent implements OnInit {
     if (!result.quizId || this.reviewRevealQuizId === result.quizId) return;
     this.reviewRevealQuizId = result.quizId;
 
+    // After a refresh the saved result has no answers and the receipts are gone. What the player ALREADY earned in
+    // THIS completed attempt was kept in a small, scoped session record (see CompletedReviewStoreService): put it
+    // back. Nothing is requested, and display still only accepts reveals that match the question's own options.
+    const restored = this.completedReview.load(result);
+    if (restored.size > 0) {
+      const next = new Map(this.reviewReveals());
+      for (const [key, reveal] of restored) if (!next.has(key)) next.set(key, reveal);
+      this.reviewReveals.set(next);
+      this.cdRef.markForCheck();
+    }
+
+    // A question that is already covered (earned in memory, or restored) is not fetched again.
+    const covered = mergeReviewReveals(
+      result.analysis ?? [],
+      this.reviewReveals(),
+      this.reviewQuestions()
+    );
+
     this.reviewRevealService
-      .reveals(result.quizId, result.analysis ?? [])
+      .reveals(result.quizId, covered)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((reveal) => {
         const next = new Map(this.reviewReveals());
         next.set(norm(reveal.questionText), reveal);
         this.reviewReveals.set(next);
+        this.rememberReview(result);
         this.cdRef.markForCheck();
       });
+  }
+
+  /**
+   * Keep the answers and explanations the player has earned for THIS result (those carried by the live analysis plus
+   * any fetched after the quiz ended), so a refresh can restore them. Review data the player was already authorized
+   * to see; the saved result itself stays stripped.
+   */
+  private rememberReview(result: FinalResult): void {
+    const earned: ReviewReveal[] = [];
+    for (const item of result.analysis ?? []) {
+      if ((item.correctOptionTexts?.length ?? 0) === 0) continue;
+      earned.push({
+        questionText: item.questionText,
+        correctOptionTexts: [...(item.correctOptionTexts ?? [])],
+        explanation: item.explanation ?? ''
+      });
+    }
+    this.completedReview.save(result, [...earned, ...this.reviewReveals().values()]);
   }
 
   private persistResultsToSession(result: FinalResult): void {
@@ -786,5 +836,7 @@ export class ResultsComponent implements OnInit {
     } catch (err: unknown) {
       swallow('results.component.ts', err);
     }
+    // The reveal the player earned goes to its own scoped record, not into the saved result.
+    this.rememberReview(result);
   }
 }

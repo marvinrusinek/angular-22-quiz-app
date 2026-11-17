@@ -98,3 +98,7 @@ export const SK_TOPIC_PERFORMANCE_HISTORY = 'topicPerformanceHistory:v1';
 // Active Weak Areas Practice session (sessionStorage). Holds the GENERATED
 // questions so a refresh resumes the identical session rather than reshuffling.
 export const SK_PRACTICE_SESSION = 'weakAreasPracticeSession:v1';
+
+// The answers + explanations the player ALREADY earned in the completed attempt (see CompletedReviewStoreService).
+// Scoped to one exact result (quizId + completedAt) and cleared whenever the saved result is. Not the answer bank.
+export const SK_COMPLETED_REVIEW = 'completedReviewReveals:v1';

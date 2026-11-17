@@ -39,6 +39,14 @@ export type ReviewFilter = 'all' | 'incorrect' | 'correct';
 // Collapses runs of whitespace like HTML rendering did, so the row text is identical to what the template showed.
 const oneLine = (text: string): string => text.replace(/\s+/g, ' ').trim();
 
+// True when the text already ends a sentence: a period, question mark, exclamation mark or ellipsis ("…" or "..."),
+// optionally followed by closing quotes or brackets (for example `...end."` or `(see above.)`).
+const endsWithTerminalPunctuation = (text: string): boolean => /[.?!…]["'”’)\]]*$/.test(text);
+
+// The explanation as the end of a sentence: unchanged when it is already punctuated, otherwise with one period.
+// (Only the displayed row is affected: the stored/backend explanation is never modified.)
+const asSentenceEnd = (text: string): string => (endsWithTerminalPunctuation(text) ? text : `${text}.`);
+
 @Component({
   selector: 'codelab-results-accordion',
   standalone: true,
@@ -393,8 +401,12 @@ export class AccordionComponent implements OnInit {
           : $localize`Explanation: (no explanation available)`
       );
     }
+    // The final punctuation comes from the explanation itself (a period is added only when it has none), so an
+    // explanation that already ends in ".", "?", "!" or an ellipsis is never given a second one. This single
+    // string feeds both the visible row and its accessible name, so they stay identical.
+    const sentence = asSentenceEnd(explanation);
     return oneLine(
-      $localize`Explanation: ${list}:list: ${verb}:verb: correct because ${explanation}:explanation:.`
+      $localize`Explanation: ${list}:list: ${verb}:verb: correct because ${sentence}:explanation:`
     );
   }
 

@@ -1362,6 +1362,37 @@ describe('AccordionComponent — reveal by question state', () => {
     ]);
   });
 
+  // Final punctuation of the Explanation row: a period is added ONLY when the explanation has no terminal
+  // punctuation. An explanation that already ends in ".", "?", "!" or an ellipsis is shown exactly as it is.
+  it.each([
+    ['why-0', 'Explanation: Option 1 was correct because why-0.'],
+    ['why-0.', 'Explanation: Option 1 was correct because why-0.'],
+    ['Is that right?', 'Explanation: Option 1 was correct because Is that right?'],
+    ['Yes!', 'Explanation: Option 1 was correct because Yes!'],
+    ['and so on…', 'Explanation: Option 1 was correct because and so on…'],
+    ['and so on...', 'Explanation: Option 1 was correct because and so on...'],
+    ['He said "done."', 'Explanation: Option 1 was correct because He said "done."'],
+    ['(see the guide.)', 'Explanation: Option 1 was correct because (see the guide.)'],
+    ['  padded  ', 'Explanation: Option 1 was correct because padded.']
+  ])('explanation %j: one terminal punctuation, never two', async (explanation, expected) => {
+    const analysis = [analysisItem(0, explanation)];
+    const f = await mount([question(0, [1])], analysis, new Map([[0, pick(0, 1)]]));
+    expect(rows(f, 0)[2]).toBe(expected);
+    expect(rows(f, 0)[2]).not.toMatch(/([^.]\.\.|[?!]\.)$/);
+    // the visible row and its accessible name are the same string
+    expect(aria(f, 0)[2]).toBe(rows(f, 0)[2]);
+    // the stored explanation is never modified
+    expect(analysis[0].explanation).toBe(explanation);
+  });
+
+  it('plural explanation row gets the same punctuation rule', async () => {
+    const f = await mount(
+      [question(0, [1, 3])], [analysisItem(0, 'both hold.')], new Map([[0, pick(0, 1, 3)]])
+    );
+    expect(rows(f, 0)[2]).toBe('Explanation: Options 1 and 3 were correct because both hold.');
+    expect(aria(f, 0)[2]).toBe(rows(f, 0)[2]);
+  });
+
   it('partially answered multiple-answer (never completed): nothing revealed', async () => {
     const f = await mount(
       [question(0, null)], [analysisItem(0, null)], new Map([[0, pick(0, 1)]])

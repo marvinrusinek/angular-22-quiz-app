@@ -3,6 +3,23 @@ main {
   justify-content: center;
 }
 
+// The persistent, initially empty polite live region that speaks the loading message. Clip-based
+// visually-hidden (the same pattern as the answer announcer): out of the layout and sight, but still
+// exposed to assistive technology (display:none / visibility:hidden would remove it).
+.start-announcer {
+  position: fixed; // the last element in the document: fixed keeps it out of the scrollable overflow
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 // Brief "starting the quiz" overlay. Hidden by default; fades in when the Start
 // spinner is shown and fades out (into Q1) when it hides.
 .start-spinner {

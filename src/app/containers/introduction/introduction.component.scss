@@ -166,7 +166,16 @@ mat-card-actions {
         border: 2px solid vars.$black;
       }
 
-      &:disabled {
+      // While preparing the button is only DIMMED (.is-starting). Its exposed state is deliberately left alone: a
+      // disabled / aria-disabled flip on the focused button makes UI Automation fire an IsEnabled change and a
+      // second focus event, which Narrator speaks as a re-announcement ("Start the…"). The loading message is spoken
+      // by the live-region announcer in app.component.html and the click guard in onStartQuiz() blocks any repeat
+      // activation.
+      // KNOWN LIMITATION (unresolved): the preparing state is therefore NOT exposed programmatically on the button
+      // (no disabled / aria-disabled / aria-busy), so the button still reads as available to assistive technology
+      // while preparing. Revisit if a way to expose it without a re-announcement is found.
+      &:disabled,
+      &.is-starting {
         opacity: 0.65;
         cursor: not-allowed;
       }

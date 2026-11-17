@@ -1349,6 +1349,35 @@ describe('IntroductionComponent — Angular entrance animation', () => {
     expect(root.querySelector('mat-card.quiz-card')?.hasAttribute('role')).toBe(false);
   });
 
+  it('leaves the exposed state of the Start button ALONE while preparing: only a dimming class, never disabled or aria-disabled', () => {
+    setMatchMedia(false);
+    const fixture = create();
+    const root = fixture.nativeElement as HTMLElement;
+    const comp = fixture.componentInstance as any;
+    const start = (): HTMLButtonElement => root.querySelector('button.start-btn') as HTMLButtonElement;
+    const exposed = (): string => JSON.stringify({ disabled: start().disabled, ariaDisabled: start().getAttribute('aria-disabled'), label: start().getAttribute('aria-label'), tabindex: start().getAttribute('tabindex') });
+    const before = exposed();
+    expect(start().classList.contains('is-starting')).toBe(false);
+
+    comp.isStartingQuiz.set(true);
+    fixture.detectChanges();
+    // A disabled / aria-disabled flip on the focused button makes UIA fire IsEnabled + a second focus event
+    // (Narrator re-speaks "Start the…"). Only the visual dimming class changes.
+    expect(exposed()).toBe(before);
+    expect(start().disabled).toBe(false);
+    expect(start().hasAttribute('aria-disabled')).toBe(false);
+    expect(start().classList.contains('is-starting')).toBe(true);
+
+    comp.isStartingQuiz.set(false);
+    fixture.detectChanges();
+    expect(exposed()).toBe(before);
+    expect(start().classList.contains('is-starting')).toBe(false);
+  });
+
+  it('styles the preparing (.is-starting) state like the old disabled state', () => {
+    expect(scss.replace(/\s+/g, ' ')).toContain('&:disabled, &.is-starting { opacity: 0.65; cursor: not-allowed; }');
+  });
+
   it('honours prefers-reduced-motion by disabling Angular animations for the card', () => {
     setMatchMedia(true);
     expect((create().componentInstance as any).motionDisabled).toBe(true);

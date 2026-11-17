@@ -1,10 +1,11 @@
 <main>
-  <!-- Brief "starting the quiz" overlay — fades in on Start, fades out into Q1. -->
+  <!-- Brief "starting the quiz" overlay — fades in on Start, fades out into Q1. Purely visual: hidden from
+       assistive technology (the announcer below carries the spoken message), so the label is never
+       exposed twice and the spinner stays silent. -->
   <div
     class="start-spinner"
     [class.is-visible]="startSpinner.visible()"
-    role="status"
-    aria-live="polite"
+    aria-hidden="true"
   >
     <div class="start-spinner__box">
       <app-google-spinner />
@@ -14,3 +15,18 @@
 
   <router-outlet></router-outlet>
 </main>
+
+<!-- The spoken loading message ("Preparing quiz…"): ONE persistent, initially EMPTY polite live region. Its text is
+     written when preparation begins and cleared when it ends, so assistive technology gets a real content change
+     (a CSS reveal of pre-populated text was not announced). It never takes focus.
+     - It is the LAST element in the document, after <main> and the route content, outside what is created and
+       destroyed on navigation, so writing its text does not insert text at the very start of the document.
+     - It has NO explicit role on purpose: role="status" made Narrator append the word "Status" after the message
+       when the Start button was activated from scan mode (Down Arrow + Space). aria-live="polite" and
+       aria-atomic="true" alone keep it a live region. (UI Automation exposes it as a "group"; no extra word was
+       heard in a Narrator retest.) -->
+<div
+  class="start-announcer"
+  aria-live="polite"
+  aria-atomic="true"
+>{{ startStatus() }}</div>

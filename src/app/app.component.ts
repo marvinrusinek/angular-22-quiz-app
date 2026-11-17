@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -23,6 +23,11 @@ export class AppComponent {
 
   // Drives the brief "Start the Quiz!" loading overlay (set by IntroductionComponent).
   readonly startSpinner = inject(QuizStartSpinnerService);
+
+  // The spoken loading message: the overlay's label while an attempt is in flight, empty otherwise. Driven by
+  // the existing preparation state (QuizStartSpinnerService.visible/label), so it clears on success, failure
+  // and cancel alike when the overlay hides.
+  readonly startStatus = computed(() => (this.startSpinner.visible() ? this.startSpinner.label() : ''));
 
   // Detects a freshly deployed bundle (via the service worker) and offers a
   // one-click reload, so users don't have to hard-refresh to get the new version.

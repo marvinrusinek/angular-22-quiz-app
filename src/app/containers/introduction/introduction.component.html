@@ -113,7 +113,7 @@
             mat-raised-button
             color="primary"
             class="btn btn-outline-primary start-btn"
-            [disabled]="isStartingQuiz()"
+            [class.is-starting]="isStartingQuiz()"
             (click)="onStartQuiz(quiz.quizId)"
             aria-label="Retry starting the quiz"
           i18n-aria-label
@@ -129,7 +129,7 @@
             mat-raised-button
             color="primary"
             class="btn btn-outline-primary start-btn"
-            [disabled]="isStartingQuiz()"
+            [class.is-starting]="isStartingQuiz()"
             (click)="onStartQuiz(quiz.quizId)"
             aria-label="Start the Quiz"
           i18n-aria-label

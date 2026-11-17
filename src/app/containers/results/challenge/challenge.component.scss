@@ -4,6 +4,15 @@
   text-align: center;
   padding-bottom: 5px; // Compact layout
 
+  // Keeps the heading's former <h4> appearance (it is now an h2 for the page outline): 1em, bold, 1.33em margins —
+  // the browser's default h4 rendering — instead of the larger default h2 size and smaller h2 margins.
+  .challenge__heading {
+    font-size: 1em;
+    font-weight: bold;
+    margin-block: 1.33em;
+    margin-inline: 0;
+  }
+
   .social-buttons {
     display: inline-flex;
     vertical-align: middle;

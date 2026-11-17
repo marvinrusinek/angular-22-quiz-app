@@ -291,8 +291,8 @@ mat-card {
   padding: 0;
   margin-top: -30px; // Move content up closer to header
 
-  // Congratulations Header - Gradient Text
-  h3 {
+  // Congratulations Header - Gradient Text (the section headings: h2 under the page h1)
+  h2 {
     font-family: 'Georgia', serif;
     font-size: 28px;
     font-style: italic;
@@ -478,7 +478,7 @@ mat-card {
     }
   }
 
-  .results h3 {
+  .results h2 {
     font-size: 22px;
   }
 }

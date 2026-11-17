@@ -36,7 +36,7 @@ describe('AchievementsCatalogComponent (always visible)', () => {
 
   it('keeps the heading with the earned count SEPARATE from the rows, with no disclosure control', () => {
     setAchievements(VIEW);
-    const heading = root().querySelector('h3.achievements-catalog__heading') as HTMLElement;
+    const heading = root().querySelector('h2.achievements-catalog__heading') as HTMLElement;
     expect(heading.textContent?.replace(/\s+/g, ' ').trim()).toContain('Achievements, 1 of 3');
     // The heading is not inside any row group, and no group spans the whole section.
     expect(heading.closest('[role="group"]')).toBeNull();
@@ -107,14 +107,14 @@ describe('AchievementsCatalogComponent (always visible)', () => {
     expect(exposed(g).textContent).toBe('Angular Explorer. Complete every available quiz. Earned.');
     expect(g.querySelector('.achievements-catalog__badge')?.textContent?.trim()).toBe('Earned');
     expect(exposed(g).childNodes).toHaveLength(1);
-    expect(root().querySelector('h3')?.textContent).toContain('Achievements, 2 of 3');
+    expect(root().querySelector('h2')?.textContent).toContain('Achievements, 2 of 3');
   });
 
   it('shows the actual count in the heading for any state (0 of 3, 3 of 3)', () => {
     setAchievements(VIEW.map((a) => ({ ...a, earned: false })));
-    expect(root().querySelector('h3')?.textContent?.replace(/\s+/g, ' ')).toContain('Achievements, 0 of 3');
+    expect(root().querySelector('h2')?.textContent?.replace(/\s+/g, ' ')).toContain('Achievements, 0 of 3');
     setAchievements(VIEW.map((a) => ({ ...a, earned: true })));
-    expect(root().querySelector('h3')?.textContent?.replace(/\s+/g, ' ')).toContain('Achievements, 3 of 3');
+    expect(root().querySelector('h2')?.textContent?.replace(/\s+/g, ' ')).toContain('Achievements, 3 of 3');
   });
 
   it('rowLabel drops only a terminal period', () => {

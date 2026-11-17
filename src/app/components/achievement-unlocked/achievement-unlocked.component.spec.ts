@@ -61,7 +61,7 @@ describe('AchievementUnlockedComponent', () => {
     expect(section.getAttribute('role')).toBe('status');
     expect(section.getAttribute('aria-live')).toBe('polite');
     // Meaning is carried by text, readable without the icon.
-    expect(section.querySelector('h3')?.textContent).toContain('Achievement Unlocked');
+    expect(section.querySelector('h2')?.textContent).toContain('Achievement Unlocked');
   });
 
   it('exposes the name/description list to assistive tech (the card announces which achievement was just unlocked)', () => {
@@ -72,7 +72,7 @@ describe('AchievementUnlockedComponent', () => {
     expect(section.textContent).toContain('Perfect Score');
     // ...and exposed (no aria-hidden), together with the heading and live region.
     expect(section.querySelector('.achievement-unlocked__list')?.hasAttribute('aria-hidden')).toBe(false);
-    expect(section.querySelector('h3')?.getAttribute('aria-hidden')).toBeNull();
+    expect(section.querySelector('h2')?.getAttribute('aria-hidden')).toBeNull();
     expect(section.getAttribute('aria-live')).toBe('polite');
   });
 });

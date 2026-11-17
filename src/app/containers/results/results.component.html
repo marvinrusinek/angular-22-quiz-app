@@ -139,7 +139,7 @@
   <mat-card-content>
     <section class="results">
       @if (activeSection() === 'score') {
-        <h3 class="section-heading" i18n>Score Analysis</h3>
+        <h2 class="section-heading" i18n>Score Analysis</h2>
 
         <!-- Statistics (Score only) -->
         @defer (on viewport) {
@@ -163,7 +163,7 @@
       }
 
       @if (activeSection() === 'summary') {
-        <h3 class="section-heading" i18n>Quiz Review</h3>
+        <h2 class="section-heading" i18n>Quiz Review</h2>
 
         <!-- Accordion (Questions Review) -->
         <section class="quiz-summary">
@@ -193,7 +193,7 @@
       }
 
       @if (activeSection() === 'resources') {
-        <h3 class="section-heading" i18n>Learning Resources</h3>
+        <h2 class="section-heading" i18n>Learning Resources</h2>
 
         <!-- Resources List -->
         @defer (on viewport) {

@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1794955574964,
+  "timestamp": 1794958099865,
   "index": "/angular-quiz-platform/index.html",
   "assetGroups": [
     {
@@ -11,18 +11,18 @@
         "ignoreVary": true
       },
       "urls": [
-        "/angular-quiz-platform/chunk-3451X-mu.js",
+        "/angular-quiz-platform/chunk-B45e-C9e.js",
         "/angular-quiz-platform/chunk-BcR-gcGq.js",
-        "/angular-quiz-platform/chunk-CM9OUJFg.js",
-        "/angular-quiz-platform/chunk-CNg1Oflg.js",
-        "/angular-quiz-platform/chunk-CRJe9pHN.js",
-        "/angular-quiz-platform/chunk-CiN0DeLT.js",
-        "/angular-quiz-platform/chunk-Cigv1IUq.js",
+        "/angular-quiz-platform/chunk-C1Xy0qcH.js",
+        "/angular-quiz-platform/chunk-CNOXWLdJ.js",
+        "/angular-quiz-platform/chunk-CYvExeoZ.js",
+        "/angular-quiz-platform/chunk-CoO3KKi4.js",
+        "/angular-quiz-platform/chunk-DchvOw53.js",
         "/angular-quiz-platform/index.html",
-        "/angular-quiz-platform/main-SZXTHEDB.js",
+        "/angular-quiz-platform/main-JV6BZKB7.js",
         "/angular-quiz-platform/manifest.webmanifest",
         "/angular-quiz-platform/polyfills-ZCFIDMUY.js",
-        "/angular-quiz-platform/styles-3V7YIVXG.css"
+        "/angular-quiz-platform/styles-CBFRMS4G.css"
       ],
       "patterns": []
     },
@@ -117,13 +117,13 @@
     "/angular-quiz-platform/assets/images/testing.svg": "f2dcf2bc17eb0aaa5f7304dfc31139c99d825884",
     "/angular-quiz-platform/assets/images/twitter.svg": "ab2a6b157ca887ef7333c252aafc133ac68cc3ae",
     "/angular-quiz-platform/assets/images/typescript.webp": "5178d2ba1a82966b8440842fb1363701bfcc5521",
-    "/angular-quiz-platform/chunk-3451X-mu.js": "e75d6ede5420c037ffe218997e8945fbb098c173",
+    "/angular-quiz-platform/chunk-B45e-C9e.js": "3ad49b303ffd897c94456225bde180858d23bfe7",
     "/angular-quiz-platform/chunk-BcR-gcGq.js": "65e151ae643d744a0b5f9735e821259e69590cb7",
-    "/angular-quiz-platform/chunk-CM9OUJFg.js": "dc0facd24efc9d8455fa809fe48f2cb831a3cc5e",
-    "/angular-quiz-platform/chunk-CNg1Oflg.js": "95e4da9eb05eced697e9d4afb8ec01a52df6cf9b",
-    "/angular-quiz-platform/chunk-CRJe9pHN.js": "e60f1608c2c04b342561aabbc51498fe685315fc",
-    "/angular-quiz-platform/chunk-CiN0DeLT.js": "387a1929e3fb56cb765172d22abef4d32b1044f5",
-    "/angular-quiz-platform/chunk-Cigv1IUq.js": "622eb6d46918b605c30ab00f5989dbed2a46109f",
+    "/angular-quiz-platform/chunk-C1Xy0qcH.js": "750e5fc5bdecffab322baabddbeb299ebd4df65b",
+    "/angular-quiz-platform/chunk-CNOXWLdJ.js": "bfe6518215a93d97739dfb39189e3b4082d80807",
+    "/angular-quiz-platform/chunk-CYvExeoZ.js": "e930c982ce70f988dfe451d6443a755cafb4b6a4",
+    "/angular-quiz-platform/chunk-CoO3KKi4.js": "449a79d794bc1c30c85db80bb579b8b90e394f05",
+    "/angular-quiz-platform/chunk-DchvOw53.js": "f1c97ebd9b5933a1de227e07a25e09d4be821600",
     "/angular-quiz-platform/icons/icon-128x128.png": "f912963bdc6d5a38d8f1dd0afbaab2ce8d657acb",
     "/angular-quiz-platform/icons/icon-144x144.png": "b155fd5f2fd5d2ea7760721063003c4cd95fd783",
     "/angular-quiz-platform/icons/icon-152x152.png": "eae6e0f0c8afb8aaae339e2a569b43e9238e5e6c",
@@ -132,11 +132,11 @@
     "/angular-quiz-platform/icons/icon-512x512.png": "1de182f76f7329dfa8f9fcdd1fdcdd695bea6a99",
     "/angular-quiz-platform/icons/icon-72x72.png": "aa88a6096bd973be7f6d7a5489bfa6bc2463f8c4",
     "/angular-quiz-platform/icons/icon-96x96.png": "7fb8f59c30ce2ff12c700321a0b39e14b3dc8f95",
-    "/angular-quiz-platform/index.html": "eb2a3622963673f6cccc11593d9da6b5e98efaaf",
-    "/angular-quiz-platform/main-SZXTHEDB.js": "06051125a815007cb8fe7e0ce4ee5216b7c778da",
+    "/angular-quiz-platform/index.html": "e390331f8cd9f7f1c1d87b986eb28d2a9aa875af",
+    "/angular-quiz-platform/main-JV6BZKB7.js": "0123718525daf9f8af7c78d79fdf2758b07f8bd9",
     "/angular-quiz-platform/manifest.webmanifest": "74fa07e5083d952835cd95fb72685f1818211bee",
     "/angular-quiz-platform/polyfills-ZCFIDMUY.js": "d95d77c85e3638ace2862592b9479ad4e8520cad",
-    "/angular-quiz-platform/styles-3V7YIVXG.css": "ab0c1dc677fb5d34060a746b01aba12ff2f57753"
+    "/angular-quiz-platform/styles-CBFRMS4G.css": "93570a8040813ba981d8fa88955ecda11f4fbc2b"
   },
   "navigationUrls": [
     {

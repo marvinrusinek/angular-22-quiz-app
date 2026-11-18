@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  Built with Angular 22, TypeScript, Signals, RxJS, and Angular Material (with a small NgRx SignalStore for Interview History view state), integrating Node.js/Express and Spring Boot REST APIs with PostgreSQL for secure quiz data management and backend-driven interview sessions.
+  Built with Angular 22, TypeScript, Signals, RxJS, and Angular Material (with NgRx SignalStore for Interview History view state), integrating Node.js/Express and Spring Boot REST APIs with PostgreSQL for secure quiz data management and backend-driven interview sessions.
 </p>
 
 <p align="center">

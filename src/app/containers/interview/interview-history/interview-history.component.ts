@@ -19,7 +19,6 @@ import { formatDuration } from '@shared/utils/format-time';
 import { swallow } from '@shared/utils/error-logging';
 import { InterviewAttemptHistoryEntry, interviewConfigLabel } from '@shared/models';
 import {
-  filterAttempts,
   InterviewHistoryFilter,
   InterviewHistoryService
 } from '@shared/services/features/interview/interview-history.service';
@@ -30,18 +29,14 @@ import { InterviewReadinessService } from '@shared/services/features/interview/i
 import { InterviewTopicTrendsComponent } from '../../../components/interview/interview-topic-trends/interview-topic-trends.component';
 import { InterviewTopicTrendsService } from '@shared/services/features/interview/interview-topic-trends.service';
 import { ScrollDownIndicatorComponent } from '../../../components/scroll-down-indicator/scroll-down-indicator.component';
-
-interface HistoryCard {
-  entry: InterviewAttemptHistoryEntry;
-  number: number; // chronological attempt number (1 = oldest retained)
-  topics: string[];
-}
+import { InterviewHistoryStore } from './interview-history.store';
 
 /**
  * Interview History — a read-only record of completed Interview Mode attempts.
  * It NEVER touches localStorage directly: all persistence/validation/retention
  * lives in InterviewHistoryService, and the summary metrics reuse that service's
- * `trends` (no independent recalculation). Filtering is client-side and pure.
+ * `trends` (no independent recalculation). Filtering is client-side and pure; the selected filter and the values
+ * derived from it (chip counts, displayed cards) live in the component-scoped InterviewHistoryStore.
  *
  * This is purely historical — it never restores or resumes a session.
  */
@@ -61,6 +56,8 @@ interface HistoryCard {
   ],
   templateUrl: './interview-history.component.html',
   styleUrls: ['./interview-history.component.scss'],
+  // Component-scoped: each instance gets its own store, so the filter resets to "all" when the page is recreated.
+  providers: [InterviewHistoryStore],
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -120,6 +117,7 @@ export class InterviewHistoryComponent implements OnInit {
   }
 
   private readonly history = inject(InterviewHistoryService);
+  private readonly store = inject(InterviewHistoryStore);
   private readonly sessionRef = inject(InterviewSessionReferenceStorage);
   private readonly readinessService = inject(InterviewReadinessService);
   private readonly destroyRef = inject(DestroyRef);
@@ -234,7 +232,9 @@ export class InterviewHistoryComponent implements OnInit {
 
   readonly retainedCount = computed(() => this.history.history().length);
 
-  readonly filter = signal<InterviewHistoryFilter>('all');
+  // Selected filter, per-filter counts and the displayed cards come from the component-scoped store; the template
+  // keeps reading them under the same names.
+  readonly filter = this.store.filter;
 
   readonly filters: { id: InterviewHistoryFilter; label: string }[] = [
     { id: 'all', label: $localize`All` },
@@ -242,34 +242,12 @@ export class InterviewHistoryComponent implements OnInit {
     { id: 'time-expired', label: $localize`Time Expired` }
   ];
 
-  // Per-filter counts for the filter chips.
-  readonly counts = computed<Record<InterviewHistoryFilter, number>>(() => {
-    const all = this.history.history();
-    return {
-      all: all.length,
-      submitted: all.filter((a) => a.completionReason === 'submitted').length,
-      'time-expired': all.filter((a) => a.completionReason === 'time-expired').length
-    };
-  });
+  readonly counts = this.store.counts;
 
-  // Cards, newest first. The number is the persisted lifetime attempt number
-  // (stable as older attempts age out); falls back to chronological position for
-  // any legacy record still missing one.
-  readonly cards = computed<HistoryCard[]>(() => {
-    const all = this.history.history();
-    const positionById = new Map(all.map((e, i) => [e.id, i + 1]));
-    return filterAttempts(all, this.filter())
-      .slice()
-      .reverse()
-      .map((entry) => ({
-        entry,
-        number: entry.attemptNumber ?? positionById.get(entry.id) ?? 0,
-        topics: this.topicsFor(entry)
-      }));
-  });
+  readonly cards = this.store.cards;
 
   setFilter(id: InterviewHistoryFilter): void {
-    this.filter.set(id);
+    this.store.setFilter(id);
   }
 
   /**
@@ -308,12 +286,6 @@ export class InterviewHistoryComponent implements OnInit {
     } catch {
       return iso;
     }
-  }
-
-  private topicsFor(entry: InterviewAttemptHistoryEntry): string[] {
-    const fromPerf = entry.topicPerformance.map((t) => t.topicName).filter(Boolean);
-    if (fromPerf.length > 0) return fromPerf;
-    return [...(entry.selectedTopicIds ?? [])];
   }
 
   /**

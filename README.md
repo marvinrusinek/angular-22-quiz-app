@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  Built with Angular 22, TypeScript, Signals, RxJS, and Angular Material, integrating Node.js/Express and Spring Boot REST APIs with PostgreSQL for secure quiz data management and backend-driven interview sessions.
+  Built with Angular 22, TypeScript, Signals, RxJS, and Angular Material (with a small NgRx SignalStore for Interview History view state), integrating Node.js/Express and Spring Boot REST APIs with PostgreSQL for secure quiz data management and backend-driven interview sessions.
 </p>
 
 <p align="center">
@@ -94,7 +94,7 @@
 
 <p>The application follows a modular frontend/backend architecture. Angular container components orchestrate application flow, focused services encapsulate business logic, and Signals and RxJS keep the UI synchronized with user interactions. Topic Quizzes, quiz metadata, and certificate claims are served through a Node/Express REST API, while Interview Mode session workflows are served through a Spring Boot REST API. Both backends connect to a shared PostgreSQL database, hosted on Neon in production, which serves as the authoritative store for quiz content, assessment sessions, submitted answers, server-side results, and issued certificates.</p>
 
-<p>The frontend combines <strong>Angular Signals</strong> for fine-grained reactive UI state with <strong>RxJS</strong> for asynchronous data flows, event coordination, and cross-component communication. Correctness-sensitive operations remain backend-authoritative so answer-bearing quiz data is not shipped with the Angular application. </p>
+<p>The frontend combines <strong>Angular Signals</strong> for fine-grained reactive UI state with <strong>RxJS</strong> for asynchronous data flows, event coordination, and cross-component communication. <strong>NgRx SignalStore</strong> (<code>@ngrx/signals</code>) is used in exactly one place: a component-scoped store for the Interview History page's view state (the selected filter and the counts and cards derived from it). <code>InterviewHistoryService</code> remains the single owner of the persisted history, its validation, retention, deduplication and trends; the store reads that service's signals and never copies the history. This is a deliberately small, local adoption, not an application-wide state-management migration. Correctness-sensitive operations remain backend-authoritative so answer-bearing quiz data is not shipped with the Angular application. </p>
 
 <h3>High-Level Flow</h3>
 
@@ -110,7 +110,7 @@
 
 <ul>
   <li><strong>Frontend:</strong> Angular 22, TypeScript</li>
-  <li><strong>Reactive State:</strong> Angular Signals, RxJS</li>
+  <li><strong>Reactive State:</strong> Angular Signals, RxJS, NgRx SignalStore (Interview History view state only)</li>
   <li><strong>UI:</strong> Angular Material, SCSS</li>
   <li><strong>Forms:</strong> Reactive Forms, Signal Forms</li>
   <li><strong>HTTP Integration:</strong> Angular HttpClient with Fetch backend (<code>withFetch()</code>) and functional HTTP interceptors (<code>withInterceptors()</code>)</li>

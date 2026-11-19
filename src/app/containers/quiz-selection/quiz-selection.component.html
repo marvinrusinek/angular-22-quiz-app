@@ -2,8 +2,7 @@
   <header class="qd-header">
     <div class="qd-header__inner">
       <div class="qd-brand">
-        <!-- The h1 is named by the logo's alt text, so the name is spoken once. -->
-        <h1 class="qd-brand__name">
+        <div class="qd-brand__name">
           <img
             class="qd-brand__img"
             src="assets/images/angular-quiz-platform-logo.webp"
@@ -12,7 +11,7 @@
             alt="Angular Quiz Platform"
             i18n-alt
           />
-        </h1>
+        </div>
         <p class="qd-brand__tagline" i18n>Learn • Practice • Assess • Improve</p>
       </div>
 
@@ -24,11 +23,12 @@
           href="https://github.com/marvinrusinek/angular-quiz-platform"
           target="_blank"
           rel="noopener noreferrer"
+          aria-labelledby="qd-star-label qd-star-new-tab"
           (click)="onStarClick()"
         >
           <mat-icon class="qd-star__icon" aria-hidden="true">star</mat-icon>
-          <span class="qd-star__label" i18n>Star on GitHub</span>
-          <span class="visually-hidden" i18n> (opens in a new tab)</span>
+          <span id="qd-star-label" class="qd-star__label" i18n>Star on GitHub</span>
+          <span id="qd-star-new-tab" hidden i18n>Opens in a new tab</span>
         </a>
         <codelab-theme-toggle class="selection-theme-toggle" />
       </div>
@@ -42,34 +42,46 @@
   </header>
 
   <div class="qd-page">
-    <section class="qd-hero" aria-labelledby="qd-hero-title">
+    <section class="qd-hero">
       <div class="qd-hero__copy">
-        <h2 id="qd-hero-title" class="qd-hero__title" i18n>
+        <h1 id="qd-hero-title" class="qd-hero__title" i18n>
           Master Angular with Interactive Quizzes
-        </h2>
-        <p class="qd-hero__sub" i18n>
-          Topic quizzes, interview practice, and focused review to build your
-          Angular skills.
-        </p>
-        <p class="version-note" i18n>Questions updated for Angular 22</p>
+        </h1>
+        <!-- One group, one reading stop: the subtitle and the version note are hidden from AT and the group exposes ONE text
+             item (see IntroExposedTextDirective), so Narrator reads them together as a single passage. -->
+        <div class="qd-hero__intro" role="group">
+          <div class="qd-hero__intro-visible" data-intro-visible aria-hidden="true">
+            <p class="qd-hero__sub" data-intro-width-ref i18n>
+              Topic quizzes, interview practice, and focused review to build your
+              Angular skills.
+            </p>
+            <p class="version-note" i18n>Questions updated for Angular 22</p>
+          </div>
+          <span [appIntroExposedText]="heroPassageSig()" exposedTextMode="spread" fitGroupWidth></span>
+        </div>
 
         @if (quizzes().length > 0) {
-          <div
-            class="quiz-stats"
-            role="status"
-            aria-live="polite"
-          >
-            <!-- Stats use visually hidden grouped text for Narrator; visible animated counters are aria-hidden to avoid duplicate announcements. -->
-            <span class="stat">
-              <span class="visually-hidden" role="group">{{ quizCountAccessibleLabelSig() }}</span>
-              <span class="stat-num" aria-hidden="true" [appCountUp]="quizStats().quizCount" [countUpDelay]="0"></span>
-              <span class="stat-label" aria-hidden="true" i18n>Quizzes</span>
+          <!-- Plain page content, not a status message: it is NOT a live region. Each statistic below is its own group whose
+               exposed text is (re)fitted as the page settles; inside a live region those refits would be announced. -->
+          <div class="quiz-stats">
+            <!-- Each statistic is its own group: the visible number and label are hidden from AT and the group exposes ONE
+                 text item with the FINAL count (see IntroExposedTextDirective), laid over the visible number AND label, so
+                 Narrator reads "20 Quizzes" once and draws one box. The counter animation only touches the hidden visible
+                 copy. -->
+            <span class="stat" role="group">
+              <span class="stat-visible" data-intro-visible aria-hidden="true">
+                <span class="stat-num" [appCountUp]="quizStats().quizCount" [countUpDelay]="0"></span>
+                <span class="stat-label" data-intro-font-ref i18n>Quizzes</span>
+              </span>
+              <span [appIntroExposedText]="quizCountAccessibleLabelSig()" exposedTextMode="cover"></span>
             </span>
             <span class="stat-divider" aria-hidden="true"></span>
-            <span class="stat">
-              <span class="visually-hidden" role="group">{{ questionCountAccessibleLabelSig() }}</span>
-              <span class="stat-num" aria-hidden="true" [appCountUp]="quizStats().questionCount" [countUpDelay]="140"></span>
-              <span class="stat-label" aria-hidden="true" i18n>Questions</span>
+            <span class="stat" role="group">
+              <span class="stat-visible" data-intro-visible aria-hidden="true">
+                <span class="stat-num" [appCountUp]="quizStats().questionCount" [countUpDelay]="140"></span>
+                <span class="stat-label" data-intro-font-ref i18n>Questions</span>
+              </span>
+              <span [appIntroExposedText]="questionCountAccessibleLabelSig()" exposedTextMode="cover"></span>
             </span>
             <span class="stat-divider stat-divider--before-levels" aria-hidden="true"></span>
             <!-- Keep difficulty levels together on mobile without changing desktop layout. -->
@@ -78,10 +90,12 @@
                 @if (i > 0) {
                   <span class="stat-divider" aria-hidden="true"></span>
                 }
-                <span class="stat" [class]="'level-' + level.key">
-                  <span class="visually-hidden" role="group">{{ levelAccessibleLabel(level) }}</span>
-                  <span class="stat-num" aria-hidden="true" [appCountUp]="level.count" [countUpDelay]="(i + 2) * 140"></span>
-                  <span class="stat-label" aria-hidden="true">{{ level.label }}</span>
+                <span class="stat" [class]="'level-' + level.key" role="group">
+                  <span class="stat-visible" data-intro-visible aria-hidden="true">
+                    <span class="stat-num" [appCountUp]="level.count" [countUpDelay]="(i + 2) * 140"></span>
+                    <span class="stat-label" data-intro-font-ref>{{ level.label }}</span>
+                  </span>
+                  <span [appIntroExposedText]="levelAccessibleLabel(level)" exposedTextMode="cover"></span>
                 </span>
               }
             </div>

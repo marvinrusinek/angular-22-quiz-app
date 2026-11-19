@@ -75,6 +75,7 @@ import { ScrollDownIndicatorComponent } from '../../components/scroll-down-indic
 import { DashboardFeatureCardsComponent } from '../../components/dashboard-feature-cards/dashboard-feature-cards.component';
 import { DashboardProgressComponent } from '../../components/dashboard-progress/dashboard-progress.component';
 import { CountUpDirective } from '../../directives/count-up.directive';
+import { IntroExposedTextDirective } from '../introduction/intro-exposed-text.directive';
 
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
 
@@ -109,7 +110,8 @@ import {
     QuizCardProgressComponent,
     DashboardFeatureCardsComponent,
     DashboardProgressComponent,
-    CountUpDirective
+    CountUpDirective,
+    IntroExposedTextDirective
   ],
   templateUrl: './quiz-selection.component.html',
   styleUrls: ['./quiz-selection.component.scss'],
@@ -466,28 +468,26 @@ export class QuizSelectionComponent implements OnInit {
   });
 
   /**
-   * CONFIRMED (real Narrator scan-mode retest, localhost:4200, 2026-10-16):
-   * spoken phrase for the "Quizzes" stat — number and label as one
-   * coherent utterance (e.g. "12 Quizzes"), matching the visible text's
-   * own wording exactly (unlike the Introduction duration piece, there's
-   * no wording mismatch to reconcile here).
+   * The hero's subtitle and its version note as ONE spoken passage ("Topic quizzes, interview practice, and focused
+   * review to build your Angular skills. Questions updated for Angular 22."). The two visible paragraphs are hidden
+   * from AT and the group exposes this single text item (see IntroExposedTextDirective). The wording matches the
+   * visible `i18n` paragraphs; the closing full stop only ends the spoken passage (the visible note has none).
+   */
+  readonly heroPassageSig = computed(() => {
+    const subtitle = $localize`Topic quizzes, interview practice, and focused review to build your Angular skills.`;
+    const versionNote = $localize`Questions updated for Angular 22`;
+    return `${subtitle} ${versionNote}.`;
+  });
+
+  /**
+   * Spoken phrase for the "Quizzes" stat — number and label as one coherent utterance (e.g. "12 Quizzes"), matching
+   * the visible text's own wording exactly.
    *
-   * Narrator read `.stat-num` and `.stat-label` as two separate stops
-   * because they are two separate DOM/AX leaf nodes. The fix that
-   * actually shipped is NOT a `role="group"` + `aria-label` on the
-   * `.stat` wrapper (that candidate was tried and reverted — a direct,
-   * controlled comparison against this exact codebase's own pre-existing
-   * `.visually-hidden[role="status"]` span found a BARE, roleless
-   * `.visually-hidden` span's real text gets pruned from the
-   * accessibility tree entirely (`ignored: true`), even though the
-   * identically-styled, already-shipped span with `role="status"` is
-   * not pruned — the role, not the CSS, is what keeps a span's content
-   * in the tree). The shipped fix instead renders this phrase as REAL
-   * TEXT inside a `.visually-hidden role="group"` span in the template
-   * (confirmed via CDP: a non-ignored `group` node with a `StaticText`
-   * child reading the full phrase) — `.stat-num`/`.stat-label` get
-   * `aria-hidden="true"` so the same information isn't ALSO announced
-   * separately, not because it's redundant to remove.
+   * Narrator read `.stat-num` and `.stat-label` as two separate stops because they are two separate DOM/AX leaf
+   * nodes. Each `.stat` is now a group: the visible number and label are hidden from AT (`data-intro-visible`,
+   * `aria-hidden`) and the group exposes ONE text item with this phrase, laid over the visible number AND label (see
+   * IntroExposedTextDirective). This REPLACES the earlier off-screen `.visually-hidden` copy: there is no second
+   * accessible copy of the text.
    *
    * `$localize` because the visible label ("Quizzes") is `i18n`-marked
    * in the template; composing the same word via TS keeps the spoken

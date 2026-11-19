@@ -2748,12 +2748,12 @@ describe('QuizSelectionComponent — difficulty filter', () => {
 });
 
 /**
- * Catalog stats accessible phrase — real Narrator scan-mode retest
- * CONFIRMED PASSING, localhost:4200, 2026-10-16 (see quiz-selection.
- * component.ts's own comment on `quizCountAccessibleLabelSig` for the
- * two reverted candidates and why this is the one that shipped).
+ * Catalog stats accessible phrase. Each statistic is its own group: the visible number and label are hidden from AT
+ * and the group exposes ONE text item (IntroExposedTextDirective) holding the final, localized phrase. This replaced
+ * the earlier off-screen `.visually-hidden` copy, so there is no second accessible copy. Narrator behaviour is
+ * verified by hand, not here; these tests pin the structure and the text.
  */
-describe('QuizSelectionComponent — catalog stats accessible phrase (2026-10-16 candidate)', () => {
+describe('QuizSelectionComponent — catalog stats accessible phrase (grouped candidate)', () => {
   const difficultyMap = new Map<string, string | null>([
     ['create-first-app', 'beginner'],
     ['dependency-injection', 'intermediate'],
@@ -2866,38 +2866,72 @@ describe('QuizSelectionComponent — catalog stats accessible phrase (2026-10-16
     return match;
   }
 
-  it('exposes each number+label as one real, non-hidden, readable text node — not merely an attribute name', () => {
+  /** The one exposed text item of a stat group (the IntroExposedTextDirective host). */
+  function exposedText(stat: HTMLElement): HTMLElement {
+    const hosts = stat.querySelectorAll(':scope > .intro-exposed-text');
+    expect(hosts).toHaveLength(1);
+    return hosts[0] as HTMLElement;
+  }
+
+  it('exposes each number+label as ONE exposed text item of its own group, with the final count', () => {
     const { fixture } = render();
 
     const quizzesStat = statEl(fixture, 'Quizzes');
-    const hidden = quizzesStat.querySelector('.visually-hidden');
-    expect(hidden).not.toBeNull();
-    expect(hidden!.getAttribute('role')).toBe('group');
-    expect(hidden!.getAttribute('aria-hidden')).not.toBe('true');
-    expect(hidden!.textContent).toBe('3 Quizzes');
+    expect(quizzesStat.getAttribute('role')).toBe('group');
+    expect(exposedText(quizzesStat).textContent).toBe('3 Quizzes');
 
     const questionsStat = statEl(fixture, 'Questions');
-    expect(questionsStat.querySelector('.visually-hidden')!.textContent).toBe('21 Questions');
+    expect(questionsStat.getAttribute('role')).toBe('group');
+    expect(exposedText(questionsStat).textContent).toBe('21 Questions');
 
     const beginnerStat = statEl(fixture, 'Beginner');
-    expect(beginnerStat.querySelector('.visually-hidden')!.textContent).toBe('1 Beginner');
+    expect(beginnerStat.getAttribute('role')).toBe('group');
+    expect(exposedText(beginnerStat).textContent).toBe('1 Beginner');
   });
 
-  it('excludes the visible duplicate text from the accessibility tree via aria-hidden, without hiding it visually', () => {
+  it('does not keep a second, off-screen accessible copy of any statistic', () => {
+    const { fixture } = render();
+    const strip = fixture.nativeElement.querySelector('.quiz-stats') as HTMLElement;
+    expect(strip.querySelectorAll('.visually-hidden')).toHaveLength(0);
+    // one exposed item per statistic (quizzes, questions, three difficulty levels), no more
+    expect(strip.querySelectorAll('.intro-exposed-text')).toHaveLength(5);
+  });
+
+  it('hides the visible number and label as one unit from the accessibility tree, without hiding them visually', () => {
     const { fixture } = render();
     const quizzesStat = statEl(fixture, 'Quizzes');
 
-    const num = quizzesStat.querySelector('.stat-num') as HTMLElement;
-    const label = quizzesStat.querySelector('.stat-label') as HTMLElement;
-    expect(num.getAttribute('aria-hidden')).toBe('true');
-    expect(label.getAttribute('aria-hidden')).toBe('true');
-    // Visually present: no display:none/visibility:hidden on either —
-    // only the duplicate TEXT is excluded from the accessibility tree,
-    // never the real rendered content sighted users see.
-    expect(num.style.display).not.toBe('none');
-    expect(label.style.display).not.toBe('none');
-    expect(num.hasAttribute('hidden')).toBe(false);
-    expect(label.hasAttribute('hidden')).toBe(false);
+    const visible = quizzesStat.querySelector(':scope > [data-intro-visible]') as HTMLElement;
+    expect(visible).not.toBeNull();
+    expect(visible.getAttribute('aria-hidden')).toBe('true');
+    const num = visible.querySelector('.stat-num') as HTMLElement;
+    const label = visible.querySelector('.stat-label') as HTMLElement;
+    expect(num).not.toBeNull();
+    expect(label).not.toBeNull();
+    // The font reference the exposed text is fitted to.
+    expect(label.hasAttribute('data-intro-font-ref')).toBe(true);
+    // Visually present: nothing is display:none / hidden, only excluded from the accessibility tree.
+    for (const el of [visible, num, label]) {
+      expect(el.style.display).not.toBe('none');
+      expect(el.hasAttribute('hidden')).toBe(false);
+    }
+  });
+
+  it('keeps the dividers decorative and does not combine the strip into one group', () => {
+    const { fixture } = render();
+    const strip = fixture.nativeElement.querySelector('.quiz-stats') as HTMLElement;
+    const dividers = Array.from(strip.querySelectorAll('.stat-divider')) as HTMLElement[];
+    expect(dividers.length).toBeGreaterThan(0);
+    expect(dividers.every((d) => d.getAttribute('aria-hidden') === 'true')).toBe(true);
+    // Every statistic is its own group; the strip itself is not one.
+    const stats = Array.from(strip.querySelectorAll('.stat')) as HTMLElement[];
+    expect(stats).toHaveLength(5);
+    expect(stats.every((s) => s.getAttribute('role') === 'group')).toBe(true);
+    expect(strip.getAttribute('role')).not.toBe('group');
+    // Not a live region: the exposed text is refitted as the page settles, which a live region would announce.
+    expect([strip.getAttribute('role'), strip.getAttribute('aria-live')]).toEqual([null, null]);
+    // No stat group is nested in another.
+    expect(strip.querySelectorAll('.stat .stat')).toHaveLength(0);
   });
 
   it('adds no new Tab stop anywhere in the stats row', () => {
@@ -2907,15 +2941,14 @@ describe('QuizSelectionComponent — catalog stats accessible phrase (2026-10-16
     const groupRoles = Array.from(
       fixture.nativeElement.querySelectorAll('.quiz-stats [role="group"]')
     ) as HTMLElement[];
-    // role="group" exists (on the visually-hidden text spans) but none of
-    // them carry a tabindex — a role alone never adds focusability.
+    // role="group" exists (on each .stat) but none of them carry a tabindex — a role alone never adds focusability.
     expect(groupRoles.length).toBeGreaterThan(0);
     expect(groupRoles.every((el) => !el.hasAttribute('tabindex'))).toBe(true);
   });
 
   it('stays synchronized when the underlying catalog changes after first render', () => {
     const { fixture, metadataApi } = render();
-    expect(statEl(fixture, 'Quizzes').querySelector('.visually-hidden')!.textContent).toBe('3 Quizzes');
+    expect(exposedText(statEl(fixture, 'Quizzes')).textContent).toBe('3 Quizzes');
 
     // Simulate a catalog update: a NEW quiz lands in the metadata signals.
     const newDifficulty = new Map(difficultyMap);
@@ -2929,13 +2962,13 @@ describe('QuizSelectionComponent — catalog stats accessible phrase (2026-10-16
     metadataApi.milestoneByQuiz.set(newMilestone);
     fixture.detectChanges();
 
-    expect(statEl(fixture, 'Quizzes').querySelector('.visually-hidden')!.textContent).toBe('4 Quizzes');
-    expect(statEl(fixture, 'Questions').querySelector('.visually-hidden')!.textContent).toBe('33 Questions');
+    expect(exposedText(statEl(fixture, 'Quizzes')).textContent).toBe('4 Quizzes');
+    expect(exposedText(statEl(fixture, 'Questions')).textContent).toBe('33 Questions');
     const advancedStats = Array.from(
       fixture.nativeElement.querySelectorAll('.quiz-stats .stat.level-advanced')
     ) as HTMLElement[];
     expect(advancedStats).toHaveLength(1);
-    expect(advancedStats[0].querySelector('.visually-hidden')!.textContent).toBe('2 Advanced');
+    expect(exposedText(advancedStats[0]).textContent).toBe('2 Advanced');
   });
 
   it('preserves appCountUp ownership of the visible .stat-num text', () => {
@@ -2943,13 +2976,48 @@ describe('QuizSelectionComponent — catalog stats accessible phrase (2026-10-16
     const quizzesStat = statEl(fixture, 'Quizzes');
     const num = quizzesStat.querySelector('.stat-num');
     expect(num?.getAttribute('appCountUp')).toBeNull(); // Angular input, not a static attr
-    // appCountUp is still bound on the same element — confirmed by the
-    // directive's own selector matching; the element wasn't replaced or
-    // moved by this change (same two visible children, same order).
-    const childFirstClass = Array.from(quizzesStat.children).map(
+    // appCountUp is still bound on the same element; the number and label keep their order, now inside the hidden
+    // visible wrapper, followed by the one exposed text item.
+    const childFirstClass = Array.from(quizzesStat.children).map((c) => c.className.split(' ')[0]);
+    expect(childFirstClass).toEqual(['stat-visible', 'intro-exposed-text']);
+    const visibleChildren = Array.from(quizzesStat.querySelector('.stat-visible')!.children).map(
       (c) => c.className.split(' ')[0]
     );
-    expect(childFirstClass).toEqual(['visually-hidden', 'stat-num', 'stat-label']);
+    expect(visibleChildren).toEqual(['stat-num', 'stat-label']);
+  });
+
+  it('exposes the final count from the data, not the counter animation tick (the visible number is the only animated node)', () => {
+    const { fixture } = render();
+    const quizzesStat = statEl(fixture, 'Quizzes');
+    const num = quizzesStat.querySelector('.stat-num') as HTMLElement;
+    // whatever the counter currently shows, the exposed phrase already carries the settled value
+    num.textContent = '0';
+    fixture.detectChanges();
+    expect(exposedText(quizzesStat).textContent).toBe('3 Quizzes');
+    // the animated node is inside the hidden wrapper; the exposed node is outside it
+    expect(quizzesStat.querySelector('[data-intro-visible]')!.contains(num)).toBe(true);
+    expect(quizzesStat.querySelector('[data-intro-visible]')!.contains(exposedText(quizzesStat))).toBe(false);
+  });
+
+  it('reads the hero subtitle and the version note together as ONE passage', () => {
+    const { fixture } = render();
+    const group = fixture.nativeElement.querySelector('.qd-hero__intro') as HTMLElement;
+    expect(group).not.toBeNull();
+    expect(group.getAttribute('role')).toBe('group');
+    expect(group.hasAttribute('tabindex')).toBe(false);
+
+    const visible = group.querySelector(':scope > [data-intro-visible]') as HTMLElement;
+    expect(visible.getAttribute('aria-hidden')).toBe('true');
+    // both visible paragraphs live inside the hidden wrapper, unchanged
+    expect(visible.querySelector('p.qd-hero__sub')).not.toBeNull();
+    expect(visible.querySelector('p.version-note')!.textContent!.trim()).toBe('Questions updated for Angular 22');
+    expect(visible.querySelector('p.qd-hero__sub')!.hasAttribute('data-intro-width-ref')).toBe(true);
+
+    const exposed = group.querySelectorAll(':scope > .intro-exposed-text');
+    expect(exposed).toHaveLength(1);
+    expect(exposed[0].textContent).toBe(
+      'Topic quizzes, interview practice, and focused review to build your Angular skills. Questions updated for Angular 22.'
+    );
   });
 });
 

@@ -212,6 +212,12 @@ codelab-quiz-selection {
     color: #fff;
   }
 
+  // The Narrator group around the subtitle and the version note (see the template). It generates the same layout as the
+  // two paragraphs did on their own and anchors the exposed text, which is absolutely positioned inside it.
+  .qd-hero__intro {
+    position: relative;
+  }
+
   .qd-hero__sub {
     margin: 0;
     font-size: clamp(15px, 1.6vw, 18px);
@@ -291,6 +297,12 @@ codelab-quiz-selection {
       line-height: 1.05;
       color: #fff;
       white-space: nowrap;
+
+      // Holds the number and the label so they can be hidden from AT as one unit; it generates no box, so the layout
+      // is exactly as before (the number and label are still the flex items of .stat).
+      .stat-visible {
+        display: contents;
+      }
 
       .stat-num {
         display: inline-block;

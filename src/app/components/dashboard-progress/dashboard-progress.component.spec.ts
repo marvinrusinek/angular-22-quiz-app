@@ -194,6 +194,26 @@ describe('DashboardProgressComponent', () => {
     expect(root().querySelector('a.dp__link')).toBeNull();
   });
 
+  it('places all three statistics before View Progress in document order', () => {
+    const examples = [
+      summary(),
+      summary({ completedCount: 20, averageScore: 97, perfectScores: 16 })
+    ];
+    for (const progress of examples) {
+      set(progress);
+      const heading = root().querySelector('h2')!;
+      const statistics = statEls();
+      const button = root().querySelector('button.dp__link')!;
+      expect(statistics).toHaveLength(3);
+      for (const statistic of statistics) {
+        expect(heading.compareDocumentPosition(statistic) &
+          Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(statistic.compareDocumentPosition(button) &
+          Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      }
+    }
+  });
+
   it('navigates to /progress once when View Progress is activated', () => {
     const router = TestBed.inject(Router);
     const navigate = jest.spyOn(router, 'navigateByUrl')

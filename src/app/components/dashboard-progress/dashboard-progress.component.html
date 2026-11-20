@@ -4,10 +4,6 @@
       <mat-icon class="dp__title-icon" aria-hidden="true">bar_chart</mat-icon>
       <ng-container i18n>Your Progress</ng-container>
     </h2>
-    <button type="button" class="dp__link" routerLink="/progress">
-      <ng-container i18n>View Progress</ng-container>
-      <mat-icon aria-hidden="true">arrow_forward</mat-icon>
-    </button>
   </div>
 
   <!-- Each statistic is ONE text node ("<value> <label>") in a native paragraph, so it is read as one complete phrase in one
@@ -47,5 +43,12 @@
       </span>
       <p class="dp__plain-stat">{{ perfectExposed() }}</p>
     </div>
+  </div>
+
+  <div class="dp__actions">
+    <button type="button" class="dp__link" routerLink="/progress">
+      <ng-container i18n>View Progress</ng-container>
+      <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+    </button>
   </div>
 </section>

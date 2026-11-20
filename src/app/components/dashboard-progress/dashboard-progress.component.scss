@@ -35,6 +35,12 @@
   color: var(--qd-accent, #4f46e5);
 }
 
+.dp__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
 .dp__link {
   padding: 0;
   border: 0;

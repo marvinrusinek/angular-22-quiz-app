@@ -776,6 +776,16 @@ export class QuizSelectionComponent implements OnInit {
   readonly starThanks = signal(false);
   private starThanksTimer: ReturnType<typeof setTimeout> | undefined;
 
+  /** Opens the repository in a new tab (no opener, no referrer), then shows the existing thank-you message. */
+  openGitHub(): void {
+    window.open(
+      'https://github.com/marvinrusinek/angular-quiz-platform',
+      '_blank',
+      'noopener,noreferrer'
+    );
+    this.onStarClick();
+  }
+
   onStarClick(): void {
     this.starThanks.set(true);
     clearTimeout(this.starThanksTimer);

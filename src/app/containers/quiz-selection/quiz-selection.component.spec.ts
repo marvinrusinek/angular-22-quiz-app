@@ -999,19 +999,40 @@ describe('QuizSelectionComponent — tile keyboard accessibility', () => {
     expect(activateBtn!.getAttribute('type')).toBe('button');
   });
 
-  // Narrator-confirmed order: the theme toggle comes BEFORE the GitHub link, so the DOM order, the visual order (no CSS
-  // reordering) and the Tab order agree. Both controls keep their own markup and behaviour.
-  it('puts the shared theme toggle before the GitHub link in the header actions, with both controls intact', () => {
+  // The theme toggle comes BEFORE the GitHub control (DOM = visual = Tab order). The GitHub control is a native button
+  // that opens the repository through window.open; Narrator behaviour is verified by hand.
+  it('puts the shared theme toggle before the GitHub button in the header actions, with both controls intact', () => {
     const { fixture } = render();
     const actions = fixture.nativeElement.querySelector('.qd-header__actions') as HTMLElement;
-    expect(Array.from(actions.children).map((c) => c.tagName.toLowerCase())).toEqual(['codelab-theme-toggle', 'a']);
+    expect(Array.from(actions.children).map((c) => c.tagName.toLowerCase())).toEqual(['codelab-theme-toggle', 'button']);
     const toggle = actions.querySelector('codelab-theme-toggle button') as HTMLButtonElement;
     expect(toggle.getAttribute('aria-label')).toMatch(/^Switch to (dark|light) mode$/);
-    const link = actions.querySelector('a.qd-star') as HTMLAnchorElement;
-    expect(link.getAttribute('href')).toContain('github.com');
-    expect(link.getAttribute('target')).toBe('_blank');
-    expect(link.getAttribute('aria-labelledby')).toBe('qd-star-label qd-star-new-tab');
-    expect(toggle.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const star = actions.querySelector('button.qd-star') as HTMLButtonElement;
+    expect(star.getAttribute('type')).toBe('button');
+    expect(star.getAttribute('aria-labelledby')).toBe('qd-star-label qd-star-new-tab');
+    expect(star.hasAttribute('href') || star.hasAttribute('target') || star.hasAttribute('rel')).toBe(false);
+    expect(star.querySelector('.qd-star__icon')?.getAttribute('aria-hidden')).toBe('true');
+    expect(star.querySelector('#qd-star-label')?.textContent?.trim()).toBe('Star on GitHub');
+    expect(star.querySelector('#qd-star-new-tab')?.hasAttribute('hidden')).toBe(true);
+    expect(toggle.compareDocumentPosition(star) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('activating the GitHub button opens the repository in a new tab without opener or referrer, then thanks the user', () => {
+    jest.useFakeTimers();
+    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+    const { fixture, comp } = render();
+    const star = fixture.nativeElement.querySelector('.qd-header__actions button.qd-star') as HTMLButtonElement;
+    expect(comp.starThanks()).toBe(false);
+    star.click();
+    fixture.detectChanges();
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith('https://github.com/marvinrusinek/angular-quiz-platform', '_blank', 'noopener,noreferrer');
+    expect(comp.starThanks()).toBe(true);
+    expect(fixture.nativeElement.querySelector('.qd-star-thanks')?.textContent).toContain('Thanks for supporting');
+    jest.advanceTimersByTime(8000);
+    expect(comp.starThanks()).toBe(false);
+    open.mockRestore();
+    jest.useRealTimers();
   });
 
   it("the button's accessible name is derived from the tile's own visible title and summary", () => {

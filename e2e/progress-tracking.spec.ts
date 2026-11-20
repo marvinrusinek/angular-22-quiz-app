@@ -3,7 +3,7 @@ import { HEADING, NEXT_BTN, RESULTS_BTN, tsQuiz, correctIndexForHeading, correct
 
 const PANEL_DETAILS = '.progress-summary';
 const GATED = '.achievements-summary-row';
-const PROGRESS_LINK = 'a.dp__link'; // "View Progress" on the Your Progress card
+const PROGRESS_ACTION = 'button.dp__link'; // "View Progress" on the Your Progress card
 const TS_TILE = '.quiz-tile:has(.quiz-title:text-is("Fixture Widgets"))';
 const BEST_SCORES_KEY = 'quizBestScores';
 
@@ -117,7 +117,7 @@ test('progress: score persists durably, the dashboard reflects it, gated content
   await expect(page.locator(GATED)).toBeVisible();
 
   // ── the dashboard is a separate page, reached through the card's View Progress link ──
-  await page.locator(PROGRESS_LINK).click();
+  await page.locator(PROGRESS_ACTION).click();
   await expect(page).toHaveURL(/\/progress$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Your Progress' })).toBeVisible();
   await expect(page.locator(PANEL_DETAILS)).toContainText('Overall Progress');
@@ -206,7 +206,7 @@ test('progress: a brand-new user starts clean, and engaging opens the gate durab
 
   // Fresh load: nothing gated, and no progress link (the card is gated too).
   await expect(page.locator(GATED)).toHaveCount(0);
-  await expect(page.locator(PROGRESS_LINK)).toHaveCount(0);
+  await expect(page.locator(PROGRESS_ACTION)).toHaveCount(0);
 
   // Tile click calls onSelect() -> markEngaged(), which opens the gate.
   await page.locator(TS_TILE).click();

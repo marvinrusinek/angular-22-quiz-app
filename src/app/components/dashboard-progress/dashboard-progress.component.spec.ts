@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router, UrlTree } from '@angular/router';
 
 import { ProgressSummary } from '@shared/models';
 import { DashboardProgressComponent } from './dashboard-progress.component';
@@ -182,14 +182,29 @@ describe('DashboardProgressComponent', () => {
     expect(root().querySelectorAll('.dp__stats [tabindex]')).toHaveLength(0);
   });
 
-  it('is a labelled region with an h2 and a link to /progress', () => {
+  it('is a labelled region with an h2 and a native View Progress button', () => {
     set(summary());
     const region = root().querySelector('section')!;
     const heading = root().querySelector('h2')!;
     expect(region.getAttribute('aria-labelledby')).toBe(heading.id);
     expect(heading.textContent).toContain('Your Progress');
-    const link = root().querySelector('a.dp__link');
-    expect(link?.getAttribute('href')).toBe('/progress');
-    expect(link?.textContent).toContain('View Progress');
+    const button = root().querySelector('button.dp__link') as HTMLButtonElement;
+    expect(button.type).toBe('button');
+    expect(button.textContent).toContain('View Progress');
+    expect(root().querySelector('a.dp__link')).toBeNull();
+  });
+
+  it('navigates to /progress once when View Progress is activated', () => {
+    const router = TestBed.inject(Router);
+    const navigate = jest.spyOn(router, 'navigateByUrl')
+      .mockResolvedValue(true);
+    set(summary({ completedCount: 20, averageScore: 97, perfectScores: 16 }));
+    const button = root().querySelector('button.dp__link') as HTMLButtonElement;
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    button.click();
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(router.serializeUrl(navigate.mock.calls[0][0] as UrlTree))
+      .toBe('/progress');
   });
 });

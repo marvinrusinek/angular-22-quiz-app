@@ -734,15 +734,16 @@ describe('QuizSelectionComponent — Your Progress entry point', () => {
     });
   });
 
-  describe('the Your Progress card keeps its "View Progress" link', () => {
-    it('is the single /progress link, a real link to /progress', () => {
+  describe('the Your Progress card keeps its "View Progress" action', () => {
+    it('keeps one native View Progress button in the progress card', () => {
       const f = render({ engaged: true });
-      const links = f.nativeElement.querySelectorAll('a[href="/progress"]');
-      expect(links).toHaveLength(1);
-      expect(links[0].tagName).toBe('A');
-      expect(links[0].classList.contains('dp__link')).toBe(true);
-      expect((links[0].textContent ?? '').replace(/\s+/g, ' ')).toContain('View Progress');
-      expect(q(f, 'codelab-dashboard-progress')?.contains(links[0])).toBe(true);
+      const buttons = f.nativeElement.querySelectorAll('button.dp__link');
+      expect(buttons).toHaveLength(1);
+      expect(buttons[0].type).toBe('button');
+      expect((buttons[0].textContent ?? '').replace(/\s+/g, ' '))
+        .toContain('View Progress');
+      expect(q(f, 'codelab-dashboard-progress')?.contains(buttons[0]))
+        .toBe(true);
     });
 
     it('navigates to /progress with NO side effects: no engagement, no storage, no history change', () => {
@@ -752,7 +753,7 @@ describe('QuizSelectionComponent — Your Progress entry point', () => {
         session: JSON.stringify({ ...sessionStorage })
       };
 
-      (q(f, 'a.dp__link') as HTMLAnchorElement).click();
+      (q(f, 'button.dp__link') as HTMLButtonElement).click();
 
       expect(navigateByUrl).toHaveBeenCalledTimes(1);
       expect(navigateByUrl.mock.calls[0][0].toString()).toBe('/progress');
@@ -763,7 +764,7 @@ describe('QuizSelectionComponent — Your Progress entry point', () => {
 
     it('still appears with persisted Interview history alone', () => {
       const f = render({ seed: () => seedInterview() });
-      expect(q(f, 'a.dp__link')).not.toBeNull();
+      expect(q(f, 'button.dp__link')).not.toBeNull();
       expect(q(f, '.achievements-summary-row')).not.toBeNull();
     });
   });

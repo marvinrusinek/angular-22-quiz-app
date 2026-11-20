@@ -30,7 +30,7 @@ import { SPRING_HEALTH_URL } from './support/e2e-backends';
 // achievements row it continues to control.
 const GATED = '.achievements-summary-row';
 // The Your Progress card's link; it only exists once the progress gate is open.
-const PROGRESS_LINK = 'a.dp__link';
+const PROGRESS_ACTION = 'button.dp__link';
 const PANEL_DETAILS = '.progress-summary';
 const INSIGHTS = 'codelab-performance-insights';
 const HISTORY_KEY = 'interviewAttemptHistory:v2';
@@ -123,8 +123,8 @@ test.describe('Your Progress visibility — Interview history alone is sufficien
     expect(Object.values(preState).every((v) => v === null)).toBe(true);
     // No Topic Quiz tile is ever touched anywhere in this test.
     await expect(page.locator(GATED)).toHaveCount(0);
-    // ...and the card's "View Progress" link is not offered to a user with nothing.
-    await expect(page.locator(PROGRESS_LINK)).toHaveCount(0);
+    // ...and the card's "View Progress" action is not offered to a user with nothing.
+    await expect(page.locator(PROGRESS_ACTION)).toHaveCount(0);
 
     await completeCustomInterview(page);
 
@@ -141,7 +141,7 @@ test.describe('Your Progress visibility — Interview history alone is sufficien
     // Confirm no Topic Quiz was ever completed — the gate is NOT open because of one.
     await expect(page.locator('.quiz-tile.completed')).toHaveCount(0);
 
-    await page.locator(PROGRESS_LINK).click();
+    await page.locator(PROGRESS_ACTION).click();
     await expect(page).toHaveURL(/\/progress$/);
     await expect(page.locator(PANEL_DETAILS)).toBeVisible();
 
@@ -166,7 +166,7 @@ test.describe('Your Progress visibility — Interview history alone is sufficien
     expect(Object.values(gateState).every((v) => v === null)).toBe(true);
 
     await expect(page.locator(GATED)).toBeVisible();
-    await page.locator(PROGRESS_LINK).click();
+    await page.locator(PROGRESS_ACTION).click();
     await expect(page.locator(INSIGHTS)).toContainText('Interview Mode');
     await expect(page.locator(INSIGHTS)).toContainText('70%');
     await expect(page.locator(INSIGHTS)).toContainText('7 / 10 questions · 1 attempt');
@@ -186,7 +186,7 @@ test.describe('Your Progress visibility — Interview history alone is sufficien
     await page.locator('.quiz-tile').first().waitFor({ state: 'visible', timeout: 20_000 });
 
     await expect(page.locator(GATED)).toBeVisible();
-    await page.locator(PROGRESS_LINK).click();
+    await page.locator(PROGRESS_ACTION).click();
     await expect(page.locator(INSIGHTS)).toContainText('Interview Mode');
     await expect(page.locator(INSIGHTS)).toContainText('90%');
     await expect(page.locator(INSIGHTS)).toContainText('9 / 10 questions · 1 attempt');

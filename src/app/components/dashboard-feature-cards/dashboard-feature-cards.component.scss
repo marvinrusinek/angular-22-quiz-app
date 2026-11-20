@@ -14,7 +14,7 @@
   list-style: none;
 }
 
-.dfc li {
+.dfc > .dfc__item {
   display: flex;
   min-width: 0;
 }

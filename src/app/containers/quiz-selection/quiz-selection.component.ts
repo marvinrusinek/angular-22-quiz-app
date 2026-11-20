@@ -480,7 +480,7 @@ export class QuizSelectionComponent implements OnInit {
   });
 
   /**
-   * Spoken phrase for the "Quizzes" stat — number and label as one coherent utterance (e.g. "12 Quizzes"), matching
+   * Spoken phrase for the "Topics" stat — number and label as one coherent utterance (e.g. "12 Topics"), matching
    * the visible text's own wording exactly.
    *
    * Narrator read `.stat-num` and `.stat-label` as two separate stops because they are two separate DOM/AX leaf
@@ -489,7 +489,7 @@ export class QuizSelectionComponent implements OnInit {
    * IntroExposedTextDirective). This REPLACES the earlier off-screen `.visually-hidden` copy: there is no second
    * accessible copy of the text.
    *
-   * `$localize` because the visible label ("Quizzes") is `i18n`-marked
+   * `$localize` because the visible label ("Topics") is `i18n`-marked
    * in the template; composing the same word via TS keeps the spoken
    * phrase in sync with a number value the directive-owned `.stat-num`
    * span can't be read from directly (CountUpDirective writes its target
@@ -498,7 +498,7 @@ export class QuizSelectionComponent implements OnInit {
    * always the settled target, never a mid-animation value).
    */
   readonly quizCountAccessibleLabelSig = computed(() =>
-    $localize`${this.quizStats().quizCount} Quizzes`
+    $localize`${this.quizStats().quizCount} Topics`
   );
 
   /** Same rationale as `quizCountAccessibleLabelSig`, for "Questions". */

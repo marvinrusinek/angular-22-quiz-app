@@ -10,39 +10,42 @@
     </a>
   </div>
 
-  <!-- One spoken phrase per stat, as REAL text in a visually hidden group
-       (the pattern this app already uses for its other stat rows); the
-       visible number and label are aria-hidden so nothing is read twice. -->
-  <ul class="dp__stats">
-    <li class="dp__stat dp__stat--done">
-      <span class="dp__sr" role="group">{{ completedLabel() }}</span>
+  <!-- Each statistic is ONE text node ("<value> <label>") in a native paragraph, so it is read as one complete phrase in one
+       stop. The value-above-label formatting is drawn by CSS alone (see .dp__plain-stat). The only fitted group left is the
+       average's "not available yet" state. The icons are decorative. -->
+  <div class="dp__stats">
+    <div class="dp__stat dp__stat--done">
       <span class="dp__icon" aria-hidden="true">
         <mat-icon>check_circle_outline</mat-icon>
       </span>
-      <span class="dp__text" aria-hidden="true">
-        <span class="dp__value">{{ completed() }}</span>
-        <span class="dp__label" i18n>Quizzes Completed</span>
-      </span>
-    </li>
-    <li class="dp__stat dp__stat--avg">
-      <span class="dp__sr" role="group">{{ averageLabel() }}</span>
+      <!-- ONE text node, "<n> Quizzes Completed". The paragraph is as narrow as the label (its words joined by no-break spaces) so the
+           text wraps after the number, and ::first-line styles that first line like the value. No spans, hidden copy, fitting or ARIA naming. -->
+      <p class="dp__plain-stat">{{ completedExposed() }}</p>
+    </div>
+    <div class="dp__stat dp__stat--avg">
       <span class="dp__icon" aria-hidden="true">
         <mat-icon>emoji_events</mat-icon>
       </span>
-      <span class="dp__text" aria-hidden="true">
-        <span class="dp__value">{{ average() }}</span>
-        <span class="dp__label" i18n>Average Score</span>
-      </span>
-    </li>
-    <li class="dp__stat dp__stat--perfect">
-      <span class="dp__sr" role="group">{{ perfectLabel() }}</span>
+      <!-- Filled: the same single-text-node paragraph as the first statistic ("97% Average Score"). Until a quiz is completed the average is
+           unavailable: the meaningful "Average score not available yet" message is kept (a dash is not a value, and 0% would be invented),
+           so that state keeps its existing fitted group. -->
+      @if (averageAvailable()) {
+        <p class="dp__plain-stat">{{ averageExposed() }}</p>
+      } @else {
+        <span class="dp__group" role="group">
+          <span class="dp__visible" data-intro-visible aria-hidden="true">
+            <span class="dp__value">{{ average() }}</span>
+            <span class="dp__label" data-intro-font-ref i18n>Average Score</span>
+          </span>
+          <span [appIntroExposedText]="averageExposed()" exposedTextMode="cover"></span>
+        </span>
+      }
+    </div>
+    <div class="dp__stat dp__stat--perfect">
       <span class="dp__icon" aria-hidden="true">
         <mat-icon>trending_up</mat-icon>
       </span>
-      <span class="dp__text" aria-hidden="true">
-        <span class="dp__value">{{ perfect() }}</span>
-        <span class="dp__label" i18n>Perfect Scores</span>
-      </span>
-    </li>
-  </ul>
+      <p class="dp__plain-stat">{{ perfectExposed() }}</p>
+    </div>
+  </div>
 </section>

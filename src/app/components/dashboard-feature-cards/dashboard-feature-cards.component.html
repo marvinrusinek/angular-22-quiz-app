@@ -1,5 +1,5 @@
-<ul class="dfc">
-  <li>
+<div class="dfc">
+  <div class="dfc__item">
     <button
       type="button"
       class="dfc__card dfc__card--topics"
@@ -14,22 +14,27 @@
       </span>
       <mat-icon class="dfc__arrow" aria-hidden="true">arrow_forward</mat-icon>
     </button>
-  </li>
-  <li>
-    <a class="dfc__card dfc__card--interview" routerLink="/interview">
+  </div>
+  <div class="dfc__item">
+    <button
+      type="button"
+      class="dfc__card dfc__card--interview"
+      aria-labelledby="dfc-interview-title dfc-interview-desc"
+      (click)="openInterview()"
+    >
       <span class="dfc__icon" aria-hidden="true">
         <mat-icon>person</mat-icon>
       </span>
       <span class="dfc__text">
-        <span class="dfc__title" i18n>Interview Mode</span>
-        <span class="dfc__desc" i18n>
+        <span class="dfc__title" id="dfc-interview-title" i18n>Interview Mode</span>
+        <span class="dfc__desc" id="dfc-interview-desc" aria-hidden="true" i18n>
           Mixed Angular questions like a real interview
         </span>
       </span>
       <mat-icon class="dfc__arrow" aria-hidden="true">arrow_forward</mat-icon>
-    </a>
-  </li>
-  <li>
+    </button>
+  </div>
+  <div class="dfc__item">
     <button
       type="button"
       class="dfc__card dfc__card--weak"
@@ -51,9 +56,9 @@
       </span>
       <mat-icon class="dfc__arrow" aria-hidden="true">arrow_forward</mat-icon>
     </button>
-  </li>
-  <li>
-    <a class="dfc__card dfc__card--cert" routerLink="/interview/certificate">
+  </div>
+  <div class="dfc__item">
+    <button type="button" class="dfc__card dfc__card--cert" (click)="openCertificate()">
       <span class="dfc__icon" aria-hidden="true">
         <mat-icon>card_membership</mat-icon>
       </span>
@@ -62,6 +67,6 @@
         <span class="dfc__desc" i18n>Earn your Certificate of Achievement</span>
       </span>
       <mat-icon class="dfc__arrow" aria-hidden="true">arrow_forward</mat-icon>
-    </a>
-  </li>
-</ul>
+    </button>
+  </div>
+</div>

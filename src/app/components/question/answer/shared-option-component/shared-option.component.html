@@ -35,7 +35,12 @@
 @if (canShowOptions()) {
   <form [formGroup]="form" class="options-form">
     @if (mode === 'single') {
-      <mat-radio-group class="options-group options" formControlName="selectedOptionId">
+      <mat-radio-group
+        class="options-group options"
+        formControlName="selectedOptionId"
+        aria-label="Select one option"
+        i18n-aria-label
+      >
         <ng-container *ngTemplateOutlet="optionsList; context: { type: 'single' }" />
       </mat-radio-group>
     } @else {

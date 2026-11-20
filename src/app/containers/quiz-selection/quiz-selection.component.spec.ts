@@ -2876,9 +2876,9 @@ describe('QuizSelectionComponent — catalog stats accessible phrase (grouped ca
   it('exposes each number+label as ONE exposed text item of its own group, with the final count', () => {
     const { fixture } = render();
 
-    const quizzesStat = statEl(fixture, 'Quizzes');
+    const quizzesStat = statEl(fixture, 'Topics');
     expect(quizzesStat.getAttribute('role')).toBe('group');
-    expect(exposedText(quizzesStat).textContent).toBe('3 Quizzes');
+    expect(exposedText(quizzesStat).textContent).toBe('3 Topics');
 
     const questionsStat = statEl(fixture, 'Questions');
     expect(questionsStat.getAttribute('role')).toBe('group');
@@ -2899,7 +2899,7 @@ describe('QuizSelectionComponent — catalog stats accessible phrase (grouped ca
 
   it('hides the visible number and label as one unit from the accessibility tree, without hiding them visually', () => {
     const { fixture } = render();
-    const quizzesStat = statEl(fixture, 'Quizzes');
+    const quizzesStat = statEl(fixture, 'Topics');
 
     const visible = quizzesStat.querySelector(':scope > [data-intro-visible]') as HTMLElement;
     expect(visible).not.toBeNull();
@@ -2948,7 +2948,7 @@ describe('QuizSelectionComponent — catalog stats accessible phrase (grouped ca
 
   it('stays synchronized when the underlying catalog changes after first render', () => {
     const { fixture, metadataApi } = render();
-    expect(exposedText(statEl(fixture, 'Quizzes')).textContent).toBe('3 Quizzes');
+    expect(exposedText(statEl(fixture, 'Topics')).textContent).toBe('3 Topics');
 
     // Simulate a catalog update: a NEW quiz lands in the metadata signals.
     const newDifficulty = new Map(difficultyMap);
@@ -2962,7 +2962,7 @@ describe('QuizSelectionComponent — catalog stats accessible phrase (grouped ca
     metadataApi.milestoneByQuiz.set(newMilestone);
     fixture.detectChanges();
 
-    expect(exposedText(statEl(fixture, 'Quizzes')).textContent).toBe('4 Quizzes');
+    expect(exposedText(statEl(fixture, 'Topics')).textContent).toBe('4 Topics');
     expect(exposedText(statEl(fixture, 'Questions')).textContent).toBe('33 Questions');
     const advancedStats = Array.from(
       fixture.nativeElement.querySelectorAll('.quiz-stats .stat.level-advanced')
@@ -2973,7 +2973,7 @@ describe('QuizSelectionComponent — catalog stats accessible phrase (grouped ca
 
   it('preserves appCountUp ownership of the visible .stat-num text', () => {
     const { fixture } = render();
-    const quizzesStat = statEl(fixture, 'Quizzes');
+    const quizzesStat = statEl(fixture, 'Topics');
     const num = quizzesStat.querySelector('.stat-num');
     expect(num?.getAttribute('appCountUp')).toBeNull(); // Angular input, not a static attr
     // appCountUp is still bound on the same element; the number and label keep their order, now inside the hidden
@@ -2988,12 +2988,12 @@ describe('QuizSelectionComponent — catalog stats accessible phrase (grouped ca
 
   it('exposes the final count from the data, not the counter animation tick (the visible number is the only animated node)', () => {
     const { fixture } = render();
-    const quizzesStat = statEl(fixture, 'Quizzes');
+    const quizzesStat = statEl(fixture, 'Topics');
     const num = quizzesStat.querySelector('.stat-num') as HTMLElement;
     // whatever the counter currently shows, the exposed phrase already carries the settled value
     num.textContent = '0';
     fixture.detectChanges();
-    expect(exposedText(quizzesStat).textContent).toBe('3 Quizzes');
+    expect(exposedText(quizzesStat).textContent).toBe('3 Topics');
     // the animated node is inside the hidden wrapper; the exposed node is outside it
     expect(quizzesStat.querySelector('[data-intro-visible]')!.contains(num)).toBe(true);
     expect(quizzesStat.querySelector('[data-intro-visible]')!.contains(exposedText(quizzesStat))).toBe(false);

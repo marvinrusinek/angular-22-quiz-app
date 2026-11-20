@@ -4,6 +4,8 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { ProgressSummary } from '@shared/models';
 
+import { IntroExposedTextDirective } from '../../containers/introduction/intro-exposed-text.directive';
+
 /**
  * Compact "Your Progress" snapshot for the dashboard. Presentational: it only
  * formats a ProgressSummary the parent already derived from the durable
@@ -13,7 +15,7 @@ import { ProgressSummary } from '@shared/models';
 @Component({
   selector: 'codelab-dashboard-progress',
   standalone: true,
-  imports: [RouterLink, MatIconModule],
+  imports: [RouterLink, MatIconModule, IntroExposedTextDirective],
   templateUrl: './dashboard-progress.component.html',
   styleUrl: './dashboard-progress.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -31,17 +33,37 @@ export class DashboardProgressComponent {
     return s && s.completedCount > 0 ? `${s.averageScore}%` : '—';
   });
 
-  /** Spoken phrases: one real-text group per stat (see the template). */
+  /** True once at least one quiz is completed; until then the average is unavailable (never shown as 0%). */
+  readonly averageAvailable = computed(() => (this.summary()?.completedCount ?? 0) > 0);
+
+  /** Spoken phrases: each is the ONE exposed text item of its statistic's group (see the template). */
   readonly completedLabel = computed(
-    () => $localize`${this.completed()} of ${this.total()} quizzes completed`
+    () => $localize`${this.completed()} Quizzes Completed`
   );
   readonly averageLabel = computed(() => {
     const s = this.summary();
     return s && s.completedCount > 0
-      ? $localize`Average score ${s.averageScore} percent`
+      ? $localize`${s.averageScore}% Average Score`
       : $localize`Average score not available yet`;
   });
   readonly perfectLabel = computed(
-    () => $localize`${this.perfect()} perfect scores`
+    () => $localize`${this.perfect()} Perfect Scores`
   );
+
+  /**
+   * The exposed text of a statistic whose phrase is "<value> <label>". The exposed text is laid out to wrap like the visible
+   * statistic, which is TWO rows: the value, then the whole label. A two-word label would otherwise wrap at its own width as
+   * "<value> <first word>" / "<second word>", which is not what is on screen (Narrator read only "20 Quizzes" and drew its
+   * box around "20"). Joining the label's words with no-break spaces keeps the label on one row, so the exposed rows are
+   * exactly the visible ones. The spoken words are unchanged (a no-break space is read as a space). A phrase that is not
+   * "<value> <label>" (the average's empty state) is returned as it is.
+   */
+  private exposedRows(phrase: string, value: string): string {
+    const prefix = `${value} `;
+    return phrase.startsWith(prefix) ? prefix + phrase.slice(prefix.length).replace(/ /g, '\u00A0') : phrase;
+  }
+
+  readonly completedExposed = computed(() => this.exposedRows(this.completedLabel(), String(this.completed())));
+  readonly averageExposed = computed(() => this.exposedRows(this.averageLabel(), this.average()));
+  readonly perfectExposed = computed(() => this.exposedRows(this.perfectLabel(), String(this.perfect())));
 }

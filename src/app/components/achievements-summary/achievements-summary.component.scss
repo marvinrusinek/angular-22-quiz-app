@@ -16,11 +16,33 @@
   line-height: 1;
 }
 
-.achievements-summary__label {
+// The whole phrase ("Achievements N / M") is ONE text node in ONE inline span with one consistent style (no separate label or count).
+.achievements-summary__text {
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
-.achievements-summary__count {
+// Neutral positioned wrapper: the single flex item of the badge next to the trophy. It anchors the spoken text layer.
+.achievements-summary__textwrap {
+  position: relative;
+  display: inline-block;
+}
+
+// The spoken phrase: a NORMAL-SIZED, UNCLIPPED, transparent text layer aligned over the visible text with the same font, size, weight
+// and baseline (all inherited from the badge, plus the same weight and numeric style as the visible span). It is out of flow, so it
+// takes no layout space; it is not clipped, scaled or letter-spaced, and ignores pointer input.
+.achievements-summary__sr {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: transparent;
+  font: inherit;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--text-secondary, #555555);
+  line-height: inherit;
+  white-space: nowrap;
+  pointer-events: none;
 }

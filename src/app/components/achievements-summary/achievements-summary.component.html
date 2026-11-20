@@ -1,25 +1,16 @@
 @if (total() > 0) {
-  <section
-    class="achievements-summary"
-    [attr.aria-label]="label()"
-  >
+  <div class="achievements-summary">
     <span
       class="achievements-summary__icon"
       aria-hidden="true"
     >
       🏆
     </span>
-    <span
-      class="achievements-summary__label"
-      aria-hidden="true"
-    >
-      <ng-container i18n>Achievements</ng-container>
+    <!-- A neutral positioned wrapper holds the visible slash text (aria-hidden) and ONE transparent, normal-sized, unclipped text layer
+         aligned over it: the spoken phrase ("of"), same font, size, weight and baseline. -->
+    <span class="achievements-summary__textwrap">
+      <span class="achievements-summary__text" aria-hidden="true">{{ summaryText() }}</span>
+      <span class="achievements-summary__sr">{{ spokenText() }}</span>
     </span>
-    <span
-      class="achievements-summary__count"
-      aria-hidden="true"
-    >
-      {{ earned() }} / {{ total() }}
-    </span>
-  </section>
+  </div>
 }

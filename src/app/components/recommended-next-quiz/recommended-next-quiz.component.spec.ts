@@ -89,6 +89,48 @@ describe('RecommendedNextQuizComponent', () => {
         'Latest score: 40%'
       );
     });
+
+    it('provides one complete summary before the separate Review Quiz button', () => {
+      render(COMPLETE, {
+        ...REVIEW,
+        title: 'RxJS',
+        difficulty: 'advanced',
+        latestPercent: 20
+      });
+      const summary = root().querySelector('.rec__summary')!;
+      const visible = summary.querySelector('[data-intro-visible]')!;
+      const spoken = summary.querySelector('.intro-exposed-text')!;
+      expect(spoken.textContent).toBe(
+        'RxJS. Advanced. Latest score: 20%. ' +
+        'Recommended based on your available quiz history.'
+      );
+      expect(spoken.childNodes).toHaveLength(1);
+      expect(spoken.firstChild?.nodeType).toBe(Node.TEXT_NODE);
+      expect(visible.getAttribute('aria-hidden')).toBe('true');
+      expect(visible.contains(spoken)).toBe(false);
+      expect(summary.contains(button())).toBe(false);
+      expect(spoken.compareDocumentPosition(button()) &
+        Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('updates the complete summary when the latest score changes', () => {
+      for (const latestPercent of [0, 20, 100]) {
+        render(COMPLETE, { ...REVIEW, latestPercent });
+        const spoken = root().querySelector('.intro-exposed-text')!;
+        expect(spoken.textContent).toContain(
+          `Latest score: ${latestPercent}%.`
+        );
+        expect(spoken.childNodes).toHaveLength(1);
+      }
+    });
+
+    it('omits an unavailable difficulty without an empty sentence', () => {
+      render(COMPLETE, { ...REVIEW, difficulty: '' });
+      expect(root().querySelector('.intro-exposed-text')?.textContent).toBe(
+        'Pipes. Latest score: 40%. ' +
+        'Recommended based on your available quiz history.'
+      );
+    });
   });
 
   it('without a review it still renders the Learning Path Complete card', () => {

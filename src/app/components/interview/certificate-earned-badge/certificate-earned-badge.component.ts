@@ -11,7 +11,7 @@ import { CertificateClaimService } from '@shared/services/features/interview/cer
  * from achievement counts. Clicking it opens the existing certificate page.
  * Presentation only — it derives no eligibility and mutates nothing.
  *
- * Accessibility: a real link with an accessible name announcing "Certificate
+ * Accessibility: a native button with an accessible name announcing "Certificate
  * earned"; the medal emoji is decorative (aria-hidden). Theme-aware via the
  * app's CSS custom properties; a one-shot, reduced-motion-respecting fade-in.
  */

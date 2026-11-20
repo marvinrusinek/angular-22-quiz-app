@@ -1,20 +1,32 @@
 @if (review(); as rv) {
   <!-- The parent supplies the "Recommended for Review" heading. -->
   <div class="rec rec--review">
-    <div class="rec__head">
-      <h3 class="rec__title">{{ rv.title }}</h3>
-      @if (rv.difficulty) {
-        <span class="rec__difficulty">{{ rv.difficulty | titlecase }}</span>
-      }
+    <div class="rec__summary">
+      <div
+        class="rec__summary-visible"
+        data-intro-visible
+        aria-hidden="true"
+      >
+        <div class="rec__head">
+          <h3 class="rec__title">{{ rv.title }}</h3>
+          @if (rv.difficulty) {
+            <span class="rec__difficulty">{{ rv.difficulty | titlecase }}</span>
+          }
+        </div>
+
+        <p class="rec__score">
+          <span i18n>Latest score:</span>&nbsp;<strong>{{ rv.latestPercent }}%</strong>
+        </p>
+
+        <p class="rec__reason" data-intro-font-ref i18n>
+          Recommended based on your available quiz history.
+        </p>
+      </div>
+      <p
+        [appIntroExposedText]="reviewSummaryText()"
+        exposedTextMode="cover"
+      ></p>
     </div>
-
-    <p class="rec__score">
-      <span i18n>Latest score:</span>&nbsp;<strong>{{ rv.latestPercent }}%</strong>
-    </p>
-
-    <p class="rec__reason" i18n>
-      Recommended based on your available quiz history.
-    </p>
 
     <button
       type="button"

@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router, UrlTree } from '@angular/router';
 
 import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
 import { CertificateClaimService } from '@shared/services/features/interview/certificate-claim.service';
@@ -64,16 +64,26 @@ describe('CertificateEarnedBadgeComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.cert-badge')).not.toBeNull();
   });
 
-  it('is a keyboard-accessible link to the certificate page', () => {
+  it('uses a native button that navigates to the certificate once', () => {
     unlockedSig.set(true);
-    const link = (render().nativeElement as HTMLElement).querySelector(
-      '.cert-badge'
-    ) as HTMLAnchorElement;
-    expect(link.tagName).toBe('A'); // focusable / keyboard-operable
-    expect(link.getAttribute('href')).toContain('/interview/certificate');
+    const fixture = render();
+    const router = TestBed.inject(Router);
+    const navigate = jest.spyOn(router, 'navigateByUrl')
+      .mockResolvedValue(true);
+    const button = (fixture.nativeElement as HTMLElement).querySelector(
+      'button.cert-badge'
+    ) as HTMLButtonElement;
+    expect(button.type).toBe('button');
+    expect(button.hasAttribute('href')).toBe(false);
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    button.click();
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(router.serializeUrl(navigate.mock.calls[0][0] as UrlTree))
+      .toBe('/interview/certificate');
   });
 
-  it('is accessible: decorative emoji hidden, link announces "Certificate earned"', () => {
+  it('keeps the decorative medal hidden and the existing accessible name', () => {
     unlockedSig.set(true);
     const el = render().nativeElement as HTMLElement;
     expect(el.querySelector('.cert-badge__icon')?.getAttribute('aria-hidden')).toBe('true');

@@ -30,6 +30,19 @@
   grid-row: 1 / span 4;
 }
 
+.rec__summary {
+  position: relative;
+  display: grid;
+  grid-column: 1;
+  grid-row: 1 / span 4;
+  grid-template-rows: subgrid;
+  min-width: 0;
+}
+
+.rec__summary-visible {
+  display: contents;
+}
+
 .rec__score {
   grid-column: 1;
   margin: 6px 0 0;
@@ -115,5 +128,9 @@
     grid-row: auto;
     width: 100%;
     margin-top: 6px;
+  }
+
+  .rec__summary {
+    grid-row: 1 / span 3;
   }
 }

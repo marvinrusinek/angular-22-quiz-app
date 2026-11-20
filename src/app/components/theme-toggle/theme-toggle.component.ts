@@ -17,7 +17,7 @@ import { registerThemeIcons } from './theme-icons';
       (click)="themeService.toggle()"
       [matTooltip]="themeService.tooltip()"
       matTooltipPosition="below"
-      aria-label="Toggle dark/light mode"
+      [attr.aria-label]="themeService.tooltip()"
     >
       <mat-icon
         [svgIcon]="themeService.icon()"

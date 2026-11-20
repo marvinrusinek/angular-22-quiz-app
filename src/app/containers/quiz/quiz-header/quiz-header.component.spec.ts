@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
+import { MatTooltip } from '@angular/material/tooltip';
+import { By } from '@angular/platform-browser';
 
 import { CodelabQuizHeaderComponent } from './quiz-header.component';
 import { TopicQuizMetadataService } from '@shared/services/api/topic-quiz-metadata.service';
@@ -65,6 +67,40 @@ describe('CodelabQuizHeaderComponent', () => {
     expect(fixture.componentInstance.currentQuiz()?.milestone).toBe('TypeScript');
   });
 
+  it('focuses the existing logo link without adding another focus stop', () => {
+    configure('rxjs');
+    const fixture = TestBed.createComponent(CodelabQuizHeaderComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.focusLogo();
+    const link = fixture.nativeElement.querySelector('a');
+    expect(document.activeElement).toBe(link);
+    expect(link.querySelector('img')?.getAttribute('alt'))
+      .toBe('Angular Quiz Platform');
+    expect(link.hasAttribute('tabindex')).toBe(false);
+  });
+
+  it('names the shortcuts button once without a redundant tooltip description', () => {
+    configure('rxjs');
+    const fixture = TestBed.createComponent(CodelabQuizHeaderComponent);
+    fixture.detectChanges();
+    TestBed.tick();
+
+    const control = fixture.debugElement.query(
+      By.css('button.keyboard-shortcuts-btn')
+    );
+    const button = control.nativeElement as HTMLButtonElement;
+    const tooltip = control.injector.get(MatTooltip);
+    expect(button.getAttribute('aria-label')).toBe('Open keyboard shortcuts');
+    expect(button.hasAttribute('aria-describedby')).toBe(false);
+    expect(tooltip.message).toBe('Open keyboard shortcuts');
+    expect(tooltip.disabled).toBe(false);
+
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    button.click();
+    expect(TestBed.inject(MatDialog).open).toHaveBeenCalledTimes(1);
+  });
+
   it('each quiz id resolves its own milestone (cross-quiz SPA navigation verified separately by E2E)', () => {
     // quizService.quizId is a plain (non-signal) field — computed() has no way
     // to react to a raw mutation of it, exactly as the pre-S6i computed()
@@ -85,6 +121,55 @@ describe('CodelabQuizHeaderComponent', () => {
     const signalsFixture = TestBed.createComponent(CodelabQuizHeaderComponent);
     signalsFixture.detectChanges();
     expect(signalsFixture.componentInstance.currentQuiz()?.milestone).toBe('Signals');
+  });
+
+  // The title and subtitle are native headings that keep the Material card styling classes, each holding ONE complete text node.
+  // Narrator speech for the headings is verified by hand.
+  it('renders the title as a native h1 and the subtitle as a native h2, each one complete text node', () => {
+    configure('typescript');
+    metadataApi.questionCountByQuiz.mockReturnValue(new Map([['typescript', 5]]));
+    metadataApi.milestoneFor.mockReturnValue('TypeScript');
+
+    const fixture = TestBed.createComponent(CodelabQuizHeaderComponent);
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const h1 = root.querySelector('.header-titles > h1') as HTMLElement;
+    const h2 = root.querySelector('.header-titles > h2') as HTMLElement;
+    expect(h1.classList.contains('mat-mdc-card-title')).toBe(true);
+    expect(h2.classList.contains('mat-mdc-card-subtitle')).toBe(true);
+    expect(root.querySelector('mat-card-title, mat-card-subtitle')).toBeNull();
+    for (const [el, text] of [
+      [h1, 'TypeScript Quiz'],
+      [h2, 'Assess your knowledge of TypeScript']
+    ] as const) {
+      expect(el.childNodes).toHaveLength(1);
+      expect(el.firstChild!.nodeType).toBe(Node.TEXT_NODE);
+      expect(el.children).toHaveLength(0);
+      expect(el.textContent).toBe(text);
+      expect(el.hasAttribute('aria-label') || el.hasAttribute('role') || el.hasAttribute('aria-hidden')).toBe(false);
+    }
+  });
+
+  // The logo link carries its own class (it owns the logo's spacing) and still wraps the unchanged image and route.
+  it('keeps the logo link, route, image, alt text and dimensions, with the link marked quiz-header__logo', () => {
+    configure('typescript');
+    metadataApi.questionCountByQuiz.mockReturnValue(new Map([['typescript', 5]]));
+    metadataApi.milestoneFor.mockReturnValue('TypeScript');
+
+    const fixture = TestBed.createComponent(CodelabQuizHeaderComponent);
+    fixture.detectChanges();
+
+    const link = (fixture.nativeElement as HTMLElement).querySelector('mat-card-header > a') as HTMLAnchorElement;
+    expect(link.classList.contains('quiz-header__logo')).toBe(true);
+    expect(link.getAttribute('href')).toBe('/select');
+    const img = link.querySelector('img') as HTMLImageElement;
+    expect(img.classList.contains('header-image')).toBe(true);
+    expect(img.getAttribute('alt')).toBe('Angular Quiz Platform');
+    expect(img.getAttribute('width')).toBe('495');
+    expect(img.getAttribute('height')).toBe('144');
+    expect(img.getAttribute('src') ?? '').toContain('angular-quiz-platform-logo.webp');
+    expect(link.hasAttribute('aria-label') || link.hasAttribute('role') || link.hasAttribute('tabindex')).toBe(false);
   });
 
   it('renders nothing (null) on a cold quiz — metadata not yet loaded', () => {

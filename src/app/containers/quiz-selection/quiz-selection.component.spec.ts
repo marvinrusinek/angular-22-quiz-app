@@ -999,6 +999,21 @@ describe('QuizSelectionComponent — tile keyboard accessibility', () => {
     expect(activateBtn!.getAttribute('type')).toBe('button');
   });
 
+  // Narrator-confirmed order: the theme toggle comes BEFORE the GitHub link, so the DOM order, the visual order (no CSS
+  // reordering) and the Tab order agree. Both controls keep their own markup and behaviour.
+  it('puts the shared theme toggle before the GitHub link in the header actions, with both controls intact', () => {
+    const { fixture } = render();
+    const actions = fixture.nativeElement.querySelector('.qd-header__actions') as HTMLElement;
+    expect(Array.from(actions.children).map((c) => c.tagName.toLowerCase())).toEqual(['codelab-theme-toggle', 'a']);
+    const toggle = actions.querySelector('codelab-theme-toggle button') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-label')).toMatch(/^Switch to (dark|light) mode$/);
+    const link = actions.querySelector('a.qd-star') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toContain('github.com');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('aria-labelledby')).toBe('qd-star-label qd-star-new-tab');
+    expect(toggle.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("the button's accessible name is derived from the tile's own visible title and summary", () => {
     const { fixture } = render();
     const activateBtn: HTMLElement = fixture.nativeElement.querySelector(

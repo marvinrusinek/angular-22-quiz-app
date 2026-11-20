@@ -19,7 +19,9 @@ import { quizData, startQuizViaUi, advanceToQuestion, HEADING, NEXT_BTN, PREV_BT
  * exception, confirmed by real Narrator retest, not assumed: the combined
  * approach (focus + this announcement) FAILED there — Introduction's own
  * speech kept playing past Q1's load — while focus ALONE, on that exact
- * same transition, PASSED. So the cold start gets focus only; the
+ * same transition, PASSED. That test used question-heading focus.
+ * The requested focus target is now the logo; cold start still uses
+ * focus only, and its Narrator result must be retested. The
  * announcement fires only from Next/Previous. See
  * QuizComponent's route-focus effect for the up-to-date split and the
  * full evidence trail; the cause of the cold-start-specific difference is
@@ -32,7 +34,7 @@ import { quizData, startQuizViaUi, advanceToQuestion, HEADING, NEXT_BTN, PREV_BT
  * the question text, never a stale outcome; rapid repeated navigation
  * lands on the FINAL question only; destruction mid-flight produces no
  * errors; and the cold-start arrival never writes to the announcer at all
- * (focus-only, confirmed correct by a real Narrator retest).
+ * (focus-only; logo focus still needs a manual Narrator retest).
  *
  * ── What this suite does NOT and cannot prove ───────────────────────────
  * That Narrator actually speaks the Next/Previous announcement in every
@@ -61,13 +63,10 @@ async function announcerText(page: Page): Promise<string> {
 }
 
 test.describe('Topic Quiz navigation-arrival announcement (Next/Previous only, confirmed by real Narrator retest)', () => {
-  test('Introduction -> Q1 (cold start): focus lands on the heading with Q1\'s own text, but the announcer is NEVER written to', async ({ page }) => {
-    // This is the confirmed behavior, not a candidate: a real Narrator
-    // retest of the combined approach (focus + this announcement) FAILED
-    // on this exact transition — Introduction's own speech kept playing
-    // past Q1's load. A controlled retest of focus ALONE on the same
-    // transition PASSED. See QuizComponent's route-focus effect for the
-    // full evidence trail.
+  test('Introduction -> Q1: logo receives focus and the announcer stays empty', async ({ page }) => {
+    // Preserve cold-entry silence with the newly requested logo focus.
+    // The historical Narrator result covered question-heading focus;
+    // this new target requires its own manual retest.
     const qIdx = SINGLE_ANSWER_IDX[0];
     await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
     await page.waitForTimeout(600);
@@ -75,6 +74,10 @@ test.describe('Topic Quiz navigation-arrival announcement (Next/Previous only, c
     const headingText = ((await page.locator(HEADING).first().textContent()) ?? '').trim();
     expect(headingText.length).toBeGreaterThan(0);
     expect(headingText).toContain(doohickeys.questions[qIdx].questionText.slice(0, 20));
+
+    await expect(page.locator(
+      'codelab-quiz-header a:has(img.header-image)'
+    )).toBeFocused();
 
     const announced = await announcerText(page);
     expect(announced).toBe('');

@@ -1,6 +1,11 @@
 import { test, expect, Page } from '@playwright/test';
 import { HEADING, NEXT_BTN } from './helpers';
 
+// The Score menu trigger's accessible name now carries the current value ("Score 3 out of 10" / "Score 30 percent").
+const SCORE_TRIGGER_NAME = /^Score \d+ (out of \d+|percent)$/;
+// The Timer menu trigger's name carries the natural duration ("Timer 29 seconds", "Timer 1 minute", "Timer 1 minute and 1 second").
+const TIMER_TRIGGER_NAME = /^Timer \d+ (minutes?|seconds?)( and \d+ seconds?)?$/;
+
 /**
  * Regression coverage for two accessibility defects fixed on
  * fix/a11y-keyboard-focus:
@@ -94,8 +99,8 @@ test.describe('Topic Quiz answers — keyboard reachable + visible focus (defect
 
 test.describe('Score/Timer menu triggers — visible keyboard focus, mouse styling preserved (defect 2)', () => {
   const triggers = [
-    { name: 'Score menu trigger', ariaLabel: 'Score display menu' },
-    { name: 'Timer menu trigger', ariaLabel: 'Timer menu' },
+    { name: 'Score menu trigger', ariaLabel: SCORE_TRIGGER_NAME },
+    { name: 'Timer menu trigger', ariaLabel: TIMER_TRIGGER_NAME },
   ];
 
   for (const { name, ariaLabel } of triggers) {
@@ -118,7 +123,7 @@ test.describe('Score/Timer menu triggers — visible keyboard focus, mouse styli
 
   test('Score menu: Enter opens it, Escape closes it and returns focus to the trigger', async ({ page }) => {
     await page.goto('/quiz/question/fixture-widgets/1');
-    const trigger = page.getByRole('button', { name: 'Score display menu' });
+    const trigger = page.getByRole('button', { name: SCORE_TRIGGER_NAME });
     await trigger.waitFor({ state: 'visible', timeout: 20_000 });
 
     await tabUntil(page, async () => trigger.evaluate((el) => el === document.activeElement));

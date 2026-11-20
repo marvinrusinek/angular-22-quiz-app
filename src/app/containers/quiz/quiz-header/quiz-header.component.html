@@ -1,5 +1,7 @@
 <mat-card-header>
   <a
+    #quizLogo
+    class="quiz-header__logo"
     [routerLink]="['/select']"
     matTooltip="Back to Quiz Selection"
     i18n-matTooltip
@@ -18,14 +20,9 @@
 
   @if (currentQuiz(); as currentQuiz) {
     <div class="header-titles">
-      <mat-card-title i18n>
-        {{ currentQuiz?.milestone || 'No questions found' }} Quiz
-      </mat-card-title>
+      <h1 mat-card-title i18n>{{ currentQuiz?.milestone || 'No questions found' }} Quiz</h1>
 
-      <mat-card-subtitle i18n>
-        Assess your knowledge of
-        {{ currentQuiz?.milestone || 'No questions found' }}
-      </mat-card-subtitle>
+      <h2 mat-card-subtitle i18n>Assess your knowledge of {{ currentQuiz?.milestone || 'No questions found' }}</h2>
     </div>
   }
 
@@ -34,7 +31,7 @@
       type="button"
       class="keyboard-shortcuts-btn"
       (click)="openKeyboardShortcuts()"
-      matTooltip="Keyboard shortcuts"
+      matTooltip="Open keyboard shortcuts"
       i18n-matTooltip
       matTooltipPosition="below"
       aria-label="Open keyboard shortcuts"

@@ -1,11 +1,16 @@
 <div class="score-menu-container">
   <button
-    mat-button
+    type="button"
+    class="scoreboard-control"
     [matMenuTriggerFor]="displayScoreMenu"
-    aria-label="Score display menu"
-    i18n-aria-label
+    [attr.aria-label]="scoreAccessibleLabel()"
   >
-    <span class="leader" i18n>Score&#x25BC;</span>
+    <span class="scoreboard-control__label">
+      <span class="leader" i18n>Score<span aria-hidden="true">&#x25BC;</span></span>
+    </span>
+    <span class="scoreboard-score" aria-hidden="true">
+      <span class="scoreboard">{{ displayedScore() }}</span>
+    </span>
   </button>
   <mat-menu #displayScoreMenu="matMenu" xPosition="before">
     <button
@@ -30,8 +35,3 @@
     </button>
   </mat-menu>
 </div>
-<section class="scoreboard-score">
-  <span class="scoreboard" i18n>
-    {{ displayedScore() || 0 }}
-  </span>
-</section>

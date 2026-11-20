@@ -1,14 +1,17 @@
 <ng-container class="timer-container">
   <div class="timer-menu-container">
     <button
-      mat-button
+      type="button"
+      class="scoreboard-control"
       [matMenuTriggerFor]="timerMenu"
-      aria-label="Timer menu"
-      i18n-aria-label
+      [attr.aria-label]="timerAccessibleLabel()"
     >
-      <span class="timer-menu-button-text leader" i18n
-        >Timer&#x25BC;</span
-      >
+      <span class="scoreboard-control__label">
+        <span class="timer-menu-button-text leader" i18n>Timer<span aria-hidden="true">&#x25BC;</span></span>
+      </span>
+      <span class="scoreboard-timer" aria-hidden="true">
+        <span class="scoreboard" [class.low-time]="isLowTime()">{{ displayClock() }}</span>
+      </span>
     </button>
     <mat-menu #timerMenu="matMenu">
       <button
@@ -31,9 +34,4 @@
       </button>
     </mat-menu>
   </div>
-  <section class="scoreboard-timer">
-    <span class="scoreboard" [class.low-time]="isLowTime()" i18n
-      >0:{{ displayTime() | number: '2.0-0' }}</span
-    >
-  </section>
 </ng-container>

@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy, Component, computed, ElementRef, inject, viewChild
+} from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -32,6 +34,9 @@ export class CodelabQuizHeaderComponent {
   private readonly metadataApi = inject(TopicQuizMetadataService);
   private readonly quizService = inject(QuizService);
   private readonly dialog = inject(MatDialog);
+  private readonly logoLink = viewChild.required<ElementRef<HTMLAnchorElement>>(
+    'quizLogo'
+  );
 
   // ── remaining variables ─────────────────────────────────────────
   // S6i: metadata-only — the only field the template reads is `.milestone`,
@@ -44,6 +49,10 @@ export class CodelabQuizHeaderComponent {
     if (!quizId || !this.metadataApi.questionCountByQuiz().has(quizId)) return null;
     return { milestone: this.metadataApi.milestoneFor(quizId) };
   });
+
+  focusLogo(): void {
+    this.logoLink().nativeElement.focus();
+  }
 
   // Open the presentational keyboard-shortcuts dialog. ariaLabelledBy /
   // ariaDescribedBy point at the ids in the dialog template; width + maxWidth

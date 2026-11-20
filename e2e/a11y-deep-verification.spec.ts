@@ -1,6 +1,11 @@
 import { test, expect, Page } from '@playwright/test';
 import { HEADING, NEXT_BTN, PREV_BTN, quizData, startQuizViaUi, advanceToQuestion } from './helpers';
 
+// The Score menu trigger's accessible name now carries the current value ("Score 3 out of 10" / "Score 30 percent").
+const SCORE_TRIGGER_NAME = /^Score \d+ (out of \d+|percent)$/;
+// The Timer menu trigger's name carries the natural duration ("Timer 29 seconds", "Timer 1 minute", "Timer 1 minute and 1 second").
+const TIMER_TRIGGER_NAME = /^Timer \d+ (minutes?|seconds?)( and \d+ seconds?)?$/;
+
 /**
  * Deeper verification for fix/a11y-keyboard-focus, beyond the two confirmed
  * defects' own regression tests (e2e/a11y-keyboard-focus.spec.ts):
@@ -184,8 +189,8 @@ test.describe('Group 1: full keyboard-only Topic Quiz completion (single + multi
 test.describe('Group 2: Score/Timer menus — both themes, narrow viewport', () => {
   const themes: Array<'light' | 'dark'> = ['light', 'dark'];
   const triggers = [
-    { name: 'Score menu trigger', ariaLabel: 'Score display menu' },
-    { name: 'Timer menu trigger', ariaLabel: 'Timer menu' },
+    { name: 'Score menu trigger', ariaLabel: SCORE_TRIGGER_NAME },
+    { name: 'Timer menu trigger', ariaLabel: TIMER_TRIGGER_NAME },
   ];
 
   for (const theme of themes) {
@@ -222,7 +227,7 @@ test.describe('Group 2: Score/Timer menus — both themes, narrow viewport', () 
   test('focus outline is not clipped at a 375px-wide viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/quiz/question/fixture-widgets/1');
-    const trigger = page.getByRole('button', { name: 'Score display menu' });
+    const trigger = page.getByRole('button', { name: SCORE_TRIGGER_NAME });
     await trigger.waitFor({ state: 'visible', timeout: 20_000 });
     await tabUntil(page, async () => trigger.evaluate((el) => el === document.activeElement));
 

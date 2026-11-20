@@ -8,7 +8,6 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
-import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 
 import { QuizQuestion } from '@shared/models';
@@ -19,7 +18,7 @@ import { swallow } from '@shared/utils/error-logging';
 @Component({
   selector: 'codelab-scoreboard-score',
   standalone: true,
-  imports: [MatButtonModule, MatMenuModule],
+  imports: [MatMenuModule],
   templateUrl: './score.component.html',
   styleUrls: ['./score.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -47,8 +46,7 @@ export class ScoreComponent implements OnInit {
   // User preference: numerical vs percentage display.
   readonly isPercentage = signal<boolean>(false);
 
-  // Reactive display string used by the template.
-  readonly displayedScore = computed<string>(() => {
+  private readonly scoreCounts = computed(() => {
     const total = this.totalQuestionsSig();
     const safeTotal = Number.isFinite(total) ? Math.max(0, Math.trunc(total)) : 0;
     const rawCorrect = this.correctAnswersCountSig();
@@ -57,10 +55,27 @@ export class ScoreComponent implements OnInit {
         ? Math.min(Math.max(0, Math.trunc(rawCorrect)), safeTotal)
         : Math.max(0, Math.trunc(rawCorrect));
 
+    return { correct: safeCorrect, total: safeTotal };
+  });
+
+  private readonly percentageScore = computed(() => {
+    const { correct, total } = this.scoreCounts();
+    return total > 0 ? ((correct / total) * 100).toFixed(0) : '0';
+  });
+
+  readonly displayedScore = computed(() => {
+    const { correct, total } = this.scoreCounts();
+    return this.isPercentage()
+      ? `${this.percentageScore()}%`
+      : `${correct}/${total}`;
+  });
+
+  readonly scoreAccessibleLabel = computed(() => {
     if (this.isPercentage()) {
-      return safeTotal > 0 ? `${((safeCorrect / safeTotal) * 100).toFixed(0)}%` : '0%';
+      return $localize`Score ${this.percentageScore()} percent`;
     }
-    return `${safeCorrect}/${safeTotal}`;
+    const { correct, total } = this.scoreCounts();
+    return $localize`Score ${correct} out of ${total}`;
   });
 
   ngOnInit(): void {

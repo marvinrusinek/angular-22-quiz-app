@@ -20,7 +20,14 @@ describe('ThemeToggleComponent', () => {
   const icon = () => fixture.nativeElement.querySelector('mat-icon') as HTMLElement;
 
   async function create(storedTheme?: 'light' | 'dark'): Promise<void> {
-    window.matchMedia = jest.fn().mockReturnValue({ matches: false } as MediaQueryList);
+    // The tooltip's breakpoint observer subscribes to this once timers run, so the mock needs the listener methods too.
+    window.matchMedia = jest.fn().mockReturnValue({
+      matches: false,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn()
+    } as unknown as MediaQueryList);
     localStorage.removeItem('quiz-app-theme');
     if (storedTheme) localStorage.setItem('quiz-app-theme', storedTheme);
 
@@ -140,9 +147,9 @@ describe('ThemeToggleComponent', () => {
       expect(document.documentElement.getAttribute('data-theme')).toBe('light');
     });
 
-    it('keeps the accessible name on the button and hides the icon from assistive tech', async () => {
+    it('keeps the icon hidden from assistive tech and the control a native button', async () => {
       await create();
-      expect(button().getAttribute('aria-label')).toBe('Toggle dark/light mode');
+      expect(button().tagName).toBe('BUTTON');
       expect(icon().getAttribute('aria-hidden')).toBe('true');
     });
 
@@ -154,6 +161,72 @@ describe('ThemeToggleComponent', () => {
       button().click();
       fixture.detectChanges();
       expect(tooltip.message).toBe('Switch to light mode');
+    });
+  });
+
+  // The button's accessible name is the same action text as its tooltip, so it names what the button DOES in the current
+  // theme. Material's tooltip adds an aria-describedby for its message unless that message equals the host's aria-label
+  // (it skips an identical description so a screen reader does not read the same text twice); these tests pin that no
+  // redundant description remains, after rendering and after every toggle, without removing any Material-managed attribute.
+  describe('accessible name follows the tooltip action text', () => {
+    /** Material's tooltip registers its description in a microtask after the message changes: let it run. */
+    async function settle(): Promise<void> {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
+    const tooltipMessage = () =>
+      fixture.debugElement.query(By.directive(MatTooltip)).injector.get(MatTooltip).message;
+    const noRedundantDescription = () => {
+      expect(button().hasAttribute('aria-describedby')).toBe(false);
+      // and no description element for the tooltip message is left in the document either
+      expect(document.querySelectorAll('.cdk-describedby-message-container [id^="cdk-describedby-message-"]')).toHaveLength(0);
+    };
+
+    it('LIGHT theme: the name and the tooltip both say "Switch to dark mode", with no redundant description', async () => {
+      await create('light');
+      await settle();
+      expect(themeService.theme()).toBe('light');
+      expect(button().getAttribute('aria-label')).toBe('Switch to dark mode');
+      expect(tooltipMessage()).toBe('Switch to dark mode');
+      noRedundantDescription();
+    });
+
+    it('DARK theme: the name and the tooltip both say "Switch to light mode", with no redundant description', async () => {
+      await create('dark');
+      await settle();
+      expect(themeService.theme()).toBe('dark');
+      expect(button().getAttribute('aria-label')).toBe('Switch to light mode');
+      expect(tooltipMessage()).toBe('Switch to light mode');
+      noRedundantDescription();
+    });
+
+    it('stays correct and redundancy-free after every toggle (light -> dark -> light)', async () => {
+      await create('light');
+      await settle();
+
+      button().click();
+      await settle();
+      expect(themeService.theme()).toBe('dark');
+      expect(button().getAttribute('aria-label')).toBe('Switch to light mode');
+      expect(tooltipMessage()).toBe('Switch to light mode');
+      noRedundantDescription();
+
+      button().click();
+      await settle();
+      expect(themeService.theme()).toBe('light');
+      expect(button().getAttribute('aria-label')).toBe('Switch to dark mode');
+      expect(tooltipMessage()).toBe('Switch to dark mode');
+      noRedundantDescription();
+    });
+
+    it('keeps the name and the tooltip identical to the service text (one source, no second copy)', async () => {
+      await create('light');
+      await settle();
+      expect(button().getAttribute('aria-label')).toBe(themeService.tooltip());
+      button().click();
+      await settle();
+      expect(button().getAttribute('aria-label')).toBe(themeService.tooltip());
     });
 
     it('keeps the 36px circular button and 20px icon box (touch target unchanged)', () => {

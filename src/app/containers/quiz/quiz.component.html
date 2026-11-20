@@ -21,8 +21,8 @@
                 [questionToDisplay$]="questionToDisplay$"
               >
                 <!-- Projected question content keeps the heading and optional code snippet
-                     together. #qText is programmatically focused on question changes;
-                     tabindex="-1" keeps it outside normal Tab navigation.
+                     together. Question changes focus the header logo; the question
+                     heading stays outside normal Tab navigation with tabindex="-1".
                      Only live timer expiry enables aria-live; click-driven answer
                      feedback is announced separately to avoid duplicate speech. -->
                 <div

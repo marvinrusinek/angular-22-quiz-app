@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy, Component, computed, inject, LOCALE_ID
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { DecimalPipe } from '@angular/common';
 import { MatMenuModule } from '@angular/material/menu';
 
 import { TimerService } from '@shared/services/features/timer/timer.service';
+import { formatMMSS } from '@shared/utils/format-time';
 
 enum TimerType {
   Countdown = 'countdown',
@@ -13,7 +15,7 @@ enum TimerType {
 @Component({
   selector: 'codelab-scoreboard-timer',
   standalone: true,
-  imports: [MatMenuModule, DecimalPipe],
+  imports: [MatMenuModule],
   templateUrl: './timer.component.html',
   styleUrls: ['./timer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -21,6 +23,16 @@ enum TimerType {
 export class TimerComponent {
   // ── injects ─────────────────────────────────────────────────────
   private readonly timerService = inject(TimerService);
+  private readonly locale = inject(LOCALE_ID);
+  private readonly minuteFormatter = new Intl.NumberFormat(this.locale, {
+    style: 'unit', unit: 'minute', unitDisplay: 'long'
+  });
+  private readonly secondFormatter = new Intl.NumberFormat(this.locale, {
+    style: 'unit', unit: 'second', unitDisplay: 'long'
+  });
+  private readonly durationFormatter = new Intl.ListFormat(this.locale, {
+    style: 'long', type: 'conjunction'
+  });
 
   // ── remaining variables ─────────────────────────────────────────
   readonly timerType = TimerType;
@@ -41,6 +53,25 @@ export class TimerComponent {
     return this.currentTimerType() === TimerType.Countdown
       ? Math.max(this.timePerQuestion - elapsed, 0)
       : elapsed;
+  });
+
+  private readonly displaySeconds = computed(() => {
+    const time = this.displayTime();
+    return Number.isFinite(time) ? Math.max(0, Math.round(time)) : 0;
+  });
+
+  readonly displayClock = computed(() => formatMMSS(this.displaySeconds()));
+
+  readonly timerAccessibleLabel = computed(() => {
+    const total = this.displaySeconds();
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
+    const parts: string[] = [];
+    if (minutes > 0) parts.push(this.minuteFormatter.format(minutes));
+    if (seconds > 0 || minutes === 0) {
+      parts.push(this.secondFormatter.format(seconds));
+    }
+    return $localize`Timer ${this.durationFormatter.format(parts)}`;
   });
 
   /** True when the countdown has 5 or fewer seconds remaining. Used to flag

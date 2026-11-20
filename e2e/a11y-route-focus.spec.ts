@@ -1,61 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { quizData, startQuizViaUi, advanceToQuestion, HEADING, NEXT_BTN } from './helpers';
+import { quizData, startQuizViaUi, advanceToQuestion, HEADING, NEXT_BTN, PREV_BTN } from './helpers';
 
 /**
- * Regression coverage for the route-focus fix (quiz.component.ts/.html).
- *
- * ── Root cause ──────────────────────────────────────────────────────────
- * An Angular SPA route change (QuizSelection -> Introduction -> this
- * component, or Next/Previous BETWEEN questions) is a client-side DOM
- * swap, never a real browser navigation — so it gives screen readers no
- * unload/load cue to stop speaking whatever they were on. With no focus-
- * management anywhere in the app (the app-level NavigationEnd handler was
- * found to be dead code — it toggles fields the template never reads), a
- * screen reader's own in-progress/queued speech from the page or question
- * just left can keep playing after the next one has already mounted.
- *
- * ── Scope (expanded from the initial-arrival-only version) ─────────────
- * A live diagnostic confirmed the app writes NO stale previous-question
- * text anywhere after a Next/Previous navigation (the `/check` response is
- * question-keyed, the heading/message-area are pure computeds off the live
- * index, and the staggered feedback announcer — see
- * a11y-feedback-announcer-stagger.spec.ts — is explicitly cancel-guarded on
- * transition). The reported overlap is consistent with the AT finishing
- * speech it had already started, which no DOM state can retroactively
- * un-queue. QuizComponent now moves focus to the question heading
- * (`#qText`, `tabindex="-1"`) on EVERY actual question-index change —
- * initial arrival AND every Next/Previous — gated on
- * `currentQuestionIndex()` genuinely changing, so an answer click, a
- * feedback update, or a timer tick (none of which change that index) never
- * re-trigger it. `tabindex="-1"` keeps the heading out of the normal Tab
- * sequence, so this never alters logical Tab order.
- *
- * ── What this suite proves ──────────────────────────────────────────────
- * The heading is real, present, and focusable; it receives focus on
- * initial arrival AND on every subsequent Next, each time with that
- * question's own non-empty text; answering a question (without
- * navigating) does not steal focus away mid-interaction; rapid repeated
- * navigation and navigating away entirely (destruction) produce no
- * console/page errors.
- *
- * ── What this suite does NOT and cannot prove ───────────────────────────
- * That Narrator (or any other assistive technology) actually interrupts
- * its speech queue when this focus change happens, beyond what has
- * already been manually retested. For Next/Previous, focus is paired with
- * a coordinated navigation announcement (see
- * a11y-navigation-announcement.spec.ts) — confirmed passing by a real
- * Narrator retest. For the INITIAL Introduction -> Q1 cold-start arrival,
- * focus runs ALONE (the announcement is deliberately withheld there — a
- * real Narrator retest of the combined approach failed on this exact
- * transition, while focus alone, retested separately, passed). The cause
- * of that cold-start-specific difference is not established.
- *
- * Navigation uses startQuizViaUi + advanceToQuestion (real progression),
- * never a direct page.goto to a non-first question — QuizGuard redirects
- * that back to Q1 on a fresh attempt.
+ * Each ready question starts at the existing top-left logo link, including
+ * initial entry, reload, Next and Previous. Same-question answer, feedback
+ * and timer updates must not reclaim focus. These are browser-focus checks;
+ * Narrator speech and highlight rectangles require a manual test.
+ * Existing Next/Previous live announcements are covered separately.
  */
 
 const doohickeys = quizData.find((q: any) => (q.quizId || q.id) === 'fixture-doohickeys');
+const LOGO = 'codelab-quiz-header a:has(img.header-image)';
 const HEADING_H3 = `${HEADING}[tabindex="-1"]`;
 
 async function headingState(page: import('@playwright/test').Page) {
@@ -71,29 +26,28 @@ async function headingState(page: import('@playwright/test').Page) {
 }
 
 test.describe('Topic Quiz route focus — every question change, never on answer/feedback/timer updates (fix regression)', () => {
-  test('arriving at Q1 from Introduction focuses the question heading, which already carries non-empty, matching text', async ({ page }) => {
+  test('arriving at Q1 from Introduction focuses the logo with matching question content', async ({ page }) => {
     await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
 
     const state = await headingState(page);
     if (!state.found) throw new Error('heading element not found');
-    expect(state.isFocused).toBe(true);
+    await expect(page.locator(LOGO)).toBeFocused();
     expect(state.text.length).toBeGreaterThan(0);
     expect(state.text).toContain(doohickeys.questions[0].questionText.slice(0, 20));
   });
 
-  test('arriving at Q1 from Introduction (cold start): focus lands on the heading exactly once and is never stolen back afterward', async ({ page }) => {
-    // Regression coverage for a reopened investigation: a live diagnostic on
-    // this exact cold-start path (Introduction's own "Preparing quiz…"
-    // overlay + the slower first-time dynamic AnswerComponent/option-load
-    // chain, both unique to this transition and absent from Next/Previous)
-    // confirmed focus moves to the heading exactly once and holds — this
-    // locks that in so a future regression (e.g. something re-stealing
-    // focus back to <body> after the heading already has it) is caught.
+  test('reloading the first question returns focus to the logo', async ({ page }) => {
+    await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
+    await page.reload();
+    await expect(page.locator(LOGO)).toBeFocused();
+  });
+
+  test('cold entry keeps focus at the logo after the page settles', async ({ page }) => {
     await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
 
     const first = await headingState(page);
     if (!first.found) throw new Error('heading element not found');
-    expect(first.isFocused).toBe(true);
+    await expect(page.locator(LOGO)).toBeFocused();
 
     // Give any later-settling work (the cold-start overlay's own minimum
     // display floor, any trailing async option-binding work) a full window
@@ -102,11 +56,11 @@ test.describe('Topic Quiz route focus — every question change, never on answer
 
     const second = await headingState(page);
     expect(second.found).toBe(true);
-    expect(second.isFocused).toBe(true);
+    await expect(page.locator(LOGO)).toBeFocused();
     expect(second.text).toBe(first.text);
   });
 
-  test('clicking Next moves focus BACK onto the heading, now with the NEW question text', async ({ page }) => {
+  test('Next and Previous return focus to the logo with current question content', async ({ page }) => {
     await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
 
     const correctIdx = doohickeys.questions[0].options.findIndex(
@@ -123,16 +77,22 @@ test.describe('Topic Quiz route focus — every question change, never on answer
 
     const state = await headingState(page);
     if (!state.found) throw new Error('heading element not found');
-    expect(state.isFocused).toBe(true);
+    await expect(page.locator(LOGO)).toBeFocused();
     expect(state.text).toContain(doohickeys.questions[1].questionText.slice(0, 20));
     // Genuinely a different question's text, not a stale re-focus of Q1's.
     expect(state.text).not.toContain(doohickeys.questions[0].questionText.slice(0, 20));
+
+    await page.locator(PREV_BTN).click();
+    await expect(page.locator(LOGO)).toBeFocused();
+    await expect(page.locator(HEADING).first()).toContainText(
+      doohickeys.questions[0].questionText.slice(0, 20)
+    );
   });
 
-  test('selecting an option (answer/feedback update, no navigation) does NOT steal focus back onto the heading', async ({ page }) => {
+  test('answer and timer updates do not reclaim focus for the logo', async ({ page }) => {
     await startQuizViaUi(page, 'fixture-doohickeys', /fixture doohickeys/i);
 
-    // Initial arrival already focused the heading — move focus elsewhere
+    // Initial arrival focused the logo — move focus elsewhere
     // (onto the option itself, as a real click does) before triggering the
     // answer/feedback update under test.
     const correctIdx = doohickeys.questions[0].options.findIndex(
@@ -144,12 +104,15 @@ test.describe('Topic Quiz route focus — every question change, never on answer
 
     const state = await headingState(page);
     if (!state.found) throw new Error('heading element not found');
-    // The verdict/feedback effects fired (same question, same index) — the
-    // heading must NOT have reclaimed focus as a side effect of that.
+    // Verdict/feedback effects fired for the same question.
+    // Neither the logo nor the heading may reclaim focus during answering.
     expect(state.isFocused).toBe(false);
+    await expect(page.locator(LOGO)).not.toBeFocused();
+    await page.waitForTimeout(1500);
+    await expect(page.locator(LOGO)).not.toBeFocused();
   });
 
-  test('rapid repeated Next clicks land focus on the FINAL question only (never a stale intermediate one), and navigating away entirely produces no console/page errors', async ({ page }) => {
+  test('rapid navigation keeps current content and logo focus; leaving destroys pending callbacks safely', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (msg) => {
@@ -181,12 +144,10 @@ test.describe('Topic Quiz route focus — every question change, never on answer
     await page.locator('.option-row').first().waitFor({ state: 'visible', timeout: 20_000 });
     await page.waitForTimeout(500);
 
-    // Focus must land on the FINAL question reached (index 2, 1-based),
-    // never an intermediate one — confirms rapid Next/Next cannot leave
-    // focus on a stale/earlier heading.
+    // The final question is current and the logo holds focus.
     const afterRapidNav = await headingState(page);
     if (!afterRapidNav.found) throw new Error('heading element not found');
-    expect(afterRapidNav.isFocused).toBe(true);
+    await expect(page.locator(LOGO)).toBeFocused();
     expect(afterRapidNav.text).toContain(doohickeys.questions[2].questionText.slice(0, 20));
     expect(afterRapidNav.text).not.toContain(doohickeys.questions[0].questionText.slice(0, 20));
     expect(afterRapidNav.text).not.toContain(doohickeys.questions[1].questionText.slice(0, 20));

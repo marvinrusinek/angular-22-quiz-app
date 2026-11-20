@@ -1,5 +1,7 @@
 import { NgClass } from '@angular/common';
-import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import {
+  Component, ElementRef, forwardRef, inject, NO_ERRORS_SCHEMA, signal
+} from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -20,9 +22,28 @@ import { NextButtonStateService } from '@shared/services/state/next-button-state
 import { SelectedOptionService } from '@shared/services/state/selectedoption.service';
 import { TimerService } from '@shared/services/features/timer/timer.service';
 import { CURRENT_CHECK_FAILED_MESSAGE } from '@shared/utils/verdict-notice';
+import { AnswerAnnouncementCoordinatorService } from '@shared/services/features/shared-option/answer-announcement-coordinator.service';
 
 import { VerdictNoticeComponent } from '../../components/verdict-notice/verdict-notice.component';
 import { QuizComponent } from './quiz.component';
+import { CodelabQuizHeaderComponent } from './quiz-header/quiz-header.component';
+
+@Component({
+  selector: 'codelab-quiz-header',
+  standalone: true,
+  template: '<a href="/select">Angular Quiz Platform</a>',
+  providers: [{
+    provide: CodelabQuizHeaderComponent,
+    useExisting: forwardRef(() => QuizHeaderFocusStub)
+  }]
+})
+class QuizHeaderFocusStub {
+  private readonly element = inject(ElementRef<HTMLElement>);
+
+  focusLogo(): void {
+    this.element.nativeElement.querySelector('a')!.focus();
+  }
+}
 
 /**
  * QuizComponent × failed answer check.
@@ -213,7 +234,9 @@ async function mountQuiz(): Promise<void> {
   // Only the notice is real; the heavy children are inert.
   TestBed.overrideComponent(QuizComponent, {
     set: {
-      imports: [NgClass, MatTooltipModule, VerdictNoticeComponent],
+      imports: [
+        NgClass, MatTooltipModule, VerdictNoticeComponent, QuizHeaderFocusStub
+      ],
       schemas: [NO_ERRORS_SCHEMA]
     }
   });
@@ -269,6 +292,57 @@ beforeEach(mountQuiz);
 afterEach(() => {
   jest.useRealTimers();
   fixture?.destroy();
+});
+
+describe('QuizComponent — entry and question focus', () => {
+  it('starts at the existing logo link on initial quiz entry', () => {
+    TestBed.tick();
+    expect(document.activeElement).toBe(
+      host().querySelector('codelab-quiz-header a')
+    );
+  });
+
+  it('does not reclaim focus after a payload refresh or timer update', () => {
+    TestBed.tick();
+    const answer = document.createElement('button');
+    answer.textContent = 'Answer';
+    host().appendChild(answer);
+    answer.focus();
+    component.combinedQuestionData.update(payload =>
+      payload ? { ...payload } : payload
+    );
+    timer.elapsedTimeSig.set(1);
+    fixture.detectChanges();
+    TestBed.tick();
+    expect(document.activeElement).toBe(answer);
+  });
+
+  it('returns to the logo on Next and Previous, preserving announcements', () => {
+    const announce = jest.spyOn(
+      TestBed.inject(AnswerAnnouncementCoordinatorService),
+      'announceQuestionArrival'
+    ).mockImplementation(() => undefined);
+    TestBed.tick();
+    const logo = host().querySelector('codelab-quiz-header a') as HTMLElement;
+    const answer = document.createElement('button');
+    host().appendChild(answer);
+    component.totalQuestions.set(2);
+    expect(announce).not.toHaveBeenCalled();
+
+    answer.focus();
+    component.currentQuestionIndex.set(1);
+    fixture.detectChanges();
+    TestBed.tick();
+    expect(document.activeElement).toBe(logo);
+    expect(announce).toHaveBeenCalledTimes(1);
+
+    answer.focus();
+    component.currentQuestionIndex.set(0);
+    fixture.detectChanges();
+    TestBed.tick();
+    expect(document.activeElement).toBe(logo);
+    expect(announce).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('QuizComponent — failed answer check', () => {

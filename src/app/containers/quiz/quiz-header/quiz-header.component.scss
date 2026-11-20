@@ -12,10 +12,22 @@ mat-card-header {
   min-height: 80px;
   padding: 8px 12px 8px 12px;
 
+  // The logo link owns the logo's spacing, so the link and the image occupy the same rectangle.
+  .quiz-header__logo {
+    display: block;
+    flex: 0 0 auto;
+    margin: -10px 16px 4px 0;
+  }
+
   .header-image {
     flex: 0 0 auto;
     width: auto;
     height: 48px;
+    display: block;
+    // !important: the global header-image rule (float: left; margin: -10px 16px 4px 0, higher specificity) would otherwise
+    // still apply on top of the logo link's own margin.
+    float: none !important;
+    margin: 0 !important;
   }
 
   .header-titles {
@@ -23,7 +35,7 @@ mat-card-header {
     min-width: 0;
     padding-top: 6px;   // nudge the titles down, clear of the top-right icons
 
-    mat-card-title {
+    .mat-mdc-card-title {
       display: block;
       font-size: 30px;
       line-height: 1.15;
@@ -31,12 +43,20 @@ mat-card-header {
       overflow-wrap: break-word;   // wrap to show the FULL title (no "…")
     }
 
-    mat-card-subtitle {
+    .mat-mdc-card-subtitle {
       display: block;
       margin-top: 2px !important;
       margin-left: -30px;   // shift the subtitle left
       line-height: 1.3;
       white-space: nowrap;   // fits on one line at the subtitle font size
+
+      // A long milestone ("Dependency Injection") is wider than the title column; with nowrap its text then overflowed its own
+      // element box. At least its usual (auto) width, and as wide as the text when that is longer, so the text range stays inside the
+      // heading element while short titles keep their exact centred position. (Desktop only: the mobile block wraps.)
+      @media (min-width: 601px) {
+        min-width: calc(100% + 30px);   // the auto width the -30px margin-left gives it
+        width: max-content;
+      }
     }
   }
 
@@ -103,7 +123,7 @@ mat-card-header {
       padding-top: 5px;
       text-align: center;
 
-      mat-card-title {
+      .mat-mdc-card-title {
         font-size: 24px;
         padding-top: 5px;
         white-space: normal;
@@ -111,7 +131,7 @@ mat-card-header {
         display: block;
       }
 
-      mat-card-subtitle {
+      .mat-mdc-card-subtitle {
         margin-top: 0 !important;
         text-align: center;
         white-space: normal;

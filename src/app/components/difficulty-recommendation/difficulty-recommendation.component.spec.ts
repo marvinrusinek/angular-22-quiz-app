@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router, UrlTree } from '@angular/router';
 
 import { DifficultyRecommendation, InterviewCertificateProgress } from '@shared/models';
 import { InterviewCertificateService } from '@shared/services/features/interview/interview-certificate.service';
@@ -101,18 +101,38 @@ describe('DifficultyRecommendationComponent — certificate-journey completion c
     );
   });
 
-  it('certificate earned: shows the medal + View Certificate link', () => {
+  it('certificate earned: shows the medal + a native View Certificate button', () => {
     unlockedSig.set(true);
     const el = render(COMPLETE).nativeElement as HTMLElement;
     expect(text(el)).toContain('Certificate Earned');
     expect(el.querySelector('.dr__message')?.textContent).toContain(
       'View your Angular Interview Master Certificate.'
     );
-    const link = el.querySelector('a.dr__btn') as HTMLAnchorElement;
-    expect(link?.textContent).toContain('View Certificate');
-    expect(link?.getAttribute('href')).toContain('/interview/certificate');
+    const button = el.querySelector('button.dr__btn--cert') as HTMLButtonElement;
+    expect(button.type).toBe('button');
+    expect(button.textContent).toContain('View Certificate');
+    expect(button.hasAttribute('href')).toBe(false);
+    expect(el.querySelector('a.dr__btn')).toBeNull();
     // Not the "become an Interview Master" prompt at the same time.
     expect(text(el)).not.toContain('become an Interview Master');
+  });
+
+  // The visible text names the button: no longer aria-label override, so the name is exactly "View Certificate".
+  // Narrator behaviour is verified by hand.
+  it('View Certificate is named by its visible text alone and navigates to the certificate once', () => {
+    unlockedSig.set(true);
+    const fixture = render(COMPLETE);
+    const router = TestBed.inject(Router);
+    const navigate = jest.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    const button = (fixture.nativeElement as HTMLElement).querySelector('button.dr__btn--cert') as HTMLButtonElement;
+    expect(button.hasAttribute('aria-label')).toBe(false);
+    expect(button.hasAttribute('aria-labelledby')).toBe(false);
+    expect((button.textContent ?? '').replace(/s+/g, ' ').trim()).toBe('View Certificate');
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    button.click();
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(router.serializeUrl(navigate.mock.calls[0][0] as UrlTree)).toBe('/interview/certificate');
   });
 
   it('the decorative icon is hidden from assistive tech', () => {

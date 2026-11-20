@@ -59,6 +59,13 @@
     color 0.15s ease;
 }
 
+/* The View Certificate action is a native button that keeps the look the link had. */
+.dr__btn--cert {
+  appearance: none;
+  font-family: inherit;
+  line-height: inherit;
+}
+
 /* Browse is a lighter, secondary affordance (informational, not a primary CTA). */
 .dr__btn--ghost {
   background: transparent;

@@ -198,6 +198,7 @@
         }
 
         <codelab-difficulty-recommendation
+          [class.qd-card]="reviewRecommendation() !== null"
           [recommendation]="difficultyRecommendation()"
           (browse)="browseQuizzes($event)"
           (buildInterview)="startBuildingInterview()"

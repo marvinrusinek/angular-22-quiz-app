@@ -371,10 +371,59 @@ codelab-quiz-selection {
       margin: 0;
     }
 
+    // Beside "Recommended for Review" the completion card gets the same outer card frame (class qd-card on its host), so both
+    // cards are a white card around a grey panel and each panel's action button sits the same distance above the shared bottom.
+    codelab-difficulty-recommendation.qd-card {
+      display: flex;
+      flex-direction: column;
+    }
+
     .dr {
       max-width: none;
       height: 100%;
       margin: 0;
+    }
+
+    codelab-difficulty-recommendation.qd-card .dr {
+      flex: 1 1 auto;
+      height: auto;
+    }
+
+    // Side by side (the row collapses to one column at 900px): each card is a column, so its action button follows its own
+    // content down to the card's bottom instead of floating mid-card. Stacked, the buttons stay naturally below their content.
+    @media (min-width: 901px) {
+      .qd-review {
+        display: flex;
+        flex-direction: column;
+      }
+
+      // Keep the heading its own shrink-wrapped width (as before), not stretched across the card.
+      .qd-review .qd-card__title {
+        align-self: flex-start;
+      }
+
+      .qd-review codelab-recommended-next-quiz {
+        display: flex;
+        flex: 1 1 auto;
+      }
+
+      .qd-review .rec {
+        flex: 1 1 auto;
+      }
+
+      .qd-review .rec--review .rec__btn {
+        align-self: end;
+      }
+
+      .dr {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .dr .dr__btn {
+        align-self: flex-start;
+        margin-top: auto;
+      }
     }
   }
 

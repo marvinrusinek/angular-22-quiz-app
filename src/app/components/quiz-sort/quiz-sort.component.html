@@ -20,7 +20,7 @@
     class="sort-btn sort-btn--alpha"
     (click)="toggleAlpha()"
     [attr.aria-label]="alphaLabel()"
-    [matTooltip]="alphaHint()"
+    [matTooltip]="alphaLabel()"
   >
     @if (alphaDirection() === 'az') {
       <span class="sort-btn__text" i18n>A&ndash;Z</span>

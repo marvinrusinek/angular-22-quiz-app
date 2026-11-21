@@ -15,10 +15,9 @@ import { AlphaDirection, DifficultyDirection } from '@shared/models';
  * quiz data — it reflects the current values and emits the new one; the parent
  * owns the state and performs the actual sort.
  *
- * The accessible NAME states what is applied ("Sort by difficulty ascending"),
- * so the current state never depends on the arrow icon alone; the tooltip (which
- * MatTooltip also exposes as the accessible description) says what activating
- * the button will do.
+ * The difficulty name states the applied direction; its tooltip explains the
+ * action. The alphabetical name includes both the current order and the action.
+ * Its tooltip matches that name to avoid a redundant accessible description.
  */
 @Component({
   selector: 'app-quiz-sort',
@@ -49,14 +48,8 @@ export class QuizSortComponent {
 
   readonly alphaLabel = computed(() =>
     this.alphaDirection() === 'az'
-      ? $localize`Sort alphabetically A to Z`
-      : $localize`Sort alphabetically Z to A`
-  );
-
-  readonly alphaHint = computed(() =>
-    this.alphaDirection() === 'az'
-      ? $localize`A to Z within each difficulty. Select to sort Z to A.`
-      : $localize`Z to A within each difficulty. Select to sort A to Z.`
+      ? $localize`Sort alphabetically A to Z within each difficulty. Select to sort Z to A.`
+      : $localize`Sort alphabetically Z to A within each difficulty. Select to sort A to Z.`
   );
 
   toggleDifficulty(): void {

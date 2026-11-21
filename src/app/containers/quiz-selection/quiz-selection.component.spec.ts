@@ -1796,13 +1796,13 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
       const c = render();
       expect([btnText(alphaBtn(c)), alphaBtn(c).getAttribute('aria-label')]).toEqual([
         AZ,
-        'Sort alphabetically A to Z'
+        'Sort alphabetically A to Z within each difficulty. Select to sort Z to A.'
       ]);
 
       click(c, alphaBtn(c));
       expect([btnText(alphaBtn(c)), alphaBtn(c).getAttribute('aria-label')]).toEqual([
         ZA,
-        'Sort alphabetically Z to A'
+        'Sort alphabetically Z to A within each difficulty. Select to sort A to Z.'
       ]);
       expect(renderedIds(c)).toEqual(ASC_ZA);
       // Same three groups in the same order — only the order inside each changed.
@@ -1935,7 +1935,7 @@ describe('QuizSelectionComponent — sort controls (Difficulty / A–Z toggle bu
       expect(renderedIds(c)).toEqual(DESC_ZA);
       expect([arrow(c), btnText(alphaBtn(c))]).toEqual(['arrow_downward', ZA]);
       expect(difficultyBtn(c).getAttribute('aria-label')).toBe('Sort by difficulty descending');
-      expect(alphaBtn(c).getAttribute('aria-label')).toBe('Sort alphabetically Z to A');
+      expect(alphaBtn(c).getAttribute('aria-label')).toBe('Sort alphabetically Z to A within each difficulty. Select to sort A to Z.');
     });
 
     it('ignores a corrupt saved value and falls back to the defaults', () => {

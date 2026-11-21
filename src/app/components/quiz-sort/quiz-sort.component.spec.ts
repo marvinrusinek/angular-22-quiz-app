@@ -143,12 +143,18 @@ describe('QuizSortComponent', () => {
     });
 
     it.each([
-      ['az', 'Sort alphabetically A to Z'],
-      ['za', 'Sort alphabetically Z to A']
-    ] as const)('Alphabetical (%s): accessible name is "%s"', (direction, name) => {
-      render('asc', direction);
-      expect(alphaBtn().getAttribute('aria-label')).toBe(name);
-    });
+      ['az', 'Sort alphabetically A to Z within each difficulty. Select to sort Z to A.'],
+      ['za', 'Sort alphabetically Z to A within each difficulty. Select to sort A to Z.']
+    ] as const)(
+      'Alphabetical (%s): name and tooltip are "%s" without a duplicate description',
+      async (direction, name) => {
+        render('asc', direction);
+        await fixture.whenStable();
+        expect(alphaBtn().getAttribute('aria-label')).toBe(name);
+        expect(tooltipOf(ALPHA)).toBe(name);
+        expect(alphaBtn().hasAttribute('aria-describedby')).toBe(false);
+      }
+    );
 
     it('the accessible names follow the state as it changes — they are not fixed strings', () => {
       render('asc', 'az');
@@ -157,7 +163,7 @@ describe('QuizSortComponent', () => {
       fixture.detectChanges();
 
       expect(difficultyBtn().getAttribute('aria-label')).toBe('Sort by difficulty descending');
-      expect(alphaBtn().getAttribute('aria-label')).toBe('Sort alphabetically Z to A');
+      expect(alphaBtn().getAttribute('aria-label')).toBe('Sort alphabetically Z to A within each difficulty. Select to sort A to Z.');
     });
 
     it('the current state is conveyed in WORDS — the arrow icon is decorative and hidden from assistive tech', () => {
@@ -175,7 +181,7 @@ describe('QuizSortComponent', () => {
       expect(tooltipOf(DIFFICULTY)).toBe(
         'Beginner to Advanced. Select to sort Advanced to Beginner.'
       );
-      expect(tooltipOf(ALPHA)).toBe('A to Z within each difficulty. Select to sort Z to A.');
+      expect(tooltipOf(ALPHA)).toBe('Sort alphabetically A to Z within each difficulty. Select to sort Z to A.');
 
       fixture.componentRef.setInput('difficultyDirection', 'desc');
       fixture.componentRef.setInput('alphaDirection', 'za');
@@ -183,7 +189,7 @@ describe('QuizSortComponent', () => {
       expect(tooltipOf(DIFFICULTY)).toBe(
         'Advanced to Beginner. Select to sort Beginner to Advanced.'
       );
-      expect(tooltipOf(ALPHA)).toBe('Z to A within each difficulty. Select to sort A to Z.');
+      expect(tooltipOf(ALPHA)).toBe('Sort alphabetically Z to A within each difficulty. Select to sort A to Z.');
     });
 
     it('is keyboard-operable: native, focusable, in the tab order', () => {

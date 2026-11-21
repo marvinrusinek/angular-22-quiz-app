@@ -252,28 +252,28 @@
       }
 
       <div class="quiz-grid">
-        <!-- Interview Mode is separate from topic quiz counts and achievements. -->
-        <div
-          class="quiz-tile interview-tile"
-          role="group"
-          aria-labelledby="interview-card-title"
-        >
+        <!-- Interview Mode is separate from topic quiz counts and achievements.
+             Same pattern as the topic tiles: ONE native, full-card button named by the
+             card's visible text (Interview Mode, the headline and the summary). That text is
+             aria-hidden so it is not read a second time after the button; hidden text that
+             aria-labelledby points at still supplies the name. -->
+        <div class="quiz-tile interview-tile">
+          <button
+            type="button"
+            class="quiz-tile__activate"
+            aria-labelledby="interview-card-eyebrow interview-card-title interview-card-sub interview-card-cta"
+            (click)="startBuildingInterview()"
+          ></button>
           <div class="interview-tile__body">
-            <span class="interview-tile__eyebrow" i18n>Interview Mode</span>
-            <h3 id="interview-card-title" class="interview-tile__headline" i18n>
+            <span id="interview-card-eyebrow" class="interview-tile__eyebrow" aria-hidden="true" i18n>Interview Mode</span>
+            <h3 id="interview-card-title" class="interview-tile__headline" aria-hidden="true" i18n>
               Are you interview ready?
             </h3>
-            <p class="interview-tile__sub" i18n>Build a timed, mixed-topic Angular interview.</p>
+            <p id="interview-card-sub" class="interview-tile__sub" aria-hidden="true" i18n>Build a timed, mixed-topic Angular interview.</p>
           </div>
           <div class="interview-tile__footer">
-            <button
-              type="button"
-              class="interview-tile__cta"
-              (click)="startBuildingInterview()"
-              i18n
-            >
-              Start Building
-            </button>
+            <!-- Visual call to action only; the card's button above is the control, and its name ends with this text. -->
+            <span id="interview-card-cta" class="interview-tile__cta" aria-hidden="true" i18n>Start Building</span>
           </div>
         </div>
 
@@ -305,11 +305,15 @@
               />
             }
 
-            <!-- Full-tile button is named by visible content and stays separate from the status link. -->
+            <!-- Full-tile button is named by visible content and stays separate from the status link.
+                 Its aria-label is the title, summary, question count, difficulty and progress (best score) as one
+                 punctuated string (tileAriaLabel); the
+                 count, difficulty and progress text, like the title and summary, is aria-hidden so it is not read a
+                 second time after the button (hidden text that aria-labelledby names still names the button). -->
             <button
               type="button"
               class="quiz-tile__activate"
-              [attr.aria-labelledby]="'quiz-title-' + i + ' quiz-summary-' + i"
+              [attr.aria-label]="tileAriaLabel(quiz)"
               (click)="onSelect(quiz.quizId, i)"
             ></button>
 
@@ -317,6 +321,7 @@
               <h3
                 [id]="'quiz-title-' + i"
                 class="quiz-title"
+                aria-hidden="true"
                 i18n
               >
                 {{ quiz?.milestone || 'Milestone not found' }}
@@ -325,6 +330,7 @@
               <p
                 [id]="'quiz-summary-' + i"
                 class="quiz-summary"
+                aria-hidden="true"
                 i18n
               >
                 {{ quiz?.summary || 'Summary not found' }}
@@ -332,12 +338,14 @@
 
               <div class="quiz-meta">
                 @if (questionCountLabel(quiz); as countLabel) {
-                  <span class="qd-pill">{{ countLabel }}</span>
+                  <span [id]="'quiz-count-' + i" class="qd-pill" aria-hidden="true">{{ countLabel }}</span>
                 }
                 @if (quiz?.difficulty; as difficulty) {
                   <span
+                    [id]="'quiz-difficulty-' + i"
                     class="difficulty-badge"
                     [ngClass]="'difficulty-' + difficulty"
+                    aria-hidden="true"
                   >
                     {{ difficulty | titlecase }}
                   </span>
@@ -365,7 +373,9 @@
               @if (showSelectionProgress()) {
                 @let cardProgress = quizCardProgress().get(quiz.quizId);
                 <codelab-quiz-card-progress
+                  [id]="'quiz-progress-' + i"
                   class="quiz-card-progress-line"
+                  aria-hidden="true"
                   [state]="cardProgress?.state ?? 'not-started'"
                   [bestScore]="cardProgress?.bestScore ?? null"
                 />

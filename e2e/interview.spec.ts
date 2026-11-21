@@ -55,7 +55,7 @@ async function answerAllAndSubmit(page: Page, count: number) {
 test.describe('Interview Mode', () => {
   test('main flow: selection card → build → session → submit → results → review', async ({ page }) => {
     await page.goto('/quiz');
-    await page.locator('.interview-tile__cta').click();
+    await page.locator('.interview-tile .quiz-tile__activate').click();
     await expect(page).toHaveURL(/\/interview$/);
 
     await configureAndStart(page, '10');

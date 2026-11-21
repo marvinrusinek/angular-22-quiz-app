@@ -781,11 +781,17 @@ codelab-quiz-selection {
     border-color: transparent;
     background: linear-gradient(135deg, #4527a0 0%, #3f5bd9 100%);
     color: #fff;
-    cursor: default;
+    cursor: pointer;
 
     &:hover {
       border-color: transparent;
       box-shadow: 0 8px 20px rgba(63, 91, 217, 0.4);
+    }
+
+    // The full-card button (shared with the topic tiles) keeps a visible focus ring on the gradient.
+    .quiz-tile__activate:focus-visible {
+      outline: 3px solid #fff;
+      outline-offset: -6px;
     }
 
     .interview-tile__eyebrow {
@@ -817,7 +823,9 @@ codelab-quiz-selection {
       display: flex;
     }
 
+    // A visual call to action: the card's own button is the control.
     .interview-tile__cta {
+      display: inline-block;
       padding: 10px 22px;
       border: none;
       border-radius: 10px;
@@ -825,16 +833,11 @@ codelab-quiz-selection {
       color: #2d2a8f;
       font-size: 15px;
       font-weight: 700;
-      cursor: pointer;
+      line-height: normal;
+    }
 
-      &:hover {
-        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
-      }
-
-      &:focus-visible {
-        outline: 3px solid #fff;
-        outline-offset: 3px;
-      }
+    &:hover .interview-tile__cta {
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
     }
   }
 

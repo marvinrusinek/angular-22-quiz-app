@@ -28,7 +28,6 @@ export type QuizCardProgressState = 'not-started' | 'in-progress' | 'completed';
           </span>
           @if (bestScore() !== null) {
             <span class="quiz-card-progress__score">
-              ·
               <ng-container i18n>Best</ng-container>
               {{ bestScore() }}%
             </span>
@@ -63,6 +62,11 @@ export type QuizCardProgressState = 'not-started' | 'in-progress' | 'completed';
         font-weight: 700;
         line-height: 1.4;
         letter-spacing: 0.3px;
+      }
+
+      /* The separator is generated content with an empty text alternative: drawn, never spoken. */
+      .quiz-card-progress__score::before {
+        content: '· ' / '';
       }
 
       .quiz-card-progress__score {

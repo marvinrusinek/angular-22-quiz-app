@@ -843,6 +843,37 @@ export class QuizSelectionComponent implements OnInit {
     this.liveAnnouncer.announce(message, 'polite');
   }
 
+  // The accessible name of a topic tile's full-card button: ONE string built from the same content the
+  // tile shows — title, summary, question count, difficulty, then the progress status and best score —
+  // with a period between fields so they are read as separate phrases. Optional fields are left out when
+  // absent, and a field's own trailing period is dropped so punctuation is never doubled. There is no period
+  // after the last field: it would be spoken ("dot") before the role, "button".
+  tileAriaLabel(quiz: Quiz): string {
+    const fields: string[] = [quiz?.milestone || 'Milestone not found', quiz?.summary || 'Summary not found'];
+    const count = this.questionCountLabel(quiz);
+    if (count) fields.push(count);
+    const difficulty = quiz?.difficulty;
+    if (difficulty) fields.push(difficulty.charAt(0).toUpperCase() + difficulty.slice(1));
+    if (this.showSelectionProgress()) {
+      const progress = this.quizCardProgress().get(quiz.quizId);
+      const state = progress?.state ?? 'not-started';
+      if (state === 'completed') {
+        fields.push($localize`Completed`);
+        if (progress?.bestScore != null) fields.push($localize`Best ${progress.bestScore}%`);
+      } else if (state === 'in-progress') {
+        fields.push($localize`In Progress`);
+      } else {
+        fields.push($localize`Not Started`);
+      }
+    }
+    return (
+      fields
+        .map((field) => String(field).replace(/\s+/g, ' ').trim().replace(/[.\s]+$/, ''))
+        .filter(Boolean)
+        .join('. ')
+    );
+  }
+
   // "12 questions" pill on a topic card, from the catalog metadata. '' (so no
   // pill) when the count is unknown — never a made-up number.
   questionCountLabel(quiz: Quiz): string {

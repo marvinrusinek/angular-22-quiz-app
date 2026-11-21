@@ -1036,21 +1036,48 @@ describe('QuizSelectionComponent — tile keyboard accessibility', () => {
     jest.useRealTimers();
   });
 
-  it("the button's accessible name is derived from the tile's own visible title and summary", () => {
+  it("the button's accessible name is ONE punctuated aria-label built from the tile's own content", () => {
     const { fixture } = render();
-    const activateBtn: HTMLElement = fixture.nativeElement.querySelector(
-      '.quiz-tile:not(.interview-tile) .quiz-tile__activate'
-    );
-    const labelledBy = (activateBtn.getAttribute('aria-labelledby') ?? '')
-      .split(' ')
-      .filter(Boolean);
+    const tile: HTMLElement = fixture.nativeElement.querySelector('.quiz-tile:not(.interview-tile)');
+    const activateBtn = tile.querySelector('.quiz-tile__activate') as HTMLElement;
+    const label = activateBtn.getAttribute('aria-label') ?? '';
 
-    expect(labelledBy.length).toBe(2);
-    const labelText = labelledBy
-      .map((id) => fixture.nativeElement.querySelector(`#${id}`)?.textContent?.trim())
-      .join(' ');
-    expect(labelText).toContain('Create Your First App');
-    expect(labelText).toContain('Get started with Angular.');
+    // A single aria-label: no competing aria-labelledby.
+    expect(activateBtn.hasAttribute('aria-labelledby')).toBe(false);
+    expect(label.startsWith('Create Your First App. Get started with Angular.')).toBe(true);
+    expect(label.endsWith('.')).toBe(false); // a final period is spoken ("dot") before "button"
+    expect(label).not.toMatch(/\.\./); // never a doubled period
+
+    // The same content, still on screen but hidden from the tree so it is not read a second time.
+    const count = tile.querySelector('.qd-pill');
+    const badge = tile.querySelector('.difficulty-badge');
+    if (count) expect(label).toContain(count.textContent!.trim());
+    if (badge) expect(label).toContain(badge.textContent!.trim());
+    for (const el of [
+      tile.querySelector('.quiz-title'),
+      tile.querySelector('.quiz-summary'),
+      count,
+      badge,
+      tile.querySelector('codelab-quiz-card-progress')
+    ]) {
+      if (el) expect(el.getAttribute('aria-hidden')).toBe('true');
+    }
+    expect(activateBtn.hasAttribute('aria-hidden')).toBe(false);
+    expect(tile.hasAttribute('aria-hidden')).toBe(false);
+  });
+
+  it('tileAriaLabel joins the fields with periods, leaves optional fields out and never doubles punctuation', () => {
+    const { comp } = render();
+    const withProgress = comp.showSelectionProgress();
+    const notStarted = withProgress ? '. Not Started' : '';
+    const full = { quizId: 'zz', milestone: 'RxJS', summary: 'Streams and operators.', questionCount: 10, difficulty: 'advanced' } as any;
+    const bare = { quizId: 'zz', milestone: 'RxJS', summary: 'Streams and operators' } as any;
+    const one = { quizId: 'zz', milestone: 'RxJS', summary: 'Streams.', questionCount: 1, difficulty: 'beginner' } as any;
+
+    expect(comp.tileAriaLabel(full)).toBe('RxJS. Streams and operators. 10 questions. Advanced' + notStarted);
+    expect(comp.tileAriaLabel(bare)).toBe('RxJS. Streams and operators' + notStarted);
+    expect(comp.tileAriaLabel(one)).toBe('RxJS. Streams. 1 question. Beginner' + notStarted); // singular
+    expect(comp.tileAriaLabel(full)).not.toMatch(/\.\./);
   });
 
   it('activating the tile button invokes the SAME onSelect() path a mouse click always has', () => {
@@ -3841,6 +3868,56 @@ describe('QuizSelectionComponent — renders without the old slide-in animation'
     await f.whenStable();
     expect(navigate).toHaveBeenCalledTimes(1);
     expect(navigate.mock.calls[0][0][0]).toBe('intro/');
+  });
+
+  describe('Interview Mode card', () => {
+    const card = (f: any): HTMLElement => f.nativeElement.querySelector('.interview-tile');
+    const control = (f: any): HTMLButtonElement => card(f).querySelector('.quiz-tile__activate')!;
+    const nameOf = (b: HTMLElement): string =>
+      (b.getAttribute('aria-labelledby') ?? '')
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent ?? '')
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    it('is ONE native button, like the topic tiles, named by the visible card text', () => {
+      const f = render();
+      document.body.appendChild(f.nativeElement);
+      f.detectChanges();
+
+      expect(card(f).querySelectorAll('button')).toHaveLength(1);
+      expect(control(f).tagName).toBe('BUTTON');
+      expect(control(f).getAttribute('type')).toBe('button');
+      expect(card(f).hasAttribute('role')).toBe(false);
+      // The referenced text is hidden from the tree (so it is not read twice) but still names the button.
+      for (const id of ['interview-card-eyebrow', 'interview-card-title', 'interview-card-sub', 'interview-card-cta']) {
+        expect(document.getElementById(id)!.getAttribute('aria-hidden')).toBe('true');
+      }
+      expect(control(f).hasAttribute('aria-hidden')).toBe(false);
+      expect(card(f).hasAttribute('aria-hidden')).toBe(false);
+      expect(nameOf(control(f))).toBe(
+        'Interview Mode Are you interview ready? Build a timed, mixed-topic Angular interview. Start Building'
+      );
+      f.nativeElement.remove();
+    });
+
+    it('the call to action is part of the button name but is not a second control', () => {
+      const f = render();
+      const cta = card(f).querySelector('.interview-tile__cta')!;
+
+      expect(cta.tagName).toBe('SPAN');
+      expect(cta.getAttribute('aria-hidden')).toBe('true');
+      expect(cta.textContent!.trim()).toBe('Start Building');
+    });
+
+    it('activating the card goes to the Interview builder', async () => {
+      const f = render();
+      control(f).click();
+      await f.whenStable();
+
+      expect(navigate).toHaveBeenCalledWith(['/interview']);
+    });
   });
 
   it('re-renders on signal changes without any animation callback', () => {
